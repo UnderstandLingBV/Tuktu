@@ -1,25 +1,20 @@
 package tuktu.generators
 
+import java.util.concurrent.TimeoutException
+
+import scala.concurrent.Await
+import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import akka.actor.Cancellable
-import akka.actor.PoisonPill
-import akka.actor.actorRef2Scala
+
+import akka.actor._
+import akka.pattern.ask
+import akka.util.Timeout
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.iteratee.Enumeratee
+import play.api.libs.iteratee._
 import play.api.libs.json.JsValue
-import tuktu.api.AsyncGenerator
-import tuktu.api.DataPacket
-import tuktu.api.StopPacket
-import tuktu.api.DataPacket
-import tuktu.api.AsyncGenerator
-import tuktu.api.StopPacket
-import tuktu.api.SynchronousGenerator
-import play.api.libs.iteratee.Iteratee
-import akka.actor.ActorLogging
-import play.api.libs.iteratee.Concurrent
-import akka.actor.Actor
+import tuktu.api._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Async 'special' generator that just waits for DataPackets to come in and processes them
@@ -28,8 +23,7 @@ class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataP
     override def receive() = {
         case config: JsValue => { }
         case sp: StopPacket => {
-            channel.eofAndEnd
-            self ! PoisonPill
+            cleanup()
         }
         case p: DataPacket => channel.push(p)
     }
@@ -38,7 +32,9 @@ class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataP
 /**
  * Special sync generator that processes a tuple and returns the actual result
  */
-class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]])  extends Actor with ActorLogging {
+class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(1 seconds)
+    
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     for (processor <- processors.drop(1))
@@ -47,6 +43,19 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
     override def receive() = {
         case config: JsValue => {}
         case sp: StopPacket => {
+            // Send message to the monitor actor
+            try {
+                val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
+                val monActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef
+                
+                monActor ! new MonitorPacket(
+                        CompleteType, self.path.toStringWithoutAddress, "master", 1
+                )
+            } catch {
+                case e: TimeoutException => {} // skip
+                case e: NullPointerException => {}
+            }
+            
             channel.eofAndEnd
             self ! PoisonPill
         }
@@ -86,8 +95,7 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
         }
         case sp: StopPacket => {
             schedulerActor.cancel
-            channel.eofAndEnd
-            self ! PoisonPill
+            cleanup()
         }
         case msg: String => channel.push(new DataPacket(List(Map(resultName -> message))))
     }

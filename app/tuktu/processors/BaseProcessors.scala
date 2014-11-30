@@ -1,27 +1,35 @@
 package tuktu.processors
 
-import java.io._
+import java.io.BufferedWriter
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
+import java.io.StringWriter
 import java.util.concurrent.TimeoutException
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import akka.actor.ActorIdentity
-import akka.actor.Identify
-import akka.actor.actorRef2Scala
+import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
-import tuktu.api.BaseProcessor
-import tuktu.api.DataPacket
 import au.com.bytecode.opencsv.CSVWriter
 import groovy.util.Eval
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json._
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsString
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
-import akka.actor.ActorRef
+import akka.actor.ActorLogging
+import akka.actor.Actor
+import play.api.libs.iteratee.Iteratee
+import play.api.libs.iteratee.Concurrent
 
 object util {
 	def fieldParser(input: Map[String, Any], path: List[String], defaultValue: Option[Any]): Any = path match {
@@ -160,10 +168,14 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
  * Renames a single field
  */
 class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var fieldList: List[JsObject] = null
+    
     override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
         new DataPacket(for (datum <- data.data) yield {
-	        // Find out which fields we should extract
-	        val fieldList = (config \ "fields").as[List[JsObject]]
+            if (fieldList == null) {
+    	        // Find out which fields we should extract
+    	        fieldList = (config \ "fields").as[List[JsObject]]
+            }
 	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
 	        for {
 	                field <- fieldList
@@ -182,11 +194,21 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var expression: String = null
+    var expressionType: String = null
+    var andOr: String = null
     override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        // Get the groovy expression that determines whether to include or exclude
-        val expression = (config \ "expression").as[String]
-        // See if this is a simple or groovy expression
-        val expressionType = (config \ "type").as[String]
+        if (expression == null) {
+            // Get the groovy expression that determines whether to include or exclude
+            expression = (config \ "expression").as[String]
+            // See if this is a simple or groovy expression
+            expressionType = (config \ "type").as[String]
+            // Set and/or
+            andOr = (config \ "and_or").asOpt[String] match {
+                case Some("or") => "or"
+                case _ => "and"
+            }
+        }
         
         new DataPacket(for {
                 datum <- data.data
@@ -205,16 +227,14 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
                     case "negate" => {
                         // This is a comma-separated list of field=val statements
                         val matches = expression.split(",").map(m => m.trim)
-                        val evals = (for (m <- matches) yield {
+                        val evals = for (m <- matches) yield {
                             val split = m.split("=").map(s => s.trim)
                             // Get field and value and see if they match
                             datum(split(0)) == split(1)
-                        }).toList
-                        // See if its and/or
-                        (config \ "and_or").asOpt[String] match {
-                            case Some("or") => evals.foldLeft(false)(_ || !_)
-                            case _ => evals.foldLeft(false)( _ && !_)
                         }
+                        // See if its and/or
+                        if (andOr == "or") !evals.exists(elem => elem)
+                        else evals.exists(elem => !elem)
                     }
                     case _ => {
                         // This is a comma-separated list of field=val statements
@@ -225,10 +245,8 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
                             datum(split(0)) == split(1)
                         }).toList
                         // See if its and/or
-                        (config \ "and_or").asOpt[String] match {
-                            case Some("or") => evals.foldLeft(false)(_ || _)
-                            case _ => evals.foldLeft(false)( _ && _)
-                        }
+                        if (andOr == "or") evals.exists(elem => elem)
+                        else !evals.exists{elem => !elem}
                     }
                 }
                 if (include)
@@ -243,6 +261,10 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
  */
 class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
     var writer: BufferedWriter = null
+    var fields = collection.mutable.Map[String, Int]()
+    var fieldSep: String = null
+    var lineSep: String = null
+    
     override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.onEOF(() => {
         writer.flush
 	    writer.close
@@ -253,25 +275,77 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
            val fileName = (config \ "file_name").as[String]
            val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
            
+           // Get the field we need to write out
+           (config \ "fields").as[List[String]].foreach {field => fields += field -> 1}
+           fieldSep = (config \ "field_separator").asOpt[String].getOrElse(",")
+           lineSep = (config \ "line_separator").asOpt[String].getOrElse("\r\n")
+           
            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding))
        }
-       // Get the field we need to write out
-       val fields = (config \ "fields").as[List[String]]
-       val fieldSep = (config \ "field_separator").asOpt[String].getOrElse(",")
-       val lineSep = (config \ "line_separator").asOpt[String].getOrElse("\r\n")
+
        new DataPacket(for (datum <- data.data) yield {
     	   // Write it
-           val output = (for {
-               field <- fields
-               if (datum.contains(field))
-           } yield {
-               datum(field).toString()
+           val output = (datum collect {
+                   case elem: (String, Any) if fields.contains(elem._1) => elem._2.toString
            }).mkString(fieldSep)
+           
            writer.write(output + lineSep)
 	       
 	       datum
         })
 	})
+}
+
+/**
+ * Streams data into a file and closes it when it's done
+ */
+class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var writer: BufferedWriter = null
+    var fields = collection.mutable.Map[String, Int]()
+    var fieldSep: String = null
+    var lineSep: String = null
+    var batchSize: Int = 1
+    var batch = new StringBuilder()
+    var batchCount = 0
+    
+    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.onEOF(() => {
+        writer.flush
+        writer.close
+    }) compose Enumeratee.map((data: DataPacket) => {
+        // See if we need to initialize the buffered writer
+       if (writer == null) {
+           // Get the location of the file to write to
+           val fileName = (config \ "file_name").as[String]
+           val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
+           
+           // Get the field we need to write out
+           (config \ "fields").as[List[String]].foreach {field => fields += field -> 1}
+           fieldSep = (config \ "field_separator").asOpt[String].getOrElse(",")
+           lineSep = (config \ "line_separator").asOpt[String].getOrElse("\r\n")
+           
+           // Get batch size
+           batchSize = (config \ "batch_size").as[Int]
+           
+           writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding))
+       }
+
+       new DataPacket(for (datum <- data.data) yield {
+           // Write it
+           val output = (datum collect {
+                   case elem: (String, Any) if fields.contains(elem._1) => elem._2.toString
+           }).mkString(fieldSep)
+           
+           // Add to batch or write
+           batch.append(output + lineSep)
+           batchCount = batchCount + 1
+           if (batchCount == batchSize) {
+               writer.write(batch.toString)
+               batch.clear
+           }
+           
+           datum
+        })
+    })
 }
 
 /**
@@ -636,8 +710,132 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
 }
 
 /**
+ * Actor that deals with parallel processing
+ * 
+ */
+class ParallelProcessorActor(parent: ActorRef, processor: Enumeratee[DataPacket, DataPacket]) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(1 seconds)
+    val (enumerator, channel) = Concurrent.broadcast[DataPacket]
+    val sinkIteratee: Iteratee[Unit, Unit] = Iteratee.ignore
+    
+    val sendBackEnum: Enumeratee[DataPacket, Unit] = Enumeratee.map(data => parent ! data)
+    enumerator |>> (processor compose sendBackEnum) &>> sinkIteratee
+    
+    def receive() = {
+        case data: DataPacket => {
+            // When we get a data packet, we process it using our enumeratee
+            channel.push(data)
+        }
+    }
+}
+
+/**
  * Executes a number of processor-flows in parallel
  */
 class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(1 seconds)
+    
+    var actors: List[ActorRef] = null
+    
+    /**
+     * Taken from dispatcher; recursively pipes Enumeratees
+     */
+    def buildEnums (
+            nextId: List[String],
+            processorMap: Map[String, (Enumeratee[DataPacket, DataPacket], List[String])]
+    ): List[Enumeratee[DataPacket, DataPacket]] = {
+        /**
+         * Function that recursively builds the tree of processors
+         */
+        def buildEnumsHelper(
+                next: List[String],
+                accum: List[Enumeratee[DataPacket, DataPacket]],
+                iterationCount: Integer
+        ): List[Enumeratee[DataPacket, DataPacket]] = {
+            if (iterationCount > 500) {
+                // Awful lot of enumeratees... cycle?
+                throw new Exception("Possible cycle detected in config file. Aborted")
+            }
+            else {
+                next match {
+                    case List() => {
+                        // We are done, return accumulator
+                        accum
+                    }
+                    case id::List() => {
+                        // This is just a pipeline, get the processor
+                        val proc = processorMap(id)
+                        
+                        buildEnumsHelper(proc._2, {
+                            if (accum.isEmpty) List(proc._1)
+                            else accum.map(enum => enum compose proc._1)
+                        }, iterationCount + 1)
+                    }
+                    case nextList => {
+                        // We have a branch here and need to expand the list of processors
+                        (for (id <- nextList) yield {
+                            val proc = processorMap(id)
+                            
+                            buildEnumsHelper(proc._2, {
+                                if (accum.isEmpty) List(proc._1)
+                                else accum.map(enum => enum compose proc._1)
+                            }, iterationCount + 1)
+                        }).flatten
+                    }
+                }
+            }
+        }
+        
+        // Build the enums
+        buildEnumsHelper(nextId, List(), 0)
+    }
+    
+    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+        // Get hte processors
+        if (actors == null) {
+            // Process config
+            val pipelines = (config \ "processors").as[List[JsObject]]
+            
+            // For each pipeline, build the enumeratee
+            actors = for (pipeline <- pipelines) yield {
+                val next = (pipeline \ "start").as[String]
+                val procs = (pipeline \ "processors").as[List[JsObject]]
+                
+                val processorMap = (for (processor <- procs) yield {
+                    // Get all fields
+                    val processorId = (processor \ "id").as[String]
+                    val processorName = (processor \ "name").as[String]
+                    val processorConfig = (processor \ "config").as[JsObject]
+                    val resultName = (processor \ "result").as[String]
+                    val next = (processor \ "next").as[List[String]]
+                    
+                    // Instantiate processor
+                    val procClazz = Class.forName(processorName)
+                    val iClazz = procClazz.getConstructor(classOf[String]).newInstance(resultName)
+                    val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
+                    val proc = method.invoke(iClazz, processorConfig).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                    
+                    // Return map
+                    processorId -> (proc, next)
+                }).toMap
+                
+                // Build the processor pipeline for this generator
+                val processor = buildEnums(List(next), processorMap).head
+                // Set up the actor that will execute this processor
+                Akka.system.actorOf(Props(classOf[ParallelProcessorActor], processor))
+            }
+        }
+        
+        // Send data to actors
+        val futs = for (actor <- actors) yield
+            actor ? data
+        // Get the results
+        val results = for (fut <- futs) yield
+            Await.result(fut.mapTo[DataPacket], timeout.duration)
+            
+        // TODO: Do the merge
+        
+        data
+    })
+    
 }

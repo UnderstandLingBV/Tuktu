@@ -77,8 +77,7 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 	        twitterStream.filter(fq)
 	    }
         case sp: StopPacket => {
-            channel.eofAndEnd
-            self ! PoisonPill
+            cleanup()
         }
 	 }
 }

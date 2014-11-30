@@ -12,7 +12,7 @@ import akka.actor._
 import tuktu.api._
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
@@ -203,8 +203,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
 	    }
 	    case data: ResponsePacket => channel.push(new DataPacket(List(Map(resultName -> data.json))))
 	    case sp: StopPacket => {
-	        channel.eofAndEnd
-	        self ! PoisonPill
+	        cleanup()
 	    }
 	}
 }

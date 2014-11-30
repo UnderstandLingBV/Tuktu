@@ -4,12 +4,7 @@ import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import akka.actor.Actor
-import akka.actor.ActorIdentity
-import akka.actor.ActorLogging
-import akka.actor.Identify
-import akka.actor.Props
-import akka.actor.actorRef2Scala
+import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import tuktu.api.DataPacket
@@ -18,12 +13,12 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
+import play.api.libs.json._
 import akka.actor.ActorRef
 import play.api.Logger
 import scala.concurrent.ExecutionContext.Implicits.global
+import tuktu.api.MPType
+import tuktu.api._
 
 case class asyncDispatchRequest(
         configName: String,
@@ -43,11 +38,12 @@ case class treeNode(
         children: List[Class[_]]
 )
 
-class Dispatcher() extends Actor with ActorLogging {
+class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
     implicit val timeout = Timeout(10 seconds)
     
     val configRepo = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
     val homeAddress = Play.current.configuration.getString("akka.remote.netty.tcp.hostname").getOrElse("127.0.0.1")
+    val logLevel = Play.current.configuration.getString("tuktu.monitor.level").getOrElse("all")
     val clusterNodes = {
         Play.current.configuration.getConfigList("tuktu.cluster.nodes") match {
             case Some(nodeList) => {
@@ -60,18 +56,31 @@ class Dispatcher() extends Actor with ActorLogging {
         }
     }
     
+    /**
+     * Enumeratee for error-logging and handling
+     */
     def logEnumeratee[T] = Enumeratee.recover[T] {
         case (e, input) => Logger.error("Error happened on: " + input, e)
     }
+    /**
+     * Monitoring enumeratee
+     */
+    def monitorEnumeratee(generatorName: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
+        Enumeratee.map(data => {
+            monitorActor ! new MonitorPacket(mpType, generatorName, branch, data.data.size)
+            data
+        })
+    }
 
     /**
-     * Takes a list of Enumeratees and iteratively composes them to form a single Enumeratee (this is like conceptual MapReduce)
-     * @param enums The Enumeratees yet to compose
-     * @param accum The Enumeratee that has been composed so far
+     * Takes a list of Enumeratees and iteratively composes them to form a single Enumeratee
+     * @param nextId The names of the processors next to compose
+     * @param processorMap A map cntaining the names of the processors and the processors themselves
      */
     def buildEnums (
             nextId: List[String],
-            processorMap: Map[String, (Enumeratee[DataPacket, DataPacket], List[String])]
+            processorMap: Map[String, (Enumeratee[DataPacket, DataPacket], List[String])],
+            monitorName: String
     ): List[Enumeratee[DataPacket, DataPacket]] = {
         /**
          * Function that recursively builds the tree of processors
@@ -115,8 +124,18 @@ class Dispatcher() extends Actor with ActorLogging {
             }
         }
         
-        // Get the first processors
-        buildEnumsHelper(nextId, List(logEnumeratee[DataPacket]), 0)
+        // Determine logging strategy and build the enumeratee
+        logLevel match {
+            case "all" => {
+                val enums = buildEnumsHelper(nextId, List(logEnumeratee[DataPacket]), 0)
+                for ((enum, index) <- enums.zipWithIndex) yield {
+                    monitorEnumeratee(monitorName, index.toString, BeginType) compose
+                    enum compose
+                    monitorEnumeratee(monitorName, index.toString, EndType)
+                }
+            }
+            case "none" => buildEnumsHelper(nextId, List(logEnumeratee[DataPacket]), 0)
+        }
     }
     
     def receive() = {
@@ -156,16 +175,25 @@ class Dispatcher() extends Actor with ActorLogging {
                     // We need to start an actor on a remote location
                     val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname) + "/user/TuktuDispatcher"
                     // Get the identity
-                    val fut = Akka.system.actorSelection(location) ? Identify(None)
-                    val remoteDispatcher = Await.result(fut.mapTo[ActorIdentity], 5 seconds).getRef
-                    // Send a remoted dispatch request, which is just the obtained config
-                    dr.returnRef match {
-                        case true => {
-                            // We need to get the actor reference and return it
-                            val refFut = remoteDispatcher ? new asyncDispatchRequest(dr.configName, Some(config), true, dr.returnRef)
-                            sender ? Await.result(refFut.mapTo[ActorRef], 5 seconds)
+                    val fut = (Akka.system.actorSelection(location) ? Identify(None)).mapTo[ActorIdentity]
+                    fut.onSuccess {
+                        case ai: ActorIdentity => {
+                            val remoteDispatcher = ai.getRef
+                            // Send a remoted dispatch request, which is just the obtained config
+                            dr.returnRef match {
+                                case true => {
+                                    // We need to get the actor reference and return it
+                                    val refFut = (remoteDispatcher ? new asyncDispatchRequest(dr.configName, Some(config), true, dr.returnRef)).mapTo[ActorRef]
+                                    refFut.onSuccess {
+                                        case ar: ActorRef => sender ! ar
+                                    }
+                                    refFut.onFailure {
+                                        case _ => sender ! null
+                                    }
+                                }
+                                case false => remoteDispatcher ! new asyncDispatchRequest(dr.configName, Some(config), true, dr.returnRef)
+                            }
                         }
-                        case false => remoteDispatcher ! new asyncDispatchRequest(dr.configName, Some(config), true, dr.returnRef)
                     }
                 } else {
                     if (!startRemotely) {
@@ -190,7 +218,7 @@ class Dispatcher() extends Actor with ActorLogging {
                         }).toMap
                         
                         // Build the processor pipeline for this generator
-                        val processorEnumeratee = buildEnums(next, processorMap)
+                        val processorEnumeratee = buildEnums(next, processorMap, dr.configName + "/" + generatorName)
                         
                         // Set up the generator, we assume the class is loaded
                         val clazz = Class.forName(generatorName)
@@ -288,7 +316,7 @@ class Dispatcher() extends Actor with ActorLogging {
                         }).toMap
                         
                         // Build the processor pipeline for this generator
-                        val processorEnumeratee = buildEnums(next, processorMap)
+                        val processorEnumeratee = buildEnums(next, processorMap, dr.configName  + "/" + generatorName)
                         
                         try {
                         	val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee), name = dr.configName + clazz.getName)
