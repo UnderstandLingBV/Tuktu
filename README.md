@@ -149,6 +149,7 @@ Alternatively, a configuration file can be given to Tuktu. This can be done by s
 Tuktu comes with a number of submodules by default. Read more about them here.
 
 - The [API](modules/api) submodule. This is actually part of Tuktu's core and used for extending the platform.
-- The [CSV](modules/csv) submodule. This module contains generic CSV transformators for flattening CSV data, a typical process in importing legacy data into NoSQL systems.
+- The [CSV](modules/csv) submodule. In Big Data, CSV files are often used to export legacy data into NoSQL systems. This package helps with that.
 - The [NLP](modules/nlp) submodule. This module contains some algorithms on Natural Language Processing.
+- The [NoSQL](modules/nosql) submodule. This module contains standard methods to read or write from and to some popular NoSQL systems.
 - The [Social](modules/social) submodule. This module contains generators for social media and some basic processors. 
