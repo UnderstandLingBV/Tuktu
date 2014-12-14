@@ -13,7 +13,9 @@ The name comes from the Inuït word *tuktu*, which freely translates to the Engl
 
 # Installing
 
-For now, the only way to install Tuktu is by building it from source as described below. A pre-compiled version will be available soon.
+Installing Tuktu can be done by either building from source as described below, or by downloading a fully packaged (including all the submodules mentioned here) release from the following URL:
+
+[http://tuktu.et4it.nl/downloads/tuktu-0.1.zip](http://tuktu.et4it.nl/downloads/tuktu-0.1.zip) 
 
 # Building from Source
 
