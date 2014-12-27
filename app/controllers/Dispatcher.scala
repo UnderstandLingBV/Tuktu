@@ -175,25 +175,16 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     // We need to start an actor on a remote location
                     val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname) + "/user/TuktuDispatcher"
                     // Get the identity
-                    val fut = (Akka.system.actorSelection(location) ? Identify(None)).mapTo[ActorIdentity]
-                    fut.onSuccess {
-                        case ai: ActorIdentity => {
-                            val remoteDispatcher = ai.getRef
-                            // Send a remoted dispatch request, which is just the obtained config
-                            dr.returnRef match {
-                                case true => {
-                                    // We need to get the actor reference and return it
-                                    val refFut = (remoteDispatcher ? new asyncDispatchRequest(dr.configName, Some(config), true, dr.returnRef)).mapTo[ActorRef]
-                                    refFut.onSuccess {
-                                        case ar: ActorRef => sender ! ar
-                                    }
-                                    refFut.onFailure {
-                                        case _ => sender ! null
-                                    }
-                                }
-                                case false => remoteDispatcher ! new asyncDispatchRequest(dr.configName, Some(config), true, dr.returnRef)
-                            }
+                    val fut = Akka.system.actorSelection(location) ? Identify(None)
+                    val remoteDispatcher = Await.result(fut.mapTo[ActorIdentity], 5 seconds).getRef
+                    // Send a remoted dispatch request, which is just the obtained config
+                    dr.returnRef match {
+                        case true => {
+                            // We need to get the actor reference and return it
+                            val refFut = remoteDispatcher ? new asyncDispatchRequest(dr.configName, Some(config), true, dr.returnRef)
+                            sender ? Await.result(refFut.mapTo[ActorRef], 5 seconds)
                         }
+                        case false => remoteDispatcher ! new asyncDispatchRequest(dr.configName, Some(config), true, dr.returnRef)
                     }
                 } else {
                     if (!startRemotely) {
@@ -254,9 +245,9 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
             }
             
             // Go through all entries in config and get the futures
-            sender ! {
+            {
                 // Get the data generator
-                val generator = (config \ "generator").as[JsObject]
+                val generator = (config \ "generators").as[List[JsObject]].head
                 val generatorName = (generator \ "name").as[String]
                 val resultName = (generator \ "result").as[String]
                 val generatorConfig = (generator \ "config").as[JsObject]
@@ -289,9 +280,11 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                         case true => {
                             // We must return the actorRef of the synchronous generator
                             val refFut = remoteDispatcher ? new syncDispatchRequest(dr.configName, Some(config), true, true)
-                            Await.result(fut.mapTo[ActorRef], 5 seconds)
+                            refFut.onSuccess {
+                                case ar: ActorRef => sender ! ar
+                            }
                         }
-                        case false => (remoteDispatcher ? new syncDispatchRequest(dr.configName, Some(config), true, false)).asInstanceOf[Future[Enumerator[DataPacket]]]
+                        case false => sender ! (remoteDispatcher ? new syncDispatchRequest(dr.configName, Some(config), true, false)).asInstanceOf[Future[Enumerator[DataPacket]]]
                     }
                 } else {
                     if (!startRemotely) {
@@ -317,25 +310,26 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                         
                         // Build the processor pipeline for this generator
                         val processorEnumeratee = buildEnums(next, processorMap, dr.configName  + "/" + generatorName)
-                        
+
                         try {
                         	val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee), name = dr.configName + clazz.getName)
+
                         	// Send it the config
                             dr.returnRef match {
-                                case true => actorRef
-                                case false => (actorRef ? generatorConfig).asInstanceOf[Future[Enumerator[DataPacket]]]
+                                case true => sender ! actorRef
+                                case false => sender ! (actorRef ? generatorConfig).asInstanceOf[Future[Enumerator[DataPacket]]]
                             }
                         } catch {
                             case e: akka.actor.InvalidActorNameException => {
                                 val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee), name = dr.configName + clazz.getName +  java.util.UUID.randomUUID.toString)
                                 // Send it the config
                                 dr.returnRef match {
-                                    case true => actorRef
-                                    case false => (actorRef ? generatorConfig).asInstanceOf[Future[Enumerator[DataPacket]]]
+                                    case true => sender ! actorRef
+                                    case false => sender ! (actorRef ? generatorConfig).asInstanceOf[Future[Enumerator[DataPacket]]]
                                 }
                             }
                         }
-                    }
+                    } else sender ! null
                 }
             }
         }

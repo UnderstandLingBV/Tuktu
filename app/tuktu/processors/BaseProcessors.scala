@@ -16,7 +16,7 @@ import au.com.bytecode.opencsv.CSVWriter
 import groovy.util.Eval
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsObject
@@ -30,6 +30,10 @@ import akka.actor.ActorLogging
 import akka.actor.Actor
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent
+import scala.concurrent.Future
+import tuktu.api.StopPacket
+import tuktu.api.DataMerger
+import java.lang.reflect.Method
 
 object util {
 	def fieldParser(input: Map[String, Any], path: List[String], defaultValue: Option[Any]): Any = path match {
@@ -632,16 +636,45 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
 }
 
 /**
- * Invokes a new generator
+ * This class is used to always have an actor present when data is to be streamed in sync
  */
-class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
+class SyncStreamForwarder() extends Actor with ActorLogging {
     implicit val timeout = Timeout(5 seconds)
     
     var remoteGenerator: ActorRef = null
     var sync: Boolean = false
     
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        if (remoteGenerator == null) {
+    def receive() = {
+        case setup: (ActorRef, Boolean) => {
+            remoteGenerator = setup._1
+            sync = setup._2
+            sender ! "ok"
+        }
+        case dp: DataPacket => sync match { 
+            case false => remoteGenerator ! dp
+            case true => {
+                sender ! Await.result((remoteGenerator ? dp).mapTo[DataPacket], timeout.duration)
+            }
+        }
+        case sp: StopPacket => remoteGenerator ! StopPacket()
+    }
+}
+
+/**
+ * Invokes a new generator
+ */
+class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
+    implicit val timeout = Timeout(5 seconds)
+    
+    val forwarder = Akka.system.actorOf(Props[SyncStreamForwarder])
+    var init = false
+    var sync: Boolean = false
+    
+    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.onEOF(() => {
+        forwarder ! new StopPacket()
+        forwarder ! PoisonPill
+    }) compose Enumeratee.map(data => {
+        if (!init) {
             // Get the name of the config file
             val nextName = (config \ "name").as[String]
             // Node to execute on
@@ -655,7 +688,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
             
             // Manipulate config and set up the remote actor
             val customConfig = Json.obj(
-                "generator" -> (Json.obj(
+                "generators" -> List((Json.obj(
                     "name" -> {
                         sync match {
                             case true => "tuktu.generators.SyncStreamGenerator"
@@ -670,36 +703,38 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
                         case Some(n) => Json.obj("node" -> n)
                         case None => Json.obj()
                     }
-                }),
+                })),
                 "processors" -> processors
             )
             
             // Send a message to our Dispatcher to create the (remote) actor and return us the actorref
             try {
                 val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
-                val dispActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef
+                val dispActor = Await.result(fut.mapTo[ActorIdentity], timeout.duration).getRef
                 
                 // Set up actor and get ref
                 val refFut = sync match {
                     case true => dispActor ? new controllers.syncDispatchRequest(nextName, Some(customConfig), false, true)
                     case false => dispActor ? new controllers.asyncDispatchRequest(nextName, Some(customConfig), false, true)
                 }
-                remoteGenerator = Await.result(refFut.mapTo[ActorRef], 5 seconds)
+                val remoteGenerator = Await.result(refFut.mapTo[ActorRef], timeout.duration)
+                Await.result(forwarder ? (remoteGenerator, sync), timeout.duration)
             } catch {
                 case e: TimeoutException => {} // skip
                 case e: NullPointerException => {}
             }
+            init = true
         }
         
         // Send the result to the generator
         val newData = sync match {
             case true => {
                 // Get the result from the generator
-                val dataFut = remoteGenerator ? data
-                Await.result(dataFut.mapTo[DataPacket], 5 seconds)
+                val dataFut = forwarder ? data
+                Await.result(dataFut.mapTo[DataPacket], timeout.duration)
             }
             case false => {
-                remoteGenerator ! data
+                forwarder ! data
                 data
             }
         }
@@ -713,18 +748,24 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
  * Actor that deals with parallel processing
  * 
  */
-class ParallelProcessorActor(parent: ActorRef, processor: Enumeratee[DataPacket, DataPacket]) extends Actor with ActorLogging {
+class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(1 seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
-    val sinkIteratee: Iteratee[Unit, Unit] = Iteratee.ignore
+    val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     
-    val sendBackEnum: Enumeratee[DataPacket, Unit] = Enumeratee.map(data => parent ! data)
+    val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => {
+        // Get the actor ref and acutal data
+        val actorRef = dp.data.head("ref").asInstanceOf[ActorRef]
+        val newData = new DataPacket(dp.data.drop(1))
+        actorRef ! newData
+        newData
+    })
     enumerator |>> (processor compose sendBackEnum) &>> sinkIteratee
     
     def receive() = {
         case data: DataPacket => {
-            // When we get a data packet, we process it using our enumeratee
-            channel.push(data)
+            // We add the ActorRef to the datapacket because we need it later on
+            channel.push(new DataPacket(Map("ref" -> sender)::data.data))
         }
     }
 }
@@ -736,6 +777,8 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(1 seconds)
     
     var actors: List[ActorRef] = null
+    var merger: Method = null
+    var mergerClass: Any = null
     
     /**
      * Taken from dispatcher; recursively pipes Enumeratees
@@ -796,11 +839,15 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
             // Process config
             val pipelines = (config \ "processors").as[List[JsObject]]
             
+            // Set up the merger
+            val mergerProcClazz = Class.forName((config \ "merger").as[String])
+            mergerClass = mergerProcClazz.getConstructor().newInstance()
+            merger = mergerProcClazz.getDeclaredMethods.filter(m => m.getName == "merge").head
+            
             // For each pipeline, build the enumeratee
             actors = for (pipeline <- pipelines) yield {
-                val next = (pipeline \ "start").as[String]
-                val procs = (pipeline \ "processors").as[List[JsObject]]
-                
+                val start = (pipeline \ "start").as[String]
+                val procs = (pipeline \ "pipeline").as[List[JsObject]]
                 val processorMap = (for (processor <- procs) yield {
                     // Get all fields
                     val processorId = (processor \ "id").as[String]
@@ -820,7 +867,7 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
                 }).toMap
                 
                 // Build the processor pipeline for this generator
-                val processor = buildEnums(List(next), processorMap).head
+                val processor = buildEnums(List(start), processorMap).head
                 // Set up the actor that will execute this processor
                 Akka.system.actorOf(Props(classOf[ParallelProcessorActor], processor))
             }
@@ -833,9 +880,8 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
         val results = for (fut <- futs) yield
             Await.result(fut.mapTo[DataPacket], timeout.duration)
             
-        // TODO: Do the merge
-        
-        data
+        // Apply the merger
+        merger.invoke(mergerClass, results).asInstanceOf[DataPacket]
     })
     
 }

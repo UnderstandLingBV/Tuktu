@@ -23,6 +23,11 @@ lazy val socialDependencies = Seq(
     "com.googlecode.batchfb" % "batchfb" % "2.1.5"
 )
 
+lazy val nosqlDependencies = Seq(
+    "org.apache.kafka" %% "kafka" % "0.8.2-beta",
+    "org.reactivemongo" %% "reactivemongo" % "0.10.5.0.akka23"
+)
+
 lazy val coreDependencies = Seq(
     jdbc,
     anorm,
@@ -73,6 +78,17 @@ lazy val social = (project in file("modules/social"))
     .settings(EclipseKeys.skipParents in ThisBuild := false)
     .aggregate(api)
     .dependsOn(api)
+    
+lazy val nosql = (project in file("modules/nosql"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-nosql")
+    .settings(version := "0.1")
+    .settings(scalaVersion := "2.11.1")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= nosqlDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
+    .aggregate(api)
+    .dependsOn(api)
 
 lazy val root = project
     .in(file("."))
@@ -83,5 +99,5 @@ lazy val root = project
 	.settings(resolvers ++= appResolvers)
 	.settings(libraryDependencies ++= coreDependencies)
 	.settings(EclipseKeys.skipParents in ThisBuild := false)
-	.aggregate(api, nlp, csv, social)
-    .dependsOn(api, nlp, csv, social)
+	.aggregate(api, nlp, csv, social, nosql)
+    .dependsOn(api, nlp, csv, social, nosql)

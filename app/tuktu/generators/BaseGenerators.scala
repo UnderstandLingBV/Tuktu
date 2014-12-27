@@ -34,9 +34,14 @@ class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataP
  */
 class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(1 seconds)
-    
+
+    var init: Boolean = false
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
+    val actorRemovingEnumeratee: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => {
+        // First element in the list is the actor ref
+        new DataPacket(dp.data.drop(1))
+    })
     for (processor <- processors.drop(1))
         processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
     
@@ -44,30 +49,34 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         case config: JsValue => {}
         case sp: StopPacket => {
             // Send message to the monitor actor
-            try {
-                val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
-                val monActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef
-                
-                monActor ! new MonitorPacket(
-                        CompleteType, self.path.toStringWithoutAddress, "master", 1
-                )
-            } catch {
-                case e: TimeoutException => {} // skip
-                case e: NullPointerException => {}
+            val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
+            fut.onSuccess {
+                case ai: ActorIdentity => {
+                    ai.getRef ! new MonitorPacket(
+                            CompleteType, self.path.toStringWithoutAddress, "master", 1
+                    )
+                }
             }
             
             channel.eofAndEnd
             self ! PoisonPill
         }
         case dp: DataPacket => {
-            channel.push(dp)
+            if (!init) {
+                init = true
+                // Make an enumeratee that sends the packets back
+                val sendingEnumeratee: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => {
+                    // Get the actor ref and acutal data
+                    val actorRef = dp.data.head("ref").asInstanceOf[ActorRef]
+                    val newData = new DataPacket(dp.data.drop(1))
+                    actorRef ! newData
+                    newData
+                })
+                enumerator |>> (processors.head compose sendingEnumeratee) &>> sinkIteratee
+            }
             
-            // Make an enumeratee that sends the packets back
-            val sendingEnumeratee: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => {
-                sender ! dp
-                dp
-            })
-            enumerator |>> (processors.head compose sendingEnumeratee) &>> sinkIteratee
+            // We add the ActorRef to the datapacket because we need it later on
+            channel.push(new DataPacket(Map("ref" -> sender)::dp.data))
         }
     }
 }

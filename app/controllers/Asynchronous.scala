@@ -14,6 +14,7 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.mvc.Action
 import play.api.mvc.Controller
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Asynchronous extends Controller {
     implicit val timeout = Timeout(1 seconds)
@@ -23,16 +24,11 @@ object Asynchronous extends Controller {
      * @param id String The ID (name) of the config to fetch
      */
     def load(id: String) = Action {
-        // Dispatch for this user
-        try {
-	    	// Send this to our analytics async handler
-	    	val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
-            val dispActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef
-	    	dispActor ! new asyncDispatchRequest(id, None, false, false)
-	    } catch {
-    	    case e: TimeoutException => {} // skip
-    	    case e: NullPointerException => {}
-    	}
+    	// Send this to our analytics async handler
+    	val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
+        fut.onSuccess {
+            case ai: ActorIdentity => ai.getRef ! new asyncDispatchRequest(id, None, false, false)
+        }
         
         Ok("")
     }
@@ -42,20 +38,16 @@ object Asynchronous extends Controller {
      */
     def loadPost() = Action { implicit request =>
         // Dispatch for this user, with config given
-        try {
-            val jsonBody = request.body.asJson.getOrElse(null)
-            if (jsonBody != null) {
-                // Get the ID from the request
-                val id = (jsonBody \ "id").as[String]
-		    	// Send this to our analytics async handler
-		    	val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
-	            val dispActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef
-		    	dispActor ! new asyncDispatchRequest(id, Some(jsonBody), false, false)
+        val jsonBody = request.body.asJson.getOrElse(null)
+        if (jsonBody != null) {
+            // Get the ID from the request
+            val id = (jsonBody \ "id").as[String]
+	    	// Send this to our analytics async handler
+	    	val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
+            fut.onSuccess {
+                case ai: ActorIdentity => ai.getRef ! new asyncDispatchRequest(id, Some(jsonBody), false, false)
             }
-	    } catch {
-    	    case e: TimeoutException => {} // skip
-    	    case e: NullPointerException => {}
-    	}
+        }
 	    
         Ok("")
     }
