@@ -45,6 +45,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val query = BSONDocument((for (key <- queryJson.keys) yield {
                 key -> BSONString((queryJson \ key).as[String])
             }).toMap)
+            
             // Set up filter
             val filterJson = (config \ "filter").as[JsObject]
             val filter = BSONDocument((for (key <- filterJson.keys) yield {

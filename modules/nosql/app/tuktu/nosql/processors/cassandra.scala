@@ -1,2 +1,51 @@
 package tuktu.nosql.processors
 
+import tuktu.api._
+import play.api.libs.json.JsValue
+import play.api.libs.iteratee.Enumeratee
+import scala.concurrent.ExecutionContext.Implicits.global
+import tuktu.nosql.util.cassandra
+import scala.collection.JavaConversions._
+
+class CassandraProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var client: cassandra.client = null
+    var append = false
+    var query = ""
+    
+    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.onEOF(() => {
+        client.close
+    }) compose Enumeratee.map(data => {
+        if (client == null) {
+            // Get hostname
+            val address = (config \ "address").as[String]
+            // Initialize client
+            client = new cassandra.client(address)
+            
+            // Get the query
+            query = (config \ "query").as[String]
+            
+            // Append result or not?
+            append = (config \ "append").asOpt[Boolean].getOrElse(false)
+        }
+        
+        new DataPacket(for (datum <- data.data) yield {
+            // Evaluate query
+            val evalQuery = utils.evaluateTuktuString(query, datum)
+            
+            // See if we need to append the result
+            append match {
+                case false => {
+                    // No need for appending
+                    client.runQuery(evalQuery)
+                    datum
+                }
+                case true => {
+                    // Get the result and use it
+                    val res = client.runQuery(evalQuery).all
+                    
+                    datum + (resultName -> res)
+                }
+            }
+        })
+    })
+}
