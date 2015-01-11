@@ -1,5 +1,5 @@
-# Tuktu - Streaming Analytics Platform
-Tuktu is a streaming analytics platform with a number of core focus points.
+# Tuktu - Commodity Big Data Analytics
+Tuktu is a big data analytics platform with a core focus points.
 
 - Social analytics out-of-the-box 
 - Easy design of data processing pipeline
@@ -8,6 +8,8 @@ Tuktu is a streaming analytics platform with a number of core focus points.
 - Distributed computation
 - Easy integration with big data/NoSQL tooling
 - Easily extendable
+- Usage of platform is done using configurations rather than writing program code
+- Distributed functionality
 
 The name comes from the Inuït word *tuktu*, which freely translates to the English word *deer*.
 
@@ -40,7 +42,7 @@ Tuktu is set up in a modular way and is easily extended, provided some rules are
 - Every extension should be placed in the *modules* subfolder.
 - An extension can be a Play! project on its own, if it is required to use Play! libraries or to even add to the routing of Tuktu. If an extension is a Play! project, it must be of version 2.3.4 to prevent version conflicts.
 - Tuktu has a submodule named *api*. This provides bare-bones classes and utilities used in Tuktu. An extension should most likely depend on this submodule.
-- Package names should always start with the prefix `tuktu.`. It is good practice to place collections of typical processors in a `tuktu.processors` package and generators in a `tuktu.generators` package.
+- Package names should always start with the prefix `tuktu.`. It is good practice to place collections of typical processors in a `tuktu.[modulename].processors` package and generators in a `tuktu.[modulename].generators` package.
 - Dependencies and project configurations of the submodule should be defined at the root project level and only there.
 
 # Core Concepts
