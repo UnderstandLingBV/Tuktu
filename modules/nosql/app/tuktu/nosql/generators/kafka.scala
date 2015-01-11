@@ -9,7 +9,7 @@ import kafka.consumer.Consumer
 import kafka.consumer.ConsumerConfig
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
-import scala.actors.threadpool.Executors
+import java.util.concurrent.Executors
 
 class KafkaGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends AsyncGenerator(resultName, processors) {
     override def receive() = {

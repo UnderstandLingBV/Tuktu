@@ -22,6 +22,13 @@ lazy val socialDependencies = Seq(
 )
 
 lazy val nosqlDependencies = Seq(
+    jdbc,
+    anorm,
+    "mysql" % "mysql-connector-java" % "5.1.34",
+    "org.mariadb.jdbc" % "mariadb-java-client" % "1.1.7",
+    "com.h2database" % "h2" % "1.3.176",
+    "org.postgresql" % "postgresql" % "9.3-1102-jdbc41",
+    "org.xerial" % "sqlite-jdbc" % "3.8.7",
     "org.apache.kafka" %% "kafka" % "0.8.2-beta",
     "org.reactivemongo" %% "reactivemongo" % "0.10.5.0.akka23",
     "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.4"
@@ -112,5 +119,5 @@ lazy val root = project
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= coreDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
-    .aggregate(api, nlp, csv, social, nosql)
-    .dependsOn(api, nlp, csv, social, nosql)
+    .aggregate(api, nlp, csv, social, nosql, ml)
+    .dependsOn(api, nlp, csv, social, nosql, ml)

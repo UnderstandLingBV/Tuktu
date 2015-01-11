@@ -18,7 +18,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
     def MapReader[V](implicit vr: BSONDocumentReader[V]): BSONDocumentReader[Map[String, V]] = new BSONDocumentReader[Map[String, V]] {
         def read(bson: BSONDocument): Map[String, V] = {
             val elements = bson.elements.map { tuple =>
-                // assume that all values in the document are BSONDocuments
+                // Assume that all values in the document are BSONDocuments
                 tuple._1 -> vr.read(tuple._2.seeAsTry[BSONDocument].get)
             }
             elements.toMap

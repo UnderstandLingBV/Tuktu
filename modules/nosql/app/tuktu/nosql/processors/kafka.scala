@@ -17,9 +17,7 @@ import play.api.libs.json.Json
 class KafkaProcessor(resultName: String) extends BaseProcessor(resultName) {
     var producer: Producer[String, String] = null
     
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.onEOF(() => {
-        producer.close
-    }) compose Enumeratee.map(data => {
+    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Initialize producer
         if (producer == null) {
             // Kafka properties
@@ -44,5 +42,7 @@ class KafkaProcessor(resultName: String) extends BaseProcessor(resultName) {
         }
         
         data
+    }) compose Enumeratee.onEOF(() => {
+        producer.close
     })
 }

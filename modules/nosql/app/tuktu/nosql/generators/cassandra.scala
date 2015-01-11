@@ -20,6 +20,8 @@ class CassandraGenerator(resultName: String, processors: List[Enumeratee[DataPac
 
             // Get the query
             val query = (config \ "query").as[String]
+            // Do we need to flatten or not?
+            val flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
 
             // Run the query
             executionType match {
@@ -27,8 +29,10 @@ class CassandraGenerator(resultName: String, processors: List[Enumeratee[DataPac
                     val rows = client.runQuery(query)
 
                     // Go over the rows and push them
-                    for (row <- rows)
-                        channel.push(new DataPacket(List(Map(resultName -> row))))
+                    for (row <- rows) flatten match {
+                        case true => channel.push(new DataPacket(List(cassandra.rowToMap(row))))
+                        case false => channel.push(new DataPacket(List(Map(resultName -> cassandra.rowToMap(row)))))
+                    }
                 }
             }
             

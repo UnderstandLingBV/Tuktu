@@ -145,9 +145,9 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                 case Some(cfg) => cfg
                 case None => {
                     val configFile = scala.io.Source.fromFile(configRepo + "/" + dr.configName + ".json", "utf-8")
-		            val cfg = Json.parse(configFile.mkString).as[JsObject]
-		            configFile.close
-		            cfg
+                    val cfg = Json.parse(configFile.mkString).as[JsObject]
+                    configFile.close
+                    cfg
                 }
             }
 
