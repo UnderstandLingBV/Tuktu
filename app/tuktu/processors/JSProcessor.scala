@@ -7,13 +7,18 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.JsString
 import tuktu.api._
+import scala.concurrent.Future
 
 class JSProcessor(resultName: String) extends BaseProcessor(resultName) {
-	override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-	    new DataPacket(for (datum <- data.data) yield {
-	        // Get the JS from the config
-		    val js = (config \ "js").as[JsString]
-	        datum + (resultName -> js.value)
-	    })
+    var js = ""
+    
+    override def initialize(config: JsValue) = {
+        js = (config \ "js").as[String]
+    }
+    
+	override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+	    Future {new DataPacket(for (datum <- data.data) yield {
+	        datum + (resultName -> js)
+	    })}
     })
 }

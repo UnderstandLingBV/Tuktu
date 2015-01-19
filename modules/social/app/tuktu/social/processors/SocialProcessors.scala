@@ -11,13 +11,23 @@ import org.scribe.builder.api.FacebookApi
 import org.scribe.model.Token
 import org.scribe.model.OAuthRequest
 import org.scribe.model.Verb
+import scala.concurrent.Future
 
 /**
  * When a tweet is being searched for on the stream using a combination of filters, this processors will append to the data
  * those filters that actually caused a hit for this tweet
  */
 class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    // Get name of the field in which the Twitter object is
+    var objField = ""
+    // Get the actual tags
+    var tags: JsObject = Json.obj()
+    var keywords: Option[List[String]] = None
+    var users: Option[List[String]] = None
+    var geos: Option[List[String]] = None
+    var excludeOnNone = false
+    
+    override def initialize(config: JsValue) = {
         // Get name of the field in which the Twitter object is
         val objField = (config \ "object_field").as[String]
         // Get the actual tags
@@ -26,8 +36,10 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
         val users = (tags \ "users").asOpt[List[String]]
         val geos = (tags \ "geos").asOpt[List[String]]
         val excludeOnNone = (config \ "exclude_on_none").asOpt[Boolean].getOrElse(false)
-        
-        new DataPacket(for {
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for {
             datum <- data.data
             
             tweet = datum(objField).asInstanceOf[JsObject]
@@ -85,7 +97,7 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
         } yield {
             // Append the tags
             datum + (resultName -> tags)
-        })
+        })}
     })
 }
 
@@ -93,7 +105,15 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
  * Does the tagging for a Facebook-originated object
  */
 class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    // Get name of the field in which the Twitter object is
+    var objField = ""
+    // Get the actual tags
+    var excludeOnNone = false
+    var tags: JsObject = Json.obj()
+    var keywords: Option[List[String]] = None
+    var users: Option[List[String]] = None
+    
+    override def initialize(config: JsValue) = {
         // Get name of the field in which the Twitter object is
         val objField = (config \ "object_field").as[String]
         // Get the actual tags
@@ -101,8 +121,10 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
         val keywords = (tags \ "keywords").asOpt[List[String]]
         val users = (tags \ "users").asOpt[List[String]]
         val excludeOnNone = (config \ "exclude_on_none").as[Boolean]
-        
-        new DataPacket(for {
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for {
             datum <- data.data
             
             item = datum(objField).asInstanceOf[JsObject]
@@ -148,7 +170,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
             if (!excludeOnNone || !none)
         } yield {
 	        datum + (resultName -> tags)
-        })
+        })}
     })
 }
 
@@ -158,35 +180,39 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
 class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fbClient: OAuthService = null
     var accessToken: Token = null
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        // Initialize client
-        if (fbClient == null) {
-            // Get credentials
-            val consumerKey = (config \ "consumer_key").as[String]
-            val consumerSecret = (config \ "consumer_secret").as[String]
-            val token = (config \ "access_token").as[String] 
-            fbClient = new ServiceBuilder()
-            	.provider(classOf[FacebookApi])
-                .apiKey(consumerKey)
-                .apiSecret(consumerSecret)
-                .callback("http://localhost/")
-                .build()
-            accessToken = new Token(token, "")  
-        }
+    
+    var url = ""
+    var httpMethod = Verb.GET
+    
+    override def initialize(config: JsValue) = {
+        // Set up FB client
+        val consumerKey = (config \ "consumer_key").as[String]
+        val consumerSecret = (config \ "consumer_secret").as[String]
+        val token = (config \ "access_token").as[String] 
+        fbClient = new ServiceBuilder()
+            .provider(classOf[FacebookApi])
+            .apiKey(consumerKey)
+            .apiSecret(consumerSecret)
+            .callback("http://localhost/")
+            .build()
+        accessToken = new Token(token, "")
         
         // Get the URL 
-        val url = (config \ "url").as[String]
-        // URLs cannot contains spaces, as such, anything surrounded by spaces can be replaced by a value present in our data
-        val components = url.split(" ")
-        val httpMethod = {
+        url = (config \ "url").as[String]
+        httpMethod = {
             (config \ "http_method").asOpt[String].getOrElse("get") match {
                 case "post" => Verb.POST
                 case _ => Verb.GET
             }
-            
         }
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         
-        new DataPacket(for (datum <- data.data) yield {
+        // URLs cannot contains spaces, as such, anything surrounded by spaces can be replaced by a value present in our data
+        val components = url.split(" ")
+        
+        Future {new DataPacket(for (datum <- data.data) yield {
 	        // Replace all fields by their value
 	        val replacedUrl = (for (component <- components) yield {
 	            // Only do something if this is surrounded by [ and ]
@@ -205,6 +231,6 @@ class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName
             val jsonResult = Json.parse(response.getBody)
 	        
 	        datum + (resultName -> jsonResult)
-        })
+        })}
     })
 }

@@ -2,24 +2,30 @@ package tuktu.nlp
 
 import scala.collection.JavaConversions.mapAsScalaMap
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import nl.et4it._
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
+import scala.concurrent.Future
+import play.api.libs.json.JsNull
 
 /**
  * Tokenizes a piece of data
  */
 class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    var fieldName = ""
+    var asString = false
+    
+    override def initialize(config: JsValue) = {
         // Get fields
-        val fieldName = (config \ "field").as[String]
-        val asString = (config \ "as_string").asOpt[Boolean].getOrElse(false)
-        
-        new DataPacket(for (datum <- data.data) yield {
+        fieldName = (config \ "field").as[String]
+        asString = (config \ "as_string").asOpt[Boolean].getOrElse(false)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             // Tokenize
             val fieldValue = {
                 if (datum(fieldName).isInstanceOf[JsString]) datum(fieldName).asInstanceOf[JsString].value
@@ -32,7 +38,7 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
                 datum + (resultName -> tokens.mkString(" "))
             else
                 datum + (resultName -> tokens)
-        })
+        })}
     })
 }
 
@@ -40,11 +46,18 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
  * Performs language detection
  */
 class LIGAProcessor(resultName: String) extends BaseProcessor(resultName) {
+    // LIGA has only one model
     var liga = new LIGA()
     liga.loadModel()
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        val fieldName = (config \ "field").as[String]
-        new DataPacket(for (datum <- data.data) yield {
+    
+    var fieldName = ""
+    
+    override def initialize(config: JsValue) = {
+        fieldName = (config \ "field").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             // Get the field on which we should perform the language detection
             val text = {
                 if (datum(fieldName).isInstanceOf[JsString]) datum(fieldName).asInstanceOf[JsString].value
@@ -54,7 +67,7 @@ class LIGAProcessor(resultName: String) extends BaseProcessor(resultName) {
             val language = liga.classify(text)
         
             datum + (resultName -> language)
-        })
+        })}
     })
 }
 
@@ -63,11 +76,19 @@ class LIGAProcessor(resultName: String) extends BaseProcessor(resultName) {
  */
 class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var taggers = scala.collection.mutable.Map[String, POSWrapper]()
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        val langSpec = (config \ "language").as[JsValue]
-        val lang = (langSpec \ "field").asOpt[String]
-        
-        new DataPacket(for (datum <- data.data) yield {
+    
+    var langSpec: JsValue = JsNull
+    var lang: Option[String] = None
+    var tokens = ""
+    
+    override def initialize(config: JsValue) = {
+        langSpec = (config \ "language").as[JsValue]
+        lang = (langSpec \ "field").asOpt[String]
+        tokens = (config \ "tokens").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             // Get the language, either fixed or from a data field
             val language = {
                 lang match {
@@ -82,7 +103,7 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
                 }
             }
             // Get the tokens
-            val tokens = datum((config \ "tokens").as[String]).asInstanceOf[Array[String]]
+            val tkns = datum(tokens).asInstanceOf[Array[String]]
             
             // See if the tagger is already loaded
             if (!taggers.contains(language)) {
@@ -90,9 +111,9 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
                 taggers += language -> tagger
             }
             // Tag it
-            val posTags = taggers(language).tag(tokens)
+            val posTags = taggers(language).tag(tkns)
         
             datum + (resultName -> posTags)
-        })
+        })}
     })
 }

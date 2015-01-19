@@ -6,27 +6,28 @@ import play.api.libs.iteratee.Enumeratee
 import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.nosql.util.cassandra
 import scala.collection.JavaConversions._
+import scala.concurrent.Future
 
 class CassandraProcessor(resultName: String) extends BaseProcessor(resultName) {
     var client: cassandra.client = null
     var append = false
     var query = ""
     
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        if (client == null) {
-            // Get hostname
-            val address = (config \ "address").as[String]
-            // Initialize client
-            client = new cassandra.client(address)
-            
-            // Get the query
-            query = (config \ "query").as[String]
-            
-            // Append result or not?
-            append = (config \ "append").asOpt[Boolean].getOrElse(false)
-        }
+    override def initialize(config: JsValue) = {
+        // Get hostname
+        val address = (config \ "address").as[String]
+        // Initialize client
+        client = new cassandra.client(address)
         
-        new DataPacket(for (datum <- data.data) yield {
+        // Get the query
+        query = (config \ "query").as[String]
+        
+        // Append result or not?
+        append = (config \ "append").asOpt[Boolean].getOrElse(false)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             // Evaluate query
             val evalQuery = utils.evaluateTuktuString(query, datum)
             
@@ -44,7 +45,7 @@ class CassandraProcessor(resultName: String) extends BaseProcessor(resultName) {
                     datum + (resultName -> res)
                 }
             }
-        })
+        })}
     }) compose Enumeratee.onEOF(() => {
         client.close
     })

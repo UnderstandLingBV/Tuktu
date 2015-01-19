@@ -11,12 +11,13 @@ import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import play.api.libs.json.JsString
 import java.io.BufferedWriter
+import scala.concurrent.Future
 
 /**
  * Converts all fields to CSV
  */
 class CSVProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         // Set up writer
         val sw = new StringWriter
         val csvWriter = new CSVWriter(sw, ',', '"', '\\', "")
@@ -33,7 +34,7 @@ class CSVProcessor(resultName: String) extends BaseProcessor(resultName) {
         csvWriter.close
         sw.close
         
-        new DataPacket(newData)
+        Future {new DataPacket(newData)}
     })
 }
 
@@ -43,18 +44,19 @@ class CSVProcessor(resultName: String) extends BaseProcessor(resultName) {
 class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var writer: CSVWriter = null
     var wroteHeaders = false
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        // See if we need to initialize the buffered writer
-       if (writer == null) {
-           // Get the location of the file to write to
-           val fileName = (config \ "file_name").as[String]
-           val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
+    var fields: Option[List[String]] = None
+    
+    override def initialize(config: JsValue) = {
+        // Get the location of the file to write to
+        val fileName = (config \ "file_name").as[String]
+        val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
 
-           writer = new CSVWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding)), ';', '"', '\\')
-       }
-       // See if fields are specified
-       val fields = (config \ "fields").asOpt[List[String]]
-
+        writer = new CSVWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding)), ';', '"', '\\')
+        
+        fields = (config \ "fields").asOpt[List[String]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Convert data to CSV
         for (datum <- data.data) {
             // Write out headers
@@ -85,7 +87,7 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
             }
         }
         
-        data
+        Future {data}
     }) compose Enumeratee.onEOF(() => {
         writer.flush
         writer.close

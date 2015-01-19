@@ -57,6 +57,17 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
     }
     
     /**
+     * Definition of a processor
+     */
+    case class ProcessorDefinition(
+            id: String,
+            name: String,
+            config: JsObject,
+            resultName: String,
+            next: List[String]
+    )
+    
+    /**
      * Enumeratee for error-logging and handling
      */
     def logEnumeratee[T] = Enumeratee.recover[T] {
@@ -66,9 +77,9 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
      * Monitoring enumeratee
      */
     def monitorEnumeratee(generatorName: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
-        Enumeratee.map(data => {
+        Enumeratee.mapM(data => {
             monitorActor ! new MonitorPacket(mpType, generatorName, branch, data.data.size)
-            data
+            Future {data}
         })
     }
 
@@ -79,7 +90,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
      */
     def buildEnums (
             nextId: List[String],
-            processorMap: Map[String, (Enumeratee[DataPacket, DataPacket], List[String])],
+            processorMap: Map[String, ProcessorDefinition],
             monitorName: String
     ): List[Enumeratee[DataPacket, DataPacket]] = {
         /**
@@ -102,22 +113,143 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     }
                     case id::List() => {
                         // This is just a pipeline, get the processor
-                        val proc = processorMap(id)
+                        val pd = processorMap(id)
                         
-                        buildEnumsHelper(proc._2, {
-                            if (accum.isEmpty) List(proc._1)
-                            else accum.map(enum => enum compose proc._1)
-                        }, iterationCount + 1)
+                        // Initialize the processor
+                        val procClazz = Class.forName(pd.name)
+                        // Check if this processor is a bufferer
+                        if (classOf[BufferProcessor].isAssignableFrom(procClazz)) {
+                            /*
+                             * Bufferer processor, we pass on an actor that can take up the datapackets with the regular
+                             * flow and cut off regular flow for now
+                             */
+                            
+                            // Get sync or not
+                            val sync = (pd.config \ "sync").asOpt[Boolean].getOrElse(false)
+                            // Create generator
+                            val generator = sync match {
+                                case true => {
+                                    Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
+                                        buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1)
+                                    ))
+                                }
+                                case false => {
+                                    Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
+                                        buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1)
+                                    ))
+                                }
+                            }
+                            
+                            // Instantiate the processor now
+                            val iClazz = procClazz.getConstructor(
+                                    classOf[ActorRef],
+                                    classOf[String]
+                            ).newInstance(
+                                    generator,
+                                    pd.resultName
+                            )
+                        
+                            // Initialize the processor first
+                            try {
+                                val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                                initMethod.invoke(iClazz, pd.config).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                            } catch {
+                                case e: NoSuchElementException => {}
+                            }
+                            
+                            // Add method to all our entries so far
+                            val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
+                            accum.map(enum => method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]])
+                        }
+                        else {
+                            val iClazz = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
+                        
+                            // Initialize the processor first
+                            try {
+                                val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                                initMethod.invoke(iClazz, pd.config).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                            } catch {
+                                case e: NoSuchElementException => {}
+                            }
+                            
+                            val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
+                            val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                            
+                            // Recurse
+                            buildEnumsHelper(pd.next, {
+                                if (accum.isEmpty) List(procEnum)
+                                else accum.map(enum => enum compose procEnum)
+                            }, iterationCount + 1)
+                        }
                     }
                     case nextList => {
                         // We have a branch here and need to expand the list of processors
                         (for (id <- nextList) yield {
-                            val proc = processorMap(id)
+                            val pd = processorMap(id)
                             
-                            buildEnumsHelper(proc._2, {
-        	                    if (accum.isEmpty) List(proc._1)
-        	                    else accum.map(enum => enum compose proc._1)
-        	                }, iterationCount + 1)
+                            // Initialize the processor
+                            val procClazz = Class.forName(pd.name)
+                            // Check if this processor is a bufferer
+                            if (classOf[BufferProcessor].isAssignableFrom(procClazz)) {
+                                /*
+                                 * Bufferer processor, we pass on an actor that can take up the datapackets with the regular
+                                 * flow and cut off regular flow for now
+                                 */
+                                
+                                // Get sync or not
+                                val sync = (pd.config \ "sync").asOpt[Boolean].getOrElse(false)
+                                // Create generator
+                                val generator = sync match {
+                                    case true => {
+                                        Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
+                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1)
+                                        ))
+                                    }
+                                    case false => {
+                                        Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
+                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1)
+                                        ))
+                                    }
+                                }
+                                
+                                // Instantiate the processor now
+                                val iClazz = procClazz.getConstructor(
+                                        classOf[ActorRef],
+                                        classOf[String]
+                                ).newInstance(
+                                        generator,
+                                        pd.resultName
+                                )
+                            
+                                // Initialize the processor first
+                                try {
+                                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                                    initMethod.invoke(iClazz, pd.config).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                                } catch {
+                                    case e: NoSuchElementException => {}
+                                }
+                                
+                                // Add method to all our entries so far
+                                val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
+                                accum.map(enum => method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]])
+                            }
+                            else {
+                                val iClazz = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
+                            
+                                // Initialize the processor first
+                                try {
+                                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                                    initMethod.invoke(iClazz, pd.config).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                                } catch {
+                                    case e: NoSuchElementException => {}
+                                }
+                                
+                                val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
+                                val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                                
+                                // Recurse
+                                buildEnumsHelper(pd.next, accum.map(enum => enum compose procEnum), iterationCount + 1)
+                            }
                         }).flatten
                     }
                 }
@@ -138,6 +270,36 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
         }
     }
     
+    /**
+     * Builds the processor map
+     */
+    def buildProcessorMap(processors: List[JsObject]) = {
+        // Get all processors
+        (for (processor <- processors) yield {
+            // Get all fields
+            val processorId = (processor \ "id").as[String]
+            val processorName = (processor \ "name").as[String]
+            val processorConfig = (processor \ "config").as[JsObject]
+            val resultName = (processor \ "result").as[String]
+            val next = (processor \ "next").as[List[String]]
+            
+            // Create processor definition
+            val procDef = new ProcessorDefinition(
+                    processorId,
+                    processorName,
+                    processorConfig,
+                    resultName,
+                    next
+            )
+            
+            // Return map
+            processorId -> procDef
+        }).toMap
+    }
+    
+    /**
+     * Receive function that does all the magic
+     */
     def receive() = {
         case dr: asyncDispatchRequest => {
             // Get config
@@ -150,6 +312,9 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     cfg
                 }
             }
+            
+            // Start local actor, get all data processors
+            val processorMap = buildProcessorMap((config \ "processors").as[List[JsObject]])
 
             // Get the data generators
             val generators = (config \ "generators").as[List[JsObject]]
@@ -188,26 +353,6 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     }
                 } else {
                     if (!startRemotely) {
-                        // Start local actor, get all data processors
-                        val processors = (config \ "processors").as[List[JsObject]]
-                        val processorMap = (for (processor <- processors) yield {
-                            // Get all fields
-                            val processorId = (processor \ "id").as[String]
-                            val processorName = (processor \ "name").as[String]
-                            val processorConfig = (processor \ "config").as[JsObject]
-                            val resultName = (processor \ "result").as[String]
-                            val next = (processor \ "next").as[List[String]]
-                            
-                            // Instantiate processor
-                            val procClazz = Class.forName(processorName)
-                            val iClazz = procClazz.getConstructor(classOf[String]).newInstance(resultName)
-                            val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
-                            val proc = method.invoke(iClazz, processorConfig).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
-                            
-                            // Return map
-                            processorId -> (proc, next)
-                        }).toMap
-                        
                         // Build the processor pipeline for this generator
                         val processorEnumeratee = buildEnums(next, processorMap, dr.configName + "/" + generatorName)
                         
@@ -289,24 +434,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                 } else {
                     if (!startRemotely) {
                         // Get all data processors
-                        val processors = (config \ "processors").as[List[JsObject]]
-                        val processorMap = (for (processor <- processors) yield {
-                            // Get all fields
-                            val processorId = (processor \ "id").as[String]
-                            val processorName = (processor \ "name").as[String]
-                            val processorConfig = (processor \ "config").as[JsObject]
-                            val resultName = (processor \ "result").as[String]
-                            val next = (processor \ "next").as[List[String]]
-                            
-                            // Instantiate processor
-                            val procClazz = Class.forName(processorName)
-                            val iClazz = procClazz.getConstructor(classOf[String]).newInstance(resultName)
-                            val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
-                            val proc = method.invoke(iClazz, processorConfig).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
-                            
-                            // Return map
-                            processorId -> (proc, next)
-                        }).toMap
+                        val processorMap = buildProcessorMap((config \ "processors").as[List[JsObject]])
                         
                         // Build the processor pipeline for this generator
                         val processorEnumeratee = buildEnums(next, processorMap, dr.configName  + "/" + generatorName)

@@ -2,7 +2,6 @@ package tuktu.api
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-
 import akka.actor.Actor
 import akka.actor.ActorIdentity
 import akka.actor.ActorLogging
@@ -17,6 +16,7 @@ import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsValue
+import akka.actor.ActorRef
 
 case class DataPacket(
         data: List[Map[String, Any]]
@@ -45,8 +45,11 @@ case class MonitorPacket(
 case class MonitorOverviewPacket()
 
 abstract class BaseProcessor(resultName: String) {
-    def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = ???
+    def initialize(config: JsValue): Unit = {}
+    def processor(): Enumeratee[DataPacket, DataPacket] = ???
 }
+
+abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends BaseProcessor(resultName: String) {}
 
 abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(1 seconds)

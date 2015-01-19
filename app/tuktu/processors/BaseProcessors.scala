@@ -3,11 +3,9 @@ package tuktu.processors
 import java.io._
 import java.lang.reflect.Method
 import java.util.concurrent.TimeoutException
-
-import scala.concurrent.Await
+import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
@@ -21,15 +19,21 @@ import play.api.libs.iteratee.Iteratee
 import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import tuktu.api._
+import java.text.SimpleDateFormat
 
 /**
  * Filters specific fields from the data tuple
  */
 class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    var fieldList = List[JsObject]()
+    
+    override def initialize(config: JsValue) = {
         // Find out which fields we should extract
-        val fieldList = (config \ "fields").as[List[JsObject]]
-        new DataPacket(for (datum <- data.data) yield {
+        fieldList = (config \ "fields").as[List[JsObject]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             val newData = (for {
                     fieldItem <- fieldList
                     default = (fieldItem \ "default").asOpt[JsValue]
@@ -46,7 +50,7 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
             }).toMap
             
             newData
-        })
+        })}
     })
 }
 
@@ -54,10 +58,15 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
  * Gets a JSON Object and fetches a single field to put it as top-level citizen of the data
  */
 class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    var fieldList = List[JsObject]()
+    
+    override def initialize(config: JsValue) = {
         // Find out which fields we should extract
-        val fieldList = (config \ "fields").as[List[JsObject]]
-        new DataPacket(for (datum <- data.data) yield {
+        fieldList = (config \ "fields").as[List[JsObject]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             val newData = (for {
                     fieldItem <- fieldList
                     default = (fieldItem \ "default").asOpt[JsValue]
@@ -74,7 +83,7 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
             }).toMap
             
             datum ++ newData
-        })
+        })}
     })
 }
 
@@ -82,14 +91,14 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
  * Renames a single field
  */
 class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fieldList: List[JsObject] = null
+    var fieldList = List[JsObject]()
     
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        new DataPacket(for (datum <- data.data) yield {
-            if (fieldList == null) {
-    	        // Find out which fields we should extract
-    	        fieldList = (config \ "fields").as[List[JsObject]]
-            }
+    override def initialize(config: JsValue) = {
+        fieldList = (config \ "fields").as[List[JsObject]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
 	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
 	        for {
 	                field <- fieldList
@@ -103,7 +112,7 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
 	        }
 	        
 	        mutableDatum.toMap
-        })
+        })}
     })
 }
 
@@ -111,20 +120,21 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
     var expression: String = null
     var expressionType: String = null
     var andOr: String = null
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        if (expression == null) {
-            // Get the groovy expression that determines whether to include or exclude
-            expression = (config \ "expression").as[String]
-            // See if this is a simple or groovy expression
-            expressionType = (config \ "type").as[String]
-            // Set and/or
-            andOr = (config \ "and_or").asOpt[String] match {
-                case Some("or") => "or"
-                case _ => "and"
-            }
+    
+    override def initialize(config: JsValue) = {
+        // Get the groovy expression that determines whether to include or exclude
+        expression = (config \ "expression").as[String]
+        // See if this is a simple or groovy expression
+        expressionType = (config \ "type").as[String]
+        // Set and/or
+        andOr = (config \ "and_or").asOpt[String] match {
+            case Some("or") => "or"
+            case _ => "and"
         }
-        
-        new DataPacket(for {
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for {
                 datum <- data.data
                 // See if we need to include this
                 include = expressionType match {
@@ -166,7 +176,7 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
                 if (include)
         } yield {
             datum
-        })
+        })}
     })
 }
 
@@ -174,13 +184,16 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
  * Adds a field with a constant (static) value
  */
 class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        // Get the value for the field
-        val value = (config \ "value").as[JsString].value
-        
-        new DataPacket(for (datum <- data.data) yield {
+    var value = ""
+    
+    override def initialize(config: JsValue) = {
+        value = (config \ "value").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
 	        datum + (resultName -> value.toString)
-        })
+        })}
     })
 }
 
@@ -188,11 +201,11 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
  * Dumps the data to console
  */
 class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         data.data.foreach(datum => datum.foreach(dat => println(dat._1 + " -- " + dat._2)))
         println
         
-        data
+        Future {data}
     })
 }
 
@@ -200,11 +213,13 @@ class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultNam
  * Implodes an array into a string
  */
 class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        // Get the field
-        val fieldList = (config \ "fields").as[List[JsObject]]
-        
-        new DataPacket(for (datum <- data.data) yield {
+    var fieldList = List[JsObject]()
+    override def initialize(config: JsValue) = {
+        fieldList = (config \ "fields").as[List[JsObject]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             // Find out which fields we should extract
 	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
 	        for (fieldObject <- fieldList) {
@@ -228,7 +243,7 @@ class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
 	            mutableDatum += field -> value.mkString(sep)
 	        }
 	        mutableDatum.toMap
-        })
+        })}
     })
 }
 
@@ -236,11 +251,14 @@ class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
  * Implodes an array  of JSON object-fields into a string
  */
 class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        // Get the field
-        val fieldList = (config \ "fields").as[List[JsObject]]
-        
-        new DataPacket(for (datum <- data.data) yield {
+    var fieldList = List[JsObject]()
+    
+    override def initialize(config: JsValue) = {
+        fieldList = (config \ "fields").as[List[JsObject]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             // Find out which fields we should extract
 	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
 	        for (fieldObject <- fieldList) {
@@ -263,7 +281,7 @@ class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(result
 	            mutableDatum += field -> gluedValue
 	        }
 	        mutableDatum.toMap
-        })
+        })}
     })
 }
 
@@ -289,12 +307,17 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
         }).toList.foldLeft(Map[String, Any]())(_ ++ _)
     }
     
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    var fieldList = List[String]()
+    var separator = ""
+    
+    override def initialize(config: JsValue) = {
         // Get the field to flatten
-        val fieldList = (config \ "fields").as[List[String]]
-        val separator = (config \ "separator").as[String]
-        
-        new DataPacket(for (datum <- data.data) yield {
+        fieldList = (config \ "fields").as[List[String]]
+        separator = (config \ "separator").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             // Find out which fields we should extract
 	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
 	        for (fieldName <- fieldList) {
@@ -314,6 +337,29 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
 	            mutableDatum ++= value
 	        }
 	        mutableDatum.toMap
-        })
+        })}
+    })
+}
+
+/**
+ * Adds a simple timestamp to the data packet
+ */
+class TimestampAdderProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var format: String = ""
+    
+    override def initialize(config: JsValue) = {
+        format = (config \ "format").asOpt[String].getOrElse("")
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {new DataPacket(for (datum <- data.data) yield {
+            format match {
+                case "" => datum + (resultName -> System.currentTimeMillis)
+                case _ => {
+                    val dateFormat = new SimpleDateFormat(format)
+                    datum + (resultName -> dateFormat.format(System.currentTimeMillis))
+                }
+            }
+        })}
     })
 }

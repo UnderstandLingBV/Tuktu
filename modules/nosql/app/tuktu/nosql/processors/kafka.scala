@@ -10,30 +10,33 @@ import play.api.libs.json.JsObject
 import java.util.Properties
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.Json
+import scala.concurrent.Future
 
 /**
  * Kafka producer
  */
 class KafkaProcessor(resultName: String) extends BaseProcessor(resultName) {
     var producer: Producer[String, String] = null
+    var keyField = ""
     
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+    override def initialize(config: JsValue) = {
+        // Kafka properties
+        val props = new Properties()
+        val kafkaProps = (config \ "kafka_props").as[JsObject]
+        for (key <- kafkaProps.keys) 
+            props.put(key, (kafkaProps \ key).as[String])
+            
         // Initialize producer
-        if (producer == null) {
-            // Kafka properties
-            val props = new Properties()
-            val kafkaProps = (config \ "kafka_props").as[JsObject]
-            for (key <- kafkaProps.keys) 
-                props.put(key, (kafkaProps \ key).as[String])
-                
-            // Initialize producer
-            producer = new Producer[String, String](new ProducerConfig(props))
-        }
+        producer = new Producer[String, String](new ProducerConfig(props))
         
+        (config \ "key_field").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Send the data to kafka
         for (datum <- data.data) {
             // Get the key
-            val key = datum((config \ "key_field").as[String]).toString
+            val key = datum(keyField).toString
             // Serialize datum
             val datumJson = Json.toJson(datum.map(elem => elem._1 -> elem._2.toString))
             
@@ -41,7 +44,7 @@ class KafkaProcessor(resultName: String) extends BaseProcessor(resultName) {
             producer.send(message)
         }
         
-        data
+        Future {data}
     }) compose Enumeratee.onEOF(() => {
         producer.close
     })

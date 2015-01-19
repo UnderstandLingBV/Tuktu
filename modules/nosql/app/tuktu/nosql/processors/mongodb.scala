@@ -1,14 +1,17 @@
 package tuktu.nosql.processors
 
-import tuktu.api._
-import play.api.libs.json.JsValue
-import play.api.libs.iteratee.Enumeratee
 import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsValue
+import tuktu.api._
+import scala.concurrent.Future
 
 class MongoDBProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    override def initialize(config: JsValue) = {
         
-        
-        data
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        Future {data}
     })
 }

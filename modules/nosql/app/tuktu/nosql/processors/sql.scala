@@ -7,29 +7,30 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import java.sql._
 import anorm._
 import tuktu.nosql.util.sql
+import scala.concurrent.Future
 
 class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var client: sql.client = null
     var append = false
     var query = ""
     
-    override def processor(config: JsValue): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        if (client == null) {
-            // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
-            val url = (config \ "url").as[String]
-            val user = (config \ "user").as[String]
-            val password = (config \ "password").as[String]
-            val driver = (config \ "driver").as[String]
-            query = (config \ "query").as[String]
-            
-            // Set up the client
-            client = new sql.client(url, user, password, driver)
-            
-            // Append result or not?
-            append = (config \ "append").asOpt[Boolean].getOrElse(false)
-        }
+    override def initialize(config: JsValue) = {
+        // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
+        val url = (config \ "url").as[String]
+        val user = (config \ "user").as[String]
+        val password = (config \ "password").as[String]
+        val driver = (config \ "driver").as[String]
+        query = (config \ "query").as[String]
         
-        new DataPacket(for (datum <- data.data) yield {
+        // Set up the client
+        client = new sql.client(url, user, password, driver)
+        
+        // Append result or not?
+        append = (config \ "append").asOpt[Boolean].getOrElse(false)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        Future {new DataPacket(for (datum <- data.data) yield {
             // Evaluate query
             val evalQuery = utils.evaluateTuktuString(query, datum)
             
@@ -47,7 +48,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                     datum + (resultName -> res)
                 }
             }
-        })
+        })}
     }) compose Enumeratee.onEOF(() => {
         client.close
     })
