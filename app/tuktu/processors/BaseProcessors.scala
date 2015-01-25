@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Find out which fields we should extract
         fieldList = (config \ "fields").as[List[JsObject]]
     }
@@ -60,7 +60,7 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
 class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Find out which fields we should extract
         fieldList = (config \ "fields").as[List[JsObject]]
     }
@@ -93,7 +93,7 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
 class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         fieldList = (config \ "fields").as[List[JsObject]]
     }
     
@@ -121,7 +121,7 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
     var expressionType: String = null
     var andOr: String = null
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get the groovy expression that determines whether to include or exclude
         expression = (config \ "expression").as[String]
         // See if this is a simple or groovy expression
@@ -186,7 +186,7 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
 class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var value = ""
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         value = (config \ "value").as[String]
     }
     
@@ -202,8 +202,8 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
  */
 class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        data.data.foreach(datum => datum.foreach(dat => println(dat._1 + " -- " + dat._2)))
-        println
+        // Print data as a block
+        println(data + "\r\n")
         
         Future {data}
     })
@@ -214,7 +214,7 @@ class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultNam
  */
 class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         fieldList = (config \ "fields").as[List[JsObject]]
     }
     
@@ -253,7 +253,7 @@ class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
 class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         fieldList = (config \ "fields").as[List[JsObject]]
     }
     
@@ -310,7 +310,7 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[String]()
     var separator = ""
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get the field to flatten
         fieldList = (config \ "fields").as[List[String]]
         separator = (config \ "separator").as[String]
@@ -347,7 +347,7 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
 class TimestampAdderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var format: String = ""
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         format = (config \ "format").asOpt[String].getOrElse("")
     }
     

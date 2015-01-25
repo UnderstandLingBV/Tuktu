@@ -8,11 +8,12 @@ import play.api.libs.json.Json
 import play.api.libs.json.JsString
 import tuktu.api._
 import scala.concurrent.Future
+import play.api.libs.json.JsObject
 
 class JSProcessor(resultName: String) extends BaseProcessor(resultName) {
     var js = ""
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         js = (config \ "js").as[String]
     }
     

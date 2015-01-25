@@ -1,31 +1,35 @@
 package tuktu.processors
 
-import java.io._
 import java.lang.reflect.Method
 import java.util.concurrent.TimeoutException
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import akka.actor._
+import akka.actor.Actor
+import akka.actor.ActorIdentity
+import akka.actor.ActorLogging
+import akka.actor.ActorRef
+import akka.actor.Identify
+import akka.actor.PoisonPill
+import akka.actor.Props
+import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout
-import au.com.bytecode.opencsv.CSVWriter
-import groovy.util.Eval
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import play.api.libs.iteratee._
-import play.api.libs.json._
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import tuktu.api._
-import play.api.libs.iteratee.Iteratee
-import akka.actor.Actor
 import play.api.libs.iteratee.Concurrent
-import java.lang.reflect.Method
-import play.api.libs.concurrent.Akka
-import akka.actor.ActorRef
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.iteratee.Iteratee
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import akka.util.Timeout
-import scala.concurrent.Future
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import tuktu.api.BaseProcessor
+import tuktu.api.DataPacket
+import tuktu.api.StopPacket
+import controllers.ProcessorDefinition
+import play.api.libs.iteratee.Enumerator
 
 /**
  * Invokes a new generator
@@ -37,7 +41,7 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
     var fieldsToAdd: Option[List[JsObject]] = None
     var genConfig: JsObject = Json.obj()
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get the name of the config file
         nextName = (config \ "name").as[String]
         // See if we need to populate the config file
@@ -65,24 +69,14 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
                 val newConfig = genConfig ++ Json.toJson(mapToAdd).asInstanceOf[JsObject]
                 
                 // Invoke the new generator with custom config
-                try {
-                    val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
-                    val dispActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef
-                    dispActor ! new controllers.asyncDispatchRequest(nextName, Some(newConfig), false, false)
-                } catch {
-                    case e: TimeoutException => {} // skip
-                    case e: NullPointerException => {}
+                Akka.system.actorSelection("user/TuktuDispatcher") ! {
+                    new controllers.DispatchRequest(nextName, Some(newConfig), false, false, false, None)
                 }
             }
             case None => {
                 // Invoke the new generator, as-is
-                try {
-                    val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
-                    val dispActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef
-                    dispActor ! new controllers.asyncDispatchRequest(nextName, None, false, false)
-                } catch {
-                    case e: TimeoutException => {} // skip
-                    case e: NullPointerException => {}
+                val fut = Akka.system.actorSelection("user/TuktuDispatcher") ! {
+                    new controllers.DispatchRequest(nextName, None, false, false, false, None)
                 }
             }
         }
@@ -105,7 +99,6 @@ class SyncStreamForwarder() extends Actor with ActorLogging {
         case setup: (ActorRef, Boolean) => {
             remoteGenerator = setup._1
             sync = setup._2
-            sender ! "ok"
         }
         case dp: DataPacket => sync match { 
             case false => remoteGenerator ! dp
@@ -126,7 +119,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
     val forwarder = Akka.system.actorOf(Props[SyncStreamForwarder])
     var sync: Boolean = false
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get the name of the config file
         val nextName = (config \ "name").as[String]
         // Node to execute on
@@ -161,16 +154,15 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         
         // Send a message to our Dispatcher to create the (remote) actor and return us the actorref
         try {
-            val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
-            val dispActor = Await.result(fut.mapTo[ActorIdentity], timeout.duration).getRef
-            
-            // Set up actor and get ref
-            val refFut = sync match {
-                case true => dispActor ? new controllers.syncDispatchRequest(nextName, Some(customConfig), false, true)
-                case false => dispActor ? new controllers.asyncDispatchRequest(nextName, Some(customConfig), false, true)
+            val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? {
+                sync match {
+                    case true => new controllers.DispatchRequest(nextName, Some(customConfig), false, true, true, Some(forwarder))
+                    case false => new controllers.DispatchRequest(nextName, Some(customConfig), false, true, false, None)
+                }
             }
-            val remoteGenerator = Await.result(refFut.mapTo[ActorRef], timeout.duration)
-            Await.result(forwarder ? (remoteGenerator, sync), timeout.duration)
+            fut.onSuccess {
+                case ar: ActorRef => forwarder ! (ar, sync)
+            }
         } catch {
             case e: TimeoutException => {} // skip
             case e: NullPointerException => {}
@@ -208,19 +200,28 @@ class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) exte
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     
-    val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(dp => {
-        // Get the actor ref and acutal data
-        val actorRef = dp.data.head("ref").asInstanceOf[ActorRef]
-        val newData = new DataPacket(dp.data.drop(1))
-        actorRef ! newData
-        Future {newData}
-    })
-    enumerator |>> (processor compose sendBackEnum) &>> sinkIteratee
+    /**
+     * We must somehow keep track of the sending actor of each data packet. This state is kept within this helper class that
+     * is to be instantiated for each data packet
+     */
+    class senderReturningProcessor(senderActor: ActorRef, dp: DataPacket) {
+        // Create enumeratee that will send back
+        val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => {
+            senderActor ! dp
+            dp
+        })
+        
+        def runProcessor() = Enumerator(dp) |>> (processor compose sendBackEnum compose controllers.Dispatcher.logEnumeratee) &>> sinkIteratee
+    }
     
     def receive() = {
-        case data: DataPacket => {
-            // We add the ActorRef to the datapacket because we need it later on
-            channel.push(new DataPacket(Map("ref" -> sender)::data.data))
+        case dp: DataPacket => {
+            // Push to all async processors
+            channel.push(dp)
+
+            // Send through our enumeratee
+            val p = new senderReturningProcessor(sender, dp)
+            Future(p.runProcessor())
         }
     }
 }
@@ -235,60 +236,7 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
     var merger: Method = null
     var mergerClass: Any = null
     
-    /**
-     * Taken from dispatcher; recursively pipes Enumeratees
-     */
-    def buildEnums (
-            nextId: List[String],
-            processorMap: Map[String, (Enumeratee[DataPacket, DataPacket], List[String])]
-    ): List[Enumeratee[DataPacket, DataPacket]] = {
-        /**
-         * Function that recursively builds the tree of processors
-         */
-        def buildEnumsHelper(
-                next: List[String],
-                accum: List[Enumeratee[DataPacket, DataPacket]],
-                iterationCount: Integer
-        ): List[Enumeratee[DataPacket, DataPacket]] = {
-            if (iterationCount > 500) {
-                // Awful lot of enumeratees... cycle?
-                throw new Exception("Possible cycle detected in config file. Aborted")
-            }
-            else {
-                next match {
-                    case List() => {
-                        // We are done, return accumulator
-                        accum
-                    }
-                    case id::List() => {
-                        // This is just a pipeline, get the processor
-                        val proc = processorMap(id)
-                        
-                        buildEnumsHelper(proc._2, {
-                            if (accum.isEmpty) List(proc._1)
-                            else accum.map(enum => enum compose proc._1)
-                        }, iterationCount + 1)
-                    }
-                    case nextList => {
-                        // We have a branch here and need to expand the list of processors
-                        (for (id <- nextList) yield {
-                            val proc = processorMap(id)
-                            
-                            buildEnumsHelper(proc._2, {
-                                if (accum.isEmpty) List(proc._1)
-                                else accum.map(enum => enum compose proc._1)
-                            }, iterationCount + 1)
-                        }).flatten
-                    }
-                }
-            }
-        }
-        
-        // Build the enums
-        buildEnumsHelper(nextId, List(), 0)
-    }
-    
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Process config
         val pipelines = (config \ "processors").as[List[JsObject]]
         
@@ -309,18 +257,21 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
                 val resultName = (processor \ "result").as[String]
                 val next = (processor \ "next").as[List[String]]
                 
-                // Instantiate processor
-                val procClazz = Class.forName(processorName)
-                val iClazz = procClazz.getConstructor(classOf[String]).newInstance(resultName)
-                val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
-                val proc = method.invoke(iClazz, processorConfig).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                // Create processor definition
+                val procDef = new ProcessorDefinition(
+                        processorId,
+                        processorName,
+                        processorConfig,
+                        resultName,
+                        next
+                )
                 
                 // Return map
-                processorId -> (proc, next)
+                processorId -> procDef
             }).toMap
             
             // Build the processor pipeline for this generator
-            val processor = buildEnums(List(start), processorMap).head
+            val processor = controllers.Dispatcher.buildEnums(List(start), processorMap, "ParalllelProcessor").head
             // Set up the actor that will execute this processor
             Akka.system.actorOf(Props(classOf[ParallelProcessorActor], processor))
         }

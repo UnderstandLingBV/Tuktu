@@ -1,8 +1,6 @@
 package controllers
 
-import java.util.concurrent.TimeoutException
-
-import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 
 import akka.actor.ActorIdentity
@@ -14,7 +12,6 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.mvc.Action
 import play.api.mvc.Controller
-import scala.concurrent.ExecutionContext.Implicits.global
 
 object Asynchronous extends Controller {
     implicit val timeout = Timeout(1 seconds)
@@ -27,7 +24,7 @@ object Asynchronous extends Controller {
     	// Send this to our analytics async handler
     	val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
         fut.onSuccess {
-            case ai: ActorIdentity => ai.getRef ! new asyncDispatchRequest(id, None, false, false)
+            case ai: ActorIdentity => ai.getRef ! new DispatchRequest(id, None, false, false, false, None)
         }
         
         Ok("")
@@ -45,7 +42,7 @@ object Asynchronous extends Controller {
 	    	// Send this to our analytics async handler
 	    	val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
             fut.onSuccess {
-                case ai: ActorIdentity => ai.getRef ! new asyncDispatchRequest(id, Some(jsonBody), false, false)
+                case ai: ActorIdentity => ai.getRef ! new DispatchRequest(id, Some(jsonBody), false, false, false, None)
             }
         }
 	    

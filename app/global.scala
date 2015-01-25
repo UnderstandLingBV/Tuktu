@@ -2,21 +2,22 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 import akka.actor.Props
-import akka.actor.actorRef2Scala
 import akka.util.Timeout
+import akka.routing.SmallestMailboxPool
 import controllers.Dispatcher
 import monitor.DataMonitor
 import play.api.Application
 import play.api.GlobalSettings
+import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.mvc.RequestHeader
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.Results.InternalServerError
 import play.api.mvc.Results.NotFound
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(1 seconds)
@@ -27,8 +28,11 @@ object Global extends GlobalSettings {
         // Set up monitoring actor
         val monActor = Akka.system.actorOf(Props[DataMonitor], name = "TuktuMonitor")
         monActor ! "init"
+        
         // Set up dispatcher
-		val dispActor = Akka.system.actorOf(Props(classOf[Dispatcher], monActor), name = "TuktuDispatcher")
+		val dispActor = Akka.system.actorOf(
+                   SmallestMailboxPool(Play.current.configuration.getInt("tuktu.dispatcher.size").getOrElse(5))
+                   .props(Props(classOf[Dispatcher], monActor)), name = "TuktuDispatcher")
         dispActor ! "init"
 	}
     

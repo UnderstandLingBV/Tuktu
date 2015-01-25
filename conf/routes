@@ -5,7 +5,6 @@
 # Dispatching
 GET     /dispatch/:id				controllers.Asynchronous.load(id)
 POST	/config						controllers.Asynchronous.loadPost
-GET		/js/:id						controllers.Synchronous.load(id)
 
 # Monitor
 GET     /monitor                    monitor.controllers.Monitor.fetchLocalInfo

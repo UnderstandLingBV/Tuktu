@@ -1,13 +1,16 @@
 package tuktu.processors
 
 import java.io.BufferedWriter
-import java.io.OutputStreamWriter
 import java.io.FileOutputStream
-import play.api.libs.iteratee.Enumeratee
-import tuktu.api._
-import play.api.libs.json.JsValue
+import java.io.OutputStreamWriter
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsObject
+import tuktu.api.BaseProcessor
+import tuktu.api.DataPacket
 
 /**
  * Streams data into a file and closes it when it's done
@@ -18,7 +21,7 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
     var fieldSep: String = null
     var lineSep: String = null
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get the location of the file to write to
         val fileName = (config \ "file_name").as[String]
         val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
@@ -60,7 +63,7 @@ class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resul
     var batch = new StringBuilder()
     var batchCount = 0
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get the location of the file to write to
            val fileName = (config \ "file_name").as[String]
            val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")

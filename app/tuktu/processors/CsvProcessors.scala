@@ -1,17 +1,19 @@
 package tuktu.processors
 
-import play.api.libs.iteratee.Enumeratee
-import tuktu.api._
-import java.io.StringWriter
-import au.com.bytecode.opencsv.CSVWriter
-import tuktu.api.BaseProcessor
-import play.api.libs.json.JsValue
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.io.BufferedWriter
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
-import play.api.libs.json.JsString
-import java.io.BufferedWriter
+import java.io.StringWriter
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
+import au.com.bytecode.opencsv.CSVWriter
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsString
+import tuktu.api.BaseProcessor
+import tuktu.api.DataPacket
 
 /**
  * Converts all fields to CSV
@@ -46,7 +48,7 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var wroteHeaders = false
     var fields: Option[List[String]] = None
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get the location of the file to write to
         val fileName = (config \ "file_name").as[String]
         val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
