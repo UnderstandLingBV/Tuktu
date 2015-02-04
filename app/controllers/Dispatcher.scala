@@ -199,12 +199,14 @@ object Dispatcher {
                                 val generator = sync match {
                                     case true => {
                                         Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
-                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1)
+                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
+                                            null
                                         ))
                                     }
                                     case false => {
                                         Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
-                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1)
+                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
+                                            null
                                         ))
                                     }
                                 }
