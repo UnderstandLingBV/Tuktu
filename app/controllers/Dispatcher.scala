@@ -5,7 +5,6 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
@@ -20,6 +19,7 @@ import play.api.libs.json.Json
 import tuktu.api._
 import tuktu.generators.AsyncStreamGenerator
 import tuktu.generators.SyncStreamGenerator
+import java.lang.reflect.InvocationTargetException
 
 case class DispatchRequest(
         configName: String,
@@ -63,11 +63,12 @@ object Dispatcher {
         implicit val timeout = Timeout(1 seconds)
         
         // Get the monitoring actor
-        val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
-        val monitorActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef
+        /*val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
+        val monitorActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef*/
         
         Enumeratee.mapM(data => {
-            monitorActor ! new MonitorPacket(mpType, generatorName, branch, data.data.size)
+            if (data.data.size > 0)
+                Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, generatorName, branch, data.data.size)
             Future {data}
         })
     }
@@ -161,6 +162,11 @@ object Dispatcher {
                                 initMethod.invoke(iClazz, pd.config)
                             } catch {
                                 case e: NoSuchElementException => {}
+                                case e: InvocationTargetException => {
+                                    Logger.error("Initialization of processor " + pd.name + " failed!")
+                                    e.printStackTrace()
+                                    throw e
+                                }
                             }
                             
                             val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
@@ -381,19 +387,33 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                         val clazz = Class.forName(generatorName)
                         
                         try {
-                            val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName + clazz.getName + index)
+                            val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName +  "_" + clazz.getName +  "_" + index)
                             
                             // Send it the config
                             actorRef ! generatorConfig
                             if (dr.returnRef) sender ! actorRef
+                            
+                            // Send the monitoring actor notification of start
+                            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                                    actorRef.path.toStringWithoutAddress,
+                                    System.currentTimeMillis() / 1000L,
+                                    "start"
+                            )
                         }
                         catch {
                             case e: akka.actor.InvalidActorNameException => {
-                                val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName + clazz.getName + java.util.UUID.randomUUID.toString)
+                                val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName + "_" + clazz.getName +  "_" + java.util.UUID.randomUUID.toString)
                                 
                                 // Send it the config
                                 actorRef ! generatorConfig
                                 if (dr.returnRef) sender ! actorRef
+                                
+                                // Send the monitoring actor notification of start
+                                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                                        actorRef.path.toStringWithoutAddress,
+                                        System.currentTimeMillis() / 1000L,
+                                        "start"
+                                )
                             }
                         }
                     }

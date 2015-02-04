@@ -22,10 +22,7 @@ object Asynchronous extends Controller {
      */
     def load(id: String) = Action {
     	// Send this to our analytics async handler
-    	val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
-        fut.onSuccess {
-            case ai: ActorIdentity => ai.getRef ! new DispatchRequest(id, None, false, false, false, None)
-        }
+    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, None, false, false, false, None)
         
         Ok("")
     }
@@ -40,10 +37,7 @@ object Asynchronous extends Controller {
             // Get the ID from the request
             val id = (jsonBody \ "id").as[String]
 	    	// Send this to our analytics async handler
-	    	val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? Identify(None)
-            fut.onSuccess {
-                case ai: ActorIdentity => ai.getRef ! new DispatchRequest(id, Some(jsonBody), false, false, false, None)
-            }
+	    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, Some(jsonBody), false, false, false, None)
         }
 	    
         Ok("")

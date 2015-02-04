@@ -1,0 +1,81 @@
+body {
+    padding-top: 50px;
+    height: 100%;
+    font-size: 14px;
+}
+
+a:hover, a:focus, img, img:hover, img:focus {
+	border: 0;
+}
+
+.navbar-fixed-top {
+    padding-left: 100px;
+    padding-right: 100px;
+}
+
+@media screen and (max-width: 768px) {
+    body {
+        font-size: 12px;
+    }
+    .navbar-fixed-top {
+        padding-left: 50px;
+        padding-right: 50px;
+    }
+}
+
+@media screen and (max-width: 1024px) {
+    .navbar-fixed-top {
+        padding-left: 80px;
+        padding-right: 80px;
+    }
+}
+
+.navbar {
+    color: #333;
+    background: #eee;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.navbar a {
+    color: #999;
+}
+
+.navbar-brand {
+    padding-top: 8px;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.navbar-default .navbar-nav>li>a {
+    color: #333;
+}
+
+.navbar-default .navbar-nav>li>a:hover,.navbar-default .navbar-nav>li>a:focus {
+    color: #ddd;
+    background: #777;
+    box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
+}
+
+.navbar-nav > li > a:hover, .navbar-nav > li > a:focus {
+    color: #ddd;
+    background: #777;
+    box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
+}
+
+#sidebar-wrapper {
+	color: #333;
+    background: #eee;
+    box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
+}
+
+.sidebar-nav li a:hover {
+	color: #ddd;
+    background: #777;
+}
+
+.sidebar-brand {
+	margin-top: 30px;
+	margin-left: 45px;
+	margin-bottom: 20px;
+}

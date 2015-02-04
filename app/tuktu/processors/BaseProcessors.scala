@@ -44,9 +44,9 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
             } yield {
                 // See what to do
                 if (datum(field).isInstanceOf[JsValue])
-                    fieldName -> utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), default)
+                    fieldName -> tuktu.utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), default)
                 else
-                    fieldName -> utils.util.fieldParser(datum, fields, default)
+                    fieldName -> tuktu.utils.util.fieldParser(datum, fields, default)
             }).toMap
             
             newData
@@ -77,9 +77,9 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
             } yield {
                 // See what to do
                 if (datum(field).isInstanceOf[JsValue])
-                    fieldName -> utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), default)
+                    fieldName -> tuktu.utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), default)
                 else
-                    fieldName -> utils.util.fieldParser(datum, fields, default)
+                    fieldName -> tuktu.utils.util.fieldParser(datum, fields, default)
             }).toMap
             
             datum ++ newData
@@ -231,9 +231,9 @@ class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
 	            // Get the actual value
 	            val value = {
 	                if (datum(field).isInstanceOf[JsValue])
-	                    utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), None).as[List[String]]
+	                    tuktu.utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), None).as[List[String]]
 	                else {
-	                	val someVal = utils.util.fieldParser(datum, fields, None)
+	                	val someVal = tuktu.utils.util.fieldParser(datum, fields, None)
 	                	if (someVal.isInstanceOf[Array[String]]) someVal.asInstanceOf[Array[String]].toList
 	                	else if (someVal.isInstanceOf[Seq[String]]) someVal.asInstanceOf[Seq[String]].toList
 	                	else someVal.asInstanceOf[List[String]]
@@ -270,12 +270,12 @@ class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(result
 	            val field = fields.head
 	            // Get the actual value
 	            val values = {
-	                if (datum(field).isInstanceOf[JsArray]) utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), None).as[List[JsObject]]
+	                if (datum(field).isInstanceOf[JsArray]) tuktu.utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), None).as[List[JsObject]]
 	                else List[JsObject]()
 	            }
 	            // Now iterate over the objects
 	            val gluedValue = values.map(value => {
-	                utils.util.JsonStringToNormalString(utils.util.jsonParser(value, subpath, None).as[JsString])
+	                tuktu.utils.util.JsonStringToNormalString(tuktu.utils.util.jsonParser(value, subpath, None).as[JsString])
 	            }).mkString(sep)
 	            // Replace
 	            mutableDatum += field -> gluedValue
@@ -318,9 +318,14 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {new DataPacket(for (datum <- data.data) yield {
+            // Set up mutable datum
+            var mutableDatum = collection.mutable.Map(datum.toSeq: _*)
+            
             // Find out which fields we should extract
-	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
 	        for (fieldName <- fieldList) {
+                // Remove the fields we need to extract
+                mutableDatum -= fieldName
+                
 	            // Get the value
 	            val value = {
 	                try {

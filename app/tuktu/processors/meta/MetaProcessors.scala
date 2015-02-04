@@ -1,4 +1,4 @@
-package tuktu.processors
+package tuktu.processors.meta
 
 import java.lang.reflect.Method
 import java.util.concurrent.TimeoutException

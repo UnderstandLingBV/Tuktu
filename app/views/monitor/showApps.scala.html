@@ -1,0 +1,50 @@
+@(apps: List[(String, tuktu.api.AppMonitorObject)], messages: Map[String, List[String]])
+
+@index(messages) {
+    @monitorMenu()
+} {
+	@if(apps.size > 0) {
+	    <h2>
+	       The following jobs are currently running on Tuktu
+	    </h2>
+	    
+	    <table class="table table-striped">
+	        <thead>
+		        <tr>
+		            <th>
+		                Job name
+		            </th>
+		            <th>
+		                Actions
+		            </th>
+		            <th style="text-align: right;">
+		                Running since
+		            </th>
+		        </tr>
+	        </thead>
+	        <tbody>
+				@for((appName, appProps) <- apps) {
+				    <tr>
+				        <th style="margin-right: 25px;">
+				            @appName
+				        </th>
+				        <td>
+				            <a href="@routes.Monitor.terminate(appName, false)">
+                                Stop
+                            </a>
+				            <a href="@routes.Monitor.terminate(appName, true)">
+                                Terminate
+                            </a>
+				        </td>
+				        <td style="text-align: right;">
+				            @{new java.util.Date(appProps.getStartTime * 1000).toString}
+				            (@{(System.currentTimeMillis / 1000L) - appProps.getStartTime} seconds)
+				        </td>
+				    </tr>
+			    }
+			</tbody>
+	    </table>
+	} else {
+	    <h2>Currently, no jobs are running on Tuktu</h2>
+	}
+}

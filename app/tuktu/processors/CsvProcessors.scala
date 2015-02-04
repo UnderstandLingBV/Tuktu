@@ -73,7 +73,7 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
             fields match {
                 case Some(fields) => {
                     val values = fields.map(someVal => datum(someVal).isInstanceOf[JsString] match {
-                        case true => utils.util.JsonStringToNormalString(datum(someVal).asInstanceOf[JsString])
+                        case true => tuktu.utils.util.JsonStringToNormalString(datum(someVal).asInstanceOf[JsString])
                         case false => datum(someVal).toString
                     })
                     writer.writeNext(values.toArray)
@@ -81,7 +81,7 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
                 case None => {
                     // Strings are a bit annoying here
                     val stringDatum = datum.map(someVal => someVal._2.isInstanceOf[JsString] match {
-                        case true => utils.util.JsonStringToNormalString(someVal._2.asInstanceOf[JsString])
+                        case true => tuktu.utils.util.JsonStringToNormalString(someVal._2.asInstanceOf[JsString])
                         case false => someVal._2.toString
                     })
                     writer.writeNext(stringDatum.toArray)

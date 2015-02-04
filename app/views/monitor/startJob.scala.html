@@ -1,0 +1,25 @@
+@(configs: Array[String], messages: Map[String, List[String]])
+
+@index(messages) {
+    @monitorMenu()
+} {
+    @if(configs.size > 0) {
+        <form method="post" action="@routes.Monitor.startJob">
+            <div class="form-group">
+			    <select name="name" class="form-control">
+				    @for(config <- configs) {
+				        <option value="@config">
+				           @config
+				        </option>
+				    }
+			    </select>
+			</div>
+			
+			<div class="form-group">
+	           <input type="submit" class="btn" value="Start Job">
+	       </div>
+	   </form>
+	} else {
+	   There are no configuration files in your config repository.
+	}
+}
