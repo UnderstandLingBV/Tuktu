@@ -100,13 +100,16 @@ class SyncStreamForwarder() extends Actor with ActorLogging {
             remoteGenerator = setup._1
             sync = setup._2
         }
-        case dp: DataPacket => sync match { 
+        case dp: DataPacket => sync match {
             case false => remoteGenerator ! dp
             case true => {
                 sender ! Await.result((remoteGenerator ? dp).mapTo[DataPacket], timeout.duration)
             }
         }
-        case sp: StopPacket => remoteGenerator ! StopPacket()
+        case sp: StopPacket => {
+            remoteGenerator ! new StopPacket
+            remoteGenerator ! PoisonPill
+        }
     }
 }
 
@@ -156,7 +159,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         try {
             val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? {
                 sync match {
-                    case true => new controllers.DispatchRequest(nextName, Some(customConfig), false, true, true, Some(forwarder))
+                    case true => new controllers.DispatchRequest(nextName, Some(customConfig), false, true, true, None)
                     case false => new controllers.DispatchRequest(nextName, Some(customConfig), false, true, false, None)
                 }
             }
@@ -271,7 +274,7 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
             }).toMap
             
             // Build the processor pipeline for this generator
-            val processor = controllers.Dispatcher.buildEnums(List(start), processorMap, "ParalllelProcessor").head
+            val processor = controllers.Dispatcher.buildEnums(List(start), processorMap, "ParalllelProcessor", None).head
             // Set up the actor that will execute this processor
             Akka.system.actorOf(Props(classOf[ParallelProcessorActor], processor))
         }

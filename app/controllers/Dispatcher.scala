@@ -20,6 +20,8 @@ import tuktu.api._
 import tuktu.generators.AsyncStreamGenerator
 import tuktu.generators.SyncStreamGenerator
 import java.lang.reflect.InvocationTargetException
+import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
+import tuktu.processors.EOFBufferProcessor
 
 case class DispatchRequest(
         configName: String,
@@ -81,7 +83,8 @@ object Dispatcher {
     def buildEnums (
             nextId: List[String],
             processorMap: Map[String, ProcessorDefinition],
-            monitorName: String
+            monitorName: String,
+            genActor: Option[ActorRef]
     ): List[Enumeratee[DataPacket, DataPacket]] = {
         /**
          * Function that recursively builds the tree of processors
@@ -101,84 +104,6 @@ object Dispatcher {
                         // We are done, return accumulator
                         accum
                     }
-                    case id::List() => {
-                        // This is just a pipeline, get the processor
-                        val pd = processorMap(id)
-                        
-                        // Initialize the processor
-                        val procClazz = Class.forName(pd.name)
-                        // Check if this processor is a bufferer
-                        if (classOf[BufferProcessor].isAssignableFrom(procClazz)) {
-                            /*
-                             * Bufferer processor, we pass on an actor that can take up the datapackets with the regular
-                             * flow and cut off regular flow for now
-                             */
-                            
-                            // Get sync or not
-                            val sync = (pd.config \ "sync").asOpt[Boolean].getOrElse(false)
-                            // Create generator
-                            val generator = sync match {
-                                case true => {
-                                    Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
-                                        buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
-                                        None
-                                    ))
-                                }
-                                case false => {
-                                    Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
-                                        buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
-                                        None
-                                    ))
-                                }
-                            }
-                            
-                            // Instantiate the processor now
-                            val iClazz = procClazz.getConstructor(
-                                    classOf[ActorRef],
-                                    classOf[String]
-                            ).newInstance(
-                                    generator,
-                                    pd.resultName
-                            )
-                        
-                            // Initialize the processor first
-                            try {
-                                val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
-                                initMethod.invoke(iClazz, pd.config)
-                            } catch {
-                                case e: NoSuchElementException => {}
-                            }
-                            
-                            // Add method to all our entries so far
-                            val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
-                            accum.map(enum => method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]])
-                        }
-                        else {
-                            val iClazz = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
-                        
-                            // Initialize the processor first
-                            try {
-                                val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
-                                initMethod.invoke(iClazz, pd.config)
-                            } catch {
-                                case e: NoSuchElementException => {}
-                                case e: InvocationTargetException => {
-                                    Logger.error("Initialization of processor " + pd.name + " failed!")
-                                    e.printStackTrace()
-                                    throw e
-                                }
-                            }
-                            
-                            val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
-                            val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
-                            
-                            // Recurse
-                            buildEnumsHelper(pd.next, {
-                                if (accum.isEmpty) List(procEnum)
-                                else accum.map(enum => enum compose procEnum)
-                            }, iterationCount + 1)
-                        }
-                    }
                     case nextList => {
                         // We have a branch here and need to expand the list of processors
                         (for (id <- nextList) yield {
@@ -187,7 +112,7 @@ object Dispatcher {
                             // Initialize the processor
                             val procClazz = Class.forName(pd.name)
                             // Check if this processor is a bufferer
-                            if (classOf[BufferProcessor].isAssignableFrom(procClazz)) {
+                            if (classOf[BufferProcessor].isAssignableFrom(procClazz) || classOf[BaseConcurrentProcessor].isAssignableFrom(procClazz)) {
                                 /*
                                  * Bufferer processor, we pass on an actor that can take up the datapackets with the regular
                                  * flow and cut off regular flow for now
@@ -198,15 +123,25 @@ object Dispatcher {
                                 // Create generator
                                 val generator = sync match {
                                     case true => {
-                                        Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
-                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
-                                            null
-                                        ))
+                                        if (classOf[EOFBufferProcessor].isAssignableFrom(procClazz)) {
+                                            Akka.system.actorOf(Props(classOf[tuktu.generators.EOFSyncStreamGenerator], "",
+                                                buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
+                                                genActor
+                                            ))
+                                        } else {
+                                            Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
+                                                buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
+                                                {
+                                                    if (classOf[BufferProcessor].isAssignableFrom(procClazz)) genActor
+                                                    else None
+                                                }
+                                            ))
+                                        }
                                     }
                                     case false => {
                                         Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
                                             buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
-                                            null
+                                            None
                                         ))
                                     }
                                 }
@@ -223,9 +158,10 @@ object Dispatcher {
                                 // Initialize the processor first
                                 try {
                                     val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
-                                    initMethod.invoke(iClazz, pd.config).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                                    initMethod.invoke(iClazz, pd.config)
                                 } catch {
                                     case e: NoSuchElementException => {}
+                                    case e: Exception => e.printStackTrace()
                                 }
                                 
                                 // Add method to all our entries so far
@@ -238,7 +174,7 @@ object Dispatcher {
                                 // Initialize the processor first
                                 try {
                                     val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
-                                    initMethod.invoke(iClazz, pd.config).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                                    initMethod.invoke(iClazz, pd.config)
                                 } catch {
                                     case e: NoSuchElementException => {}
                                 }
@@ -383,7 +319,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                 } else {
                     if (!startRemotely) {
                         // Build the processor pipeline for this generator
-                        val processorEnumeratee = Dispatcher.buildEnums(next, processorMap, dr.configName + "/" + generatorName)
+                        val processorEnumeratee = Dispatcher.buildEnums(next, processorMap, dr.configName + "/" + generatorName, dr.sourceActor)
                         
                         // Set up the generator, we assume the class is loaded
                         val clazz = Class.forName(generatorName)

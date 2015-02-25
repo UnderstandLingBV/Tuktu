@@ -1,17 +1,20 @@
 package tuktu.social.processors
 
-import tuktu.api._
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.scribe.oauth.OAuthService
+import scala.concurrent.Future
+
 import org.scribe.builder.ServiceBuilder
 import org.scribe.builder.api.FacebookApi
-import org.scribe.model.Token
 import org.scribe.model.OAuthRequest
+import org.scribe.model.Token
 import org.scribe.model.Verb
-import scala.concurrent.Future
+import org.scribe.oauth.OAuthService
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
+import tuktu.api.BaseProcessor
+import tuktu.api.DataPacket
 
 /**
  * When a tweet is being searched for on the stream using a combination of filters, this processors will append to the data
@@ -27,15 +30,15 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
     var geos: Option[List[String]] = None
     var excludeOnNone = false
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get name of the field in which the Twitter object is
-        val objField = (config \ "object_field").as[String]
+        objField = (config \ "object_field").as[String]
         // Get the actual tags
-        val tags = (config \ "tags").as[JsObject]
-        val keywords = (tags \ "keywords").asOpt[List[String]]
-        val users = (tags \ "users").asOpt[List[String]]
-        val geos = (tags \ "geos").asOpt[List[String]]
-        val excludeOnNone = (config \ "exclude_on_none").asOpt[Boolean].getOrElse(false)
+        tags = (config \ "tags").as[JsObject]
+        keywords = (tags \ "keywords").asOpt[List[String]]
+        users = (tags \ "users").asOpt[List[String]]
+        geos = (tags \ "geos").asOpt[List[String]]
+        excludeOnNone = (config \ "exclude_on_none").asOpt[Boolean].getOrElse(false)
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
@@ -113,14 +116,14 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
     var keywords: Option[List[String]] = None
     var users: Option[List[String]] = None
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get name of the field in which the Twitter object is
-        val objField = (config \ "object_field").as[String]
+        objField = (config \ "object_field").as[String]
         // Get the actual tags
-        val tags = (config \ "tags").as[JsObject]
-        val keywords = (tags \ "keywords").asOpt[List[String]]
-        val users = (tags \ "users").asOpt[List[String]]
-        val excludeOnNone = (config \ "exclude_on_none").as[Boolean]
+        tags = (config \ "tags").as[JsObject]
+        keywords = (tags \ "keywords").asOpt[List[String]]
+        users = (tags \ "users").asOpt[List[String]]
+        excludeOnNone = (config \ "exclude_on_none").as[Boolean]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
@@ -184,7 +187,7 @@ class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName
     var url = ""
     var httpMethod = Verb.GET
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Set up FB client
         val consumerKey = (config \ "consumer_key").as[String]
         val consumerSecret = (config \ "consumer_secret").as[String]

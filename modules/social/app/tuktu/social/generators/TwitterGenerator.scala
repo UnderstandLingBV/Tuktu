@@ -8,8 +8,9 @@ import twitter4j.conf.ConfigurationBuilder
 import twitter4j._
 import twitter4j.json.DataObjectFactory
 import akka.actor.PoisonPill
+import akka.actor.ActorRef
 
-class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends AsyncGenerator(resultName, processors) {
+class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
 	override def receive() = {
 	     case config: JsValue => {
 	         // Get credentials

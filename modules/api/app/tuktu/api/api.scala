@@ -17,6 +17,7 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsValue
 import akka.actor.ActorRef
+import play.api.libs.json.JsObject
 
 case class DataPacket(
         data: List[Map[String, Any]]
@@ -29,6 +30,10 @@ case class StopPacket()
 case class ResponsePacket(
         json: JsValue
 )
+
+/**
+ * Monitor stuff
+ */
 
 sealed abstract class MPType
 case object BeginType extends MPType
@@ -44,26 +49,55 @@ case class MonitorPacket(
 
 case class MonitorOverviewPacket()
 
+class AppMonitorObject(name: String, startTime: Long) {
+    def getName = name
+    def getStartTime = startTime
+}
+
+case class AppMonitorPacket(
+        name: String,
+        timestamp: Long,
+        status: String
+)
+/**
+ * End monitoring stuff
+ */
+
 abstract class BaseProcessor(resultName: String) {
-    def initialize(config: JsValue): Unit = {}
+    def initialize(config: JsObject): Unit = {}
     def processor(): Enumeratee[DataPacket, DataPacket] = ???
 }
 
 abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends BaseProcessor(resultName: String) {}
 
-abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends Actor with ActorLogging {
+abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(1 seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     
+    // Set up pipeline, either one that sends back the result, or one that just sinks
+    val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
+    senderActor match {
+        case Some(ref) => {
+            // Set up enumeratee that sends the result back to sender
+            val sendBackEnumeratee: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => {
+                ref ! dp
+                dp
+            })
+            processors.foreach(processor => enumerator |>> (processor compose sendBackEnumeratee) &>> sinkIteratee)
+        }
+        case _ => processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
+    }
+    
     def cleanup() = {
         // Send message to the monitor actor
-        val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
-        fut.onSuccess {
-            case ai: ActorIdentity => ai.getRef !new MonitorPacket(CompleteType, self.path.toStringWithoutAddress, "master", 1)
-        }
+        Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                self.path.toStringWithoutAddress,
+                System.currentTimeMillis / 1000L,
+                "done"
+        )
         
         channel.eofAndEnd
-        self ! PoisonPill
+        context.stop(self)
     }
     
     def receive() = {
@@ -73,23 +107,8 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     }
 }
 
+
+
 abstract class DataMerger() {
     def merge(packets: List[DataPacket]): DataPacket = ???
-}
-
-abstract class AsyncGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends BaseGenerator(resultName, processors) {
-    val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
-    processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
-}
-
-abstract class SynchronousGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends BaseGenerator(resultName, processors) {
-    val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
-    for (processor <- processors.drop(1))
-        processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
-    
-    override def receive() = {
-        case config: JsValue => sender ! enumerator.through(processors.head)
-        case sp: StopPacket => cleanup
-        case _ => {}
-    }
 }

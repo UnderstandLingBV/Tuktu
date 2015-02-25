@@ -20,6 +20,8 @@ import tuktu.api._
 class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var schedulerActor: Cancellable = null
     var message: String = null
+    var maxAmount: Option[Int] = None
+    var amountSent = 0
     
     override def receive() = {
         case config: JsValue => {
@@ -27,6 +29,9 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
             val tickInterval = (config \ "interval").as[Int]
             // Get the message to send
             message = (config \ "message").as[String]
+            
+            // See if we need to stop at some point
+            maxAmount = (config \ "max_amount").asOpt[Int]
             
             // Set up the scheduler
             schedulerActor = Akka.system.scheduler.schedule(
@@ -39,7 +44,18 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
             schedulerActor.cancel
             cleanup()
         }
-        case msg: String => channel.push(new DataPacket(List(Map(resultName -> message))))
+        case msg: String => {
+            channel.push(new DataPacket(List(Map(resultName -> message))))
+            // See if we need to stop
+            maxAmount match {
+                case Some(amnt) => {
+                    amountSent += 1
+                    if (amountSent >= amnt)
+                            self ! new StopPacket
+                }
+                case None => {}
+            }
+        }
         case x => println("Dummy generator got unexpected packet " + x + "\r\n")
     }
 }
@@ -86,5 +102,30 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
             }
         }
         case x => println("Dummy generator got unexpected packet " + x + "\r\n")
+    }
+}
+
+/**
+ * Generates a list of values
+ */
+class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var randomActor: ActorRef = null
+    var vals = List[String]()
+    
+    override def receive() = {
+        case config: JsValue => {
+            // Get the values
+            vals = (config \ "values").as[List[String]]
+            
+            // Send message to self
+            self ! 0
+        }
+        case sp: StopPacket => cleanup()
+        case num: Int => {
+            channel.push(new DataPacket(List(Map(resultName -> vals(num)))))
+            // See if we're done or not
+            if (num < vals.size - 1) self ! (num + 1)
+            else self ! new StopPacket
+        }
     }
 }

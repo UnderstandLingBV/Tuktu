@@ -24,6 +24,7 @@ import tuktu.api.DataPacket
 import tuktu.api.MonitorPacket
 import tuktu.api.StopPacket
 import tuktu.api.BaseGenerator
+import play.api.libs.iteratee.Input
 
 /**
  * Async 'special' generator that just waits for DataPackets to come in and processes them
@@ -60,14 +61,24 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
      * We must somehow keep track of the sending actor of each data packet. This state is kept within this helper class that
      * is to be instantiated for each data packet
      */
-    class senderReturningProcessor(senderActor: ActorRef, dp: DataPacket) {
+    class senderReturningProcessor(sActor: ActorRef, dp: DataPacket) {
         // Create enumeratee that will send back
-        val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => {
-            senderActor ! dp
-            dp
+        val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map((d: DataPacket) => {
+            val sourceActor = {
+                senderActor match {
+                    case Some(a) => a
+                    case None => sActor
+                }
+            }
+            
+            sourceActor ! d
+            
+            d
         })
         
-        def runProcessor() = Enumerator(dp) |>> (processors.head compose sendBackEnum compose logEnumeratee) &>> sinkIteratee
+        def runProcessor() = {
+            Enumerator(dp) |>> (processors.head compose sendBackEnum compose logEnumeratee) &>> sinkIteratee
+        }
     }
     
     override def receive() = {
@@ -83,16 +94,91 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
                 }
             }
             
-            channel.eofAndEnd
-            self ! PoisonPill
+            val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
+            enum |>> (processors.head compose logEnumeratee) &>> sinkIteratee
+
+            channel.eofAndEnd           
+            context.stop(self)
         }
         case dp: DataPacket => {
+            
             // Push to all async processors
             channel.push(dp)
 
             // Send through our enumeratee
             val p = new senderReturningProcessor(sender, dp)
             Future(p.runProcessor())
+        }
+    }
+}
+
+/**
+ * Special sync generator that processes a tuple and returns the actual result
+ */
+class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(1 seconds)
+
+    val (enumerator, channel) = Concurrent.broadcast[DataPacket]
+    val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
+    
+    // Logging enumeratee
+    def logEnumeratee[T] = Enumeratee.recover[T] {
+        case (e, input) => System.err.println("Synced generator error happened on: " + input, e)
+    }
+    
+    // Every processor but the first gets treated as asynchronous
+    for (processor <- processors.drop(1))
+        processors.foreach(processor => enumerator |>> (processor compose logEnumeratee) &>> sinkIteratee)
+        
+    /**
+     * We must somehow keep track of the sending actor of each data packet. This state is kept within this helper class that
+     * is to be instantiated for each data packet
+     */
+    class senderReturningProcessor(sActor: ActorRef, sendBack: Boolean) {
+        // Create enumeratee that will send back
+        val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(d => {
+            if (sendBack) {
+                val sourceActor = {
+                    senderActor match {
+                        case Some(a) => a
+                        case None => sActor
+                    }
+                }
+                
+                sourceActor ! d
+            }
+            
+            d
+        })
+        
+        def runProcessor(enum: Enumerator[DataPacket]) = {
+            enum |>> (processors.head compose sendBackEnum compose logEnumeratee) &>> sinkIteratee
+        }
+    }
+    
+    override def receive() = {
+        case config: JsValue => {}
+        case sp: StopPacket => {
+            // Send message to the monitor actor
+            val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
+            fut.onSuccess {
+                case ai: ActorIdentity => {
+                    ai.getRef ! new MonitorPacket(
+                            CompleteType, self.path.toStringWithoutAddress, "master", 1
+                    )
+                }
+            }
+
+            channel.eofAndEnd
+            context.stop(self)
+        }
+        case dp: DataPacket => {
+            // Push to all async processors
+            channel.push(dp)
+            
+            // Send through our enumeratee
+            val p = new senderReturningProcessor(sender, true)
+            Future(p.runProcessor(Enumerator(dp)))
         }
     }
 }

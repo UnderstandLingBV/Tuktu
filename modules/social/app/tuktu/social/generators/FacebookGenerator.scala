@@ -140,7 +140,7 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: FacebookBatcher, u
     }
 }
 
-class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends AsyncGenerator(resultName, processors) {
+class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
 	override def receive() = {
 	    case config: JsValue => {
 	        // Get credentials

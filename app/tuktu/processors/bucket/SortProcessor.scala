@@ -10,7 +10,7 @@ import scala.collection.GenTraversableOnce
 /**
  * Sorts elements in a bucket
  */
-class SortProcessor(resultName: String) extends BaseProcessor(resultName) {
+class SortProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var field = ""
     var ascDesc = "asc"
     
@@ -22,9 +22,11 @@ class SortProcessor(resultName: String) extends BaseProcessor(resultName) {
         ascDesc = (config \ "asc_desc").asOpt[String].getOrElse("asc")
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
+    
+    override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Sort data
-        new DataPacket(data.data.sortWith((m1, m2) => {
+        data.sortWith((m1, m2) => {
             val f1 = m1(field)
             val f2 = m2(field)
             
@@ -40,6 +42,6 @@ class SortProcessor(resultName: String) extends BaseProcessor(resultName) {
                 case (a: Long, b: Long) => if (ascDesc == "desc") b < a else a < b
                 case _ => throw new Exception
             }
-        }))
-    })
+        })
+    }
 }

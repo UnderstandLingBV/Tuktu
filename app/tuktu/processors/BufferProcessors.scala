@@ -30,7 +30,10 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
             
             // Push forward to remote generator
             remoteGenerator ! dp
-            
+        }
+        case sp: StopPacket => {
+            remoteGenerator ! sp
+            self ! PoisonPill
         }
         case item: Map[String, Any] => buffer += item
     }
@@ -69,6 +72,7 @@ class SizeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
         Future {data}
     }) compose Enumeratee.onEOF(() => {
         bufferActor ! "release"
+        bufferActor ! StopPacket
         bufferActor ! PoisonPill
     })
 }
@@ -105,6 +109,26 @@ class TimeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
     }) compose Enumeratee.onEOF(() => {
         cancellable.cancel
         bufferActor ! "release"
+        bufferActor ! StopPacket
+        bufferActor ! PoisonPill
+    })
+}
+
+/**
+ * Buffers until EOF (end of data stream) is found
+ */
+class EOFBufferProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    // Set up the buffering actor
+    val bufferActor = Akka.system.actorOf(Props(classOf[BufferActor], genActor))
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        // Iterate over our data and add to the buffer
+        data.data.foreach(datum => bufferActor ! datum)
+        
+        Future {data}
+    }) compose Enumeratee.onEOF(() => {
+        bufferActor ! "release"
+        bufferActor ! StopPacket
         bufferActor ! PoisonPill
     })
 }

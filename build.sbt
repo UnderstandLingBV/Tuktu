@@ -5,7 +5,9 @@ lazy val appResolvers = Seq(
 
 lazy val nlpDependencies = Seq(
     "nl.et4it" % "LIGA" % "1.0",
-    "nl.et4it" % "OpenNLPPOSWrapper" % "1.0"
+    "nl.et4it" % "OpenNLPPOSWrapper" % "1.0",
+    "nl.et4it" % "RBEM" % "1.0",
+    "nl.et4it" %% "rhetorics" % "1.0"
 )
 
 lazy val csvDependencies = Seq(
@@ -35,6 +37,9 @@ lazy val nosqlDependencies = Seq(
 )
 
 lazy val mlDependencies = Seq(
+)
+
+lazy val webDependencies = Seq(
 )
 
 lazy val coreDependencies = Seq(
@@ -109,6 +114,17 @@ lazy val ml = (project in file("modules/ml"))
     .settings(EclipseKeys.skipParents in ThisBuild := false)
     .aggregate(api)
     .dependsOn(api)
+    
+lazy val web = (project in file("modules/web"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-web")
+    .settings(version := "0.1")
+    .settings(scalaVersion := "2.11.4")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= webDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
+    .aggregate(api)
+    .dependsOn(api)
 
 lazy val root = project
     .in(file("."))
@@ -119,5 +135,5 @@ lazy val root = project
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= coreDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
-    .aggregate(api, nlp, csv, social, nosql, ml)
-    .dependsOn(api, nlp, csv, social, nosql, ml)
+    .aggregate(api, nlp, csv, social, nosql, ml, web)
+    .dependsOn(api, nlp, csv, social, nosql, ml, web)
