@@ -1,15 +1,13 @@
 # Tuktu - Commodity Big Data Analytics
-Tuktu is a big data analytics platform with a core focus points.
+Tuktu is a big data analytics platform that focuses on ease of use. The idea of the platform its users can focus on (business) logic rather than dealing with technical implementation details. As such, the core of Tuktu offers a number of focal points.
 
+- Easy setup and usage
 - Social analytics out-of-the-box 
-- Easy design of data processing pipeline
 - Support for both synchronous and asynchronous processing
 - Native support for batch jobs as well as everlasting streaming jobs
 - Distributed computation
 - Easy integration with big data/NoSQL tooling
 - Easily extendable
-- Usage of platform is done using configurations rather than writing program code
-- Distributed functionality
 
 The name comes from the Inuït word *tuktu*, which freely translates to the English word *deer*.
 
@@ -19,9 +17,11 @@ Installing Tuktu can be done by either building from source as described below, 
 
 [http://tuktu.et4it.nl/downloads/tuktu-0.1.zip](http://tuktu.et4it.nl/downloads/tuktu-0.1.zip) 
 
+Note that Tuktu requires Java (JRE) to be present on the system it is run from. Tuktu has been tested against versions 1.7 and 1.8.
+
 # Building from Source
 
-To build Tuktu from source, clone the repository. Tuktu was built against Play! version 2.3.4 so you need that version of Play.
+To build Tuktu from source, clone the repository. Tuktu was built against Play! version 2.3.x so you need that version of Play.
 
 To build Tuktu (for production), run:
 
@@ -35,15 +35,25 @@ To run Tuktu on your local machine for testing and to be able to modify it using
 
 You can now navigate to [http://localhost:900](http://localhost:9000) to access Tuktu's server.
 
+# Usage
+
+Tuktu offers a web interface that allows to access its core functionalities like submitting jobs and monitoring running jobs. Navigate to [http://localhost:900](http://localhost:9000) to access the web interface.
+
+Tuktu jobs are essentially JSON configuration files that live in a pre-defined folder (the *configs* folder by default). Configuration files should adhere to standards. To learn how to create configuration files, the best way to start is by looking at some [examples](examples.md). In addition to creating configuration files by hand, which can be very error-prone, a visual editor is currently in the making. The visual editor will be released once mature enough.
+
+# Examples
+
+Examples of Tuktu configuration files can be found on the [examples](examples.md) page.
+
 # Extending
 
 Tuktu is set up in a modular way and is easily extended, provided some rules are adhered to. Example extensions can be found in the *modules* subfolder. Extending the Tuktu platform requires cloning or downloading the sources from this repository as a whole, or at the very least the *api* submodule.
 
 - Every extension should be placed in the *modules* subfolder.
-- An extension can be a Play! project on its own, if it is required to use Play! libraries or to even add to the routing of Tuktu. If an extension is a Play! project, it must be of version 2.3.4 to prevent version conflicts.
-- Tuktu has a submodule named *api*. This provides bare-bones classes and utilities used in Tuktu. An extension should most likely depend on this submodule.
+- An extension can be a Play! project on its own, if it is required to use Play! libraries or to even add to the routing of Tuktu. If an extension is a Play! project, it must be of version 2.3.x to prevent version conflicts.
+- Tuktu has a submodule named *api*. This provides bare-bones classes and utilities used in Tuktu. An extension should depend on this submodule.
 - Package names should always start with the prefix `tuktu.`. It is good practice to place collections of typical processors in a `tuktu.[modulename].processors` package and generators in a `tuktu.[modulename].generators` package.
-- Dependencies and project configurations of the submodule should be defined at the root project level and only there.
+- Dependencies and project configurations of the submodule should be defined at the root project level and only there, do not create submodule-specific configuration and project files in the submodule folder itself. 
 
 # Core Concepts
 
@@ -54,17 +64,19 @@ There are two basic types of actors in Tuktu.
 - Generators
 - Processors
 
-Generators are actors that gather data from the external environment (outside of Tuktu), for example from the filesystem, a remote location or by simply 'creating' data (think of a periodic time-tick). As soon as a generator has a data item that is complete, it will stream it into a series of processors.
+**Generators** are actors that gather data from the external environment (outside of Tuktu), for example from the filesystem, a remote location or by simply 'creating' data (think of a periodic time-tick). As soon as a generator has a data item that is complete, it will stream it into a series of processors.
 
-Processors are actors that manipulate data in one way or another. Processors can be chained together, executed in parallel with a merge-step or can copy data into multiple subsequent processors. This way, Tuktu creates a tree of processors that operate on a single data packet injected by a generator.
+**Processors** are actors that manipulate data in one way or another. Processors can be chained together, executed in parallel with a merge-step or can copy data into multiple subsequent processors. This way, Tuktu creates a tree of processors that operate on a single data packet injected by a generator.
 
 ## Dispatcher
 
-The core component of Tuktu is an actor named the *Dispatcher*. This actor can receive specific requests that make it set up generators and their accompanying processors. It does so based on a configuration file.
+The core component of Tuktu is an actor named the *Dispatcher*. This actor can receive specific requests that make it set up generators and their accompanying processors. It does so based on a JSON configuration file.
 
-Requests to the Dispatcher can either be synchronous or asynchronous. Synchronous requests return the data in a streaming way after it has undergone all transformations by the processors. Asynchronous requests do not return results but have potential side-effects instead. Asynchronous requests are far more common and easier to deal with.
+Requests to the Dispatcher can either be synchronous or asynchronous. Synchronous requests return the data in a streaming way after it has undergone all transformations by the processors. Asynchronous requests do not return results but have potential side-effects instead. If possible, it is always advised to use asynchronous requests.
 
-By default, a generator is a single actor that has processors living with it. This means that a generator and the entire pipeline of processors it reaches, live on the same node of a cluster. The implication is that transactional flows are trivially easy to model in Tuktu but the downside is that this can put a computational burden on the actor. A generator by default is created on the Tuktu-node that the Dispatcher is invoked on.  
+By default, a generator is a single (Akka) actor that has processors living with it. This means that a generator and the entire pipeline of processors it reaches, live on the same node of a cluster. The implication is that transactional flows are trivially easy to model in Tuktu but the downside is that this can put a computational burden on the actor. A generator by default is created on the Tuktu-node that the Dispatcher is invoked on, but can be explicitly executed on a specific node by specifying so in the configuration file.
+
+This typical transactional flow can be broken by processors that need do so. There are numerous meta-processors in Tuktu that are specifically designed to introduce an explicit asynchronicity, execute remote computations or initiate distributed computations.
 
 ## Configuration Files
 
@@ -138,15 +150,17 @@ Let's examine this configuration file in a bit more detail. Notice that specifyi
 4. After tokenization, the data is sent to a language identification processor of type `tuktu.nlp.LIGAProcessor`. This processor enriches the data by adding a language field to it.
 5. Finally, data is sent to a processor of type `tuktu.processors.CSVWriterProcessor`, which streams the data into a CSV file.
 
-Using this configuration file, data is obtained from Twitter, written out for debugging, tokenized and has language identifcation applied to it. The result is finally written to a CSV file. Note that in this case, because we make us of the generator `tuktu.social.generators.TwitterGenerator`, the processing never ends, this is a perpetual process and hence the CSV file is never closed. There are specific generators however that can end their data ingestion, in which case the entire data processing pipeline is shut down and closed accordingly. In this case, the CSV file would be closed nicely.
+Using this configuration file, data is obtained from Twitter, written out for debugging, tokenized and has language identifcation applied to it. The result is finally written to a CSV file. Note that in this case, because we make use of the generator `tuktu.social.generators.TwitterGenerator`, the processing never ends, this is a perpetual process and hence the CSV file is never closed. There are specific generators however that can end their data ingestion, in which case the entire data processing pipeline is shut down and closed accordingly. In this case, the CSV file would be closed nicely.
 
 ## Default Entry Points
 
-The Tuktu platform ignites a data processing flow as soon as the Dispatcher gets a request to do so. The Dispatcher itself is merely an Akka actor and hence Akka messages can be sent to it to start data processing.
+The Tuktu platform ignites a data processing flow as soon as the Dispatcher gets a request to do so. Besides using the web interface to initiate jobs, Tuktu has other ways of invoking the Dispatcher.
 
-A perhaps easier way to start a data processing flow, is by using the Play! nature of Tuktu and sending an HTTP request. By default, the URL `/dispatch/:configName` can be used to start data processing. The GET parameter `configName` is what the Dispatcher uses to find a JSON file stored on the same node Tuktu is running on, in a special configuration repository location, that will serve as the configuration file.
+The Play! nature of Tuktu made for usage of the Dispatcher using an HTTP request. By default, the URL `/dispatch/:configName` can be used to start data processing. The GET parameter `configName` is what the Dispatcher uses to find a JSON file stored on the same node Tuktu is running on, in a special configuration repository location, that will serve as the configuration file.
 
 Alternatively, a configuration file can be given to Tuktu. This can be done by simply invoking the Dispatcher actor or by making a POST request to `/config`, where the body should be no different from a regular configuration file, except for that an additional field named *id* should present in the configuration file.
+
+Lastly, since the Dispatcher is nothing more than an Akka actor, it can be invoked programmatically by sending it a `DispatchRequest` (defined in the Dispatcher itself).
 
 # Standard Submodules
 
@@ -158,3 +172,4 @@ Tuktu comes with a number of submodules by default. Read more about them here.
 - The [NLP](modules/nlp) submodule. This module contains some algorithms on Natural Language Processing.
 - The [NoSQL](modules/nosql) submodule. This module contains standard methods to read or write from and to some popular NoSQL systems.
 - The [Social](modules/social) submodule. This module contains generators for social media and some basic processors. 
+- The [Web](modules/web) submodule. This module will deal with HTTP traffic and has functionality for performing wb analytics. 
