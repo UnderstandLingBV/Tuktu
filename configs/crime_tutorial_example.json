@@ -1,0 +1,90 @@
+{
+    "generators": [
+        {
+            "name": "tuktu.generators.LineGenerator",
+            "result": "line",
+            "config": {
+                "filename": "data/2015-01-city-of-london-street.csv"
+            },
+            "next": [
+                "corrector"
+            ]
+        }
+    ],
+    "processors": [
+        {
+            "id": "corrector",
+            "name": "tuktu.processors.ReplaceProcessor",
+            "result": "",
+            "config": {
+                "field": "line",
+                "sources": [
+                    "On or near Conference, Exhibition Centre",
+                    "On or near Further,Higher Educational Building"
+                ],
+                "targets": [
+                    "On or near Conference/Exhibition Centre",
+                    "On or near Further/Higher Educational Building"
+                ]
+            },
+            "next": [
+                "csvConverter"
+            ]
+        },
+        {
+            "id": "csvConverter",
+            "name": "tuktu.csv.processors.CSVReaderProcessor",
+            "result": "",
+            "config": {
+                "field": "line",
+                "remove_original": true,
+                "headers_from_first": true
+            },
+            "next": [
+                "locationFilter"
+            ]
+        },
+        {
+            "id": "locationFilter",
+            "name": "tuktu.processors.InclusionProcessor",
+            "result": "",
+            "config": {
+                "expression": "Location=No Location,Location=On or near Conference/Exhibition Centre,Location=On or near Further/Higher Educational Building",
+                "type": "simple",
+                "and_or": "or"
+            },
+            "next": [
+                "outcomeFilter"
+            ]
+        },
+        {
+            "id": "outcomeFilter",
+            "name": "tuktu.processors.InclusionProcessor",
+            "result": "",
+            "config": {
+                "expression": "Crime type=Other crime,Crime type=Other theft",
+                "type": "simple",
+                "and_or": "or"
+            },
+            "next": [
+                "debug", "writer"
+            ]
+        },
+        {
+			"id": "writer",
+			"name": "tuktu.csv.processors.CSVWriterProcessor",
+			"result": "",
+			"config": {
+				"file_name": "data/my_first_tuktu_output.csv"
+			},
+			"next": []
+		},
+        {
+            "id": "debug",
+            "name": "tuktu.processors.ConsoleWriterProcessor",
+            "result": "",
+            "config": {},
+            "next": []
+        }
+    ]
+}

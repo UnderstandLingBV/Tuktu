@@ -55,6 +55,69 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 /**
+ * Adds a running count integer to data coming in
+ */
+class RunningCountProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var cnt = 0
+    var perBlock = false
+    var stepSize = 1
+    
+    override def initialize(config: JsObject) = {
+        cnt = (config \ "start_at").asOpt[Int].getOrElse(0)
+        perBlock = (config \ "per_block").asOpt[Boolean].getOrElse(false)
+        stepSize = (config \ "step_size").asOpt[Int].getOrElse(1)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        if (perBlock) {
+            val res = new DataPacket(data.data.map(datum => datum + (resultName -> cnt)))
+            cnt += stepSize
+            res
+        }
+        else {
+            new DataPacket(data.data.map(datum => {
+                val r = datum + (resultName -> cnt)
+                cnt += stepSize
+                r
+            }))
+        }
+    })
+}
+
+/**
+ * Replaces one string for another (could be regex)
+ */
+class ReplaceProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field = ""
+    var sources = List[String]()
+    var targets = List[String]()
+    
+    def replaceHelper(accum: String, offset: Int): String = {
+        if (offset >= sources.size) accum
+        else {
+            // Replace in the accumulator and advance
+            replaceHelper(accum.replaceAll(sources(offset), targets(offset)), offset + 1)
+        }
+    }
+    
+    override def initialize(config: JsObject) = {
+        field = (config \ "field").as[String]
+        sources = (config \ "sources").as[List[String]]
+        targets = (config \ "targets").as[List[String]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(data.data.map(datum => datum + (field -> {
+            // Get field value to replace
+            val value = datum(field).toString
+            
+            // Replace
+            replaceHelper(value, 0)
+        })))
+    })
+}
+
+/**
  * Gets a JSON Object and fetches a single field to put it as top-level citizen of the data
  */
 class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName) {
@@ -116,6 +179,9 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
     })
 }
 
+/**
+ * Includes or excludes specific datapackets
+ */
 class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
     var expression: String = null
     var expressionType: String = null

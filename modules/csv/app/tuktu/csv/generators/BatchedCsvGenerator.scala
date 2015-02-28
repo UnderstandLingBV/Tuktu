@@ -2,18 +2,13 @@ package tuktu.csv.generators
 
 import java.io.FileReader
 
-import akka.actor.Actor
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
-import akka.actor.PoisonPill
-import akka.actor.Props
-import akka.actor.actorRef2Scala
+import akka.actor._
 import au.com.bytecode.opencsv.CSVReader
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsValue
-import tuktu.api.AsyncGenerator
+import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.InitPacket
 import tuktu.api.StopPacket
@@ -102,7 +97,7 @@ class BatchedCsvReader(parentActor: ActorRef, fileName: String, hasHeaders: Bool
     }
 }
 
-class BatchedCSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends AsyncGenerator(resultName, processors) {
+class BatchedCSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
         case config: JsValue => {
             // Get filename

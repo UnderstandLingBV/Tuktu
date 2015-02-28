@@ -5,22 +5,17 @@ import java.io.FileInputStream
 import scala.collection.JavaConversions.asScalaIterator
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.apache.poi.ss.usermodel.Row
-import akka.actor.Actor
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
-import akka.actor.PoisonPill
-import akka.actor.Props
-import akka.actor.actorRef2Scala
+import akka.actor._
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
-import tuktu.api.AsyncGenerator
 import tuktu.api.DataPacket
 import tuktu.api.InitPacket
 import tuktu.api.StopPacket
 import play.api.libs.json.JsArray
+import tuktu.api.BaseGenerator
 
 class XlsxReader(parentActor: ActorRef, fileName: String, sheetName: String, valueName: String,
         dataColStart: Int, dataColEnd: Option[Int], hierarchy: List[ParseNode], endFieldCol: Int, endField: String
@@ -109,7 +104,7 @@ class XlsxReader(parentActor: ActorRef, fileName: String, sheetName: String, val
     }
 }
 
-class XlsxGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends AsyncGenerator(resultName, processors) {
+class XlsxGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     private var flattened = false
 
 	override def receive() = {
