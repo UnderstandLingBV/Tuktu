@@ -1,0 +1,191 @@
+{
+    "generators": [
+        {
+            "name": "tuktu.social.generators.TwitterGenerator",
+            "result": "data",
+            "config": {
+                "credentials": {
+                    "consumer_key": "NI8gsMyxdj07mLm8vEeGoH6VA",
+                    "consumer_secret": "8LQAXl95Lgi2cgtxZD4iINw6zSXYdty5VI0H0NJyknNua8wKNa",
+                    "access_token": "202118752-xOLbh33EHXhR2gm8uoW04ijBsR55odPK17pHcyGO",
+                    "access_token_secret": "LqhHKskp7mSO7de9CrVhmtyUmYOfH6YaRWwCYNNyTyS4L"
+                },
+                "filters": {
+                    "keywords": ["bigdata"],
+                    "users": [],
+                    "geos": []
+                }
+            },
+            "next": ["twitterSrcAdder"]
+        },
+        {
+            "name": "tuktu.social.generators.FacebookGenerator",
+            "result": "data",
+            "config": {
+                "credentials": {
+                    "access_token": "202118752-xOLbh33EHXhR2gm8uoW04ijBsR55odPK17pHcyGO"
+                },
+                "filters": {
+                    "keywords": [],
+                    "userids": [
+                        "barackobama"
+                    ],
+                    "geos": []
+                }
+            },
+            "next": ["fbSrcAdder"]
+        }
+    ],
+    "processors": [
+		{
+			"id": "twitterSrcAdder",
+			"name": "tuktu.processors.FieldConstantAdderProcessor",
+			"result": "source",
+			"config": {
+				"value": "Twitter"
+			},
+			"next": [
+				"twitterMessageObtainer"
+			]
+		},
+		{
+			"id": "fbSrcAdder",
+			"name": "tuktu.processors.FieldConstantAdderProcessor",
+			"result": "source",
+			"config": {
+				"value": "Faceook"
+			},
+			"next": [
+				"fbMessageObtainer"
+			]
+		},
+		{
+			"id": "twitterMessageObtainer",
+			"name": "tuktu.processors.JsonFetcherProcessor",
+			"result": "",
+			"config": {
+				"fields": [
+					{
+						"default": "",
+						"path": ["data", "text"],
+						"result": "message"
+					}
+				]
+			},
+			"next": ["tokenizer"]
+		},
+		{
+			"id": "fbMessageObtainer",
+			"name": "tuktu.processors.JsonFetcherProcessor",
+			"result": "",
+			"config": {
+				"fields": [
+					{
+						"default": "",
+						"path": ["data", "message"],
+						"result": "message"
+					}
+				]
+			},
+			"next": ["tokenizer"]
+		},
+		{
+			"id": "tokenizer",
+			"name": "tuktu.nlp.TokenizerProcessor",
+			"result": "cleanedMsg",
+			"config": {
+				"field": "message"
+			},
+			"next": [
+				"liga"
+			]
+		},
+		{
+			"id": "liga",
+			"name": "tuktu.nlp.LIGAProcessor",
+			"result": "language",
+			"config": {
+				"field": "message"
+			},
+			"next": [
+				"langFilter"
+			]
+		},
+		{
+            "id": "langFilter",
+            "name": "tuktu.processors.InclusionProcessor",
+            "result": "",
+            "config": {
+                "expression": "language=nl_NL,language=en_UK,language=de_DE",
+                "type": "simple",
+                "and_or": "or"
+            },
+            "next": [
+                "postagger"
+            ]
+        },
+		{
+			"id": "postagger",
+			"name": "tuktu.nlp.POSTaggerProcessor",
+			"result": "POSTags",
+			"config": {
+				"language": "en_UK",
+				"field": "language",
+				"tokens": "cleanedMsg"
+			},
+			"next": [
+				"rbempol"
+			]
+		},
+		{
+			"id": "rbempol",
+			"name": "tuktu.nlp.RBEMPolarityProcessor",
+			"result": "polarity",
+			"config": {
+				"language": "en_UK",
+				"field": "language",
+				"tokens": "cleanedMsg",
+				"pos": "POSTags"
+			},
+			"next": [
+				"fieldImploder"
+			]
+		},
+		{
+			"id": "fieldImploder",
+			"name": "tuktu.processors.ImploderProcessor",
+			"result": "",
+			"config": {
+				"fields": [
+					{
+						"path": ["cleanedMsg"],
+						"separator": " "
+					},
+					{
+						"path": ["POSTags"],
+						"separator": " "
+					}
+				]
+			},
+			"next": [
+				"writer", "debug"
+			]
+		},
+		{
+			"id": "writer",
+			"name": "tuktu.csv.processors.CSVWriterProcessor",
+			"result": "",
+			"config": {
+				"file_name": "data/social_data.csv"
+			},
+			"next": []
+		},
+        {
+            "id": "debug",
+            "name": "tuktu.processors.ConsoleWriterProcessor",
+            "result": "",
+            "config": {},
+            "next": []
+        }
+    ]
+}

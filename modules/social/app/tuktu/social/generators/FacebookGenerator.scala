@@ -135,6 +135,12 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: FacebookBatcher, u
                         parentActor ! new StopPacket
                     }
                 }
+                case _ => {
+                    // Default, get next one
+                    Akka.system.scheduler.scheduleOnce(updateTime seconds, self, new FBDataRequest(
+                            newUrls, fbdr.start, fbdr.end
+                    ))
+                }
             }
         }
     }

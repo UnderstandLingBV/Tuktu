@@ -199,7 +199,7 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
         }
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         Future {new DataPacket(for {
                 datum <- data.data
                 // See if we need to include this
@@ -243,6 +243,8 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
         } yield {
             datum
         })}
+    }) compose Enumeratee.filter((data: DataPacket) => {
+        data.data.size > 0
     })
 }
 
