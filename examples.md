@@ -263,7 +263,7 @@ The `debug` processor, of type `tuktu.processors.ConsoleWriterProcessor`, is a v
 ## A More Realistic Example - Multilingual Sentiment Analysis on Social Media
 Granted, the previous example feels a bit superficial in that we are using Tuktu to perform a task that can easily be achieved by Excel or one of the many other tools that are out there. We are now going to set up a more realistic Tuktu job.
 
-For this example, you will need to populate the credential fields for the Twitter and Facebook generators. These should be obtained from Twitter and Facebook themselves. For Twitter, the required credentials can be obtained [her](https://dev.twitter.com/), for Facebook, the credentials can be obtained [here](https://developers.facebook.com/).
+For this example, you will need to populate the credential fields for the Twitter and Facebook generators. These should be obtained from Twitter and Facebook themselves. For Twitter, the required credentials can be obtained [here](https://dev.twitter.com/), for Facebook, the credentials can be obtained [here](https://developers.facebook.com/).
 
 We are going to work out the core of what is presented in [this thesis](http://www.win.tue.nl/~mpechen/projects/pdfs/Tromp2011.pdf) - performing sentiment analysis on social media, in multiple languages. The flow of the job we want to work out is as follows. Beware though, that a [US-patent](http://www.google.com/patents/US20140019118) has been filed for the sentiment analysis algorithm for detecting polarity (RBEM) - when applying this in the US, be sure this patent is not granted or you might be infringing it.
 
@@ -477,10 +477,10 @@ The complete Tuktu job looks as follows, you should now be able to follow it as 
             "result": "data",
             "config": {
                 "credentials": {
-                    "consumer_key": "NI8gsMyxdj07mLm8vEeGoH6VA",
-                    "consumer_secret": "8LQAXl95Lgi2cgtxZD4iINw6zSXYdty5VI0H0NJyknNua8wKNa",
-                    "access_token": "202118752-xOLbh33EHXhR2gm8uoW04ijBsR55odPK17pHcyGO",
-                    "access_token_secret": "LqhHKskp7mSO7de9CrVhmtyUmYOfH6YaRWwCYNNyTyS4L"
+                    "consumer_key": "...",
+                    "consumer_secret": "...",
+                    "access_token": "...",
+                    "access_token_secret": "..."
                 },
                 "filters": {
                     "keywords": ["bigdata"],
@@ -495,7 +495,7 @@ The complete Tuktu job looks as follows, you should now be able to follow it as 
             "result": "data",
             "config": {
                 "credentials": {
-                    "access_token": "202118752-xOLbh33EHXhR2gm8uoW04ijBsR55odPK17pHcyGO"
+                    "access_token": "..."
                 },
                 "filters": {
                     "keywords": [],
