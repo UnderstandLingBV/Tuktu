@@ -1,13 +1,15 @@
 package tuktu.ml
 
-import play.api.libs.json.JsValue
-import play.api.libs.iteratee.Enumeratee
-import tuktu.api._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsObject
+import tuktu.api.BaseProcessor
+import tuktu.api.DataPacket
+
 class LogisticRegressionTrainProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         
     }
     
@@ -19,7 +21,7 @@ class LogisticRegressionTrainProcessor(resultName: String) extends BaseProcessor
 }
 
 class LogisticRegressionApplyProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         
     }
     

@@ -7,13 +7,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.nosql.util.cassandra
 import scala.collection.JavaConversions._
 import scala.concurrent.Future
+import play.api.libs.json.JsObject
 
 class CassandraProcessor(resultName: String) extends BaseProcessor(resultName) {
     var client: cassandra.client = null
     var append = false
     var query = ""
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get hostname
         val address = (config \ "address").as[String]
         // Initialize client
@@ -40,7 +41,7 @@ class CassandraProcessor(resultName: String) extends BaseProcessor(resultName) {
                 }
                 case true => {
                     // Get the result and use it
-                    val res = client.runQuery(evalQuery).all.map(row => cassandra.rowToMap(row)).toList
+                    val res = client.runQuery(evalQuery).get.all.map(row => cassandra.rowToMap(row)).toList
                     
                     datum + (resultName -> res)
                 }

@@ -1,12 +1,16 @@
 package tuktu.nosql.generators
 
-import tuktu.api._
-import play.api.libs.json.JsValue
-import play.api.libs.iteratee.Enumeratee
-import tuktu.nosql.util.cassandra
-import scala.collection.JavaConversions._
+import scala.collection.JavaConversions.iterableAsScalaIterable
 
-class CassandraGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends AsyncGenerator(resultName, processors) {
+import akka.actor.ActorRef
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsValue
+import tuktu.api.BaseGenerator
+import tuktu.api.DataPacket
+import tuktu.api.StopPacket
+import tuktu.nosql.util.cassandra
+
+class CassandraGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
         case config: JsValue => {
             // Get the hostname
@@ -22,14 +26,17 @@ class CassandraGenerator(resultName: String, processors: List[Enumeratee[DataPac
             val query = (config \ "query").as[String]
             // Do we need to flatten or not?
             val flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
+            
+            // Get the fetch size
+            val fetchSize = (config \ "fetch_size").asOpt[Int].getOrElse(100)
 
             // Run the query
             executionType match {
                 case _ => {
-                    val rows = client.runQuery(query)
+                    val rows = client.runQuery(query, fetchSize)
 
                     // Go over the rows and push them
-                    for (row <- rows) flatten match {
+                    for (row <- rows.get) flatten match {
                         case true => channel.push(new DataPacket(List(cassandra.rowToMap(row))))
                         case false => channel.push(new DataPacket(List(Map(resultName -> cassandra.rowToMap(row)))))
                     }

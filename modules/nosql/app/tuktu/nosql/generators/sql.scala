@@ -6,8 +6,9 @@ import play.api.libs.iteratee.Enumeratee
 import java.sql._
 import anorm._
 import tuktu.nosql.util.sql
+import akka.actor.ActorRef
 
-class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends AsyncGenerator(resultName, processors) {
+class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
         case config: JsValue => {
             // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query

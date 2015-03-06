@@ -7,7 +7,7 @@ lazy val nlpDependencies = Seq(
     "nl.et4it" % "LIGA" % "1.0",
     "nl.et4it" % "OpenNLPPOSWrapper" % "1.0",
     "nl.et4it" % "RBEM" % "1.0",
-    "nl.et4it" %% "rhetorics" % "1.0"
+    "org.apache.opennlp" % "opennlp-tools" % "1.5.3"
 )
 
 lazy val csvDependencies = Seq(

@@ -5,9 +5,10 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsValue
 import tuktu.api._
 import scala.concurrent.Future
+import play.api.libs.json.JsObject
 
 class MongoDBProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         
     }
     

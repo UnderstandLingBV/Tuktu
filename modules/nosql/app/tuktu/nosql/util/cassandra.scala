@@ -3,6 +3,8 @@ package tuktu.nosql.util
 import com.datastax.driver.core.Cluster
 import com.datastax.driver.core.Row
 import scala.collection.JavaConversions._
+import com.datastax.driver.core.SimpleStatement
+import com.datastax.driver.core.ResultSet
 
 object cassandra {
     class client(address: String) {
@@ -31,8 +33,18 @@ object cassandra {
          * Runs a query on a Cassandra cluster and returns the resultset
          * @param query The query
          */
+        def runQuery(query: String, size: Int) = {
+            val stmt = new SimpleStatement(query)
+            stmt.setFetchSize(size)
+            session.executeAsync(stmt)
+        }
+        
+        /**
+         * Runs a query on a Cassandra cluster and returns the resultset
+         * @param query The query
+         */
         def runQuery(query: String) = {
-            session.execute(query)
+            session.executeAsync(query)
         }
     }
     

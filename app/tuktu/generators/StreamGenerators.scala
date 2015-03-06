@@ -81,7 +81,7 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         }
     }
     
-    override def receive() = {
+    def receive() = {
         case config: JsValue => {}
         case sp: StopPacket => {
             // Send message to the monitor actor
@@ -156,7 +156,7 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
         }
     }
     
-    override def receive() = {
+    def receive() = {
         case config: JsValue => {}
         case sp: StopPacket => {
             // Send message to the monitor actor

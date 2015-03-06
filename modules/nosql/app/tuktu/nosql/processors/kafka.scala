@@ -1,16 +1,18 @@
 package tuktu.nosql.processors
 
-import tuktu.api._
-import play.api.libs.json.JsValue
-import play.api.libs.iteratee.Enumeratee
+import java.util.Properties
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
 import kafka.javaapi.producer.Producer
 import kafka.producer.KeyedMessage
 import kafka.producer.ProducerConfig
+import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
-import java.util.Properties
-import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.Json
-import scala.concurrent.Future
+import tuktu.api.BaseProcessor
+import tuktu.api.DataPacket
 
 /**
  * Kafka producer
@@ -19,7 +21,7 @@ class KafkaProcessor(resultName: String) extends BaseProcessor(resultName) {
     var producer: Producer[String, String] = null
     var keyField = ""
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Kafka properties
         val props = new Properties()
         val kafkaProps = (config \ "kafka_props").as[JsObject]

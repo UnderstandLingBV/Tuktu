@@ -1,20 +1,23 @@
 package tuktu.nosql.generators
 
-import tuktu.api._
-import play.api.libs.iteratee.Enumeratee
-import reactivemongo.api._
 import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsObject
-import reactivemongo.bson.BSONDocument
-import play.api.libs.iteratee.Iteratee
-import reactivemongo.bson.BSON
-import reactivemongo.bson.BSONDocumentReader
-import reactivemongo.bson.BSONDocumentWriter
-import reactivemongo.bson.BSONValue
-import reactivemongo.bson.BSONString
 
-class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends AsyncGenerator(resultName, processors) {
+import akka.actor.ActorRef
+import akka.actor.actorRef2Scala
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.iteratee.Iteratee
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsValue
+import reactivemongo.api.MongoDriver
+import reactivemongo.bson.BSONDocument
+import reactivemongo.bson.BSONDocumentReader
+import reactivemongo.bson.BSONString
+import reactivemongo.bson.BSONValue.ExtendedBSONValue
+import tuktu.api.BaseGenerator
+import tuktu.api.DataPacket
+import tuktu.api.StopPacket
+
+class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     def MapReader[V](implicit vr: BSONDocumentReader[V]): BSONDocumentReader[Map[String, V]] = new BSONDocumentReader[Map[String, V]] {
         def read(bson: BSONDocument): Map[String, V] = {
             val elements = bson.elements.map { tuple =>

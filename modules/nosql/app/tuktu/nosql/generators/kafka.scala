@@ -1,17 +1,22 @@
 package tuktu.nosql.generators
 
-import tuktu.api.AsyncGenerator
-import play.api.libs.json.JsValue
-import tuktu.api._
-import play.api.libs.iteratee.Enumeratee
 import java.util.Properties
-import kafka.consumer.Consumer
-import kafka.consumer.ConsumerConfig
-import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
 import java.util.concurrent.Executors
 
-class KafkaGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]]) extends AsyncGenerator(resultName, processors) {
+import scala.collection.JavaConversions.asScalaBuffer
+import scala.collection.JavaConversions.mapAsJavaMap
+
+import akka.actor.ActorRef
+import akka.actor.actorRef2Scala
+import kafka.consumer.Consumer
+import kafka.consumer.ConsumerConfig
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsValue
+import tuktu.api.BaseGenerator
+import tuktu.api.DataPacket
+import tuktu.api.StopPacket
+
+class KafkaGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
         case config: JsValue => {
             // Get kafka properties

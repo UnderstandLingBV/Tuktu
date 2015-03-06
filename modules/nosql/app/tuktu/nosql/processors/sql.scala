@@ -1,20 +1,21 @@
 package tuktu.nosql.processors
 
-import tuktu.api._
-import play.api.libs.json.JsValue
-import play.api.libs.iteratee.Enumeratee
 import scala.concurrent.ExecutionContext.Implicits.global
-import java.sql._
-import anorm._
-import tuktu.nosql.util.sql
 import scala.concurrent.Future
+
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsObject
+import tuktu.api.BaseProcessor
+import tuktu.api.DataPacket
+import tuktu.api.utils
+import tuktu.nosql.util.sql
 
 class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var client: sql.client = null
     var append = false
     var query = ""
     
-    override def initialize(config: JsValue) = {
+    override def initialize(config: JsObject) = {
         // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
         val url = (config \ "url").as[String]
         val user = (config \ "user").as[String]
