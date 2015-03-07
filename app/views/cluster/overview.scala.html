@@ -1,0 +1,77 @@
+@(messages: Map[String, List[String]], configRepo: String, homeAddress: String, logLevel: String, clusterNodes: Map[String, String])
+
+@index("Cluster Info", messages) {
+    @clusterMenu()
+} {
+    <h2>
+        Cluster Overview
+    </h2>
+    
+    <form>
+	    <div class="row">
+	        <div class="col-xs-12">
+	            <div class="form-group">
+	                <label for="configRepo">Configuration Repository</label>
+	                <input type="text" class="form-control" id="configRepo" value="@configRepo">
+	            </div>
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="col-xs-12">
+	            <div class="form-group">
+	                <label for="homeAddress">Current Node Address</label>
+	                <span id="homeAddress">@homeAddress</span>
+	            </div>
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="col-xs-12">
+	            <div class="form-group">
+	                <label for="logLevel">Logging Level</label>
+	                <input type="text" class="form-control" id="logLevel" value="@logLevel">
+	            </div>
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="col-xs-12">
+	            <div class="form-group">
+	                <label for="clusterNodes">Nodes in Cluster</label>
+	                <table id="clusterNodes" class="table">
+	                   <thead>
+	                       <tr>
+	                           <th>
+	                               Node
+	                           </th>
+	                           <th>
+	                               Port
+	                           </th>
+	                           <th width="50px"></th>
+	                       </tr>
+	                   </thead>
+	                   <tbody>
+		                    @for((node, port) <- clusterNodes) {
+		                        <tr>
+		                           <td>
+		                              @if(node != homeAddress) {
+		                                  <a href="http://@node:9000">@node</a>
+		                              } else {
+		                                  @node
+		                              }
+		                           </td>
+		                           <td>@port</td>
+		                           <td>
+		                              @if(node != homeAddress) {
+			                              <a href="@routes.Cluster.removeNode(node)">
+			                                  <span class="glyphicon glyphicon-remove-sign" aria-hidden="true"></span>
+			                              </a>
+			                          }
+		                           </td>
+		                        </tr>
+		                    }
+		                </tbody>
+	                </table>
+	            </div>
+	        </div>
+	    </div>
+	</form>
+}

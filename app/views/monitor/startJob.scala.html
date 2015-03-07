@@ -1,6 +1,6 @@
 @(configs: Array[String], messages: Map[String, List[String]])
 
-@index(messages) {
+@index("Monitoring", messages) {
     @monitorMenu()
 } {
     @if(configs.size > 0) {
