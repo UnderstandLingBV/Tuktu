@@ -54,13 +54,28 @@ class ConcurrentStreamForwarder(parentActor: ActorRef) extends Actor with ActorL
 /**
  * Takes take of distributing computation over several nodes
  */
-class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], processorType: String, config: JsValue, resultName: String) extends Actor with ActorLogging {
+class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], processorTypes: List[String],
+        configs: List[JsValue], resultName: String) extends Actor with ActorLogging {
     implicit val timeout = Timeout(1 seconds)
     
     var nodes = collection.mutable.Map[String, ActorRef]()
     
     // Set up the remote nodes
     for ((node, index) <- nodeList.zipWithIndex) {
+        // Construct the processors' config
+        val processorsConfig = for ((processor, index) <- processorTypes.zipWithIndex) yield {
+            Json.obj(
+                    "start" -> ("execute_processor_" + index),
+                    "pipeline" -> Json.arr(Json.obj(
+                        "id" -> ("execute_processor_" + index),
+                        "name" -> processor,
+                        "result" -> ("processed_data_" + index),
+                        "config" -> (configs(index).asInstanceOf[JsObject] - "nodes"),
+                        "next" -> List[String]()
+                    ))
+            )
+        }
+        
         val customConfig = Json.obj(
             "generators" -> List(Json.obj(
                 "name" -> "tuktu.generators.SyncStreamGenerator",
@@ -79,10 +94,14 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                     "next" -> List("execute_processor")),
                 Json.obj(
                     "id" -> "execute_processor",
-                    "name" -> processorType,
-                    "result" -> "processed_data",
-                    "config" -> (config.asInstanceOf[JsObject] - "nodes"),
-                    "next" -> List[String]())
+                    "name" -> "tuktu.processors.meta.ParallelProcessor",
+                    "result" -> "",
+                    "config" -> Json.obj(
+                            "merger" -> "tuktu.processors.merge.SimpleMerger",
+                            "processors" -> processorsConfig
+                    ),
+                    "next" -> List[String]()
+                )
         ))
 
         // Set up forwarder
@@ -103,11 +122,26 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
     }
     
     // Set up distribution class
-    val db = new DistributionFunction(config, nodeList)
-    val resultTimeout = (config \ "timeout").asOpt[Int].getOrElse(30)
+    val db = new DistributionFunction(configs.head, nodeList)
+    val resultTimeout = (configs.head \ "timeout").asOpt[Int].getOrElse(30)
     
     // For gathering the results
     var resultList = collection.mutable.ListBuffer[DataPacket]()
+    
+    def mergeResultsToDatapacket(results: List[List[Map[String, Any]]]): List[Map[String, Any]] = results match {
+        case Nil => List[Map[String, Any]]()
+        case result::remainder => {
+            // Get the remainder first
+            val otherResults = mergeResultsToDatapacket(remainder)
+            
+            for ((row, index) <- result.zipWithIndex) yield {
+                if (otherResults.size > index) {
+                    // Add all fields together
+                    row ++ otherResults(index)
+                } else row
+            }
+        }
+    }
 
     def receive() = {
         case dp: DataPacket => {
@@ -128,27 +162,29 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                 // We must now merge the results, get the 'processed_data' from all of them
                 val combinedResult = resultList.flatMap(result => result.data).toList
                 
-                // Initialize processor class once more
-                val procClazz = Class.forName(processorType)
-                val iClazz = procClazz.getConstructor(classOf[String]).newInstance(resultName)
+                // Initialize processors once more
+                val resultData = for ((processorType, index) <- processorTypes.zipWithIndex) yield {
+                    val procClazz = Class.forName(processorType)
+                    val iClazz = procClazz.getConstructor(classOf[String]).newInstance("processed_data_" + index)
+                    
+                    // Initialize the processor
+                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                    initMethod.invoke(iClazz, configs(index).asInstanceOf[JsObject] - "nodes")
                 
-                // Initialize the processor
-                val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
-                initMethod.invoke(iClazz, config.asInstanceOf[JsObject] - "nodes")
-                
-                // Now invoke the process function
-                val processMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "doProcess").head
-                val newData = try {
-                    processMethod.invoke(iClazz, combinedResult).asInstanceOf[List[Map[String, Any]]]
-                } catch {
-                    case e: Exception => {
-                        e.printStackTrace()
-                        null
+                    // Now invoke the process function
+                    val processMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "doProcess").head
+                    try {
+                        processMethod.invoke(iClazz, combinedResult).asInstanceOf[List[Map[String, Any]]]
+                    } catch {
+                        case e: Exception => {
+                            e.printStackTrace()
+                            null
+                        }
                     }
                 }
-                
+
                 // We should send them on to the remote generator now
-                genActor ! new DataPacket(newData)
+                genActor ! new DataPacket(mergeResultsToDatapacket(resultData))
                 // Free up
                 genActor ! new StopPacket()
             }
@@ -181,9 +217,13 @@ abstract class BaseConcurrentProcessor(genActor: ActorRef, resultName: String) e
     implicit val timeout = Timeout(5 seconds)
     var concurrentHandler: ActorRef = null
 
-    def initializeNodes(nodeList: List[String], processorType: String, config: JsValue) = {
+    def initializeNodes(nodeList: List[String], processorType: String, config: JsValue): Unit = {
+        this.initializeNodes(nodeList, List(processorType), List(config))
+    }
+    
+    def initializeNodes(nodeList: List[String], processorTypes: List[String], configs: List[JsValue]): Unit = {
         // Set up concurrent handler
-        concurrentHandler = Akka.system.actorOf(Props(classOf[ConcurrentHandlerActor], genActor, nodeList, processorType, config, resultName))
+        concurrentHandler = Akka.system.actorOf(Props(classOf[ConcurrentHandlerActor], genActor, nodeList, processorTypes, configs, resultName))
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -194,7 +234,7 @@ abstract class BaseConcurrentProcessor(genActor: ActorRef, resultName: String) e
 
         // No need to continue
         new DataPacket(List())
-    }) compose Enumeratee.onEOF(() => {
+    }) compose Enumeratee.filter((data: DataPacket) => data.data.size > 0) compose Enumeratee.onEOF(() => {
         // Send the end signal to our remote generator
         concurrentHandler ! new StopPacket
     })

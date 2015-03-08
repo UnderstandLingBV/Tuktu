@@ -35,7 +35,10 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
             remoteGenerator ! sp
             self ! PoisonPill
         }
-        case item: Map[String, Any] => buffer += item
+        case item: Map[String, Any] => {
+            buffer += item
+            sender ! "ok"
+        }
     }
 }
 
@@ -57,7 +60,10 @@ class SizeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Iterate over our data and add to the buffer
-        data.data.foreach(datum => bufferActor ! datum)
+        val fut = Future.sequence(for (datum <- data.data) yield bufferActor ? datum)
+        
+        // Wait for all of them to finish
+        Await.result(fut, 30 seconds)
         
         // Increase counter
         curCount += 1
@@ -118,13 +124,17 @@ class TimeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
  * Buffers until EOF (end of data stream) is found
  */
 class EOFBufferProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    implicit val timeout = Timeout(30 seconds)
+    
     // Set up the buffering actor
     val bufferActor = Akka.system.actorOf(Props(classOf[BufferActor], genActor))
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Iterate over our data and add to the buffer
-        data.data.foreach(datum => bufferActor ! datum)
+        val fut = Future.sequence(for (datum <- data.data) yield bufferActor ? datum)
         
+        // Wait for all of them to finish
+        Await.result(fut, 30 seconds)
         Future {data}
     }) compose Enumeratee.onEOF(() => {
         bufferActor ! "release"

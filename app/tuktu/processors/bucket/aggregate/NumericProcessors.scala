@@ -100,6 +100,7 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
             
             List(Map(field -> {
                 firstElem match {
+                    case a: String => data.foldLeft[Double](0)(_ + _(field).asInstanceOf[String].toDouble)
                     case a: Int => data.foldLeft[Int](0)(_ + _(field).asInstanceOf[Int])
                     case a: Integer => data.foldLeft[Integer](0: Integer)(_ + _(field).asInstanceOf[Integer])
                     case a: Double => data.foldLeft[Double](0.0)(_ + _(field).asInstanceOf[Double])
@@ -115,11 +116,14 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
  * Counts the amount of values in a bucket
  */
 class CountProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
+    override def initialize(config: JsObject) = {}
+    
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        println("Sending out: " + Map(resultName -> data.data.size))
         new DataPacket(List(Map(resultName -> data.data.size)))
     })
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        List(Map(resultName -> data.asInstanceOf[List[Map[String, Int]]].foldLeft(0)(_ + _.size)))
+        List(Map(resultName -> data.asInstanceOf[List[Map[String, Int]]].foldLeft(0)(_ + _(resultName))))
     }
 }
