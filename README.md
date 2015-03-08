@@ -9,7 +9,7 @@ Tuktu is a big data analytics platform that focuses on ease of use. The idea of 
 - Easy integration with big data/NoSQL tooling
 - Easily extendable
 
-The name comes from the Inuït word *tuktu*, which freely translates to the English word *deer*.
+The name comes from the Inuït word *tuktu*, which freely translates to the English word *reindeer* (also known as *[caribou](http://en.wikipedia.org/wiki/Caribou)*).
 
 # Installing
 
