@@ -1,0 +1,101 @@
+@(generators: Iterable[(String, String)], processors: Iterable[(String, String)])
+
+@main("Tuktu Modeller") {
+
+	<nav class="navbar navbar-default">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="#">Tuktu</a>
+			</div>
+			<ul class="nav navbar-nav">
+				<li><a href="#AddGenerator">Add Generator</a></li>
+				<li><a href="#AddProcessor">Add Processor</a></li>
+				<li><a href="#GenerateConfig">Generate Config</a></li>
+			</ul>
+			
+		</div>
+	</nav>
+
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-xs-8 text-center">
+				<h3>Flowchart</h3>
+			</div>
+			<div class="col-xs-4 text-center">
+				<h3>Preferences</h3>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-8" id="flowchart"></div>
+			<div class="col-xs-4" id="preferences">
+				<form class="hidden" id="generatorSettings">
+					<div class="form-group">
+						<button name="delete" type="button" class="btn btn-danger">Delete Node</button>
+					</div>
+					<div class="form-group">
+						<label for="generatorName">Type</label>
+						<select name="name" id="generatorName" class="form-control">
+							<option value=""> -- </option>
+							@for(generator <- generators) {
+							<option value="@generator._2">@generator._1</option>
+							}
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="generatorNode">Node</label>
+						<input name="node" id="generatorNode" class="form-control" type="text">
+					</div>
+					<div class="form-group">
+						<label for="generatorResult">Result</label>
+						<input name="result" id="generatorResult" class="form-control" type="text">
+					</div>
+					<div class="form-group">
+						<label for="generatorConfig">Configuration</label>
+						<textarea name="config" id="generatorConfig" class="form-control" rows="5"></textarea>
+					</div>
+				</form>
+				<form class="hidden" id="processorSettings">
+					<div class="form-group">
+						<button name="delete" type="button" class="btn btn-danger">Delete Node</button>
+					</div>
+					<div class="form-group">
+						<label for="processorName">Type</label>
+						<select name="name" id="processorName" class="form-control">
+							<option value=""> -- </option>
+							@for(processor <- processors) {
+							<option value="@processor._2">@processor._1</option>
+							}
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="processorId">Id</label>
+						<input name="id" id="processorId" class="form-control" type="text">
+					</div>
+					<div class="form-group">
+						<label for="processorResult">Result</label>
+						<input name="result" id="processorResult" class="form-control" type="text">
+					</div>
+					<div class="form-group">
+						<label for="processorConfig">Configuration</label>
+						<textarea name="config" id="processorConfig" class="form-control" rows="5"></textarea>
+					</div>
+				</form>
+				<form class="hidden" id="connectionSettings">
+					<div class="form-group">
+						<button name="delete" type="button" class="btn btn-danger">Delete Connection</button>
+					</div>
+				</form>
+				<form class="show" id="generatedOutput">
+					<div class="form-group">
+						<label for="outputTextarea">Generated Config</label>
+						<textarea id="outputTextarea" class="form-control" rows="12"></textarea>
+					</div>
+					<div class="form-group">
+						<a href="#GenerateConfig" class="btn btn-primary">Generate Config</a>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+}
