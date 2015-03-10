@@ -1,0 +1,46 @@
+{
+	"name": "Join Generator",
+	"class": "tuktu.generators.JoinGenerator",
+	"result_required": false,
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "JsArray",
+			"required": false
+		},
+		{
+			"name": "sources",
+			"type": "JsArray",
+			"required": true
+		}
+	],
+	"parameters.nodes": [
+		{
+			"name": "host",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "port",
+			"type": "int",
+			"required": true
+		}
+	],
+	"parameters.sources": [
+		{
+			"name": "name",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "key",
+			"type": "Array.string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		}
+	]
+}

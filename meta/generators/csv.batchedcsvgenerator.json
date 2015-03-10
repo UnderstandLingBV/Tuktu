@@ -1,0 +1,47 @@
+{
+	"name": "Batched CSV Generator",
+	"class": "tuktu.csv.generators.BatchedCsvGenerator",
+	"result_required": false,
+	"parameters": [
+		{
+			"name": "filename",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "has_headers",
+			"type": "boolean",
+			"required": false
+		},
+		{
+			"name": "predef_headers",
+			"type": "Array.string",
+			"required": false
+		},
+		{
+			"name": "flattened",
+			"type": "boolean",
+			"required": false
+		},
+		{
+			"name": "separator",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "quote",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "escape",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "batch_size",
+			"type": "int",
+			"required": false
+		}
+	]
+}

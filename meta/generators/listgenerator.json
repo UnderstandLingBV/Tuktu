@@ -1,0 +1,12 @@
+{
+	"name": "List Generator",
+	"class": "tuktu.generators.ListGenerator",
+	"result_required": true,
+	"parameters": [
+		{
+			"name": "values",
+			"type": "Array.string",
+			"required": true
+		}
+	]
+}

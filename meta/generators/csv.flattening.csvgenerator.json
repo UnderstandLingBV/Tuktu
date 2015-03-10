@@ -1,0 +1,7 @@
+{
+	"name": "CSV Flattening Generator",
+	"class": "tuktu.csv.generators.flattening.CsvGenerator",
+	"result_required": false,
+	"parameters": [
+	]
+}

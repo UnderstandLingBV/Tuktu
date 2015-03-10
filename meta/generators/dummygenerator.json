@@ -1,0 +1,17 @@
+{
+	"name": "Dummy Generator",
+	"class": "tuktu.generators.DummyGenerator",
+	"result_required": true,
+	"parameters": [
+		{
+			"name": "interval",
+			"type": "int",
+			"required": true
+		},
+		{
+			"name": "message",
+			"type": "string",
+			"required": true
+		}
+	]
+}

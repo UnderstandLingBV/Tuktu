@@ -1,0 +1,7 @@
+{
+	"name": "EOF Sync Stream Generator",
+	"class": "tuktu.generators.EOFSyncStreamGenerator",
+	"result_required": false,
+	"parameters": [
+	]
+}
