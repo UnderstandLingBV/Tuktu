@@ -186,12 +186,6 @@ class Connection
 			form.className = 'hidden'
 		form = document.getElementById('connectionSettings')
 		form.className = 'show'
-		# Clone and replace children to get rid of EventHandlers
-		for child in form.children
-			child.parentNode.replaceChild(child.cloneNode(true), child)
-		form.className = 'show'
-		button = form.querySelector('button[name="delete"]')
-		button.addEventListener('click', => @destructor())
 
 		@highlight()
 		@from.highlight()
@@ -206,6 +200,7 @@ class Connection
 		@unhighlight()
 		@from.unhighlight()
 		@to.unhighlight()
+		generateConfig()
 
 class Generator
 	@id = null
@@ -272,7 +267,6 @@ class Generator
 			text += @name
 		if @config.id? and @config.id isnt ''
 			text += '\n' + @config.id
-		console.log(text)
 		@text.attr('text', text)
 
 	activateForm: ->
@@ -281,47 +275,22 @@ class Generator
 			form.className = 'hidden'
 		form = document.getElementById(@name.toLowerCase() + 'Settings')
 		form.className = 'show'
-		# Clone and replace children to get rid of EventHandlers
-		for child in form.children
-			child.parentNode.replaceChild(child.cloneNode(true), child)
-
-		button = form.querySelector('button[name="delete"]')
-		button.addEventListener('click', => @destructor)
 
 		for input in form.querySelectorAll('input')
 			if @config[input.name]?
 				input.value = @config[input.name]
 			else
 				@config[input.name] = ''
-			func = (input) => =>
-				@config[input.name] = input.value
-				@setLabel()
-			input.addEventListener('change', func(input))
-			input.addEventListener('keyup', func(input))
 
 		for input in form.querySelectorAll('textarea')
 			if not @config[input.name]?
 				@config[input.name] = {}
 			input.value = JSON.stringify(@config[input.name], null, '    ')
-			origClasses = input.parentNode.className.replace(' has-success', '').replace(' has-error', '')
-			input.parentNode.className = origClasses
-			func = (input) => =>
-				try
-					@config[input.name] = JSON.parse(input.value)
-					input.parentNode.className = origClasses + ' has-success'
-					@setLabel()
-				catch
-					input.parentNode.className = origClasses + ' has-error'
-			input.addEventListener('change', func(input))
-			input.addEventListener('keyup', func(input))
+			$(input).removeClass('has-success has-error')
 
 		for input in form.querySelectorAll('select')
 			for option in input.querySelectorAll('option')
 				option.selected = option.value is @config[input.name]
-			func = (input) => =>
-				@config[input.name] = input.value
-				@setLabel()
-			input.addEventListener('change', func(input))
 
 	select: ->
 		selected.deselect() if selected isnt null
@@ -352,6 +321,7 @@ class Generator
 			pred.line.unhighlight()
 		@unhighlight()
 		@rect.animate({'fill': @rectColor}, _delay)
+		generateConfig()
 
 	getSourcePoint: ->
 		[@circle.attr('cx'), @circle.attr('cy')]
@@ -383,8 +353,7 @@ class Processor extends Generator
 
 	constructor: ->
 		super('#00ff66', '#00bb00', 'Processor', true, 10)
-		# Processors don't have node
-		delete @config.node
+
 		@targetOuter = paper.circle(@x, @y + 30, 10)
 		@targetOuter.attr({'fill': '#ffffff', 'stroke-width': 2, 'cursor': 'crosshair'})
 		@targetInner = paper.circle(@x, @y + 30, 8)
@@ -400,35 +369,57 @@ class Processor extends Generator
 
 	getTargetPoint: ->
 		[@targetInner.attr('cx'), @targetInner.attr('cy')]
-		
 
-for elem in document.querySelectorAll('a[href="#AddGenerator"]')
-	elem.addEventListener('click', (e) ->
-		e.preventDefault()
-		new Generator())
-for elem in document.querySelectorAll('a[href="#AddProcessor"]')
-	elem.addEventListener('click', (e) ->
-		e.preventDefault()
-		new Processor())
+generateConfig = (e) ->
+	e.preventDefault() if e?
+	gen = for g in allNodes.generators
+		conf = g.config
+		conf.next = []
+		for id, succ of g.successors
+			conf.next.push(succ.node.config.id)
+		conf
+	pro = for p in allNodes.processors
+		conf = p.config
+		conf.next = []
+		for id, succ of p.successors
+			conf.next.push(succ.node.config.id)
+		conf
+	json =
+		generators:  gen
+		processors:  pro
+	document.getElementById('outputTextarea').value = JSON.stringify(json, null, '    ')
+	selected.deselect() if selected?
 
-for elem in document.querySelectorAll('a[href="#GenerateConfig"]')
-	elem.addEventListener('click', (e) ->
-		e.preventDefault()
-		gen = for g in allNodes.generators
-			conf = g.config
-			conf.next = []
-			for id, succ of g.successors
-				conf.next.push(succ.node.config.id)
-			conf
-		pro = for p in allNodes.processors
-			conf = p.config
-			conf.next = []
-			for id, succ of p.successors
-				conf.next.push(succ.node.config.id)
-			conf
-		json =
-			generators:  gen
-			processors:  pro
-		document.getElementById('outputTextarea').value = JSON.stringify(json, null, '    ')
-		selected.deselect() if selected?
-		)
+# Bind AddGenerator, AddProcessor and deleteSelected respective click events
+$('a[href="#AddGenerator"]').on('click', (e) ->
+	e.preventDefault()
+	new Generator()
+)
+$('a[href="#AddProcessor"]').on('click', (e) ->
+	e.preventDefault()
+	new Processor()
+)
+$('#preferences button[name="deleteSelected"]').on('click', (e) ->
+	e.preventDefault()
+	selected.destructor()
+)
+
+$('a[href="#GenerateConfig"]').on('click', generateConfig)
+
+# Bind respective input types to change selected.config
+$('#preferences input[type="text"]').on('input', ->
+	selected.config[@name] = @value
+	selected.setLabel()
+)
+$('#preferences select').on('change', ->
+	selected.config[@name] = @value
+	selected.setLabel()
+)
+$('#preferences textarea').on('input', ->
+	$(@parentNode).removeClass('has-error has-success')
+	try
+		selected.config[@name] = JSON.parse(@value)
+		$(@parentNode).addClass('has-success')
+	catch
+		$(@parentNode).addClass('has-error')
+)
