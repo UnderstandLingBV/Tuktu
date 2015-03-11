@@ -27,7 +27,6 @@
 			"name": "filter",
 			"type": "json",
 			"required": true
-		},
-		
+		}
 	]
 }
