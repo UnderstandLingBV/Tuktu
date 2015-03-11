@@ -59,7 +59,7 @@ background.click(mClickSVG)
 
 # Store the current position in data for all children of node
 mDownBox = (node) -> ->
-	node.select()
+	node.select() if node isnt selected
 	for elem in node.children
 		if elem.type is 'circle'
 			elem.data('cx', elem.attr('cx'))
@@ -129,14 +129,15 @@ class Connection
 		@highlight()
 
 	destructor: ->
-		this.deselect() if this is selected
-		@line.remove() if @line isnt undefined
+		@deselect() if this is selected
+		@line.remove() if @line?
 		delete @line
-		if @from isnt undefined and @to isnt undefined
+		if @from? and @to?
 			@from.removeSuccessor(@to)
 			@to.removePredecessor(@from)
 		delete @from
 		delete @to
+		generateConfig()
 
 	connect: (to) ->
 		to = getRaphaelParent(to)
@@ -182,9 +183,8 @@ class Connection
 		selected.deselect() if selected isnt null
 		selected = this
 		# Hide all other forms; show respective settings
-		for form in document.getElementById('preferences').children
-			form.className = 'hidden'
-		form = document.getElementById('connectionSettings')
+		$('#preferences > *').each( -> @className = 'hidden' )
+		$('#connectionSettings').each( -> @className = 'show' )
 		form.className = 'show'
 
 		@highlight()
@@ -194,9 +194,8 @@ class Connection
 	deselect: ->
 		selected = null
 		# Hide all other forms; show Output
-		for form in document.getElementById('preferences').children
-			form.className = 'hidden'
-		document.getElementById('generatedOutput').className = 'show'
+		$('#preferences > *').each( -> @className = 'hidden' )
+		$('#generatedOutput').each( -> @className = 'show' )
 		@unhighlight()
 		@from.unhighlight()
 		@to.unhighlight()
@@ -253,9 +252,11 @@ class Generator
 		pred.line.destructor() for id, pred of @predecessors
 		succ.line.destructor() for id, succ of @successors
 		allNodes[@name.toLowerCase() + 's'].splice(allNodes[@name.toLowerCase() + 's'].indexOf(this))
+		generateConfig()
 
 	highlight: ->
 		@rect.animate({'stroke-width': 4}, _delay)
+
 	unhighlight: ->
 		@rect.animate({'stroke-width': 2}, _delay)
 
@@ -269,28 +270,60 @@ class Generator
 			text += '\n' + @config.id
 		@text.attr('text', text)
 
+	# Get config for a specific DOM element
+	getConfig: (elem) ->
+		configs = []
+		parent = elem.parentNode
+		while (parent?)
+			if (parent? and parent.dataset? and parent.dataset.config?)
+				configs.push(parent.dataset.config)
+			parent = parent.parentNode
+		config = @config
+		for conf in configs
+			config = config[conf]
+		config[elem.name]
+
+	# Set config for a specific DOM element
+	setConfig: (elem, newValue = $(elem).prop('value')) ->
+		name = elem.name
+		configs = []
+		while (elem?)
+			elem = elem.parentNode
+			if (elem? and elem.dataset? and elem.dataset.config?)
+				configs.push(elem.dataset.config)
+		config = @config
+		for conf in configs
+			config = config[conf]
+		config[name] = newValue
+
 	activateForm: ->
-		# Hide all forms, show respective one
-		for form in document.getElementById('preferences').children
-			form.className = 'hidden'
-		form = document.getElementById(@name.toLowerCase() + 'Settings')
-		form.className = 'show'
+		# Hide all forms, show corresponding form
+		$('#preferences > *').each( -> @className = 'hidden' )
+		$('#' + @name.toLowerCase() + 'Settings').each( -> @className = 'show' )
+		# Hide all shown sub-forms
+		$('#preferences > * > .show').each( -> @className = 'hidden' )
+		$('#preferences div[data-class="' + @config.name + '"]').each( -> @className = 'show')
+		$('#preferences div[data-class="' + @config.name + '"] input[name="result"]').each( -> @value = selected.config.result )
 
-		for input in form.querySelectorAll('input')
-			if @config[input.name]?
-				input.value = @config[input.name]
+		# Populate inputs
+		$('#preferences > .show input[type="text"],#preferences > .show input[type="number"]').each( ->
+			val = selected.getConfig(this)
+			if val?
+				$(this).prop('value', val)
 			else
-				@config[input.name] = ''
-
-		for input in form.querySelectorAll('textarea')
-			if not @config[input.name]?
-				@config[input.name] = {}
-			input.value = JSON.stringify(@config[input.name], null, '    ')
-			$(input).removeClass('has-success has-error')
-
-		for input in form.querySelectorAll('select')
-			for option in input.querySelectorAll('option')
-				option.selected = option.value is @config[input.name]
+				$(this).prop('value', '')
+		)
+		$('#preferences > .show input[type="checkbox"]').each( ->
+			val = selected.getConfig(this)
+			if val?
+				$(this).prop('checked', val)
+			else
+				$(this).prop('checked', false)
+		)
+		$('#preferences > .show select > option').each( ->
+			val = selected.config[@parentNode.name]
+			$(this).prop('selected', val? and $(this).prop('value').toString() is val.toString())
+		)
 
 	select: ->
 		selected.deselect() if selected isnt null
@@ -310,9 +343,10 @@ class Generator
 	deselect: ->
 		selected = null
 		# Hide all forms, show Output
-		for form in document.getElementById('preferences').children
-			form.className = 'hidden'
-		document.getElementById('generatedOutput').className = 'show'
+		$('#preferences > *').each( -> @className = 'hidden' )
+		$('#generatedOutput').each( -> @className = 'show' )
+
+		# Unhighlight neighbors and their connections
 		for id, succ of @successors
 			succ.node.unhighlight()
 			succ.line.unhighlight()
@@ -408,18 +442,18 @@ $('a[href="#GenerateConfig"]').on('click', generateConfig)
 
 # Bind respective input types to change selected.config
 $('#preferences input[type="text"]').on('input', ->
-	selected.config[@name] = @value
-	selected.setLabel()
+	selected.setConfig(this)
+)
+$('#preferences input[type="number"][step="1"]').on('input', ->
+	newValue = parseInt($(this).prop('value'))
+	selected.setConfig(this, newValue) if not isNaN(newValue)
+)
+$('#preferences input[type="checkbox"]').on('change', ->
+	selected.setConfig(this, $(this).prop('checked'))
 )
 $('#preferences select').on('change', ->
-	selected.config[@name] = @value
+	selected.config[@name] = $(this).prop('value')
+	selected.config.config = {}
 	selected.setLabel()
-)
-$('#preferences textarea').on('input', ->
-	$(@parentNode).removeClass('has-error has-success')
-	try
-		selected.config[@name] = JSON.parse(@value)
-		$(@parentNode).addClass('has-success')
-	catch
-		$(@parentNode).addClass('has-error')
+	selected.activateForm()
 )

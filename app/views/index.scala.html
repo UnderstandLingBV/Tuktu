@@ -1,4 +1,4 @@
-@(generators: Iterable[(String, String)], processors: Iterable[(String, String)])
+@(generators: Iterable[(String, play.api.libs.json.JsValue)], processors: Iterable[(String, play.api.libs.json.JsValue)])
 
 @main("Tuktu Modeller") {
 
@@ -37,7 +37,7 @@
 						<select name="name" id="generatorName" class="form-control">
 							<option value=""> -- </option>
 							@for(generator <- generators) {
-							<option value="@generator._2">@generator._1</option>
+							<option value="@{(generator._2 \ "class").as[String]}">@generator._1</option>
 							}
 						</select>
 					</div>
@@ -45,14 +45,7 @@
 						<label for="generatorNode">Node</label>
 						<input name="node" id="generatorNode" class="form-control" type="text">
 					</div>
-					<div class="form-group">
-						<label for="generatorResult">Result</label>
-						<input name="result" id="generatorResult" class="form-control" type="text">
-					</div>
-					<div class="form-group">
-						<label for="generatorConfig">Configuration</label>
-						<textarea name="config" id="generatorConfig" class="form-control" rows="5"></textarea>
-					</div>
+					@for(generator <- generators) { @form(generator._2) }
 				</form>
 				<form class="hidden" id="processorSettings">
 					<div class="form-group">
@@ -63,29 +56,22 @@
 						<select name="name" id="processorName" class="form-control">
 							<option value=""> -- </option>
 							@for(processor <- processors) {
-							<option value="@processor._2">@processor._1</option>
+							<option value="@{(processor._2 \ "class").as[String]}">@processor._1</option>
 							}
 						</select>
 					</div>
 					<div class="form-group">
 						<label for="processorId">Id</label>
-						<input name="id" id="processorId" class="form-control" type="text">
+						<input name="id" id="processorId" class="form-control" type="text" required="required">
 					</div>
-					<div class="form-group">
-						<label for="processorResult">Result</label>
-						<input name="result" id="processorResult" class="form-control" type="text">
-					</div>
-					<div class="form-group">
-						<label for="processorConfig">Configuration</label>
-						<textarea name="config" id="processorConfig" class="form-control" rows="5"></textarea>
-					</div>
+					@for(processor <- processors) { @form(processor._2) }
 				</form>
 				<form class="hidden" id="connectionSettings">
 					<div class="form-group">
 						<button name="deleteSelected" type="button" class="btn btn-danger">Delete Connection</button>
 					</div>
 				</form>
-				<form class="show" id="generatedOutput">
+				<form class="hidden" id="generatedOutput">
 					<div class="form-group">
 						<label for="outputTextarea">Generated Config</label>
 						<textarea id="outputTextarea" class="form-control" rows="12"></textarea>
