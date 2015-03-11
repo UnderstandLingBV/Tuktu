@@ -1,0 +1,7 @@
+{
+	"name": "Replace Processor",
+	"class": "tuktu.processors.ReplaceProcessor",
+	"result_required": false,
+	"parameters": [
+	]
+}

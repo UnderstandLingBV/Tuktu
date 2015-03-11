@@ -1,0 +1,7 @@
+{
+	"name": "JSON Fetcher Processor",
+	"class": "tuktu.processors.JsonFetcherProcessor",
+	"result_required": false,
+	"parameters": [
+	]
+}

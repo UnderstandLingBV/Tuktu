@@ -1,0 +1,7 @@
+{
+	"name": "Flattener Processor",
+	"class": "tuktu.processors.FlattenerProcessor",
+	"result_required": false,
+	"parameters": [
+	]
+}

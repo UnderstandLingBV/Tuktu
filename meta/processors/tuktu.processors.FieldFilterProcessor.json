@@ -1,0 +1,7 @@
+{
+	"name": "Field Filter Processor",
+	"class": "tuktu.processors.FieldFilterProcessor",
+	"result_required": false,
+	"parameters": [
+	]
+}

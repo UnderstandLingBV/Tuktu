@@ -1,6 +1,6 @@
 {
-	"name": "Xls Generator",
-	"class": "tuktu.csv.generators.XlsGenerator",
+	"name": "XLS Generator",
+	"class": "tuktu.csv.generators.flattening.XlsGenerator",
 	"result_required": false,
 	"parameters": [
 		{

@@ -1,0 +1,7 @@
+{
+	"name": "Timestamp Adder Processor",
+	"class": "tuktu.processors.TimestampAdderProcessor",
+	"result_required": false,
+	"parameters": [
+	]
+}

@@ -1,0 +1,7 @@
+{
+	"name": "Inclusion Processor",
+	"class": "tuktu.processors.InclusionProcessor",
+	"result_required": false,
+	"parameters": [
+	]
+}

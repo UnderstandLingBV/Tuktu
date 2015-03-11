@@ -1,0 +1,7 @@
+{
+	"name": "JSON Object Imploder Processor",
+	"class": "tuktu.processors.JsObjectImploderProcessor",
+	"result_required": false,
+	"parameters": [
+	]
+}

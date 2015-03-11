@@ -1,5 +1,5 @@
 {
-	"name": "Dummy Generator",
+	"name": "XSLX Generator",
 	"class": "tuktu.csv.generators.flattening.XlsxGenerator",
 	"result_required": false,
 	"parameters": [

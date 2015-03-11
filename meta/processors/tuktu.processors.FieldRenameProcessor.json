@@ -1,0 +1,7 @@
+{
+	"name": "Field Rename Processor",
+	"class": "tuktu.processors.FieldRenameProcessor",
+	"result_required": false,
+	"parameters": [
+	]
+}

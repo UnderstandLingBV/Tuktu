@@ -1,0 +1,7 @@
+{
+	"name": "Imploder Processor",
+	"class": "tuktu.processors.ImploderProcessor",
+	"result_required": false,
+	"parameters": [
+	]
+}
