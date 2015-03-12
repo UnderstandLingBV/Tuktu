@@ -183,9 +183,8 @@ class Connection
 		selected.deselect() if selected isnt null
 		selected = this
 		# Hide all other forms; show respective settings
-		$('#preferences > *').each( -> @className = 'hidden' )
-		$('#connectionSettings').each( -> @className = 'show' )
-		form.className = 'show'
+		$('#preferences > *').each( -> $(this).addClass('hidden') )
+		$('#connectionSettings').each( -> $(this).removeClass('hidden') )
 
 		@highlight()
 		@from.highlight()
@@ -194,8 +193,8 @@ class Connection
 	deselect: ->
 		selected = null
 		# Hide all other forms; show Output
-		$('#preferences > *').each( -> @className = 'hidden' )
-		$('#generatedOutput').each( -> @className = 'show' )
+		$('#preferences > *').each( -> $(this).addClass('hidden') )
+		$('#generatedOutput').each( -> $(this).removeClass('hidden') )
 		@unhighlight()
 		@from.unhighlight()
 		@to.unhighlight()
@@ -298,29 +297,28 @@ class Generator
 
 	activateForm: ->
 		# Hide all forms, show corresponding form
-		$('#preferences > *').each( -> @className = 'hidden' )
-		$('#' + @name.toLowerCase() + 'Settings').each( -> @className = 'show' )
-		# Hide all shown sub-forms
-		$('#preferences > * > .show').each( -> @className = 'hidden' )
-		$('#preferences div[data-class="' + @config.name + '"]').each( -> @className = 'show')
-		$('#preferences div[data-class="' + @config.name + '"] input[name="result"]').each( -> @value = selected.config.result )
+		$('#preferences > *').each( -> $(this).addClass('hidden') )
+		$('#' + @name.toLowerCase() + 'Settings').each( -> $(this).removeClass('hidden') )
+		# Hide all shown class sub-forms
+		$('#preferences > * > *[data-class]').each( -> $(this).addClass('hidden') )
+		$('#preferences div[data-class="' + @config.name + '"]').each( -> $(this).removeClass('hidden'))
 
 		# Populate inputs
-		$('#preferences > .show input[type="text"],#preferences > .show input[type="number"]').each( ->
+		$('#preferences div[data-class="' + @config.name + '"] input[type="text"],#preferences div[data-class="' + @config.name + '"] input[type="number"]').each( ->
 			val = selected.getConfig(this)
 			if val?
 				$(this).prop('value', val)
 			else
 				$(this).prop('value', '')
 		)
-		$('#preferences > .show input[type="checkbox"]').each( ->
+		$('#preferences div[data-class="' + @config.name + '"] input[type="checkbox"]').each( ->
 			val = selected.getConfig(this)
 			if val?
 				$(this).prop('checked', val)
 			else
 				$(this).prop('checked', false)
 		)
-		$('#preferences > .show select > option').each( ->
+		$('#preferences select > option').each( ->
 			val = selected.config[@parentNode.name]
 			$(this).prop('selected', val? and $(this).prop('value').toString() is val.toString())
 		)
@@ -343,8 +341,8 @@ class Generator
 	deselect: ->
 		selected = null
 		# Hide all forms, show Output
-		$('#preferences > *').each( -> @className = 'hidden' )
-		$('#generatedOutput').each( -> @className = 'show' )
+		$('#preferences > *').each( -> $(this).addClass('hidden') )
+		$('#generatedOutput').each( -> $(this).removeClass('hidden') )
 
 		# Unhighlight neighbors and their connections
 		for id, succ of @successors

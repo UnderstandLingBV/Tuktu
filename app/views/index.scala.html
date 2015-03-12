@@ -28,47 +28,82 @@
 		<div class="row">
 			<div class="col-xs-8" id="flowchart"></div>
 			<div class="col-xs-4" id="preferences">
-				<form class="hidden" id="generatorSettings">
+				<form class="hidden form-horizontal" id="generatorSettings">
 					<div class="form-group">
-						<button name="deleteSelected" type="button" class="btn btn-danger">Delete Generator</button>
+						<div class="col-xs-offset-3 col-xs-9">
+							<button name="deleteSelected" type="button" class="btn btn-danger">Delete Generator</button>
+						</div>
 					</div>
 					<div class="form-group">
-						<label for="generatorName">Type</label>
-						<select name="name" id="generatorName" class="form-control">
-							<option value=""> -- </option>
-							@for(generator <- generators) {
-							<option value="@{(generator._2 \ "class").as[String]}">@generator._1</option>
-							}
-						</select>
+						<label for="generatorName" class="col-xs-3 control-label">Type</label>
+						<div class="col-xs-9">
+							<select name="name" id="generatorName" class="form-control">
+								<option value=""> -- </option>
+								@for(generator <- generators) {
+								<option value="@{(generator._2 \ "class").as[String]}">@generator._1</option>
+								}
+							</select>
+						</div>
 					</div>
-					<div class="form-group">
-						<label for="generatorNode">Node</label>
-						<input name="node" id="generatorNode" class="form-control" type="text">
-					</div>
-					@for(generator <- generators) { @form(generator._2) }
+					@for(generator <- generators) {
+						<div class="hidden" data-class="@{(generator._2 \ "class").as[String]}">
+							<div class="form-group">
+								<label for="generatorNode" class="col-xs-3 control-label">Node</label>
+								<div class="col-xs-9">
+									<input name="node" id="generatorNode" class="form-control" type="text">
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-xs-3 control-label">Result</label>
+								<div class="col-xs-9">
+									<input name="result" class="form-control" type="text" @if((generator._2 \ "result_required").as[Boolean]) { required="required" }>
+								</div>
+							</div>
+							@form("config", (generator._2 \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value)
+						</div>
+					}
 				</form>
-				<form class="hidden" id="processorSettings">
+				<form class="hidden form-horizontal" id="processorSettings">
 					<div class="form-group">
-						<button name="deleteSelected" type="button" class="btn btn-danger">Delete Processor</button>
+						<div class="col-xs-offset-3 col-xs-9">
+							<button name="deleteSelected" type="button" class="btn btn-danger">Delete Processor</button>
+						</div>
 					</div>
 					<div class="form-group">
-						<label for="processorName">Type</label>
-						<select name="name" id="processorName" class="form-control">
-							<option value=""> -- </option>
-							@for(processor <- processors) {
-							<option value="@{(processor._2 \ "class").as[String]}">@processor._1</option>
-							}
-						</select>
+						<label for="processorName" class="col-xs-3 control-label">Type</label>
+						<div class="col-xs-9">
+							<select name="name" id="processorName" class="form-control">
+								<option value=""> -- </option>
+								@for(processor <- processors) {
+								<option value="@{(processor._2 \ "class").as[String]}">@processor._1</option>
+								}
+							</select>
+						</div>
 					</div>
-					<div class="form-group">
-						<label for="processorId">Id</label>
-						<input name="id" id="processorId" class="form-control" type="text" required="required">
-					</div>
-					@for(processor <- processors) { @form(processor._2) }
+					@for(processor <- processors) {
+						<div class="hidden" data-class="@{(processor._2 \ "class").as[String]}">
+							<div class="form-group">
+								<label for="processorId" class="col-xs-3 control-label">Id</label>
+								<div class="col-xs-9">
+									<input name="id" id="processorId" class="form-control" type="text" required="required">
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-xs-3 control-label">Result</label>
+								<div class="col-xs-9">
+									<input name="result" class="form-control" type="text" @if((processor._2 \ "result_required").as[Boolean]) { required="required" }>
+								</div>
+							</div>
+							@print(processor._2, (processor._2 \ "paramaters"))
+							@form("config", (processor._2 \ "paramaters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value)
+						</div>
+					}
 				</form>
-				<form class="hidden" id="connectionSettings">
+				<form class="hidden form-horizontal" id="connectionSettings">
 					<div class="form-group">
-						<button name="deleteSelected" type="button" class="btn btn-danger">Delete Connection</button>
+						<div class="col-xs-offset-3 col-xs-9">
+							<button name="deleteSelected" type="button" class="btn btn-danger">Delete Connection</button>
+						</div>
 					</div>
 				</form>
 				<form class="hidden" id="generatedOutput">

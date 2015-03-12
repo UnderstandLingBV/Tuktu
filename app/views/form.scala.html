@@ -1,14 +1,10 @@
-@(json: play.api.libs.json.JsValue)
+@(configKey: String, json: Iterable[play.api.libs.json.JsValue])
 
-<div class="hidden" data-class="@{(json \ "class").as[String]}">
+<div data-config="@configKey">
+@for(param <- json) {
 	<div class="form-group">
-		<label>Result</label>
-		<input name="result" class="form-control" type="text" @if((json \ "result_required").as[Boolean]) { required="required" }>
-	</div>
-	<div data-config="config">
-	@for(param <- (json \ "parameters").as[play.api.libs.json.JsArray].value) {
-		<div class="form-group">
-			<label>@{(param \ "name").as[String]}</label>
+		<label class="col-xs-3 control-label">@{(param \ "name").as[String]}</label>
+		<div class="col-xs-9">
 			@if((param \ "type").as[String] == "string") {
 			<input name="@{(param \ "name").as[String]}" class="form-control" type="text" @if((param \ "required").as[Boolean]) { required="required" }>
 			}
@@ -19,6 +15,6 @@
 			<input name="@{(param \ "name").as[String]}" class="form-control" type="checkbox" @if((param \ "required").as[Boolean]) { required="required" }>
 			}
 		</div>
-	}
 	</div>
+}
 </div>
