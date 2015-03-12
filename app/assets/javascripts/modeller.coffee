@@ -209,7 +209,7 @@ class Generator
 	@circle = null
 	@text = null
 
-	constructor: (@rectColor = '#00ccff', @rectSelectColor = '#0077ff', @name = 'Generator', @canBeConnected = false, @r = 0) ->
+	constructor: (@rectColor = '#00ccff', @rectSelectColor = '#0077ff', @type = 'Generator', @canBeConnected = false, @r = 0) ->
 		@children = []
 		@predecessors = {}
 		@successors = {}
@@ -227,7 +227,7 @@ class Generator
 		@rect = paper.rect(@x, @y, 120, 60, @r)
 		@rect.attr({'fill': @rectColor, 'cursor': 'move', 'stroke-width': 2})
 
-		@text = paper.text(@x + 60, @y + 30, @name)
+		@text = paper.text(@x + 60, @y + 30, @type)
 		@text.attr({'font-family': 'sans-serif', 'font-size': 14, 'cursor': 'move'})
 		
 		@rect.drag(mDragBox(this), mDownBox(this))
@@ -240,7 +240,7 @@ class Generator
 
 		node.data('node', this) for node in @children
 
-		allNodes[@name.toLowerCase() + 's'].push(this)
+		allNodes[@type.toLowerCase() + 's'].push(this)
 
 		@select()
 		return
@@ -250,7 +250,7 @@ class Generator
 		child.remove() for child in @children
 		pred.line.destructor() for id, pred of @predecessors
 		succ.line.destructor() for id, succ of @successors
-		allNodes[@name.toLowerCase() + 's'].splice(allNodes[@name.toLowerCase() + 's'].indexOf(this))
+		allNodes[@type.toLowerCase() + 's'].splice(allNodes[@type.toLowerCase() + 's'].indexOf(this))
 		generateConfig()
 
 	highlight: ->
@@ -262,9 +262,9 @@ class Generator
 	setLabel: ->
 		text = ''
 		if @config.name? and @config.name isnt ''
-			text += @config.name.replace(/^.*\./, '').replace(@name, '').trim() + '\n' + @name
+			text += @config.name.replace(/^.*\./, '').replace(@type, '').trim() + '\n' + @type
 		else
-			text += @name
+			text += @type
 		if @config.id? and @config.id isnt ''
 			text += '\n' + @config.id
 		@text.attr('text', text)
@@ -298,7 +298,8 @@ class Generator
 	activateForm: ->
 		# Hide all forms, show corresponding form
 		$('#preferences > *').each( -> $(this).addClass('hidden') )
-		$('#' + @name.toLowerCase() + 'Settings').each( -> $(this).removeClass('hidden') )
+		$('#' + @type.toLowerCase() + 'Settings').each( -> $(this).removeClass('hidden') )
+		$('#' + @type.toLowerCase() + 'Name').val(@config.name)
 		# Hide all shown class sub-forms
 		$('#preferences > * > *[data-class]').each( -> $(this).addClass('hidden') )
 		$('#preferences div[data-class="' + @config.name + '"]').each( -> $(this).removeClass('hidden'))
@@ -318,9 +319,12 @@ class Generator
 			else
 				$(this).prop('checked', false)
 		)
-		$('#preferences select > option').each( ->
+		$('#preferences div[data-class="' + @config.name + '"] select').each( ->
 			val = selected.config[@parentNode.name]
-			$(this).prop('selected', val? and $(this).prop('value').toString() is val.toString())
+			if val?
+				$(this).val(val)
+			else
+				$(this).val('')
 		)
 
 	select: ->

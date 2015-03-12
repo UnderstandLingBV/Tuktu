@@ -94,7 +94,6 @@
 									<input name="result" class="form-control" type="text" @if((processor._2 \ "result_required").as[Boolean]) { required="required" }>
 								</div>
 							</div>
-							@print(processor._2, (processor._2 \ "paramaters"))
 							@form("config", (processor._2 \ "paramaters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value)
 						</div>
 					}
