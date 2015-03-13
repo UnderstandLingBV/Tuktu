@@ -141,7 +141,7 @@ class Connection
 
 	connect: (to) ->
 		to = getRaphaelParent(to)
-		if to isnt null
+		if to?
 			# The element will be connected
 			elem = paper.getById(to.raphaelid).data('node')
 			if elem is undefined or elem.canBeConnected isnt true or elem is @from or elem.id of @from.successors
@@ -184,7 +184,7 @@ class Connection
 		selected = this
 		# Hide all other forms; show respective settings
 		$('#preferences > *').each( -> $(this).addClass('hidden') )
-		$('#connectionSettings').each( -> $(this).removeClass('hidden') )
+		$('#connectionSettings').removeClass('hidden')
 
 		@highlight()
 		@from.highlight()
@@ -194,7 +194,7 @@ class Connection
 		selected = null
 		# Hide all other forms; show Output
 		$('#preferences > *').each( -> $(this).addClass('hidden') )
-		$('#generatedOutput').each( -> $(this).removeClass('hidden') )
+		$('#generatedOutput').removeClass('hidden')
 		@unhighlight()
 		@from.unhighlight()
 		@to.unhighlight()
@@ -273,59 +273,65 @@ class Generator
 	getConfig: (elem) ->
 		configs = []
 		parent = elem.parentNode
-		while (parent?)
-			if (parent? and parent.dataset? and parent.dataset.config?)
-				configs.push(parent.dataset.config)
+		while parent?
+			if parent? and parent.dataset? and parent.dataset.key?
+				configs.push(parent.dataset.key)
 			parent = parent.parentNode
 		config = @config
 		for conf in configs
 			config = config[conf]
 		config[elem.name]
 
-	# Set config for a specific DOM element
-	setConfig: (elem, newValue = $(elem).prop('value')) ->
-		name = elem.name
-		configs = []
-		while (elem?)
-			elem = elem.parentNode
-			if (elem? and elem.dataset? and elem.dataset.config?)
-				configs.push(elem.dataset.config)
-		config = @config
-		for conf in configs
-			config = config[conf]
-		config[name] = newValue
+	# Set config recursively
+	setConfig: (config, elem, depth) ->
+		for data in elem.querySelectorAll('*[data-depth="' + depth + '"]')
+			switch data.dataset.type
+				when 'string'
+					config[data.name] = data.value
+				when 'int'
+					config[data.name] = parseInt(data.value, 10) if not isNaN(parseInt(data.value, 10))
+				when 'boolean'
+					config[data.name] = $(data).prop('checked')
+				when 'object'
+					config[data.dataset.key] = {}
+					@setConfig(config[data.dataset.key], data, depth + 1)
 
 	activateForm: ->
 		# Hide all forms, show corresponding form
 		$('#preferences > *').each( -> $(this).addClass('hidden') )
-		$('#' + @type.toLowerCase() + 'Settings').each( -> $(this).removeClass('hidden') )
+		$('#' + @type.toLowerCase() + 'Settings').removeClass('hidden')
 		$('#' + @type.toLowerCase() + 'Name').val(@config.name)
 		# Hide all shown class sub-forms
-		$('#preferences > * > *[data-class]').each( -> $(this).addClass('hidden') )
-		$('#preferences div[data-class="' + @config.name + '"]').each( -> $(this).removeClass('hidden'))
+		$('#preferences > * > div[data-class]').each( -> $(this).addClass('hidden') )
+		$('#preferences div[data-class="' + @config.name + '"]').removeClass('hidden')
 
 		# Populate inputs
 		$('#preferences div[data-class="' + @config.name + '"] input[type="text"],#preferences div[data-class="' + @config.name + '"] input[type="number"]').each( ->
 			val = selected.getConfig(this)
-			if val?
-				$(this).prop('value', val)
+			val = '' if not val?
+			$(this).val(val)
+			if $(this).prop('required') and $(this).val().toString() is ''
+				$(this).closest('.form-group').addClass('has-error')
 			else
-				$(this).prop('value', '')
+				$(this).closest('.form-group').removeClass('has-error')
 		)
 		$('#preferences div[data-class="' + @config.name + '"] input[type="checkbox"]').each( ->
 			val = selected.getConfig(this)
-			if val?
-				$(this).prop('checked', val)
-			else
-				$(this).prop('checked', false)
+			val = false if not val? or typeof(val) isnt 'boolean'
+			$(this).prop('checked', val)
 		)
-		$('#preferences div[data-class="' + @config.name + '"] select').each( ->
-			val = selected.config[@parentNode.name]
-			if val?
-				$(this).val(val)
-			else
-				$(this).val('')
-		)
+
+	deactivateForm: ->
+		# Hide all forms, show Output
+		$('#preferences > *').each( -> $(this).addClass('hidden') )
+		$('#generatedOutput').removeClass('hidden')
+
+		data = $('#preferences div[data-class="' + @config.name + '"]')
+		if data.length > 0
+			name = @config.name
+			@config = {}
+			@setConfig(@config, data[0], 0)
+			@config.name = name
 
 	select: ->
 		selected.deselect() if selected isnt null
@@ -343,10 +349,8 @@ class Generator
 		@rect.animate({'fill': @rectSelectColor}, _delay)
 
 	deselect: ->
+		@deactivateForm()
 		selected = null
-		# Hide all forms, show Output
-		$('#preferences > *').each( -> $(this).addClass('hidden') )
-		$('#generatedOutput').each( -> $(this).removeClass('hidden') )
 
 		# Unhighlight neighbors and their connections
 		for id, succ of @successors
@@ -442,20 +446,17 @@ $('#preferences button[name="deleteSelected"]').on('click', (e) ->
 
 $('a[href="#GenerateConfig"]').on('click', generateConfig)
 
-# Bind respective input types to change selected.config
-$('#preferences input[type="text"]').on('input', ->
-	selected.setConfig(this)
+# Bind respective input types to check validity
+$('#preferences input[type="text"],#preferences input[type="number"][step="1"]').on('input', ->
+	if $(this).prop('required') and (not @value? or @value.toString() is '')
+		$(this).closest('.form-group').addClass('has-error')
+	else
+		$(this).closest('.form-group').removeClass('has-error')
 )
-$('#preferences input[type="number"][step="1"]').on('input', ->
-	newValue = parseInt($(this).prop('value'))
-	selected.setConfig(this, newValue) if not isNaN(newValue)
-)
-$('#preferences input[type="checkbox"]').on('change', ->
-	selected.setConfig(this, $(this).prop('checked'))
-)
-$('#preferences select').on('change', ->
-	selected.config[@name] = $(this).prop('value')
-	selected.config.config = {}
+
+$('#generatorName,#processorName').on('change', ->
+	selected.deactivateForm()
+	selected.config.name = $(this).val()
 	selected.setLabel()
 	selected.activateForm()
 )

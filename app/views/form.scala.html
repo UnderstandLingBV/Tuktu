@@ -1,18 +1,18 @@
-@(configKey: String, json: Iterable[play.api.libs.json.JsValue])
+@(configKey: String, json: Iterable[play.api.libs.json.JsValue], depth: Int = 0)
 
-<div data-config="@configKey">
+<div data-depth="@depth" data-type="object" data-key="@configKey">
 @for(param <- json) {
 	<div class="form-group">
 		<label class="col-xs-3 control-label">@{(param \ "name").as[String]}</label>
 		<div class="col-xs-9">
 			@if((param \ "type").as[String] == "string") {
-			<input name="@{(param \ "name").as[String]}" class="form-control" type="text" @if((param \ "required").as[Boolean]) { required="required" }>
+			<input name="@{(param \ "name").as[String]}" class="form-control" type="text" @if((param \ "required").as[Boolean]) { required="required" } data-type="string" data-depth="@{depth + 1}">
 			}
 			@if((param \ "type").as[String] == "int") {
-			<input name="@{(param \ "name").as[String]}" class="form-control" type="number" step="1" @if((param \ "required").as[Boolean]) { required="required" }>
+			<input name="@{(param \ "name").as[String]}" class="form-control" type="number" step="1" @if((param \ "required").as[Boolean]) { required="required" } data-type="int" data-depth="@{depth + 1}">
 			}
 			@if((param \ "type").as[String] == "boolean") {
-			<input name="@{(param \ "name").as[String]}" class="form-control" type="checkbox" @if((param \ "required").as[Boolean]) { required="required" }>
+			<input name="@{(param \ "name").as[String]}" class="form-control" type="checkbox" @if((param \ "required").as[Boolean]) { required="required" } data-type="boolean" data-depth="@{depth + 1}">
 			}
 		</div>
 	</div>

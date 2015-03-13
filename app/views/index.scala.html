@@ -50,13 +50,13 @@
 							<div class="form-group">
 								<label for="generatorNode" class="col-xs-3 control-label">Node</label>
 								<div class="col-xs-9">
-									<input name="node" id="generatorNode" class="form-control" type="text">
+									<input name="node" id="generatorNode" class="form-control" type="text" data-type="string" data-depth="0">
 								</div>
 							</div>
 							<div class="form-group">
 								<label class="col-xs-3 control-label">Result</label>
 								<div class="col-xs-9">
-									<input name="result" class="form-control" type="text" @if((generator._2 \ "result_required").as[Boolean]) { required="required" }>
+									<input name="result" class="form-control" type="text" @if((generator._2 \ "result_required").as[Boolean]) { required="required" } data-type="string" data-depth="0">
 								</div>
 							</div>
 							@form("config", (generator._2 \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value)
@@ -85,13 +85,13 @@
 							<div class="form-group">
 								<label for="processorId" class="col-xs-3 control-label">Id</label>
 								<div class="col-xs-9">
-									<input name="id" id="processorId" class="form-control" type="text" required="required">
+									<input name="id" id="processorId" class="form-control" type="text" required="required" data-type="string" data-depth="0">
 								</div>
 							</div>
 							<div class="form-group">
 								<label class="col-xs-3 control-label">Result</label>
 								<div class="col-xs-9">
-									<input name="result" class="form-control" type="text" @if((processor._2 \ "result_required").as[Boolean]) { required="required" }>
+									<input name="result" class="form-control" type="text" @if((processor._2 \ "result_required").as[Boolean]) { required="required" } data-type="string" data-depth="0">
 								</div>
 							</div>
 							@form("config", (processor._2 \ "paramaters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value)
