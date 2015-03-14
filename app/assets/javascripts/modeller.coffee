@@ -279,6 +279,13 @@ class Generator
 					$(elem).val(config[elem.name])
 				else
 					$(elem).val('')
+			when 'json'
+				if array and config?
+					$(elem).val(JSON.stringify(config, null, '  '))
+				else if config[elem.name]?
+					$(elem).val(JSON.stringify(config[elem.name], null, '  '))
+				else
+					$(elem).val(JSON.stringify({}, null, '  '))
 			when 'int'
 				if array and config?
 					$(elem).val(config)
@@ -320,14 +327,19 @@ class Generator
 			switch data.dataset.type
 				when 'string'
 					if array
-						config.push(data.value)
+						config.push($(data).val())
 					else
-						config[data.name] = data.value
-				when 'int' and not isNaN(parseInt(data.value, 10))
+						config[data.name] = $(data).val()
+				when 'json'
 					if array
-						config.push(parseInt(data.value, 10))
+						config.push(JSON.parse($(data).val()))
 					else
-						config[data.name] = parseInt(data.value, 10)
+						config[data.name] = JSON.parse($(data).val())
+				when 'int' and not isNaN(parseInt($(data).val(), 10))
+					if array
+						config.push(parseInt($(data).val(), 10))
+					else
+						config[data.name] = parseInt($(data).val(), 10)
 				when 'boolean'
 					if array
 						config.push($(data).prop('checked'))
@@ -358,11 +370,18 @@ class Generator
 
 		# Hide all shown class sub-forms
 		$('#preferences > * > div[data-class]').each( -> $(this).addClass('hidden') )
-		$('#preferences div[data-class="' + @config.name + '"]').removeClass('hidden')
+		dataClass = $('#preferences > * > div[data-class="' + @config.name + '"]')
+		dataClass.removeClass('hidden')
 
 		# Populate inputs
-		$('#preferences div[data-class="' + @config.name + '"] *[data-depth="0"]').each( (i, data) =>
-			@getConfig(@config, data, 0)
+		dataClass.find('*[data-depth="0"]').each((i, data) => @getConfig(@config, data, 0))
+
+		# Update validation classes
+		dataClass.find('input[type="text"],input[type="number"],textarea').each((i, e) ->
+			if $(e).prop('required') is true and (not $(e).val()? or $(e).val().toString() is '')
+				$(e).closest('.form-group').addClass('has-error')
+			else
+				$(e).closest('.form-group').removeClass('has-error')
 		)
 
 	deactivateForm: ->
@@ -471,7 +490,7 @@ generateConfig = (e) ->
 	json =
 		generators:  gen
 		processors:  pro
-	$('#outputTextarea').val(JSON.stringify(json, null, '    '))
+	$('#outputTextarea').val(JSON.stringify(json, null, '  '))
 	selected.deselect() if selected?
 
 # Bind AddGenerator, AddProcessor and deleteSelected respective click events
@@ -502,11 +521,21 @@ $('#preferences button[name="DeleteArrayElement"]').hover(
 $('a[href="#GenerateConfig"]').on('click', generateConfig)
 
 # Bind respective input types to check validity
-$('#preferences input[type="text"],#preferences input[type="number"][step="1"]').on('input', ->
-	if $(this).prop('required') and (not @value? or @value.toString() is '')
+$('#preferences input[type="text"],#preferences input[type="number"]').on('input', ->
+	if $(this).prop('required') is true and (not $(this).val()? or $(this).val().toString() is '')
 		$(this).closest('.form-group').addClass('has-error')
 	else
 		$(this).closest('.form-group').removeClass('has-error')
+)
+$('#preferences textarea').on('input', ->
+	if $(this).prop('required') is true and (not $(this).val()? or $(this).val().toString() is '')
+		$(this).closest('.form-group').addClass('has-error')
+	else
+		try
+			JSON.parse($(this).val())
+			$(this).closest('.form-group').removeClass('has-error')
+		catch
+			$(this).closest('.form-group').addClass('has-error')
 )
 
 $('#generatorName,#processorName').on('change', ->

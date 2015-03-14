@@ -4,8 +4,17 @@
 	<div class="form-group @if((json \ "required").as[Boolean]) { has-error }">
 		<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
 		<div class="col-xs-6">
-			<input name="@{(json \ "name").as[String]}" class="form-control has-error" type="text" @if((json \ "required").as[Boolean]) { required="required" } data-type="string" data-depth="@depth">
+			<input name="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]) { required="required" } data-type="string" data-depth="@depth">
 
+		</div>
+	</div>
+} else {
+
+@if((json \ "type").as[String] == "json") {
+	<div class="form-group @if((json \ "required").as[Boolean]) { has-error }">
+		<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
+		<div class="col-xs-6">
+			<textarea rows="3" name="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]) { required="required" } data-type="json" data-depth="@depth">{}</textarea>
 		</div>
 	</div>
 } else {
@@ -56,5 +65,10 @@
 		</div>
 	</div>
 } else {
-	@{(json \ "type").as[String]} unsupported.
-}}}}}
+	<div class="form-group has-error">
+		<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
+		<div class="col-xs-6">
+			<p class="form-control-static">Type @{(json \ "type").as[String]} is not yet supported.</p>
+		</div>
+	</div>
+}}}}}}
