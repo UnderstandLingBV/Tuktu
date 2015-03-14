@@ -1,7 +1,16 @@
 {
 	"name": "Async Stream Generator",
 	"class": "tuktu.generators.AsyncStreamGenerator",
-	"result_required": false,
 	"parameters": [
+		{
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
 	]
 }

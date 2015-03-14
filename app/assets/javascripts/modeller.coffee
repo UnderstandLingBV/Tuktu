@@ -269,56 +269,100 @@ class Generator
 			text += '\n' + @config.id
 		@text.attr('text', text)
 
-	# Get config for a specific DOM element
-	getConfig: (elem) ->
-		configs = []
-		parent = elem.parentNode
-		while parent?
-			if parent? and parent.dataset? and parent.dataset.key?
-				configs.push(parent.dataset.key)
-			parent = parent.parentNode
-		config = @config
-		for conf in configs
-			config = config[conf]
-		config[elem.name]
+	# Get config and populate inputs recursively
+	getConfig: (config, elem, depth, array = false) ->
+		switch elem.dataset.type
+			when 'string'
+				if array and config?
+					$(elem).val(config)
+				else if config[elem.name]?
+					$(elem).val(config[elem.name])
+				else
+					$(elem).val('')
+			when 'int'
+				if array and config?
+					$(elem).val(config)
+				else if config[elem.name]?
+					$(elem).val(config[elem.name])
+				else
+					$(elem).val('')
+			when 'boolean'
+				if array and config?
+					$(elem).prop('checked', config)
+				if config[elem.name]?
+					$(elem).prop('checked', config[elem.name])
+				else
+					$(elem).prop('checked', false)
+			when 'object'
+				if array and config?
+					for child in $(elem).find('*[data-depth="' + (depth + 1) + '"]')
+						@getConfig(config, child, depth + 1)
+				else if config[elem.dataset.key]?
+					for child in $(elem).find('*[data-depth="' + (depth + 1) + '"]')
+						@getConfig(config[elem.dataset.key], child, depth + 1)
+				else
+					for child in $(elem).find('*[data-depth="' + (depth + 1) + '"]')
+						@getConfig({}, child, depth + 1)
+			when 'array'
+				$(elem).find('> div[data-arraytype="value"]').remove()
+				if config[elem.dataset.key]?
+					for data in config[elem.dataset.key]
+						$(elem).find('> div[data-arraytype="prototype"]').first().clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo($(elem)).find('*[data-depth="' + (depth + 1) + '"]').each((ind, newElem) => @getConfig(data, newElem, depth + 1, true))
+		return
 
 	# Set config recursively
-	setConfig: (config, elem, depth) ->
-		for data in elem.querySelectorAll('*[data-depth="' + depth + '"]')
+	setConfig: (config, elem, depth, array = false) ->
+		if array
+			nextElements = $(elem).find('div[data-arraytype="value"] *[data-depth="' + depth + '"]')
+		else
+			nextElements = $(elem).find('*[data-depth="' + depth + '"]')
+		nextElements.each( (index, data) =>
 			switch data.dataset.type
 				when 'string'
-					config[data.name] = data.value
-				when 'int'
-					config[data.name] = parseInt(data.value, 10) if not isNaN(parseInt(data.value, 10))
+					if array
+						config.push(data.value)
+					else
+						config[data.name] = data.value
+				when 'int' and not isNaN(parseInt(data.value, 10))
+					if array
+						config.push(parseInt(data.value, 10))
+					else
+						config[data.name] = parseInt(data.value, 10)
 				when 'boolean'
-					config[data.name] = $(data).prop('checked')
+					if array
+						config.push($(data).prop('checked'))
+					else
+						config[data.name] = $(data).prop('checked')
 				when 'object'
-					config[data.dataset.key] = {}
-					@setConfig(config[data.dataset.key], data, depth + 1)
+					if array
+						config.push({})
+						@setConfig(config[index], data, depth + 1)
+					else
+						config[data.dataset.key] = {}
+						@setConfig(config[data.dataset.key], data, depth + 1)
+				when 'array'
+					if array
+						config.push([])
+						@setConfig(config[index], data, depth + 1, true)
+					else
+						config[data.dataset.key] = []
+						@setConfig(config[data.dataset.key], data, depth + 1, true)
+		)
+		return
 
 	activateForm: ->
 		# Hide all forms, show corresponding form
 		$('#preferences > *').each( -> $(this).addClass('hidden') )
 		$('#' + @type.toLowerCase() + 'Settings').removeClass('hidden')
 		$('#' + @type.toLowerCase() + 'Name').val(@config.name)
+
 		# Hide all shown class sub-forms
 		$('#preferences > * > div[data-class]').each( -> $(this).addClass('hidden') )
 		$('#preferences div[data-class="' + @config.name + '"]').removeClass('hidden')
 
 		# Populate inputs
-		$('#preferences div[data-class="' + @config.name + '"] input[type="text"],#preferences div[data-class="' + @config.name + '"] input[type="number"]').each( ->
-			val = selected.getConfig(this)
-			val = '' if not val?
-			$(this).val(val)
-			if $(this).prop('required') and $(this).val().toString() is ''
-				$(this).closest('.form-group').addClass('has-error')
-			else
-				$(this).closest('.form-group').removeClass('has-error')
-		)
-		$('#preferences div[data-class="' + @config.name + '"] input[type="checkbox"]').each( ->
-			val = selected.getConfig(this)
-			val = false if not val? or typeof(val) isnt 'boolean'
-			$(this).prop('checked', val)
+		$('#preferences div[data-class="' + @config.name + '"] *[data-depth="0"]').each( (i, data) =>
+			@getConfig(@config, data, 0)
 		)
 
 	deactivateForm: ->
@@ -427,7 +471,7 @@ generateConfig = (e) ->
 	json =
 		generators:  gen
 		processors:  pro
-	document.getElementById('outputTextarea').value = JSON.stringify(json, null, '    ')
+	$('#outputTextarea').val(JSON.stringify(json, null, '    '))
 	selected.deselect() if selected?
 
 # Bind AddGenerator, AddProcessor and deleteSelected respective click events
@@ -442,6 +486,17 @@ $('a[href="#AddProcessor"]').on('click', (e) ->
 $('#preferences button[name="deleteSelected"]').on('click', (e) ->
 	e.preventDefault()
 	selected.destructor()
+)
+$('#preferences button[name="AddArrayElement"]').on('click', (e) ->
+	thatArray = $(this).closest('*[data-type="array"]')
+	newElem = thatArray.find('> div[data-arraytype="prototype"]').first().clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo(thatArray)
+)
+$('#preferences button[name="DeleteArrayElement"]').on('click', ->
+	$(this).closest('div[data-arraytype="value"]').remove()
+)
+$('#preferences button[name="DeleteArrayElement"]').hover(
+	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '#f2dede'),
+	-> $(this).closest('div[data-arraytype="value"]').css('background-color', ''),
 )
 
 $('a[href="#GenerateConfig"]').on('click', generateConfig)

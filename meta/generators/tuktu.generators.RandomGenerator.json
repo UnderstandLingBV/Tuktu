@@ -1,17 +1,33 @@
 {
 	"name": "Random ID Generator",
 	"class": "tuktu.generators.RandomGenerator",
-	"result_required": true,
 	"parameters": [
 		{
-			"name": "interval",
-			"type": "int",
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
 			"required": true
 		},
 		{
-			"name": "max",
-			"type": "int",
-			"required": true
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "interval",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "max",
+					"type": "int",
+					"required": true
+				}
+			]
 		}
 	]
 }

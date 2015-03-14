@@ -1,12 +1,35 @@
 {
 	"name": "List Generator",
 	"class": "tuktu.generators.ListGenerator",
-	"result_required": true,
 	"parameters": [
 		{
-			"name": "values",
-			"type": "Array.string",
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "values",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
 		}
 	]
 }

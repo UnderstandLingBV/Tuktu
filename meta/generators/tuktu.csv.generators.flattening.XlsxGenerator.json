@@ -1,42 +1,58 @@
 {
 	"name": "XSLX Generator",
 	"class": "tuktu.csv.generators.flattening.XlsxGenerator",
-	"result_required": false,
 	"parameters": [
 		{
-			"name": "filename",
+			"name": "node",
 			"type": "string",
-			"required": true
+			"required": false
 		},
 		{
-			"name": "sheet_name",
+			"name": "result",
 			"type": "string",
-			"required": true
+			"required": false
 		},
 		{
-			"name": "value_name",
-			"type": "string",
-			"required": true
-		},
-		{
-			"name": "locators",
-			"type": "JsArray",
-			"required": true
-		},
-		{
-			"name": "flattened",
-			"type": "JsArray",
-			"required": true
-		},
-		{
-			"name": "data_start_col",
-			"type": "JsArray",
-			"required": true
-		},
-		{
-			"name": "data_end_col",
-			"type": "JsArray",
-			"required": true
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "filename",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "sheet_name",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "value_name",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "locators",
+					"type": "JsArray",
+					"required": true
+				},
+				{
+					"name": "flattened",
+					"type": "JsArray",
+					"required": true
+				},
+				{
+					"name": "data_start_col",
+					"type": "JsArray",
+					"required": true
+				},
+				{
+					"name": "data_end_col",
+					"type": "JsArray",
+					"required": true
+				}
+			]
 		}
 	]
 }

@@ -1,27 +1,43 @@
 {
 	"name": "Line Generator",
 	"class": "tuktu.generators.LineGenerator",
-	"result_required": true,
 	"parameters": [
 		{
-			"name": "filename",
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
 			"type": "string",
 			"required": true
 		},
 		{
-			"name": "encoding",
-			"type": "string",
-			"required": false
-		},
-		{
-			"name": "start_line",
-			"type": "int",
-			"required": false
-		},
-		{
-			"name": "end_line",
-			"type": "int",
-			"required": false
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "filename",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "encoding",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "start_line",
+					"type": "int",
+					"required": false
+				},
+				{
+					"name": "end_line",
+					"type": "int",
+					"required": false
+				}
+			]
 		}
 	]
 }

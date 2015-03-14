@@ -1,42 +1,65 @@
 {
 	"name": "CSV Generator",
 	"class": "tuktu.csv.generators.CsvGenerator",
-	"result_required": false,
 	"parameters": [
 		{
-			"name": "filename",
-			"type": "string",
-			"required": true
-		},
-		{
-			"name": "has_headers",
-			"type": "boolean",
-			"required": false
-		},
-		{
-			"name": "predef_headers",
-			"type": "Array.string",
-			"required": false
-		},
-		{
-			"name": "flattened",
-			"type": "boolean",
-			"required": false
-		},
-		{
-			"name": "separator",
+			"name": "node",
 			"type": "string",
 			"required": false
 		},
 		{
-			"name": "quote",
+			"name": "result",
 			"type": "string",
 			"required": false
 		},
 		{
-			"name": "escape",
-			"type": "string",
-			"required": false
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "filename",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "has_headers",
+					"type": "boolean",
+					"required": false
+				},
+				{
+					"name": "predef_headers",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "flattened",
+					"type": "boolean",
+					"required": false
+				},
+				{
+					"name": "separator",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "quote",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "escape",
+					"type": "string",
+					"required": false
+				}
+			]
 		}
 	]
 }

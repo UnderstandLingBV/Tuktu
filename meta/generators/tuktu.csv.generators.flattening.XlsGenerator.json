@@ -1,17 +1,33 @@
 {
 	"name": "XLS Generator",
 	"class": "tuktu.csv.generators.flattening.XlsGenerator",
-	"result_required": false,
 	"parameters": [
 		{
-			"name": "interval",
-			"type": "int",
-			"required": true
+			"name": "node",
+			"type": "string",
+			"required": false
 		},
 		{
-			"name": "message",
+			"name": "result",
 			"type": "string",
-			"required": true
+			"required": false
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "interval",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "message",
+					"type": "string",
+					"required": true
+				}
+			]
 		}
 	]
 }

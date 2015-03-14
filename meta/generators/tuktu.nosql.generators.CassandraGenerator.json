@@ -1,32 +1,48 @@
 {
 	"name": "Cassandra Generator",
 	"class": "tuktu.nosql.generators.CassandraGenerator",
-	"result_required": false,
 	"parameters": [
 		{
-			"name": "host",
-			"type": "string",
-			"required": true
-		},
-		{
-			"name": "type",
+			"name": "node",
 			"type": "string",
 			"required": false
 		},
 		{
-			"name": "query",
+			"name": "result",
 			"type": "string",
-			"required": true
-		},
-		{
-			"name": "flatten",
-			"type": "boolean",
 			"required": false
 		},
 		{
-			"name": "fetch_size",
-			"type": "int",
-			"required": false
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "host",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "type",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "query",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "flatten",
+					"type": "boolean",
+					"required": false
+				},
+				{
+					"name": "fetch_size",
+					"type": "int",
+					"required": false
+				}
+			]
 		}
 	]
 }

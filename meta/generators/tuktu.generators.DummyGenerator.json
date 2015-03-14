@@ -1,17 +1,33 @@
 {
 	"name": "Dummy Generator",
 	"class": "tuktu.generators.DummyGenerator",
-	"result_required": true,
 	"parameters": [
 		{
-			"name": "interval",
-			"type": "int",
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
 			"required": true
 		},
 		{
-			"name": "message",
-			"type": "string",
-			"required": true
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "interval",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "message",
+					"type": "string",
+					"required": true
+				}
+			]
 		}
 	]
 }

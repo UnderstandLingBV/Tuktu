@@ -1,7 +1,16 @@
 {
 	"name": "Sync Stream Generator",
 	"class": "tuktu.generators.SyncStreamGenerator",
-	"result_required": false,
 	"parameters": [
+		{
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
 	]
 }

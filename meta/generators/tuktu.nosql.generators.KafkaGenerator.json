@@ -1,37 +1,53 @@
 {
 	"name": "Kafka Generator",
 	"class": "tuktu.nosql.generators.KafkaGenerator",
-	"result_required": true,
 	"parameters": [
 		{
-			"name": "kafka_properties",
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
 			"type": "object",
-			"required": true
-		},
-		{
-			"name": "topic",
-			"type": "string",
-			"required": true
-		},
-		{
-			"name": "stop_message",
-			"type": "string",
-			"required": false
-		},
-		{
-			"name": "to_string",
-			"type": "boolean",
-			"required": false
-		},
-		{
-			"name": "charset",
-			"type": "string",
-			"required": false
-		},
-		{
-			"name": "threads",
-			"type": "int",
-			"required": false
+			"required": true,
+			"parameters": [
+				{
+					"name": "kafka_properties",
+					"type": "json",
+					"required": true
+				},
+				{
+					"name": "topic",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "stop_message",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "to_string",
+					"type": "boolean",
+					"required": false
+				},
+				{
+					"name": "charset",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "threads",
+					"type": "int",
+					"required": false
+				}
+			]
 		}
 	]
 }

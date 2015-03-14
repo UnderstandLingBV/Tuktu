@@ -1,7 +1,16 @@
 {
 	"name": "CSV Flattening Generator",
 	"class": "tuktu.csv.generators.flattening.CsvGenerator",
-	"result_required": false,
 	"parameters": [
+		{
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
 	]
 }

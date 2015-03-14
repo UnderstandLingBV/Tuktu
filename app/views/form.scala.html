@@ -1,20 +1,60 @@
-@(configKey: String, json: Iterable[play.api.libs.json.JsValue], depth: Int = 0)
+@(json: play.api.libs.json.JsValue, depth: Int = 0)
 
-<div data-depth="@depth" data-type="object" data-key="@configKey">
-@for(param <- json) {
+@if((json \ "type").as[String] == "string") {
+	<div class="form-group @if((json \ "required").as[Boolean]) { has-error }">
+		<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
+		<div class="col-xs-6">
+			<input name="@{(json \ "name").as[String]}" class="form-control has-error" type="text" @if((json \ "required").as[Boolean]) { required="required" } data-type="string" data-depth="@depth">
+
+		</div>
+	</div>
+} else {
+
+@if((json \ "type").as[String] == "int") {
+	<div class="form-group @if((json \ "required").as[Boolean]) { has-error }">
+		<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
+		<div class="col-xs-6">
+			<input name="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]) { required="required" } data-type="string" data-depth="@depth">
+		</div>
+	</div>
+} else {
+
+@if((json \ "type").as[String] == "boolean") {
 	<div class="form-group">
-		<label class="col-xs-3 control-label">@{(param \ "name").as[String]}</label>
-		<div class="col-xs-9">
-			@if((param \ "type").as[String] == "string") {
-			<input name="@{(param \ "name").as[String]}" class="form-control" type="text" @if((param \ "required").as[Boolean]) { required="required" } data-type="string" data-depth="@{depth + 1}">
-			}
-			@if((param \ "type").as[String] == "int") {
-			<input name="@{(param \ "name").as[String]}" class="form-control" type="number" step="1" @if((param \ "required").as[Boolean]) { required="required" } data-type="int" data-depth="@{depth + 1}">
-			}
-			@if((param \ "type").as[String] == "boolean") {
-			<input name="@{(param \ "name").as[String]}" class="form-control" type="checkbox" @if((param \ "required").as[Boolean]) { required="required" } data-type="boolean" data-depth="@{depth + 1}">
+		<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
+		<div class="col-xs-6">
+			<input name="@{(json \ "name").as[String]}" class="form-control" type="checkbox" @if((json \ "required").as[Boolean]) { required="required" } data-type="boolean" data-depth="@depth">
+		</div>
+	</div>
+} else {
+
+@if((json \ "type").as[String] == "object") {
+	<div data-depth="@depth" data-type="object" data-key="@{(json \ "name").as[String]}">
+		@for(param <- (json \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
+			@form(param, depth + 1)
+		}
+	</div>
+} else {
+
+@if((json \ "type").as[String] == "array") {
+	<div data-depth="@depth" data-type="array" data-key="@{(json \ "name").as[String]}">
+		<div class="form-group">
+			<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
+			<div class="col-xs-3 col-xs-offset-6">
+				<button class="btn btn-success" name="AddArrayElement" type="button">+</button>
+			</div>
+		</div>
+		<div class="hidden" data-arrayType="prototype">
+			<div class="form-group">
+				<div class="col-xs-3 col-xs-offset-9">
+					<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
+				</div>
+			</div>
+			@for(param <- (json \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
+				@form(param, depth + 1)
 			}
 		</div>
 	</div>
-}
-</div>
+} else {
+	@{(json \ "type").as[String]} unsupported.
+}}}}}

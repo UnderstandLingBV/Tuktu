@@ -1,37 +1,53 @@
 {
 	"name": "SQL Generator",
 	"class": "tuktu.nosql.generators.SQLGenerator",
-	"result_required": false,
 	"parameters": [
 		{
-			"name": "url",
+			"name": "node",
 			"type": "string",
-			"required": true
-		},
-		{
-			"name": "user",
-			"type": "string",
-			"required": true
-		},
-		{
-			"name": "password",
-			"type": "string",
-			"required": true
-		},
-		{
-			"name": "query",
-			"type": "string",
-			"required": true
-		},
-		{
-			"name": "driver",
-			"type": "string",
-			"required": true
-		},
-		{
-			"name": "flatten",
-			"type": "boolean",
 			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "user",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "password",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "query",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "driver",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "flatten",
+					"type": "boolean",
+					"required": false
+				}
+			]
 		}
 	]
 }

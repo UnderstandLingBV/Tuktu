@@ -1,32 +1,55 @@
 {
 	"name": "MongoDB Generator",
 	"class": "tuktu.nosql.generators.MongoDBGenerator",
-	"result_required": false,
 	"parameters": [
 		{
-			"name": "hosts",
-			"type": "Array.string",
-			"required": true
-		},
-		{
-			"name": "database",
+			"name": "node",
 			"type": "string",
-			"required": true
+			"required": false
 		},
 		{
-			"name": "collection",
+			"name": "result",
 			"type": "string",
-			"required": true
+			"required": false
 		},
 		{
-			"name": "query",
-			"type": "json",
-			"required": true
-		},
-		{
-			"name": "filter",
-			"type": "json",
-			"required": true
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "query",
+					"type": "json",
+					"required": true
+				},
+				{
+					"name": "filter",
+					"type": "json",
+					"required": true
+				}
+			]
 		}
 	]
 }
