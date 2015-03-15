@@ -34,23 +34,31 @@
 				},
 				{
 					"name": "locators",
-					"type": "JsArray",
-					"required": true
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "json",
+							"required": true
+						}
+					]
 				},
 				{
 					"name": "flattened",
-					"type": "JsArray",
-					"required": true
+					"type": "boolean",
+					"required": false,
+					"default": false
 				},
 				{
 					"name": "data_start_col",
-					"type": "JsArray",
+					"type": "int",
 					"required": true
 				},
 				{
 					"name": "data_end_col",
-					"type": "JsArray",
-					"required": true
+					"type": "int",
+					"required": false
 				}
 			]
 		}
