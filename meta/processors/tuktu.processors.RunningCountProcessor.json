@@ -1,7 +1,39 @@
 {
 	"name": "Running Count Processor",
 	"class": "tuktu.processors.RunningCountProcessor",
-	"result_required": false,
 	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "start_at",
+					"type": "int",
+					"required": false
+				},
+				{
+					"name": "per_block",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "step_size",
+					"type": "int",
+					"required": false
+				}
+			]
+		}
 	]
 }

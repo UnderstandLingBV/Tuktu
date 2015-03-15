@@ -1,7 +1,28 @@
 {
 	"name": "Timestamp Adder Processor",
 	"class": "tuktu.processors.TimestampAdderProcessor",
-	"result_required": false,
 	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "format",
+					"type": "string",
+					"required": false
+				}
+			]
+		}
 	]
 }

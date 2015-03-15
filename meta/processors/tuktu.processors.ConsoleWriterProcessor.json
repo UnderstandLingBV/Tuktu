@@ -1,7 +1,16 @@
 {
 	"name": "Console Writer Processor",
 	"class": "tuktu.processors.ConsoleWriterProcessor",
-	"result_required": false,
 	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
 	]
 }

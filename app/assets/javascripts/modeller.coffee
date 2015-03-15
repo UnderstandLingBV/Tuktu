@@ -430,6 +430,7 @@ class Generator
 
 	deselect: ->
 		@deactivateForm()
+		@setLabel()
 		selected = null
 
 		# Unhighlight neighbors and their connections
@@ -559,5 +560,6 @@ $('#generatorName,#processorName').on('change', ->
 	selected.deactivateForm()
 	selected.config.name = $(this).val()
 	selected.setLabel()
+	delete selected.config.config
 	selected.activateForm()
 )

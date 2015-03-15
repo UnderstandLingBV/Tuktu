@@ -1,7 +1,38 @@
 {
 	"name": "Inclusion Processor",
 	"class": "tuktu.processors.InclusionProcessor",
-	"result_required": false,
 	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "expression",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "type",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "and_or",
+					"type": "string",
+					"required": false
+				}
+			]
+		}
 	]
 }

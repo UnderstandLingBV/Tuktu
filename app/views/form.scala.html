@@ -85,7 +85,7 @@
 	<div class="form-group has-error">
 		<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
 		<div class="col-xs-6">
-			<p class="form-control-static">Type @{(json \ "type").as[String]} is not yet supported.</p>
+			<p class="form-control-static">Type '@{(json \ "type").as[String]}' not supported.</p>
 		</div>
 		@if(array) {
 			<div class="col-xs-3">

@@ -1,7 +1,28 @@
 {
 	"name": "Field Constant Adder Processor",
 	"class": "tuktu.processors.FieldConstantAdderProcessor",
-	"result_required": false,
 	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "value",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
 	]
 }
