@@ -1,12 +1,16 @@
-@(json: play.api.libs.json.JsValue, depth: Int = 0)
+@(json: play.api.libs.json.JsValue, depth: Int = 0, array: Boolean = false)
 
 @if((json \ "type").as[String] == "string") {
 	<div class="form-group @if((json \ "required").as[Boolean]) { has-error }">
 		<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
 		<div class="col-xs-6">
 			<input name="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]) { required="required" } data-type="string" data-depth="@depth">
-
 		</div>
+		@if(array) {
+			<div class="col-xs-3">
+				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
+			</div>
+		}
 	</div>
 } else {
 
@@ -16,6 +20,11 @@
 		<div class="col-xs-6">
 			<textarea rows="3" name="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]) { required="required" } data-type="json" data-depth="@depth">{}</textarea>
 		</div>
+		@if(array) {
+			<div class="col-xs-3">
+				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
+			</div>
+		}
 	</div>
 } else {
 
@@ -23,8 +32,13 @@
 	<div class="form-group @if((json \ "required").as[Boolean]) { has-error }">
 		<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
 		<div class="col-xs-6">
-			<input name="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]) { required="required" } data-type="string" data-depth="@depth">
+			<input name="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]) { required="required" } data-type="int" data-depth="@depth">
 		</div>
+		@if(array) {
+			<div class="col-xs-3">
+				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
+			</div>
+		}
 	</div>
 } else {
 
@@ -34,35 +48,38 @@
 		<div class="col-xs-6">
 			<input name="@{(json \ "name").as[String]}" class="form-control" type="checkbox" @if((json \ "required").as[Boolean]) { required="required" } data-type="boolean" data-depth="@depth">
 		</div>
+		@if(array) {
+			<div class="col-xs-3">
+				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
+			</div>
+		}
 	</div>
 } else {
 
 @if((json \ "type").as[String] == "object") {
 	<div data-depth="@depth" data-type="object" data-key="@{(json \ "name").as[String]}">
 		@for(param <- (json \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
-			@form(param, depth + 1)
+			@form(param, depth + 1, array)
 		}
 	</div>
 } else {
 
 @if((json \ "type").as[String] == "array") {
 	<div data-depth="@depth" data-type="array" data-key="@{(json \ "name").as[String]}">
-		<div class="form-group">
-			<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
-			<div class="col-xs-3 col-xs-offset-6">
-				<button class="btn btn-success" name="AddArrayElement" type="button">+</button>
-			</div>
-		</div>
-		<div class="hidden" data-arrayType="prototype">
+		@for(param <- (json \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
 			<div class="form-group">
-				<div class="col-xs-3 col-xs-offset-9">
-					<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
+				<label class="col-xs-3 control-label">@{(json \ "name").as[String]}</label>
+				<div class="col-xs-6">
+					<p class="form-control-static">@{(param \ "name").as[String]}</p>
+				</div>
+				<div class="col-xs-3">
+					<button class="btn btn-success" name="AddArrayElement" type="button">+</button>
 				</div>
 			</div>
-			@for(param <- (json \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
-				@form(param, depth + 1)
-			}
-		</div>
+			<div class="hidden" data-arrayType="prototype">
+				@form(param, depth + 1, true)
+			</div>
+		}
 	</div>
 } else {
 	<div class="form-group has-error">
@@ -70,5 +87,10 @@
 		<div class="col-xs-6">
 			<p class="form-control-static">Type @{(json \ "type").as[String]} is not yet supported.</p>
 		</div>
+		@if(array) {
+			<div class="col-xs-3">
+				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
+			</div>
+		}
 	</div>
 }}}}}}

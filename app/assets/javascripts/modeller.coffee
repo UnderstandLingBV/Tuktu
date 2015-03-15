@@ -314,7 +314,10 @@ class Generator
 				$(elem).find('> div[data-arraytype="value"]').remove()
 				if config[elem.dataset.key]?
 					for data in config[elem.dataset.key]
-						$(elem).find('> div[data-arraytype="prototype"]').first().clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo($(elem)).find('*[data-depth="' + (depth + 1) + '"]').each((ind, newElem) => @getConfig(data, newElem, depth + 1, true))
+						type = switch typeof(data)
+							when 'number' then 'int'
+							else typeof(data)
+						$(elem).find('> div[data-arraytype="prototype"] *[data-depth="' + (depth + 1) + '"][data-type="' + type + '"]').first().closest('div[data-arraytype="prototype"]').clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo($(elem)).find('*[data-depth="' + (depth + 1) + '"]').each((ind, newElem) => @getConfig(data, newElem, depth + 1, true))
 		return
 
 	# Set config recursively
@@ -335,11 +338,12 @@ class Generator
 						config.push(JSON.parse($(data).val()))
 					else
 						config[data.name] = JSON.parse($(data).val())
-				when 'int' and not isNaN(parseInt($(data).val(), 10))
-					if array
-						config.push(parseInt($(data).val(), 10))
-					else
-						config[data.name] = parseInt($(data).val(), 10)
+				when 'int'
+					if not isNaN(parseInt($(data).val(), 10))
+						if array
+							config.push(parseInt($(data).val(), 10))
+						else
+							config[data.name] = parseInt($(data).val(), 10)
 				when 'boolean'
 					if array
 						config.push($(data).prop('checked'))
@@ -359,6 +363,7 @@ class Generator
 					else
 						config[data.dataset.key] = []
 						@setConfig(config[data.dataset.key], data, depth + 1, true)
+				else console.log(data.dataset.type + " not supported")
 		)
 		return
 
@@ -508,14 +513,14 @@ $('#preferences button[name="deleteSelected"]').on('click', (e) ->
 )
 $('#preferences button[name="AddArrayElement"]').on('click', (e) ->
 	thatArray = $(this).closest('*[data-type="array"]')
-	newElem = thatArray.find('> div[data-arraytype="prototype"]').first().clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo(thatArray)
+	$(this).closest('.form-group').next('div[data-arraytype="prototype"]').first().clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo(thatArray)
 )
 $('#preferences button[name="DeleteArrayElement"]').on('click', ->
 	$(this).closest('div[data-arraytype="value"]').remove()
 )
 $('#preferences button[name="DeleteArrayElement"]').hover(
 	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '#f2dede'),
-	-> $(this).closest('div[data-arraytype="value"]').css('background-color', ''),
+	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '')
 )
 
 $('a[href="#GenerateConfig"]').on('click', generateConfig)
