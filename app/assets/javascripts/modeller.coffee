@@ -281,11 +281,11 @@ class Generator
 					$(elem).val('')
 			when 'json'
 				if array and config?
-					$(elem).val(JSON.stringify(config, null, '  '))
+					$(elem).val(JSON.stringify(config, null, '    '))
 				else if config[elem.name]?
-					$(elem).val(JSON.stringify(config[elem.name], null, '  '))
+					$(elem).val(JSON.stringify(config[elem.name], null, '    '))
 				else
-					$(elem).val(JSON.stringify({}, null, '  '))
+					$(elem).val(JSON.stringify({}, null, '    '))
 			when 'int'
 				if array and config?
 					$(elem).val(config)
@@ -329,21 +329,24 @@ class Generator
 		nextElements.each( (index, data) =>
 			switch data.dataset.type
 				when 'string'
-					if array
-						config.push($(data).val())
-					else
-						config[data.name] = $(data).val()
-				when 'json'
-					if array
-						config.push(JSON.parse($(data).val()))
-					else
-						config[data.name] = JSON.parse($(data).val())
-				when 'int'
-					if not isNaN(parseInt($(data).val(), 10))
+					if $(data).prop('required') is true or $(data).val() isnt ''
 						if array
-							config.push(parseInt($(data).val(), 10))
+							config.push($(data).val())
 						else
-							config[data.name] = parseInt($(data).val(), 10)
+							config[data.name] = $(data).val()
+				when 'json'
+					if $(data).prop('required') is true or $(data).val() isnt ''
+						if array
+							config.push(JSON.parse($(data).val()))
+						else
+							config[data.name] = JSON.parse($(data).val())
+				when 'int'
+					if $(data).prop('required') is true or $(data).val() isnt ''
+						if not isNaN(parseInt($(data).val(), 10))
+							if array
+								config.push(parseInt($(data).val(), 10))
+							else
+								config[data.name] = parseInt($(data).val(), 10)
 				when 'boolean'
 					if array
 						config.push($(data).prop('checked'))
@@ -352,18 +355,27 @@ class Generator
 				when 'object'
 					if array
 						config.push({})
-						@setConfig(config[index], data, depth + 1)
+						@setConfig(config[config.length - 1], data, depth + 1)
+						if data.dataset.required is 'false' and $.isPlainObject(config[config.length - 1])
+							config.splice(config.length - 1, 1)
 					else
 						config[data.dataset.key] = {}
 						@setConfig(config[data.dataset.key], data, depth + 1)
+						if data.dataset.required is 'false' and $.isPlainObject(config[config.length - 1])
+							delete config[data.dataset.key]
 				when 'array'
 					if array
 						config.push([])
-						@setConfig(config[index], data, depth + 1, true)
+						@setConfig(config[config.length - 1], data, depth + 1, true)
+						if data.dataset.required is 'false' and config[config.length - 1].length is 0
+							config.splice(config.length - 1, 1)
 					else
 						config[data.dataset.key] = []
 						@setConfig(config[data.dataset.key], data, depth + 1, true)
+						if data.dataset.required is 'false' and config[data.dataset.key].length is 0
+							delete config[data.dataset.key]
 				else console.log(data.dataset.type + " not supported")
+			return
 		)
 		return
 
@@ -495,7 +507,7 @@ generateConfig = (e) ->
 	json =
 		generators:  gen
 		processors:  pro
-	$('#outputTextarea').val(JSON.stringify(json, null, '  '))
+	$('#outputTextarea').val(JSON.stringify(json, null, '    '))
 	selected.deselect() if selected?
 
 # Bind AddGenerator, AddProcessor and deleteSelected respective click events
