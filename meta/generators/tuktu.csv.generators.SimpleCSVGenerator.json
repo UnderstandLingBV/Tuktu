@@ -25,7 +25,8 @@
 				{
 					"name": "has_headers",
 					"type": "boolean",
-					"required": false
+					"required": false,
+					"default": false
 				},
 				{
 					"name": "predef_headers",
@@ -42,7 +43,8 @@
 				{
 					"name": "flattened",
 					"type": "boolean",
-					"required": false
+					"required": false,
+					"default": false
 				},
 				{
 					"name": "separator",

@@ -35,7 +35,8 @@
 				{
 					"name": "to_string",
 					"type": "boolean",
-					"required": false
+					"required": false,
+					"default": true
 				},
 				{
 					"name": "charset",

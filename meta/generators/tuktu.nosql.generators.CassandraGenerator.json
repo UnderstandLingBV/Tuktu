@@ -35,7 +35,8 @@
 				{
 					"name": "flatten",
 					"type": "boolean",
-					"required": false
+					"required": false,
+					"default": false
 				},
 				{
 					"name": "fetch_size",

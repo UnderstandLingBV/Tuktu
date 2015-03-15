@@ -299,7 +299,7 @@ class Generator
 				if config[elem.name]?
 					$(elem).prop('checked', config[elem.name])
 				else
-					$(elem).prop('checked', false)
+					$(elem).prop('checked', elem.dataset.checked is 'true')
 			when 'object'
 				if array and config?
 					for child in $(elem).find('*[data-depth="' + (depth + 1) + '"]')
