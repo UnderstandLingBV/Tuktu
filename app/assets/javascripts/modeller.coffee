@@ -539,8 +539,14 @@ $('#preferences button[name="DeleteArrayElement"]').hover(
 $('a[href="#GenerateConfig"]').on('click', generateConfig)
 
 # Bind respective input types to check validity
-$('#preferences input[type="text"],#preferences input[type="number"]').on('input', ->
-	if $(this).prop('required') is true and (not $(this).val()? or $(this).val().toString() is '')
+$('#preferences input[type="text"]').on('input', ->
+	if $(this).prop('required') is true and $(this).val() is ''
+		$(this).closest('.form-group').addClass('has-error')
+	else
+		$(this).closest('.form-group').removeClass('has-error')
+)
+$('#preferences input[type="number"][step="1"]').on('input', ->
+	if ($(this).prop('required') is true and $(this).val() is '') or isNaN(parseInt($(this).val(), 10)) or parseInt($(this).val(), 10) isnt parseFloat($(this).val())
 		$(this).closest('.form-group').addClass('has-error')
 	else
 		$(this).closest('.form-group').removeClass('has-error')
