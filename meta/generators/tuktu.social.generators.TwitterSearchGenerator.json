@@ -1,0 +1,73 @@
+{
+	"name": "Twitter Search Generator",
+	"class": "tuktu.social.generators.TwitterSearchGenerator",
+	"parameters": [
+		{
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "credentials",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "consumer_key",
+							"label": "Consumer Key",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "consumer_secret",
+							"label": "Consumer Secret",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token",
+							"label": "Access Token",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token_secret",
+							"label": "Access Token Secret",
+							"type": "string",
+							"required": true
+						}
+					]
+				},				
+				{
+					"name": "filters",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "keywords",
+							"type": "array",
+							"required": true,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}
