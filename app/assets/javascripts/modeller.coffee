@@ -278,7 +278,7 @@ class Generator
 				else if config[elem.name]?
 					$(elem).val(config[elem.name])
 				else
-					$(elem).val('')
+					$(elem).val(elem.dataset.default)
 			when 'json'
 				if array and config?
 					$(elem).val(JSON.stringify(config, null, '    '))
@@ -292,14 +292,14 @@ class Generator
 				else if config[elem.name]?
 					$(elem).val(config[elem.name])
 				else
-					$(elem).val('')
+					$(elem).val(elem.dataset.default)
 			when 'boolean'
 				if array and config?
 					$(elem).prop('checked', config)
 				if config[elem.name]?
 					$(elem).prop('checked', config[elem.name])
 				else
-					$(elem).prop('checked', elem.dataset.checked is 'true')
+					$(elem).prop('checked', elem.dataset.default is 'true')
 			when 'object'
 				if array and config?
 					for child in $(elem).find('*[data-depth="' + (depth + 1) + '"]')
@@ -326,57 +326,57 @@ class Generator
 			nextElements = $(elem).find('div[data-arraytype="value"] *[data-depth="' + depth + '"]')
 		else
 			nextElements = $(elem).find('*[data-depth="' + depth + '"]')
-		nextElements.each( (index, data) =>
-			switch data.dataset.type
-				when 'string'
-					if $(data).prop('required') is true or $(data).val() isnt ''
-						if array
-							config.push($(data).val())
-						else
-							config[data.name] = $(data).val()
-				when 'json'
-					if $(data).prop('required') is true or $(data).val() isnt ''
-						if array
-							config.push(JSON.parse($(data).val()))
-						else
-							config[data.name] = JSON.parse($(data).val())
-				when 'int'
-					if $(data).prop('required') is true or $(data).val() isnt ''
-						if not isNaN(parseInt($(data).val(), 10))
+		for data in nextElements
+			do (data) =>
+				switch data.dataset.type
+					when 'string'
+						if $(data).prop('required') is true or ($(data).val() isnt data.dataset.default and $(data).val() isnt '')
 							if array
-								config.push(parseInt($(data).val(), 10))
+								config.push($(data).val())
 							else
-								config[data.name] = parseInt($(data).val(), 10)
-				when 'boolean'
-					if array
-						config.push($(data).prop('checked'))
-					else
-						config[data.name] = $(data).prop('checked')
-				when 'object'
-					if array
-						config.push({})
-						@setConfig(config[config.length - 1], data, depth + 1)
-						if data.dataset.required is 'false' and $.isPlainObject(config[config.length - 1])
-							config.splice(config.length - 1, 1)
-					else
-						config[data.dataset.key] = {}
-						@setConfig(config[data.dataset.key], data, depth + 1)
-						if data.dataset.required is 'false' and $.isPlainObject(config[config.length - 1])
-							delete config[data.dataset.key]
-				when 'array'
-					if array
-						config.push([])
-						@setConfig(config[config.length - 1], data, depth + 1, true)
-						if data.dataset.required is 'false' and config[config.length - 1].length is 0
-							config.splice(config.length - 1, 1)
-					else
-						config[data.dataset.key] = []
-						@setConfig(config[data.dataset.key], data, depth + 1, true)
-						if data.dataset.required is 'false' and config[data.dataset.key].length is 0
-							delete config[data.dataset.key]
-				else console.log(data.dataset.type + " not supported")
-			return
-		)
+								config[data.name] = $(data).val()
+					when 'json'
+						if $(data).prop('required') is true or $(data).val() isnt ''
+							if array
+								config.push(JSON.parse($(data).val()))
+							else
+								config[data.name] = JSON.parse($(data).val())
+					when 'int'
+						if $(data).prop('required') is true or ($(data).val() isnt data.dataset.default and $(data).val() isnt '')
+							if not isNaN(parseInt($(data).val(), 10))
+								if array
+									config.push(parseInt($(data).val(), 10))
+								else
+									config[data.name] = parseInt($(data).val(), 10)
+					when 'boolean'
+						if $(data).prop('required') is true or $(data).prop('checked').toString() isnt data.dataset.default
+							if array
+								config.push($(data).prop('checked'))
+							else
+								config[data.name] = $(data).prop('checked')
+					when 'object'
+						if array
+							config.push({})
+							@setConfig(config[config.length - 1], data, depth + 1)
+							if data.dataset.required is 'false' and $.isPlainObject(config[config.length - 1])
+								config.splice(config.length - 1, 1)
+						else
+							config[data.dataset.key] = {}
+							@setConfig(config[data.dataset.key], data, depth + 1)
+							if data.dataset.required is 'false' and $.isPlainObject(config[config.length - 1])
+								delete config[data.dataset.key]
+					when 'array'
+						if array
+							config.push([])
+							@setConfig(config[config.length - 1], data, depth + 1, true)
+							if data.dataset.required is 'false' and config[config.length - 1].length is 0
+								config.splice(config.length - 1, 1)
+						else
+							config[data.dataset.key] = []
+							@setConfig(config[data.dataset.key], data, depth + 1, true)
+							if data.dataset.required is 'false' and config[data.dataset.key].length is 0
+								delete config[data.dataset.key]
+				return
 		return
 
 	activateForm: ->
