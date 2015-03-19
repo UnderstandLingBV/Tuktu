@@ -47,6 +47,7 @@
 					</div>
 					@for(generator <- generators) {
 						<div class="hidden" data-class="@{(generator._2 \ "class").as[String]}">
+							<span class="help-block">@{(generator._2 \ "description").asOpt[String].getOrElse("")}</span>
 							@for(param <- (generator._2 \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
 								@form(param, 0)
 							}
@@ -72,6 +73,7 @@
 					</div>
 					@for(processor <- processors) {
 						<div class="hidden" data-class="@{(processor._2 \ "class").as[String]}">
+							<span class="help-block">@{(processor._2 \ "description").asOpt[String].getOrElse("")}</span>
 							@for(param <- (processor._2 \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
 								@form(param, 0)
 							}
