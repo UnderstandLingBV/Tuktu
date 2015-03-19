@@ -18,7 +18,7 @@
 	<div class="form-group">
 		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
 		<div class="col-xs-6">
-			<textarea rows="3" name="@{(json \ "name").as[String]}" class="form-control" @if((json \ "required").as[Boolean]){required="required"} data-type="json" data-depth="@depth">{}</textarea>
+			<textarea rows="3" name="@{(json \ "name").as[String]}" class="form-control" @if((json \ "required").as[Boolean]){required="required"} data-type="json" data-depth="@depth" data-default="@{(json \ "default").asOpt[play.api.libs.json.JsValue].map(_.toString).getOrElse("{}")}"></textarea>
 		</div>
 		@if(array) {
 			<div class="col-xs-3">

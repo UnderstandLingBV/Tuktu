@@ -285,7 +285,7 @@ class Generator
 				else if config[elem.name]?
 					$(elem).val(JSON.stringify(config[elem.name], null, '    '))
 				else
-					$(elem).val(JSON.stringify({}, null, '    '))
+					$(elem).val(JSON.stringify(JSON.parse(elem.dataset.default), null, '    '))
 			when 'int'
 				if array and config?
 					$(elem).val(config)
@@ -336,7 +336,7 @@ class Generator
 							else
 								config[data.name] = $(data).val()
 					when 'json'
-						if $(data).prop('required') is true or $(data).val() isnt ''
+						if $(data).prop('required') is true or ($(data).val() isnt '' and not _.isEqual(JSON.parse($(data).val()), JSON.parse(data.dataset.default)))
 							if array
 								config.push(JSON.parse($(data).val()))
 							else
