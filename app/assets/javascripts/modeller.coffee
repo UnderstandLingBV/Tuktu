@@ -527,7 +527,9 @@ $('#preferences button[name="deleteSelected"]').on('click', (e) ->
 )
 $('#preferences button[name="AddArrayElement"]').on('click', (e) ->
 	thatArray = $(this).closest('*[data-type="array"]')
-	$(this).closest('.form-group').next('div[data-arraytype="prototype"]').first().clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo(thatArray)
+	$(this).closest('.form-group').nextAll('div[data-arraytype="prototype"]').first().clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo(thatArray).find('*[data-toggle="tooltip"]').each( (i, el) ->
+		$(el).tooltip() if $(el).closest('div[data-arraytype="prototype"]').length is 0
+	)
 )
 $('#preferences button[name="DeleteArrayElement"]').on('click', ->
 	$(this).closest('div[data-arraytype="value"]').remove()
@@ -568,4 +570,8 @@ $('#generatorName,#processorName').on('change', ->
 	selected.setLabel()
 	delete selected.config.config
 	selected.activateForm()
+)
+
+$('*[data-toggle="tooltip"]').each( (i, el) ->
+	$(el).tooltip() if $(el).closest('div[data-arraytype="prototype"]').length is 0
 )

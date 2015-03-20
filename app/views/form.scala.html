@@ -1,59 +1,27 @@
 @(json: play.api.libs.json.JsValue, depth: Int = 0, array: Boolean = false)
 
 @if((json \ "type").as[String] == "string") {
-	<div class="form-group">
-		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
-		<div class="col-xs-6">
-			<input name="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]){required="required"} data-type="string" data-depth="@depth" data-default="@{(json \ "default").asOpt[String].getOrElse("")}" value="@{(json \ "default").asOpt[String].getOrElse("")}">
-		</div>
-		@if(array) {
-			<div class="col-xs-3">
-				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
-			</div>
-		}
-	</div>
+	@form_group(json, array) {
+		<input name="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]){required="required"} data-type="string" data-depth="@depth" data-default="@{(json \ "default").asOpt[String].getOrElse("")}" value="@{(json \ "default").asOpt[String].getOrElse("")}">
+	}
 } else {
 
 @if((json \ "type").as[String] == "JsObject") {
-	<div class="form-group">
-		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
-		<div class="col-xs-6">
-			<textarea rows="3" name="@{(json \ "name").as[String]}" class="form-control" @if((json \ "required").as[Boolean]){required="required"} data-type="JsObject" data-depth="@depth" data-default="@{(json \ "default").asOpt[play.api.libs.json.JsValue].map(_.toString).getOrElse("{}")}">@{play.api.libs.json.Json.prettyPrint((json \ "default").asOpt[play.api.libs.json.JsValue].getOrElse(new play.api.libs.json.JsObject(Nil)))}</textarea>
-		</div>
-		@if(array) {
-			<div class="col-xs-3">
-				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
-			</div>
-		}
-	</div>
+	@form_group(json, array) {
+		<textarea rows="3" name="@{(json \ "name").as[String]}" class="form-control" @if((json \ "required").as[Boolean]){required="required"} data-type="JsObject" data-depth="@depth" data-default="@{(json \ "default").asOpt[play.api.libs.json.JsValue].map(_.toString).getOrElse("{}")}">@{play.api.libs.json.Json.prettyPrint((json \ "default").asOpt[play.api.libs.json.JsValue].getOrElse(new play.api.libs.json.JsObject(Nil)))}</textarea>
+	}
 } else {
 
 @if((json \ "type").as[String] == "int") {
-	<div class="form-group">
-		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
-		<div class="col-xs-6">
-			<input name="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]){required="required"} data-type="int" data-depth="@depth" data-default="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}" value="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}">
-		</div>
-		@if(array) {
-			<div class="col-xs-3">
-				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
-			</div>
-		}
-	</div>
+	@form_group(json, array) {
+		<input name="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]){required="required"} data-type="int" data-depth="@depth" data-default="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}" value="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}">
+	}
 } else {
 
 @if((json \ "type").as[String] == "boolean") {
-	<div class="form-group">
-		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
-		<div class="col-xs-6">
-			<input name="@{(json \ "name").as[String]}" class="form-control" type="checkbox" @if((json \ "required").as[Boolean]){required="required"} data-type="boolean" data-depth="@depth" data-default="@{(json \ "default").asOpt[Boolean].getOrElse(false)}" @if((json \ "default").asOpt[Boolean].getOrElse(false) == true){checked="checked"}>
-		</div>
-		@if(array) {
-			<div class="col-xs-3">
-				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
-			</div>
-		}
-	</div>
+	@form_group(json, array) {
+		<input name="@{(json \ "name").as[String]}" class="form-control" type="checkbox" @if((json \ "required").as[Boolean]){required="required"} data-type="boolean" data-depth="@depth" data-default="@{(json \ "default").asOpt[Boolean].getOrElse(false)}" @if((json \ "default").asOpt[Boolean].getOrElse(false) == true){checked="checked"}>
+	}
 } else {
 
 @if((json \ "type").as[String] == "object") {
@@ -67,9 +35,12 @@
 @if((json \ "type").as[String] == "array") {
 	<div data-depth="@depth" data-type="array" data-key="@{(json \ "name").as[String]}" data-required="@{(json \ "required").asOpt[Boolean].getOrElse(true)}">
 		@for(param <- (json \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
-			<div class="form-group">
+			<div class="form-group" data-toggle="tooltip" data-placement="left" title="@{(json \ "description").asOpt[String].map(_ + "\n").getOrElse("")
+}Type: @{(json \ "type").as[String]}
+Required: @{(json \ "required").as[Boolean]
+}@{(json \ "default").asOpt[play.api.libs.json.JsValue].map("\nDefault: " + _.toString).getOrElse("")}">
 				<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
-				<div class="col-xs-@if(array) {3} else {6}">
+				<div class="col-xs-3">
 					<p class="form-control-static">@{(param \ "label").asOpt[String].getOrElse((param \ "name").asOpt[String].getOrElse("")).capitalize}</p>
 				</div>
 				<div class="col-xs-3">
