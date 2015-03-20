@@ -279,7 +279,7 @@ class Generator
 					$(elem).val(config[elem.name])
 				else
 					$(elem).val(elem.dataset.default)
-			when 'json'
+			when 'JsObject'
 				if array and config?
 					$(elem).val(JSON.stringify(config, null, '    '))
 				else if config[elem.name]?
@@ -335,12 +335,13 @@ class Generator
 								config.push($(data).val())
 							else
 								config[data.name] = $(data).val()
-					when 'json'
-						if $(data).prop('required') is true or ($(data).val() isnt '' and not _.isEqual(JSON.parse($(data).val()), JSON.parse(data.dataset.default)))
-							if array
-								config.push(JSON.parse($(data).val()))
-							else
-								config[data.name] = JSON.parse($(data).val())
+					when 'JsObject'
+						try
+							if _.isObject(JSON.parse($(data).val())) and not _.isArray(JSON.parse($(this).val())) and ($(data).prop('required') is true or not _.isEqual(JSON.parse($(data).val()), JSON.parse(data.dataset.default)))
+								if array
+									config.push(JSON.parse($(data).val()))
+								else
+									config[data.name] = JSON.parse($(data).val())
 					when 'int'
 						if $(data).prop('required') is true or ($(data).val() isnt data.dataset.default and $(data).val() isnt '')
 							if not isNaN(parseInt($(data).val(), 10))
@@ -551,15 +552,14 @@ $('#preferences input[type="number"][step="1"]').on('input', ->
 	else
 		$(this).closest('.form-group').removeClass('has-error')
 )
-$('#preferences textarea').on('input', ->
-	if $(this).prop('required') is true and (not $(this).val()? or $(this).val().toString() is '')
-		$(this).closest('.form-group').addClass('has-error')
-	else
-		try
-			JSON.parse($(this).val())
-			$(this).closest('.form-group').removeClass('has-error')
-		catch
+$('#preferences textarea[data-type="JsObject"]').on('input', ->
+	try
+		if (not _.isObject(JSON.parse($(this).val())) or _.isArray(JSON.parse($(this).val()))) and ($(this).prop('required') is true or $(this).val() isnt '')
 			$(this).closest('.form-group').addClass('has-error')
+		else
+			$(this).closest('.form-group').removeClass('has-error')
+	catch
+		$(this).closest('.form-group').addClass('has-error')
 )
 
 $('#generatorName,#processorName').on('change', ->

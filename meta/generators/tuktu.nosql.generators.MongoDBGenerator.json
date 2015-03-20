@@ -41,12 +41,12 @@
 				},
 				{
 					"name": "query",
-					"type": "json",
+					"type": "JsObject",
 					"required": true
 				},
 				{
 					"name": "filter",
-					"type": "json",
+					"type": "JsObject",
 					"required": true
 				}
 			]

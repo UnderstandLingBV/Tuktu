@@ -19,7 +19,7 @@
 			"parameters": [
 				{
 					"name": "kafka_properties",
-					"type": "json",
+					"type": "JsObject",
 					"required": true
 				},
 				{

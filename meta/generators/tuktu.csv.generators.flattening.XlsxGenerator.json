@@ -39,7 +39,7 @@
 					"parameters": [
 						{
 							"name": "",
-							"type": "json",
+							"type": "JsObject",
 							"required": true
 						}
 					]
