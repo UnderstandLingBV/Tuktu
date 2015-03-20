@@ -4,7 +4,7 @@
 	<div class="form-group">
 		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
 		<div class="col-xs-6">
-			<input name="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]){required="required"} data-type="string" data-depth="@depth" data-default="@{(json \ "default").asOpt[String].getOrElse("")}">
+			<input name="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]){required="required"} data-type="string" data-depth="@depth" data-default="@{(json \ "default").asOpt[String].getOrElse("")}" value="@{(json \ "default").asOpt[String].getOrElse("")}">
 		</div>
 		@if(array) {
 			<div class="col-xs-3">
@@ -18,7 +18,7 @@
 	<div class="form-group">
 		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
 		<div class="col-xs-6">
-			<textarea rows="3" name="@{(json \ "name").as[String]}" class="form-control" @if((json \ "required").as[Boolean]){required="required"} data-type="JsObject" data-depth="@depth" data-default="@{(json \ "default").asOpt[play.api.libs.json.JsValue].map(_.toString).getOrElse("{}")}"></textarea>
+			<textarea rows="3" name="@{(json \ "name").as[String]}" class="form-control" @if((json \ "required").as[Boolean]){required="required"} data-type="JsObject" data-depth="@depth" data-default="@{(json \ "default").asOpt[play.api.libs.json.JsValue].map(_.toString).getOrElse("{}")}">@{play.api.libs.json.Json.prettyPrint((json \ "default").asOpt[play.api.libs.json.JsValue].getOrElse(new play.api.libs.json.JsObject(Nil)))}</textarea>
 		</div>
 		@if(array) {
 			<div class="col-xs-3">
@@ -32,7 +32,7 @@
 	<div class="form-group">
 		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
 		<div class="col-xs-6">
-			<input name="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]){required="required"} data-type="int" data-depth="@depth" data-default="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}">
+			<input name="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]){required="required"} data-type="int" data-depth="@depth" data-default="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}" value="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}">
 		</div>
 		@if(array) {
 			<div class="col-xs-3">
@@ -46,7 +46,7 @@
 	<div class="form-group">
 		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
 		<div class="col-xs-6">
-			<input name="@{(json \ "name").as[String]}" class="form-control" type="checkbox" @if((json \ "required").as[Boolean]){required="required"} data-type="boolean" data-depth="@depth" data-default="@{(json \ "default").asOpt[Boolean].getOrElse(false)}">
+			<input name="@{(json \ "name").as[String]}" class="form-control" type="checkbox" @if((json \ "required").as[Boolean]){required="required"} data-type="boolean" data-depth="@depth" data-default="@{(json \ "default").asOpt[Boolean].getOrElse(false)}" @if((json \ "default").asOpt[Boolean].getOrElse(false) == true){checked="checked"}>
 		</div>
 		@if(array) {
 			<div class="col-xs-3">
