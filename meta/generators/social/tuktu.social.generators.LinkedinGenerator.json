@@ -1,0 +1,72 @@
+{
+	"name": "Linkedin Generator",
+	"class": "tuktu.social.generators.LinkedinGenerator",
+	"parameters": [
+		{
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "credentials",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "consumer_key",
+							"label": "Consumer Key",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "consumer_secret",
+							"label": "Consumer Secret",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token",
+							"label": "Access Token",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token_secret",
+							"label": "Access Token Secret",
+							"type": "string",
+							"required": true
+						}
+					]
+				},				
+				{
+					"name": "url",
+					"label": "API endpoint URL",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "http_method",
+					"label": "HTTP request type (delete/get/post/put)",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "field",
+					"label": "JSON field to extract from response",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

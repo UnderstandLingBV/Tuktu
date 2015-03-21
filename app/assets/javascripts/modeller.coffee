@@ -293,6 +293,13 @@ class Generator
 					$(elem).val(config[elem.name])
 				else
 					$(elem).val(elem.dataset.default)
+			when 'long'
+                if array and config?
+                    $(elem).val(config)
+                else if config[elem.name]?
+                    $(elem).val(config[elem.name])
+                else
+                    $(elem).val(elem.dataset.default)
 			when 'boolean'
 				if array and config?
 					$(elem).prop('checked', config)

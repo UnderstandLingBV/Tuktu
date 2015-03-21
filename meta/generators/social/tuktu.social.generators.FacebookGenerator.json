@@ -1,0 +1,91 @@
+{
+	"name": "Facebook Generator",
+	"class": "tuktu.social.generators.FacebookGenerator",
+	"parameters": [
+		{
+			"name": "node",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "credentials",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "access_token",
+							"label": "Access Token",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "filters",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "keywords",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						},
+						{
+							"name": "users",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "update_time",
+					"label": "Frequency of updating",
+					"type": "long",
+					"required": false
+				},
+				{
+					"name": "interval",
+					"label": "Time interval to collect data for",
+					"type": "object",
+					"required": false,
+					"parameters": [
+						{
+							"name": "start",
+							"type": "long",
+							"required": false
+						},
+						{
+							"name": "end",
+							"type": "long",
+							"required": false
+						}
+					]
+				}
+			]
+		}
+	]
+}
