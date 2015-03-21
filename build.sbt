@@ -1,3 +1,5 @@
+EclipseKeys.createSrc := EclipseCreateSrc.All
+
 name := """Modeller"""
 
 version := "1.0-SNAPSHOT"
