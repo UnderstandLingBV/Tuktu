@@ -317,7 +317,11 @@ class Generator
 						type = switch typeof(data)
 							when 'number' then 'int'
 							else typeof(data)
-						$(elem).find('> div[data-arraytype="prototype"] *[data-depth="' + (depth + 1) + '"][data-type="' + type + '"]').first().closest('div[data-arraytype="prototype"]').clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo($(elem)).find('*[data-depth="' + (depth + 1) + '"]').each((ind, newElem) => @getConfig(data, newElem, depth + 1, true))
+						newElem = $(elem).find('> div[data-arraytype="prototype"] *[data-depth="' + (depth + 1) + '"][data-type="' + type + '"]').first().closest('div[data-arraytype="prototype"]').clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo($(elem))
+						newElem.find('*[data-depth="' + (depth + 1) + '"]').each((i, el) => @getConfig(data, el, depth + 1, true))
+						newElem.find('*[data-toggle="tooltip"]').each( (i, el) ->
+							$(el).tooltip() if $(el).closest('div[data-arraytype="prototype"]').length is 0
+						)
 		return
 
 	# Set config recursively
@@ -356,26 +360,28 @@ class Generator
 							else
 								config[data.name] = $(data).prop('checked')
 					when 'object'
+						newObject = {}
 						if array
-							config.push({})
-							@setConfig(config[config.length - 1], data, depth + 1)
-							if data.dataset.required is 'false' and $.isPlainObject(config[config.length - 1])
-								config.splice(config.length - 1, 1)
+							config.push(newObject)
+							@setConfig(newObject, data, depth + 1)
+							if data.dataset.required is 'false' and _.isEmpty(newObject)
+								config.splice(_.find(config, newObject), 1)
 						else
-							config[data.dataset.key] = {}
-							@setConfig(config[data.dataset.key], data, depth + 1)
-							if data.dataset.required is 'false' and $.isPlainObject(config[config.length - 1])
+							config[data.dataset.key] = newObject
+							@setConfig(newObject, data, depth + 1)
+							if data.dataset.required is 'false' and _.isEmpty(newObject)
 								delete config[data.dataset.key]
 					when 'array'
+						newArray = []
 						if array
-							config.push([])
+							config.push(newArray)
 							@setConfig(config[config.length - 1], data, depth + 1, true)
-							if data.dataset.required is 'false' and config[config.length - 1].length is 0
-								config.splice(config.length - 1, 1)
+							if data.dataset.required is 'false' and _.isEmpty(newArray)
+								config.splice(_.find(config, newArray), 1)
 						else
-							config[data.dataset.key] = []
-							@setConfig(config[data.dataset.key], data, depth + 1, true)
-							if data.dataset.required is 'false' and config[data.dataset.key].length is 0
+							config[data.dataset.key] = newArray
+							@setConfig(newArray, data, depth + 1, true)
+							if data.dataset.required is 'false' and _.isEmpty(newArray)
 								delete config[data.dataset.key]
 				return
 		return
