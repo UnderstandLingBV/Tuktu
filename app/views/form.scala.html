@@ -12,7 +12,7 @@
 	}
 } else {
 
-@if((json \ "type").as[String] == "int") {
+@if((json \ "type").as[String] == "int" || (json \ "type").as[String] == "long") {
 	@form_group(json, array) {
 		<input name="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]){required="required"} data-type="int" data-depth="@depth" data-default="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}" value="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}">
 	}

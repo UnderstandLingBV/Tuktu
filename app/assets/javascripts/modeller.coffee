@@ -293,13 +293,6 @@ class Generator
 					$(elem).val(config[elem.name])
 				else
 					$(elem).val(elem.dataset.default)
-			when 'long'
-                if array and config?
-                    $(elem).val(config)
-                else if config[elem.name]?
-                    $(elem).val(config[elem.name])
-                else
-                    $(elem).val(elem.dataset.default)
 			when 'boolean'
 				if array and config?
 					$(elem).prop('checked', config)
@@ -351,7 +344,7 @@ class Generator
 									config[data.name] = JSON.parse($(data).val())
 					when 'int'
 						if $(data).prop('required') is true or ($(data).val() isnt data.dataset.default and $(data).val() isnt '')
-							if not isNaN(parseInt($(data).val(), 10))
+							if not isNaN(parseInt($(data).val(), 10)) and parseInt($(data).val(), 10) is parseFloat($(data).val())
 								if array
 									config.push(parseInt($(data).val(), 10))
 								else
@@ -501,6 +494,7 @@ class Processor extends Generator
 
 generateConfig = (e) ->
 	e.preventDefault() if e?
+	# Cycle through all nodes and add the array of successors to its config
 	gen = for g in allNodes.generators
 		conf = g.config
 		conf.next = []
@@ -513,6 +507,7 @@ generateConfig = (e) ->
 		for id, succ of p.successors
 			conf.next.push(succ.node.config.id)
 		conf
+	# Build config
 	json =
 		generators:  gen
 		processors:  pro
