@@ -1,0 +1,16 @@
+{
+	"name": "Concurrent Deduplication Processor",
+	"class": "tuktu.processors.bucket.concurrent.DeduplicationProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

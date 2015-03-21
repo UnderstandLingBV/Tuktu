@@ -1,0 +1,16 @@
+{
+	"name": "Concurrent Maximum Processor",
+	"class": "tuktu.processors.bucket.concurrent.aggregate.MaxProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

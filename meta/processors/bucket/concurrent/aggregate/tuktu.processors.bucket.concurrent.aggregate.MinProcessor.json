@@ -1,0 +1,16 @@
+{
+	"name": "Concurrent Minimum Processor",
+	"class": "tuktu.processors.bucket.concurrent.aggregate.MinProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

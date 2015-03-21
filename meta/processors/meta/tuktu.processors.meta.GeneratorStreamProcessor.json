@@ -1,0 +1,16 @@
+{
+	"name": "Generator Stream Processor",
+	"class": "tuktu.processors.meta.GeneratorStreamProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

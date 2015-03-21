@@ -1,0 +1,16 @@
+{
+	"name": "MongoDB Processor",
+	"class": "tuktu.nosql.processors.MongoDBProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

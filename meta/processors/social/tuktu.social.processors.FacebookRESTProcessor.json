@@ -1,0 +1,16 @@
+{
+	"name": "Facebook REST Processor",
+	"class": "tuktu.social.processors.FacebookRESTProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

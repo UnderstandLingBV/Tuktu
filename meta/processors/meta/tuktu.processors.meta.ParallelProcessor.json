@@ -1,0 +1,16 @@
+{
+	"name": "Parallel Processor",
+	"class": "tuktu.processors.meta.ParallelProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

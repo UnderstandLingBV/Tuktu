@@ -1,0 +1,16 @@
+{
+	"name": "Train Logistic Regression Processor",
+	"class": "tuktu.ml.processors.LogisticRegressionTrainProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

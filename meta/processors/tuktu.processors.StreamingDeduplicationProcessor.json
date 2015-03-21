@@ -1,0 +1,16 @@
+{
+	"name": "Streaming Deduplication Processor",
+	"class": "tuktu.processors.StreamingDeduplicationProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

@@ -1,0 +1,16 @@
+{
+	"name": "Deduplication Processor",
+	"class": "tuktu.processors.bucket.DeduplicationProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

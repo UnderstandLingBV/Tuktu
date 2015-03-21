@@ -1,0 +1,16 @@
+{
+	"name": "Part-of-Speech Tagger Processor",
+	"class": "tuktu.nlp.processors.POSTaggerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

@@ -1,0 +1,16 @@
+{
+	"name": "Concurrent Count Processor",
+	"class": "tuktu.processors.bucket.concurrent.aggregate.CountProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

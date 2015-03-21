@@ -1,0 +1,16 @@
+{
+	"name": "Standard Deviation Processor",
+	"class": "tuktu.processors.bucket.statistics.StDevProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

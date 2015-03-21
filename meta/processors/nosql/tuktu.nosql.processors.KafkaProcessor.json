@@ -1,0 +1,16 @@
+{
+	"name": "Kafka Processor",
+	"class": "tuktu.nosql.processors.KafkaProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

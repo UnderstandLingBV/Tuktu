@@ -1,0 +1,16 @@
+{
+	"name": "RBEM Polarity Processor",
+	"class": "tuktu.nlp.processors.RBEMPolarityProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

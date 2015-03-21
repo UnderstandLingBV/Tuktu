@@ -1,0 +1,16 @@
+{
+	"name": "Median Processor",
+	"class": "tuktu.processors.bucket.statistics.MedianProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

@@ -1,0 +1,16 @@
+{
+	"name": "Concurrent Sum Processor",
+	"class": "tuktu.processors.bucket.concurrent.aggregate.SumProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

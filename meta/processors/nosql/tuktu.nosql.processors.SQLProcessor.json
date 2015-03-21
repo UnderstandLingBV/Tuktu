@@ -1,0 +1,16 @@
+{
+	"name": "SQL Processor",
+	"class": "tuktu.nosql.processors.SQLProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

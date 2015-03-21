@@ -1,0 +1,16 @@
+{
+	"name": "LIGA Processor",
+	"class": "tuktu.nlp.processors.LIGAProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

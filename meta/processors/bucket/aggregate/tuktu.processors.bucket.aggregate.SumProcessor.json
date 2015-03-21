@@ -1,0 +1,16 @@
+{
+	"name": "Sum Processor",
+	"class": "tuktu.processors.bucket.aggregate.SumProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

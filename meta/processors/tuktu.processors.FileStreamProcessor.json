@@ -1,0 +1,16 @@
+{
+	"name": "File Stream Processor",
+	"class": "tuktu.processors.FileStreamProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

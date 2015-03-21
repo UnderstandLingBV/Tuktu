@@ -1,0 +1,16 @@
+{
+	"name": "Generator Config Processor",
+	"class": "tuktu.processors.meta.GeneratorConfigProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

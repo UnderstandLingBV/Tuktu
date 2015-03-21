@@ -1,0 +1,16 @@
+{
+	"name": "JavaScript Processor",
+	"class": "tuktu.processors.JSProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

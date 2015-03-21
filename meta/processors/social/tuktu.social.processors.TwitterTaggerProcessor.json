@@ -1,0 +1,16 @@
+{
+	"name": "Twitter Tagger Processor",
+	"class": "tuktu.social.processors.TwitterTaggerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

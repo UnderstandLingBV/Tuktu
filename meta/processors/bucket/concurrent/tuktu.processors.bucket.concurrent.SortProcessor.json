@@ -1,0 +1,16 @@
+{
+	"name": "Concurrent Sort Processor",
+	"class": "tuktu.processors.bucket.concurrent.SortProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}

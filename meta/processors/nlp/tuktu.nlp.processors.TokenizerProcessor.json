@@ -1,0 +1,16 @@
+{
+	"name": "Tokenizer Processor",
+	"class": "tuktu.nlp.processors.TokenizerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		}
+	]
+}
