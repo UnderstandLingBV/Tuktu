@@ -279,13 +279,16 @@ class Generator
 					$(elem).val(config[elem.name])
 				else
 					$(elem).val(elem.dataset.default)
-			when 'JsObject'
-				if array and config?
-					$(elem).val(JSON.stringify(config, null, '    '))
-				else if config[elem.name]?
-					$(elem).val(JSON.stringify(config[elem.name], null, '    '))
-				else
-					$(elem).val(JSON.stringify(JSON.parse(elem.dataset.default), null, '    '))
+			when 'JsObject', 'any'
+				try
+					if array and config?
+						$(elem).val(JSON.stringify(config, null, '    '))
+					else if config[elem.name]?
+						$(elem).val(JSON.stringify(config[elem.name], null, '    '))
+					else
+						$(elem).val(JSON.stringify(JSON.parse(elem.dataset.default), null, '    '))
+				catch
+					$(elem).val('')
 			when 'int'
 				if array and config?
 					$(elem).val(config)
@@ -340,8 +343,21 @@ class Generator
 							else
 								config[data.name] = $(data).val()
 					when 'JsObject'
+						myDefault = ''
 						try
-							if _.isObject(JSON.parse($(data).val())) and not _.isArray(JSON.parse($(this).val())) and ($(data).prop('required') is true or not _.isEqual(JSON.parse($(data).val()), JSON.parse(data.dataset.default)))
+							myDefault = JSON.parse(data.dataset.default)
+						try
+							if _.isObject(JSON.parse($(data).val())) and not _.isArray(JSON.parse($(data).val())) and ($(data).prop('required') is true or not _.isEqual(JSON.parse($(data).val()), myDefault))
+								if array
+									config.push(JSON.parse($(data).val()))
+								else
+									config[data.name] = JSON.parse($(data).val())
+					when 'any'
+						myDefault = ''
+						try
+							myDefault = JSON.parse(data.dataset.default)
+						try
+							if $(data).prop('required') is true or ($(data).val() isnt '' and not _.isEqual(JSON.parse($(data).val()), myDefault))
 								if array
 									config.push(JSON.parse($(data).val()))
 								else
@@ -570,6 +586,16 @@ $('#preferences textarea[data-type="JsObject"]').on('input', ->
 			$(this).closest('.form-group').removeClass('has-error')
 	catch
 		$(this).closest('.form-group').addClass('has-error')
+)
+$('#preferences textarea[data-type="any"]').on('input', ->
+	if $(this).prop('required') is false and $(this).val() is ''
+		$(this).closest('.form-group').removeClass('has-error')
+	else
+		try
+			JSON.parse($(this).val())
+			$(this).closest('.form-group').removeClass('has-error')
+		catch
+			$(this).closest('.form-group').addClass('has-error')
 )
 
 $('#generatorName,#processorName').on('change', ->

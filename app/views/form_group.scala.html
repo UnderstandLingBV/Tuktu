@@ -5,16 +5,14 @@ class="form-group"
 data-toggle="tooltip"
 data-placement="left"
 title="@{(json \ "description").asOpt[String].map(_ + "\n").getOrElse("")
-}Type: @{(json \ "type").as[String]}
+}Type: @{(json \ "type").as[String].capitalize}
 Required: @{(json \ "required").as[Boolean]
 }@{(json \ "default").asOpt[play.api.libs.json.JsValue].map("\nDefault: " + _.toString).getOrElse("")}"
 >
 	<label class="col-xs-3 control-label">
 		@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}
 	</label>
-	<div class="col-xs-6">
-		@html
-	</div>
+	@html
 	@if(array) {
 		<div class="col-xs-3">
 			<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
