@@ -272,35 +272,28 @@ class Generator
 	# Get config and populate inputs recursively
 	getConfig: (config, elem, depth, array = false) ->
 		switch elem.dataset.type
-			when 'string'
+			when 'string', 'int'
 				if array and config?
 					$(elem).val(config)
-				else if config[elem.name]?
-					$(elem).val(config[elem.name])
+				else if config[elem.dataset.key]?
+					$(elem).val(config[elem.dataset.key])
 				else
 					$(elem).val(elem.dataset.default)
 			when 'JsObject', 'any'
 				try
 					if array and config?
 						$(elem).val(JSON.stringify(config, null, '    '))
-					else if config[elem.name]?
-						$(elem).val(JSON.stringify(config[elem.name], null, '    '))
+					else if config[elem.dataset.key]?
+						$(elem).val(JSON.stringify(config[elem.dataset.key], null, '    '))
 					else
 						$(elem).val(JSON.stringify(JSON.parse(elem.dataset.default), null, '    '))
 				catch
 					$(elem).val('')
-			when 'int'
-				if array and config?
-					$(elem).val(config)
-				else if config[elem.name]?
-					$(elem).val(config[elem.name])
-				else
-					$(elem).val(elem.dataset.default)
 			when 'boolean'
 				if array and config?
 					$(elem).prop('checked', config)
-				if config[elem.name]?
-					$(elem).prop('checked', config[elem.name])
+				if config[elem.dataset.key]?
+					$(elem).prop('checked', config[elem.dataset.key])
 				else
 					$(elem).prop('checked', elem.dataset.default is 'true')
 			when 'object'
@@ -335,71 +328,43 @@ class Generator
 			nextElements = $(elem).find('*[data-depth="' + depth + '"]')
 		for data in nextElements
 			do (data) =>
-				switch data.dataset.type
+				myDefault = null
+				try
+					myDefault = JSON.parse(data.dataset.default)
+				myValue = switch data.dataset.type
 					when 'string'
-						if $(data).prop('required') is true or ($(data).val() isnt data.dataset.default and $(data).val() isnt '')
-							if array
-								config.push($(data).val())
-							else
-								config[data.name] = $(data).val()
+						$(data).val() if $(data).prop('required') is true or ($(data).val() isnt '' and $(data).val() isnt data.dataset.default)
+
 					when 'JsObject'
-						myDefault = ''
 						try
-							myDefault = JSON.parse(data.dataset.default)
-						try
-							if _.isObject(JSON.parse($(data).val())) and not _.isArray(JSON.parse($(data).val())) and ($(data).prop('required') is true or not _.isEqual(JSON.parse($(data).val()), myDefault))
-								if array
-									config.push(JSON.parse($(data).val()))
-								else
-									config[data.name] = JSON.parse($(data).val())
+							JSON.parse($(data).val()) if _.isObject(JSON.parse($(data).val())) and not _.isArray(JSON.parse($(data).val())) and ($(data).prop('required') is true or not _.isEqual(JSON.parse($(data).val()), myDefault))
+
 					when 'any'
-						myDefault = ''
 						try
-							myDefault = JSON.parse(data.dataset.default)
-						try
-							if $(data).prop('required') is true or ($(data).val() isnt '' and not _.isEqual(JSON.parse($(data).val()), myDefault))
-								if array
-									config.push(JSON.parse($(data).val()))
-								else
-									config[data.name] = JSON.parse($(data).val())
+							JSON.parse($(data).val()) if $(data).prop('required') is true or ($(data).val() isnt '' and not _.isEqual(JSON.parse($(data).val()), myDefault))
+
 					when 'int'
-						if $(data).prop('required') is true or ($(data).val() isnt data.dataset.default and $(data).val() isnt '')
-							if not isNaN(parseInt($(data).val(), 10)) and parseInt($(data).val(), 10) is parseFloat($(data).val())
-								if array
-									config.push(parseInt($(data).val(), 10))
-								else
-									config[data.name] = parseInt($(data).val(), 10)
+						parseInt($(data).val(), 10) if /^\s*[+-]?\d+\s*$/.test($(data).val()) and ($(data).prop('required') is true or ($(data).val() isnt data.dataset.default and $(data).val() isnt ''))
+
 					when 'boolean'
-						if $(data).prop('required') is true or $(data).prop('checked').toString() isnt data.dataset.default
-							if array
-								config.push($(data).prop('checked'))
-							else
-								config[data.name] = $(data).prop('checked')
+						$(data).prop('checked') if $(data).prop('required') is true or $(data).prop('checked').toString() isnt data.dataset.default
+
 					when 'object'
 						newObject = {}
-						if array
-							config.push(newObject)
-							@setConfig(newObject, data, depth + 1)
-							if data.dataset.required is 'false' and _.isEmpty(newObject)
-								config.splice(_.find(config, newObject), 1)
-						else
-							config[data.dataset.key] = newObject
-							@setConfig(newObject, data, depth + 1)
-							if data.dataset.required is 'false' and _.isEmpty(newObject)
-								delete config[data.dataset.key]
+						@setConfig(newObject, data, depth + 1)
+						if _.isEmpty(newObject) and data.dataset.required is 'false' then null else newObject
+
 					when 'array'
 						newArray = []
-						if array
-							config.push(newArray)
-							@setConfig(config[config.length - 1], data, depth + 1, true)
-							if data.dataset.required is 'false' and _.isEmpty(newArray)
-								config.splice(_.find(config, newArray), 1)
-						else
-							config[data.dataset.key] = newArray
-							@setConfig(newArray, data, depth + 1, true)
-							if data.dataset.required is 'false' and _.isEmpty(newArray)
-								delete config[data.dataset.key]
-				return
+						@setConfig(newArray, data, depth + 1, true)
+						if _.isEmpty(newArray) and data.dataset.required is 'false' then null else newArray
+
+					else null
+
+				if array
+					config.push(myValue) if myValue?
+				else
+					config[data.dataset.key] = myValue if myValue?
 		return
 
 	activateForm: ->
@@ -573,7 +538,7 @@ $('#preferences input[type="text"]').on('input', ->
 		$(this).closest('.form-group').removeClass('has-error')
 )
 $('#preferences input[type="number"][step="1"]').on('input', ->
-	if ($(this).prop('required') is true and $(this).val() is '') or isNaN(parseInt($(this).val(), 10)) or parseInt($(this).val(), 10) isnt parseFloat($(this).val())
+	if ($(this).prop('required') is true and $(this).val() is '') or not /^\s*[+-]?\d+\s*$/.test($(this).val())
 		$(this).closest('.form-group').addClass('has-error')
 	else
 		$(this).closest('.form-group').removeClass('has-error')
