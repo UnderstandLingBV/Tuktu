@@ -58,7 +58,7 @@ class ConcurrentStreamForwarder(parentActor: ActorRef) extends Actor with ActorL
  * Takes take of distributing computation over several nodes
  */
 class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], processorTypes: List[String],
-        configs: List[JsValue], resultName: String) extends Actor with ActorLogging {
+        configs: List[JsValue], resultName: String, mergeHandler: List[List[Map[String, Any]]] => DataPacket) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var nodes = collection.mutable.Map[String, ActorRef]()
@@ -100,7 +100,7 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                     "name" -> "tuktu.processors.meta.ParallelProcessor",
                     "result" -> "",
                     "config" -> Json.obj(
-                            "merger" -> "tuktu.processors.merge.SimpleMerger",
+                            "merger" -> "tuktu.processors.merge.SerialMerger",
                             "processors" -> processorsConfig
                     ),
                     "next" -> List[String]()
@@ -129,22 +129,7 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
     val resultTimeout = (configs.head \ "timeout").asOpt[Int].getOrElse(30)
     
     // For gathering the results
-    var resultList = collection.mutable.ListBuffer[DataPacket]()
-    
-    def mergeResultsToDatapacket(results: List[List[Map[String, Any]]]): List[Map[String, Any]] = results match {
-        case Nil => List[Map[String, Any]]()
-        case result::remainder => {
-            // Get the remainder first
-            val otherResults = mergeResultsToDatapacket(remainder)
-            
-            for ((row, index) <- result.zipWithIndex) yield {
-                if (otherResults.size > index) {
-                    // Add all fields together
-                    row ++ otherResults(index)
-                } else row
-            }
-        }
-    }
+    var resultList = collection.mutable.ListBuffer[List[Map[String, Any]]]()
 
     def receive() = {
         case dp: DataPacket => {
@@ -158,12 +143,12 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
         }
         case rdp: ResultDataPacket => {
             // Add result to our list of results
-            resultList += rdp.packet
+            resultList += rdp.packet.data
             
             // See if we're done
             if (resultList.size == nodes.size) {
                 // We must now merge the results, get the 'processed_data' from all of them
-                val combinedResult = resultList.flatMap(result => result.data).toList
+                val combinedResult = resultList.toList
                 
                 // Initialize processors once more
                 val resultData = for ((processorType, index) <- processorTypes.zipWithIndex) yield {
@@ -177,29 +162,21 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                     // Now invoke the process function
                     val processMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "doProcess").head
                     try {
-                        processMethod.invoke(iClazz, combinedResult).asInstanceOf[List[Map[String, Any]]]
+                        processMethod.invoke(iClazz, combinedResult.map(elem => elem(index))).asInstanceOf[List[Map[String, Any]]]
                     } catch {
-                        case e: InvocationTargetException => {
-                            val newConfig = Json.obj("field" -> ("processed_data_" + index)) ++ (configs(index).asInstanceOf[JsObject] - "nodes" - "field")
-                            initMethod.invoke(iClazz, newConfig)
-                            try {
-                                processMethod.invoke(iClazz, combinedResult).asInstanceOf[List[Map[String, Any]]]
-                            } catch {
-                                case e: Exception => {
-                                    e.printStackTrace()
-                                    null
-                                }
-                            }
-                        }
                         case e: Exception => {
                             e.printStackTrace()
                             null
                         }
                     }
                 }
+                
+                // Check if we need to merge
+                val mergedData = if (mergeHandler == null) new DataPacket(resultData.head)
+                    else mergeHandler(resultData)
 
                 // We should send them on to the remote generator now
-                genActor ! new DataPacket(mergeResultsToDatapacket(resultData))
+                genActor ! mergedData
                 // Free up
                 genActor ! new StopPacket()
             }
@@ -232,13 +209,13 @@ abstract class BaseConcurrentProcessor(genActor: ActorRef, resultName: String) e
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     var concurrentHandler: ActorRef = null
 
-    def initializeNodes(nodeList: List[String], processorType: String, config: JsValue): Unit = {
-        this.initializeNodes(nodeList, List(processorType), List(config))
+    def initializeNodes(nodeList: List[String], processorType: String, config: JsValue, mergeHandler: List[List[Map[String, Any]]] => DataPacket): Unit = {
+        this.initializeNodes(nodeList, List(processorType), List(config), mergeHandler)
     }
     
-    def initializeNodes(nodeList: List[String], processorTypes: List[String], configs: List[JsValue]): Unit = {
+    def initializeNodes(nodeList: List[String], processorTypes: List[String], configs: List[JsValue], mergeHandler: List[List[Map[String, Any]]] => DataPacket): Unit = {
         // Set up concurrent handler
-        concurrentHandler = Akka.system.actorOf(Props(classOf[ConcurrentHandlerActor], genActor, nodeList, processorTypes, configs, resultName))
+        concurrentHandler = Akka.system.actorOf(Props(classOf[ConcurrentHandlerActor], genActor, nodeList, processorTypes, configs, resultName, mergeHandler))
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {

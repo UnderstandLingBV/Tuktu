@@ -17,7 +17,8 @@ class SortProcessor(genActor: ActorRef, resultName: String) extends BaseConcurre
         this.initializeNodes(
                 (config \ "nodes").as[List[String]],
                 "tuktu.processors.bucket.SortProcessor",
-                config
+                config,
+                null
         )
     }
     
