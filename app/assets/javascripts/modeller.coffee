@@ -87,7 +87,7 @@ mDownAccess = ->
 
 # If mouse is upped over raphael element, connect if possible, else remove line
 mUpAccess = (event) ->
-	this.data('line').connect(event.target)
+	this.data('line').connectTo(event.target)
 
 # Update path on drag
 mDragAccess = (dx, dy, x, y, event) ->
@@ -119,14 +119,15 @@ mMouseDownConn = (conn) -> ->
 	conn.select()
 
 class Connection
-	@to = null
 	@line = null
 
-	constructor: (@from) ->
+	constructor: (@from, @to = null) ->
 		@line = paper.path('M0,0l0,0')
 		@line.attr('stroke-width': 3)
 		@line.insertAfter(background)
 		@highlight()
+		@connect(@to) if @to?
+		this
 
 	destructor: ->
 		@deselect() if this is selected
@@ -139,28 +140,30 @@ class Connection
 		delete @to
 		generateConfig()
 
-	connect: (to) ->
+	connect: (elem) ->
+		if elem is undefined or elem.canBeConnected isnt true or elem is @from or elem.id of @from.successors
+			# Connection was not dropped over a node that can't be connected;
+			# or that is from, or that from is already connected to
+			@destructor()
+		else
+			# Connect @from to elem
+			@to = elem
+			this.redraw()
+			@to.addPredecessor(@from, this)
+			@from.addSuccessor(@to, this)
+			if @from is selected or @to is selected
+				@from.highlight()
+				@to.highlight()
+				@highlight()
+			@line.hover(mHoverInConn(this), mHoverOutConn(this))
+			@line.mousedown(mMouseDownConn())
+			@unhighlight() if @from isnt selected and @to isnt selected
+
+	connectTo: (to) ->
 		to = getRaphaelParent(to)
 		if to?
 			# The element will be connected
-			elem = paper.getById(to.raphaelid).data('node')
-			if elem is undefined or elem.canBeConnected isnt true or elem is @from or elem.id of @from.successors
-				# Connection was not dropped over a node that can be connected;
-				# or that is from, or that from is already connected to
-				@destructor()
-			else
-				# Connect @from to elem
-				@to = elem
-				this.redraw()
-				@to.addPredecessor(@from, this)
-				@from.addSuccessor(@to, this)
-				if @from is selected or @to is selected
-					@from.highlight()
-					@to.highlight()
-					@highlight()
-				@line.hover(mHoverInConn(this), mHoverOutConn(this))
-				@line.mousedown(mMouseDownConn(this))
-				@unhighlight() if @from isnt selected and @to isnt selected
+			@connect(paper.getById(to.raphaelid).data('node'))
 		else
 			# Connection wasn't dropped over raphael object, delete
 			@destructor()
@@ -183,7 +186,7 @@ class Connection
 		selected.deselect() if selected isnt null
 		selected = this
 		# Hide all other forms; show respective settings
-		$('#preferences > *').each( -> $(this).addClass('hidden') )
+		$('#preferences > *').addClass('hidden')
 		$('#connectionSettings').removeClass('hidden')
 
 		@highlight()
@@ -193,7 +196,7 @@ class Connection
 	deselect: ->
 		selected = null
 		# Hide all other forms; show Output
-		$('#preferences > *').each( -> $(this).addClass('hidden') )
+		$('#preferences > *').addClass('hidden')
 		$('#generatedOutput').removeClass('hidden')
 		@unhighlight()
 		@from.unhighlight()
@@ -209,13 +212,10 @@ class Generator
 	@circle = null
 	@text = null
 
-	constructor: (@rectColor = '#00ccff', @rectSelectColor = '#0077ff', @type = 'Generator', @canBeConnected = false, @r = 0) ->
+	constructor: (@config = config: {}, select = true, @rectColor = '#00ccff', @rectSelectColor = '#0077ff', @type = 'Generator', @canBeConnected = false, @r = 0) ->
 		@children = []
 		@predecessors = {}
 		@successors = {}
-
-		@config =
-			config: {}
 
 		@id = globalId++
 		@x = paperx + grid * (@id % 10 + 1) + grid * (Math.floor(@id / 10))
@@ -242,8 +242,9 @@ class Generator
 
 		allNodes[@type.toLowerCase() + 's'].push(this)
 
-		@select()
-		return
+		@select() if select is true
+		@setLabel()
+		this
 
 	destructor: ->
 		this.deselect() if this is selected
@@ -369,12 +370,12 @@ class Generator
 
 	activateForm: ->
 		# Hide all forms, show corresponding form
-		$('#preferences > *').each( -> $(this).addClass('hidden') )
+		$('#preferences > *').addClass('hidden')
 		$('#' + @type.toLowerCase() + 'Settings').removeClass('hidden')
 		$('#' + @type.toLowerCase() + 'Name').val(@config.name)
 
 		# Hide all shown class sub-forms
-		$('#preferences > * > div[data-class]').each( -> $(this).addClass('hidden') )
+		$('#preferences > * > div[data-class]').addClass('hidden')
 		dataClass = $('#preferences > * > div[data-class="' + @config.name + '"]')
 		dataClass.removeClass('hidden')
 
@@ -391,7 +392,7 @@ class Generator
 
 	deactivateForm: ->
 		# Hide all forms, show Output
-		$('#preferences > *').each( -> $(this).addClass('hidden') )
+		$('#preferences > *').addClass('hidden')
 		$('#generatedOutput').removeClass('hidden')
 
 		data = $('#preferences div[data-class="' + @config.name + '"]')
@@ -460,8 +461,8 @@ class Processor extends Generator
 	@targetInner = null
 	@targetOuter = null
 
-	constructor: ->
-		super('#00ff66', '#00bb00', 'Processor', true, 10)
+	constructor: (config = config: {}, select = true) ->
+		super(config, select, '#00ff66', '#00bb00', 'Processor', true, 10)
 
 		@targetOuter = paper.circle(@x, @y + 30, 10)
 		@targetOuter.attr({'fill': '#ffffff', 'stroke-width': 2, 'cursor': 'crosshair'})
@@ -474,7 +475,7 @@ class Processor extends Generator
 		@children = [@targetOuter, @targetInner].concat(@children)
 
 		node.data('node', this) for node in @children
-		return
+		this
 
 	getTargetPoint: ->
 		[@targetInner.attr('cx'), @targetInner.attr('cy')]
@@ -501,7 +502,38 @@ generateConfig = (e) ->
 	$('#outputTextarea').val(JSON.stringify(json, null, '    '))
 	selected.deselect() if selected?
 
-# Bind AddGenerator, AddProcessor and deleteSelected respective click events
+importConfig = (e) ->
+	e.preventDefault()
+	try
+		ids = {}
+		newConn = []
+		object = JSON.parse($('#importTextarea').val())
+		for el in allNodes.generators.concat(allNodes.processors)
+			el.destructor()
+		for generator in object.generators
+			gen = new Generator(generator, false)
+			for succ in generator.next
+				newConn.push([gen, succ])
+		for processor in object.processors
+			pro = new Processor(processor, false)
+			ids[processor.id] = pro
+			for succ in processor.next
+				newConn.push([pro, succ])
+		for pair in newConn
+			new Connection(pair[0], ids[pair[1]])
+
+
+# Bind click events
+$('a[href="#GenerateConfig"]').on('click', generateConfig)
+
+$('a[href="#ConfigImport"]').on('click', (e) ->
+	e.preventDefault()
+	$('#preferences > *').addClass('hidden')
+	$('#importedConfig').removeClass('hidden')
+)
+
+$('a[href="#ImportConfig"]').on('click', importConfig)
+
 $('a[href="#AddGenerator"]').on('click', (e) ->
 	e.preventDefault()
 	new Generator()
@@ -523,12 +555,11 @@ $('#preferences button[name="AddArrayElement"]').on('click', (e) ->
 $('#preferences button[name="DeleteArrayElement"]').on('click', ->
 	$(this).closest('div[data-arraytype="value"]').remove()
 )
+# Highlight which element(s) will be deleted
 $('#preferences button[name="DeleteArrayElement"]').hover(
 	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '#f2dede'),
 	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '')
 )
-
-$('a[href="#GenerateConfig"]').on('click', generateConfig)
 
 # Bind respective input types to check validity
 $('#preferences input[type="text"]').on('input', ->
