@@ -10,7 +10,7 @@ import tuktu.api._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataMonitor() extends Actor with ActorLogging {
-    implicit val timeout = Timeout(10 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var monitorData = new java.util.HashMap[String, java.util.HashMap[MPType, java.util.HashMap[String, Int]]]()
     var appMonitor = collection.mutable.Map[String, AppMonitorObject]()

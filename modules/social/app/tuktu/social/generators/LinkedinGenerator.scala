@@ -38,6 +38,8 @@ class LinkedinGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val httpMethod = {
                 (config \ "http_method").asOpt[String].getOrElse("get") match {
                     case "post" => Verb.POST
+                    case "delete" => Verb.DELETE
+                    case "put" => Verb.PUT
                     case _      => Verb.GET
                 }
             }

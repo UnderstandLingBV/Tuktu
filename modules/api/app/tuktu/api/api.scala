@@ -18,6 +18,7 @@ import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsValue
 import akka.actor.ActorRef
 import play.api.libs.json.JsObject
+import play.api.cache.Cache
 
 case class DataPacket(
         data: List[Map[String, Any]]
@@ -71,7 +72,7 @@ abstract class BaseProcessor(resultName: String) {
 abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends BaseProcessor(resultName: String) {}
 
 abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     
     // Set up pipeline, either one that sends back the result, or one that just sinks

@@ -155,7 +155,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
 	        val consumerSecret = (credentials \ "consumer_secret").as[String]*/
 	        val aToken = (credentials \ "access_token").as[String]
 	        // Get update time
-	        val updateTime = (config \ "update_time").asOpt[String].getOrElse("5").toLong
+	        val updateTime = (config \ "update_time").asOpt[Long].getOrElse(5L)
 	        
 	        // Set up Scribe client
 	        val fbClient = new FacebookBatcher(aToken)
@@ -163,7 +163,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             // Filters that we need to check
 	         val filters = Common.getFilters(config)
 	         val keywords = filters("keywords").asInstanceOf[Array[String]]
-	         val userids = filters("userids").asInstanceOf[Array[String]]
+	         val users = filters("users").asInstanceOf[Array[String]]
                       
             // Check period, if given
 	        val interval = (config \ "interval").asOpt[JsObject]
@@ -188,8 +188,8 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
 	        
 	        // Set up the initial URLs
 	        val userUrls = {
-	            if (userids != null) {
-		            (for (userid <- userids) yield {
+	            if (users != null) {
+		            (for (userid <- users) yield {
 		                userid + "/feed?limit=50"
 		            }).toList
 		        } else List()

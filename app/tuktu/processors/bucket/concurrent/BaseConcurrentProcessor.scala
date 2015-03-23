@@ -16,12 +16,16 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import tuktu.api._
-import tuktu.processors.meta.SyncStreamForwarder
 import scala.concurrent.Await
 import akka.actor.ActorLogging
 import akka.actor.Actor
+import play.api.cache.Cache
+import java.lang.reflect.InvocationTargetException
 
 case class ResultDataPacket(
+        packet: DataPacket
+)
+case class ForwardPacket(
         packet: DataPacket
 )
 
@@ -29,17 +33,16 @@ case class ResultDataPacket(
  * Forwards data to a single 
  */
 class ConcurrentStreamForwarder(parentActor: ActorRef) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(5 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     var remoteGenerator: ActorRef = null
 
     def receive() = {
         case ar: ActorRef => remoteGenerator = ar
+        case fp: ForwardPacket => Await.result(remoteGenerator ? fp.packet, timeout.duration)
         case dp: DataPacket => {
             // See where the data packet arrived from
-            if (sender == parentActor)
-                remoteGenerator ! dp
-            else if (sender != remoteGenerator) {
+            if (sender != remoteGenerator) {
                 // This is the result from our remote execution, we need to pass this on
                 parentActor ! new ResultDataPacket(dp)
             }
@@ -56,7 +59,7 @@ class ConcurrentStreamForwarder(parentActor: ActorRef) extends Actor with ActorL
  */
 class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], processorTypes: List[String],
         configs: List[JsValue], resultName: String) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var nodes = collection.mutable.Map[String, ActorRef]()
     
@@ -78,7 +81,7 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
         
         val customConfig = Json.obj(
             "generators" -> List(Json.obj(
-                "name" -> "tuktu.generators.SyncStreamGenerator",
+                "name" -> "tuktu.generators.ConcurrentStreamGenerator",
                 "result" -> "",
                 "config" -> Json.obj(),
                 "next" -> List("bufferer"),
@@ -147,7 +150,7 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
         case dp: DataPacket => {
             // Distribute data to one of our nodes
             for (datum <- dp.data)
-                nodes(db.nextNode(datum)) ! dp
+                nodes(db.nextNode(datum)) ! new ForwardPacket(dp)
         }
         case sp: StopPacket => {
             // This is when we actually need to take action, all data has been streamed
@@ -176,6 +179,18 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                     try {
                         processMethod.invoke(iClazz, combinedResult).asInstanceOf[List[Map[String, Any]]]
                     } catch {
+                        case e: InvocationTargetException => {
+                            val newConfig = Json.obj("field" -> ("processed_data_" + index)) ++ (configs(index).asInstanceOf[JsObject] - "nodes" - "field")
+                            initMethod.invoke(iClazz, newConfig)
+                            try {
+                                processMethod.invoke(iClazz, combinedResult).asInstanceOf[List[Map[String, Any]]]
+                            } catch {
+                                case e: Exception => {
+                                    e.printStackTrace()
+                                    null
+                                }
+                            }
+                        }
                         case e: Exception => {
                             e.printStackTrace()
                             null
@@ -214,7 +229,7 @@ class DistributionFunction(config: JsValue, nodeList: List[String]) {
 }
 
 abstract class BaseConcurrentProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
-    implicit val timeout = Timeout(5 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     var concurrentHandler: ActorRef = null
 
     def initializeNodes(nodeList: List[String], processorType: String, config: JsValue): Unit = {

@@ -61,7 +61,7 @@ object Dispatcher {
      * Monitoring enumeratee
      */
     def monitorEnumeratee(generatorName: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
-        implicit val timeout = Timeout(1 seconds)
+        implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
         
         // Get the monitoring actor
         /*val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
@@ -206,7 +206,7 @@ object Dispatcher {
 }
 
 class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(10 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Get location where config files are and store in cache
     Cache.set("configRepo", Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs"))

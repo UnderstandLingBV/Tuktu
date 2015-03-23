@@ -2,13 +2,11 @@ package tuktu.processors
 
 import java.io._
 import java.lang.reflect.Method
-import java.util.concurrent.TimeoutException
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import akka.actor._
 import akka.pattern.ask
-import akka.util.Timeout
 import au.com.bytecode.opencsv.CSVWriter
 import groovy.util.Eval
 import play.api.Play.current
