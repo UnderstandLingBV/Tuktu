@@ -10,7 +10,7 @@
 		{
 			"name": "result",
 			"type": "string",
-			"required": false
+			"required": true
 		},
 		{
 			"name": "config",
