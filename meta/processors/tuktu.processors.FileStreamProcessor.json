@@ -11,6 +11,45 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "file_name",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "encoding",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "field_separator",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "line_separator",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "fields",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "stromg",
+							"required": true
+						}
+					]
+				}
+			]
 		}
 	]
 }

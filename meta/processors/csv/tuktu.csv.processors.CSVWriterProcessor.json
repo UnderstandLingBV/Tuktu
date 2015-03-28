@@ -11,6 +11,56 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "file_name",
+					"type": "string",
+					"description": "The filename to write to.",
+					"required": true
+				},
+				{
+					"name": "encoding",
+					"type": "string",
+					"description": "The character encoding, UTF-8 by default.",
+					"required": false
+				},
+				{
+					"name": "fields",
+					"type": "array",
+					"description": "A selection of the fields to write out. If not set, all fields are written.",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "separator",
+					"type": "string",
+					"description": "The separator. Semicolon (;) by default.",
+					"required": false
+				},
+				{
+					"name": "quote",
+					"type": "string",
+					"description": "The quote character. Double quote (\") by default.",
+					"required": false
+				},
+				{
+					"name": "escape",
+					"type": "string",
+					"description": "The escape character. Double backslash (\\) by default.",
+					"required": false
+				}
+			]
 		}
 	]
 }

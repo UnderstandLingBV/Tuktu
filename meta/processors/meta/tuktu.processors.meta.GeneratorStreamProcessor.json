@@ -11,6 +11,52 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "name",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "node",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "next",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "processors",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "any",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "sync",
+					"type": "boolean",
+					"required": false
+				}
+			]
 		}
 	]
 }

@@ -1,6 +1,7 @@
 {
 	"name": "CSV String Processor",
 	"class": "tuktu.csv.processors.CSVStringProcessor",
+	"description": "Turns the entire datapacket into a comma-separated (or other separators) string.",
 	"parameters": [
 		{
 			"name": "id",
@@ -11,6 +12,31 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "separator",
+					"type": "string",
+					"description": "The separator. Semicolon (;) by default.",
+					"required": false
+				},
+				{
+					"name": "quote",
+					"type": "string",
+					"description": "The quote character. Double quote (\") by default.",
+					"required": false
+				},
+				{
+					"name": "escape",
+					"type": "string",
+					"description": "The escape character. Double backslash (\\) by default.",
+					"required": false
+				}
+			]
 		}
 	]
 }

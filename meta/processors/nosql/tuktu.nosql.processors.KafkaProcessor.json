@@ -11,6 +11,23 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "kafka_props",
+					"type": "object",
+					"required": true
+				},
+				{
+					"name": "key_field",
+					"type": "string",
+					"required": true
+				}
+			]
 		}
 	]
 }

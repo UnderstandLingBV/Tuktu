@@ -11,6 +11,64 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "processors",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "id",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "name",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "config",
+									"type": "any",
+									"required": true
+								},
+								{
+									"name": "result",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "next",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"type": "string",
+											"required": true
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "merger",
+					"type": "string",
+					"required": true
+				}
+			]
 		}
 	]
 }

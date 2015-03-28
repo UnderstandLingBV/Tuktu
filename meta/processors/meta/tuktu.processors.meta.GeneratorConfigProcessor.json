@@ -11,6 +11,40 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "name",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "add_fields",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "source",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "target",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "config",
+					"type": "any",
+					"required": true
+				}
+			]
 		}
 	]
 }

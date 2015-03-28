@@ -1,6 +1,6 @@
 {
 	"name": "SQL Processor",
-	"class": "tuktu.nosql.processors.SQLProcessor",
+	"class": "tuktu.nosql.processors.ElasticSearchProcessor",
 	"parameters": [
 		{
 			"name": "id",
@@ -18,34 +18,41 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "url",
+					"name": "cluster",
 					"type": "string",
 					"required": true
 				},
 				{
-					"name": "user",
+					"name": "host",
 					"type": "string",
 					"required": true
 				},
 				{
-					"name": "password",
+					"name": "port",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "index",
 					"type": "string",
 					"required": true
 				},
 				{
-					"name": "driver",
-					"type": "string",
-					"required": true
+					"name": "fields",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
 				},
 				{
-					"name": "query",
-					"type": "string",
+					"name": "scroll_time",
+					"type": "int",
 					"required": true
-				},
-				{
-					"name": "append",
-					"type": "boolean",
-					"required": false
 				}
 			]
 		}

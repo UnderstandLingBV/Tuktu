@@ -1,6 +1,7 @@
 {
 	"name": "CSV Reader Processor",
 	"class": "tuktu.csv.processors.CSVReaderProcessor",
+	"description": "Reads out values as CSV from a field.",
 	"parameters": [
 		{
 			"name": "id",
@@ -11,6 +12,62 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "string",
+					"description": "The field the CSV string resides in.",
+					"required": false
+				},
+				{
+					"name": "headers",
+					"type": "array",
+					"description": "The headers of the CSV string. These headers will form the names of the columns.",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "headers_from_first",
+					"type": "boolean",
+					"description": "If set to true, the first data packet will be used to extract headers from.",
+					"required": false
+				},
+				{
+					"name": "remove_original",
+					"type": "boolean",
+					"description": "Whehter to remove the original field.",
+					"required": false
+				},
+				{
+					"name": "separator",
+					"type": "string",
+					"description": "The separator. Semicolon (;) by default.",
+					"required": false
+				},
+				{
+					"name": "quote",
+					"type": "string",
+					"description": "The quote character. Double quote (\") by default.",
+					"required": false
+				},
+				{
+					"name": "escape",
+					"type": "string",
+					"description": "The escape character. Double backslash (\\) by default.",
+					"required": false
+				}
+			]
 		}
 	]
 }

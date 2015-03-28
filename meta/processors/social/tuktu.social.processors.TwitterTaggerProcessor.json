@@ -11,6 +11,66 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "object_field",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tags",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "keywords",
+							"type": "array",
+							"required": true,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						},
+						{
+							"name": "users",
+							"type": "array",
+							"required": true,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						},
+						{
+							"name": "geos",
+							"type": "array",
+							"required": true,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "exclude_on_none",
+					"type": "boolean",
+					"required": false
+				}
+			]
 		}
 	]
 }

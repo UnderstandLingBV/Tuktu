@@ -11,6 +11,38 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "consumer_key",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "consumer_secret",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "access_token",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "url",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "http_method",
+					"type": "string",
+					"required": false
+				}
+			]
 		}
 	]
 }

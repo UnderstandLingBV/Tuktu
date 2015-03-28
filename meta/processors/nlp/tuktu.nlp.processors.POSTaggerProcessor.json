@@ -11,6 +11,23 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "language",
+					"type": "any",
+					"required": true
+				},
+				{
+					"name": "tokens",
+					"type": "string",
+					"required": true
+				}
+			]
 		}
 	]
 }

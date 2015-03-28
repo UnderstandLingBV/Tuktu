@@ -11,6 +11,18 @@
 			"name": "result",
 			"type": "string",
 			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "string",
+					"required": true
+				}
+			]
 		}
 	]
 }
