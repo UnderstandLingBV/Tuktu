@@ -129,14 +129,34 @@ class ModeProcessor(resultName: String) extends BaseBucketProcessor(resultName) 
  * Computes the midrange over a field containing numerical values
  */
 class MidrangeProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
+    var fields = List[String]()
+    // Keep track of min, max
+    var mins = collection.mutable.Map[String, Double]()
+    var maxs = collection.mutable.Map[String, Double]()
+    
     override def initialize(config: JsObject) = {
-        
+        fields = (config \ "fields").as[List[String]]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
     
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        null
+        // Iterate over data and fields
+        for (datum <- data; field <- fields) {
+            // Initialize
+            if (!mins.contains(field)) mins += field -> Double.MaxValue
+            if (!maxs.contains(field)) maxs += field -> Double.MinValue
+            
+            // Get the field we are after and see if its a new min/max
+            val value = StatHelper.anyToDouble(datum(field))
+            if (value < mins(field)) mins(field) = value
+            if (value > maxs(field)) maxs(field) = value
+        }
+        
+        // Return the midrange
+        List(
+            maxs.map(fieldMax => fieldMax._1 -> ((fieldMax._2 + mins(fieldMax._1)) / 2)).toMap
+        )
     }
 }
 

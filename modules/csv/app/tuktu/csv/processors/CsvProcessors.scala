@@ -135,7 +135,10 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
         val fileName = (config \ "file_name").as[String]
         val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
 
-        writer = new CSVWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding)), ';', '"', '\\')
+        val separator = (config \ "separator").asOpt[String].getOrElse(";").head
+        val quote = (config \ "quote").asOpt[String].getOrElse("\"").head
+        val escape = (config \ "escape").asOpt[String].getOrElse("\\").head
+        writer = new CSVWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding)), separator, quote, escape)
         
         fields = (config \ "fields").asOpt[List[String]]
     }

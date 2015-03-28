@@ -34,7 +34,7 @@ class ElasticSearchProcessor(resultName: String) extends BaseProcessor(resultNam
         index = (config \ "index").as[String]
         typeName = (config \ "type").as[String]
         fields = (config \ "fields").as[Array[String]]
-        scrollTime = (config \ "fields").asOpt[Int].getOrElse(60000)
+        scrollTime = (config \ "scroll_time").asOpt[Int].getOrElse(60000)
         val termJson = (config \ "term_binding").as[List[JsObject]]
         termBinding = termJson.map(binding => (binding \ "name").as[String] -> (binding \ "field").as[String]).toMap
         
