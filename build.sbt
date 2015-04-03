@@ -36,6 +36,7 @@ lazy val nosqlDependencies = Seq(
     jdbc,
     anorm,
     cache,
+    ws,
     "mysql" % "mysql-connector-java" % "5.1.34",
     "org.mariadb.jdbc" % "mariadb-java-client" % "1.1.7",
     "com.h2database" % "h2" % "1.3.176",
