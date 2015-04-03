@@ -25,6 +25,7 @@ import tuktu.api.MonitorPacket
 import tuktu.api.StopPacket
 import tuktu.api.BaseGenerator
 import play.api.libs.iteratee.Input
+import play.api.cache.Cache
 
 /**
  * Async 'special' generator that just waits for DataPackets to come in and processes them
@@ -43,10 +44,11 @@ class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataP
  * Special sync generator that processes a tuple and returns the actual result
  */
 class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
+    var dontReturnAtAll = false
     
     // Logging enumeratee
     def logEnumeratee[T] = Enumeratee.recover[T] {
@@ -64,14 +66,16 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
     class senderReturningProcessor(sActor: ActorRef, dp: DataPacket) {
         // Create enumeratee that will send back
         val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map((d: DataPacket) => {
-            val sourceActor = {
-                senderActor match {
-                    case Some(a) => a
-                    case None => sActor
+            if (!dontReturnAtAll) {
+                val sourceActor = {
+                    senderActor match {
+                        case Some(a) => a
+                        case None => sActor
+                    }
                 }
+                
+                sourceActor ! d
             }
-            
-            sourceActor ! d
             
             d
         })
@@ -82,7 +86,9 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
     }
     
     def receive() = {
-        case config: JsValue => {}
+        case config: JsValue => {
+            dontReturnAtAll = (config \ "no_return").asOpt[Boolean].getOrElse(false)
+        }
         case sp: StopPacket => {
             // Send message to the monitor actor
             val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
@@ -101,13 +107,80 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
             context.stop(self)
         }
         case dp: DataPacket => {
-            
             // Push to all async processors
             channel.push(dp)
 
             // Send through our enumeratee
             val p = new senderReturningProcessor(sender, dp)
-            Future(p.runProcessor())
+            p.runProcessor()
+        }
+    }
+}
+
+/**
+ * Special case of stream generator that makes sure data is ordered properly, used for concurrent aggregating
+ */
+class ConcurrentStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+
+    val (enumerator, channel) = Concurrent.broadcast[DataPacket]
+    val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
+    var dontReturnAtAll = false
+    
+    // Logging enumeratee
+    def logEnumeratee[T] = Enumeratee.recover[T] {
+        case (e, input) => System.err.println("Synced generator error happened on: " + input, e)
+    }
+    
+    // Every processor but the first gets treated as asynchronous
+    for (processor <- processors.drop(1))
+        processors.foreach(processor => enumerator |>> (processor compose logEnumeratee) &>> sinkIteratee)
+        
+    /**
+     * We must somehow keep track of the sending actor of each data packet. This state is kept within this helper class that
+     * is to be instantiated for each data packet
+     */
+    class senderReturningProcessor(sActor: ActorRef, dp: DataPacket) {
+        // Create enumeratee that will send back
+        val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map((d: DataPacket) => {
+            sActor ! "ok"
+            
+            d
+        })
+        
+        def runProcessor() = {
+            Enumerator(dp) |>> (processors.head compose sendBackEnum compose logEnumeratee) &>> sinkIteratee
+        }
+    }
+    
+    def receive() = {
+        case config: JsValue => {
+            dontReturnAtAll = (config \ "no_return").asOpt[Boolean].getOrElse(false)
+        }
+        case sp: StopPacket => {
+            // Send message to the monitor actor
+            val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
+            fut.onSuccess {
+                case ai: ActorIdentity => {
+                    ai.getRef ! new MonitorPacket(
+                            CompleteType, self.path.toStringWithoutAddress, "master", 1
+                    )
+                }
+            }
+            
+            val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
+            enum |>> (processors.head compose logEnumeratee) &>> sinkIteratee
+
+            channel.eofAndEnd           
+            context.stop(self)
+        }
+        case dp: DataPacket => {
+            // Push to all async processors
+            channel.push(dp)
+
+            // Send through our enumeratee
+            val p = new senderReturningProcessor(sender, dp)
+            p.runProcessor()
         }
     }
 }
@@ -116,7 +189,7 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
  * Special sync generator that processes a tuple and returns the actual result
  */
 class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
@@ -136,7 +209,7 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
      */
     class senderReturningProcessor(sActor: ActorRef, sendBack: Boolean) {
         // Create enumeratee that will send back
-        val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(d => {
+        val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map((d: DataPacket) => {
             if (sendBack) {
                 val sourceActor = {
                     senderActor match {
@@ -168,7 +241,7 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
                     )
                 }
             }
-
+            
             channel.eofAndEnd
             context.stop(self)
         }
@@ -178,7 +251,8 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
             
             // Send through our enumeratee
             val p = new senderReturningProcessor(sender, true)
-            Future(p.runProcessor(Enumerator(dp)))
+            p.runProcessor(Enumerator(dp))
+            p.runProcessor(Enumerator.enumInput(Input.EOF))
         }
     }
 }

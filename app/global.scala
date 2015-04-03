@@ -1,6 +1,5 @@
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import akka.actor.Props
 import akka.util.Timeout
 import akka.routing.SmallestMailboxPool
@@ -11,20 +10,24 @@ import play.api.GlobalSettings
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.mvc.RequestHeader
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.Results.InternalServerError
 import play.api.mvc.Results.NotFound
+import play.api.cache.Cache
 
 object Global extends GlobalSettings {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(5 seconds)
     /**
      * Load this on startup. The application is given as parameter
      */
 	override def onStart(app: Application) {
+        // Set timeout
+        Cache.set("timeout", Play.current.configuration.getInt("tuktu.timeout").getOrElse(5))
+        
         // Set up monitoring actor
         val monActor = Akka.system.actorOf(Props[DataMonitor], name = "TuktuMonitor")
         monActor ! "init"

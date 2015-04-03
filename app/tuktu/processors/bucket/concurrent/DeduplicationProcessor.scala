@@ -17,7 +17,8 @@ class DeduplicationProcessor(genActor: ActorRef, resultName: String) extends Bas
         this.initializeNodes(
                 (config \ "nodes").as[List[String]],
                 "tuktu.processors.bucket.DeduplicationProcessor",
-                config
+                config,
+                null
         )
     }
     

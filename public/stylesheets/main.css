@@ -63,6 +63,11 @@ a:hover, a:focus, img, img:hover, img:focus {
     box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
 }
 
+.active {
+    font-weight: bold;
+    text-decoration: underline;
+}
+
 #sidebar-wrapper {
 	color: #333;
     background: #eee;

@@ -1,4 +1,4 @@
-package tuktu.nlp
+package tuktu.nlp.processors
 
 import scala.collection.JavaConversions.mapAsScalaMap
 import scala.concurrent.ExecutionContext.Implicits.global

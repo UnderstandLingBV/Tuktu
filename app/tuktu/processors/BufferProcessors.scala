@@ -13,12 +13,13 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import tuktu.api._
 import play.api.libs.json.JsObject
+import play.api.cache.Cache
 
 /**
  * This actor is used to buffer stuff in
  */
 class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var buffer = collection.mutable.ListBuffer[Map[String, Any]]()
     
@@ -30,12 +31,17 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
             
             // Push forward to remote generator
             remoteGenerator ! dp
+            
+            sender ! "ok"
         }
         case sp: StopPacket => {
             remoteGenerator ! sp
             self ! PoisonPill
         }
-        case item: Map[String, Any] => buffer += item
+        case item: Map[String, Any] => {
+            buffer += item
+            sender ! "ok"
+        }
     }
 }
 
@@ -43,7 +49,7 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
  * Buffers datapackets until we have a specific amount of them
  */
 class SizeBufferProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var maxSize = -1
     var curCount = 0
@@ -57,7 +63,10 @@ class SizeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Iterate over our data and add to the buffer
-        data.data.foreach(datum => bufferActor ! datum)
+        val fut = Future.sequence(for (datum <- data.data) yield bufferActor ? datum)
+        
+        // Wait for all of them to finish
+        Await.result(fut, 30 seconds)
         
         // Increase counter
         curCount += 1
@@ -71,9 +80,8 @@ class SizeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
         
         Future {data}
     }) compose Enumeratee.onEOF(() => {
-        bufferActor ! "release"
-        bufferActor ! StopPacket
-        bufferActor ! PoisonPill
+        Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+        bufferActor ! new StopPacket
     })
 }
 
@@ -81,7 +89,7 @@ class SizeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
  * Buffers datapackets for a given amount of time and then releases the buffer for processing
  */
 class TimeBufferProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var interval = -1
     var cancellable: Cancellable = null
@@ -108,9 +116,8 @@ class TimeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
         Future {data}
     }) compose Enumeratee.onEOF(() => {
         cancellable.cancel
-        bufferActor ! "release"
-        bufferActor ! StopPacket
-        bufferActor ! PoisonPill
+        Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+        bufferActor ! new StopPacket
     })
 }
 
@@ -118,17 +125,20 @@ class TimeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
  * Buffers until EOF (end of data stream) is found
  */
 class EOFBufferProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
     // Set up the buffering actor
     val bufferActor = Akka.system.actorOf(Props(classOf[BufferActor], genActor))
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Iterate over our data and add to the buffer
-        data.data.foreach(datum => bufferActor ! datum)
+        val fut = Future.sequence(for (datum <- data.data) yield bufferActor ? datum)
         
-        Future {data}
+        // Wait for all of them to finish
+        Await.result(fut, Cache.getAs[Int]("timeout").getOrElse(5) * 2 seconds)
+        data
     }) compose Enumeratee.onEOF(() => {
-        bufferActor ! "release"
-        bufferActor ! StopPacket
-        bufferActor ! PoisonPill
+        Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+        bufferActor ! new StopPacket
     })
 }

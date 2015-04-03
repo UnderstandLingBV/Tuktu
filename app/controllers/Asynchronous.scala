@@ -2,7 +2,6 @@ package controllers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-
 import akka.actor.ActorIdentity
 import akka.actor.Identify
 import akka.actor.actorRef2Scala
@@ -12,9 +11,10 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.mvc.Action
 import play.api.mvc.Controller
+import play.api.cache.Cache
 
 object Asynchronous extends Controller {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     /**
      * Loads a config and executes the data processing based on an ID

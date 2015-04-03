@@ -9,7 +9,7 @@ Tuktu is a big data analytics platform that focuses on ease of use. The idea of 
 - Easy integration with big data/NoSQL tooling
 - Easily extendable
 
-The name comes from the Inuït word *tuktu*, which freely translates to the English word *deer*.
+The name comes from the Inuït word *tuktu*, which freely translates to the English word *reindeer* (also known as *[caribou](http://en.wikipedia.org/wiki/Caribou)*).
 
 # Installing
 
@@ -33,11 +33,11 @@ To run Tuktu on your local machine for testing and to be able to modify it using
 
 `activator clean eclipse ~run`
 
-You can now navigate to [http://localhost:900](http://localhost:9000) to access Tuktu's server.
+You can now navigate to [http://localhost:9000](http://localhost:9000) to access Tuktu's server.
 
 # Usage
 
-Tuktu offers a web interface that allows to access its core functionalities like submitting jobs and monitoring running jobs. Navigate to [http://localhost:900](http://localhost:9000) to access the web interface.
+Tuktu offers a web interface that allows to access its core functionalities like submitting jobs and monitoring running jobs. Navigate to [http://localhost:9000](http://localhost:9000) to access the web interface.
 
 Tuktu jobs are essentially JSON configuration files that live in a pre-defined folder (the *configs* folder by default). Configuration files should adhere to standards. To learn how to create configuration files, the best way to start is by looking at some [examples](examples.md). In addition to creating configuration files by hand, which can be very error-prone, a visual editor is currently in the making. The visual editor will be released once mature enough.
 

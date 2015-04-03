@@ -22,6 +22,7 @@ import tuktu.generators.SyncStreamGenerator
 import java.lang.reflect.InvocationTargetException
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
 import tuktu.processors.EOFBufferProcessor
+import play.api.cache.Cache
 
 case class DispatchRequest(
         configName: String,
@@ -49,8 +50,6 @@ case class ProcessorDefinition(
 )
 
 object Dispatcher {
-    val logLevel = Play.current.configuration.getString("tuktu.monitor.level").getOrElse("all")
-    
     /**
      * Enumeratee for error-logging and handling
      */
@@ -62,7 +61,7 @@ object Dispatcher {
      * Monitoring enumeratee
      */
     def monitorEnumeratee(generatorName: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
-        implicit val timeout = Timeout(1 seconds)
+        implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
         
         // Get the monitoring actor
         /*val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
@@ -192,7 +191,7 @@ object Dispatcher {
         }
         
         // Determine logging strategy and build the enumeratee
-        logLevel match {
+        Cache.getAs[String]("logLevel").getOrElse("all") match {
             case "all" => {
                 val enums = buildEnumsHelper(nextId, List(logEnumeratee[DataPacket]), 0)
                 for ((enum, index) <- enums.zipWithIndex) yield {
@@ -207,12 +206,16 @@ object Dispatcher {
 }
 
 class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(10 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
-    val configRepo = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
-    val homeAddress = Play.current.configuration.getString("akka.remote.netty.tcp.hostname").getOrElse("127.0.0.1")
-    val logLevel = Play.current.configuration.getString("tuktu.monitor.level").getOrElse("all")
-    val clusterNodes = {
+    // Get location where config files are and store in cache
+    Cache.set("configRepo", Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs"))
+    // Set location of this node
+    Cache.set("homeAddress", Play.current.configuration.getString("akka.remote.netty.tcp.hostname").getOrElse("127.0.0.1"))
+    // Set log level
+    Cache.set("logLevel", Play.current.configuration.getString("tuktu.monitor.level").getOrElse("all"))
+    // Get the cluster setup, which nodes are present
+    Cache.set("clusterNodes", {
         Play.current.configuration.getConfigList("tuktu.cluster.nodes") match {
             case Some(nodeList) => {
                 // Get all the nodes in the list and put them in a map
@@ -222,7 +225,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
             }
             case None => Map[String, String]()
         }
-    }
+    })
     
     /**
      * Builds the processor map
@@ -260,7 +263,8 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
             val config = dr.config match {
                 case Some(cfg) => cfg
                 case None => {
-                    val configFile = scala.io.Source.fromFile(configRepo + "/" + dr.configName + ".json", "utf-8")
+                    val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
+                            "/" + dr.configName + ".json", "utf-8")
                     val cfg = Json.parse(configFile.mkString).as[JsObject]
                     configFile.close
                     cfg
@@ -293,12 +297,13 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                 val (startRemotely, hostname) = nodeAddress match {
                     case Some(remoteLocation) => {
                         // We may or may not need to start remotely
-                        if (remoteLocation == homeAddress) (false, "")
+                        if (remoteLocation == Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")) (false, "")
                         else (true, remoteLocation)
                     }
                     case None => (false, "")
                 }
                         
+                val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
                 if (startRemotely && !dr.isRemote && hostname != "" && clusterNodes.contains(hostname)) {
                     // We need to start an actor on a remote location
                     val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname) + "/user/TuktuDispatcher"

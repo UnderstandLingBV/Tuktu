@@ -30,12 +30,13 @@ import tuktu.api.DataPacket
 import tuktu.api.StopPacket
 import controllers.ProcessorDefinition
 import play.api.libs.iteratee.Enumerator
+import play.api.cache.Cache
 
 /**
  * Invokes a new generator
  */
 class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultName) {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var nextName = ""
     var fieldsToAdd: Option[List[JsObject]] = None
@@ -90,7 +91,7 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
  * This class is used to always have an actor present when data is to be streamed in sync
  */
 class SyncStreamForwarder() extends Actor with ActorLogging {
-    implicit val timeout = Timeout(5 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var remoteGenerator: ActorRef = null
     var sync: Boolean = false
@@ -117,7 +118,7 @@ class SyncStreamForwarder() extends Actor with ActorLogging {
  * Invokes a new generator
  */
 class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
-    implicit val timeout = Timeout(5 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     val forwarder = Akka.system.actorOf(Props[SyncStreamForwarder])
     var sync: Boolean = false
@@ -199,7 +200,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
  * 
  */
 class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     
@@ -218,13 +219,16 @@ class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) exte
     }
     
     def receive() = {
+        case sp: StopPacket => {
+            self ! PoisonPill
+        }
         case dp: DataPacket => {
             // Push to all async processors
             channel.push(dp)
 
             // Send through our enumeratee
             val p = new senderReturningProcessor(sender, dp)
-            Future(p.runProcessor())
+            p.runProcessor()
         }
     }
 }
@@ -233,7 +237,7 @@ class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) exte
  * Executes a number of processor-flows in parallel
  */
 class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var actors: List[ActorRef] = null
     var merger: Method = null
@@ -280,16 +284,16 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
         }
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
         // Send data to actors
         val futs = for (actor <- actors) yield
-            actor ? data
+            (actor ? data).asInstanceOf[Future[DataPacket]]
+        
         // Get the results
-        val results = for (fut <- futs) yield
-            Await.result(fut.mapTo[DataPacket], timeout.duration)
+        val results = Await.result(Future.sequence(futs), timeout.duration)
             
         // Apply the merger
-        Future {merger.invoke(mergerClass, results).asInstanceOf[DataPacket]}
+        merger.invoke(mergerClass, results).asInstanceOf[DataPacket]
     })
     
 }

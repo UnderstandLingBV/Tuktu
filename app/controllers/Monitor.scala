@@ -1,11 +1,9 @@
 package controllers
 
 import java.io.File
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
@@ -19,9 +17,10 @@ import play.api.mvc.Action
 import play.api.mvc.Controller
 import tuktu.api._
 import tuktu.utils.util
+import play.api.cache.Cache
 
 object Monitor extends Controller {
-    implicit val timeout = Timeout(5 seconds)
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     /**
      * Fetches the monitor's info
      */
