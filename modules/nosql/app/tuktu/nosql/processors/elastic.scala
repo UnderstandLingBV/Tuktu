@@ -17,19 +17,19 @@ import org.elasticsearch.index.query.FilterBuilders
 class ElasticSearchProcessor(resultName: String) extends BaseProcessor(resultName) {
     var client: TransportClient = null
     var append = false
-    
+
     var index = ""
     var typeName = ""
     var fields: Array[String] = Array()
     var scrollTime = 60000
     var termBinding = Map[String, String]()
-    
+
     override def initialize(config: JsObject) = {
         // Get parameters required to set up ES client
         val cluster = (config \ "cluster").as[String]
         val host = (config \ "host").as[String]
         val port = (config \ "port").as[Int]
-        
+
         // Query params
         index = (config \ "index").as[String]
         typeName = (config \ "type").as[String]
@@ -37,16 +37,16 @@ class ElasticSearchProcessor(resultName: String) extends BaseProcessor(resultNam
         scrollTime = (config \ "scroll_time").asOpt[Int].getOrElse(60000)
         val termJson = (config \ "term_binding").as[List[JsObject]]
         termBinding = termJson.map(binding => (binding \ "name").as[String] -> (binding \ "field").as[String]).toMap
-        
+
         // Set up the client
         val esSettings = ImmutableSettings.settingsBuilder().put("cluster.name", cluster).build
 
         val client = new TransportClient(esSettings).addTransportAddress(new InetSocketTransportAddress(host, port))
-        
+
         // Append result or not?
         append = (config \ "append").asOpt[Boolean].getOrElse(false)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         new DataPacket(for (datum <- data.data) yield {
             // Build term queries
@@ -55,24 +55,23 @@ class ElasticSearchProcessor(resultName: String) extends BaseProcessor(resultNam
                     QueryBuilders.termQuery(term, utils.evaluateTuktuString(field, datum))
                 }
             }).toArray
-            
+
             val response = client.prepareSearch(index)
                 .setTypes(typeName)
-                .addFields(fields:_*)
+                .addFields(fields: _*)
                 .setSearchType(SearchType.SCAN)
                 .setScroll(new TimeValue(scrollTime))
                 .setQuery(QueryBuilders.matchAllQuery)
                 .setSize(100)
                 .execute()
                 .actionGet
-                
+
             // Iterate over results
             var hits = Array[SearchHit]()
             var result = collection.mutable.Map[String, Map[String, Any]]()
             hits = response.getHits.getHits
             do {
-                
-                
+
                 // Next page
                 val r = client
                     .prepareSearchScroll(response.getScrollId())
@@ -81,7 +80,7 @@ class ElasticSearchProcessor(resultName: String) extends BaseProcessor(resultNam
                     .actionGet
                 hits = r.getHits.getHits
             } while (hits.size > 0)
-                
+
             datum
         })
     }) compose Enumeratee.onEOF(() => {

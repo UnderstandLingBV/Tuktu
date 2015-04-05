@@ -54,6 +54,7 @@ lazy val mlDependencies = Seq(
 )
 
 lazy val webDependencies = Seq(
+    ws,
     cache
 )
 
