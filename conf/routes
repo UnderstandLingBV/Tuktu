@@ -6,15 +6,19 @@
 GET     /dispatch/:id				        controllers.Asynchronous.load(id)
 POST	/config						        controllers.Asynchronous.loadPost
 
-# Actions
+# Monitoring
 GET     /terminate/:id/:force               controllers.Monitor.terminate(id, force: Boolean)
 GET     /startJob                           controllers.Monitor.startJobView
 POST    /startJob                           controllers.Monitor.startJob
 
+# Cluster management
 GET     /cluster                            controllers.Cluster.overview
 GET     /addNode                            controllers.Cluster.addNode
 POST    /addNode                            controllers.Cluster.addNodePost
 GET     /delNode/:address                   controllers.Cluster.removeNode(address)
+
+# Embedded modeller
+GET     /modeller                           controllers.Modeller.modeller
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                       controllers.Assets.at(path="/public", file)

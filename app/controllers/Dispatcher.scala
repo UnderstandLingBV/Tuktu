@@ -205,6 +205,10 @@ object Dispatcher {
     }
 }
 
+/**
+ * This actor is the heart of Tuktu and bootstraps all flows executed by Tuktu.
+ * For detailed explanation on this actor, read the manual at https://github.com/ErikTromp/Tuktu
+ */
 class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
