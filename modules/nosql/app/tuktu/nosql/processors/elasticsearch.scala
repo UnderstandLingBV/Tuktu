@@ -23,30 +23,18 @@ class ESProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     // HTTP fields
-    var host = ""
-    var port = 9200
+    var urlField = ""
     var httpMethod = ""
     var requestBody: Option[JsValue] = None
 
-    // ES-specific fields
-    var typeField = ""
-    var idField: Option[String] = None
-    var indexField = ""
-    
     // The JSON field to obtain
     var jsonField = ""
 
     override def initialize(config: JsObject) = {
-        // Get parameters required to set up ES HTTP calls        
-        host = (config \ "host").as[String]
-        port = (config \ "port").as[Int]
-        httpMethod = (config \ "http_method").asOpt[String].getOrElse("GET")
+        // Get parameters required to set up ES HTTP calls
+        urlField = (config \ "url").as[String]
+        httpMethod = (config \ "http_method").asOpt[String].getOrElse("get")
         requestBody = (config \ "body").asOpt[JsValue]
-
-        // ES fields
-        typeField = (config \ "type_field").as[String]
-        idField = (config \ "id_field").asOpt[String]
-        indexField = (config \ "index_field").as[String]
         
         // The JSON field
         jsonField = (config \ "field").as[String]
@@ -56,14 +44,16 @@ class ESProcessor(resultName: String) extends BaseProcessor(resultName) {
         // Get all future responses 
         val responses = Future.sequence(for (datum <- data.data) yield {
             // Build URL, host and port can be read from data
-            val url = "http://" + tuktu.api.utils.evaluateTuktuString(host, datum) + ":" +
-                tuktu.api.utils.evaluateTuktuString(port.toString, datum) + "/" + datum(indexField) + "/" + datum(typeField) + "/" + {
-                    // Add ID only if it is set
-                    idField match {
-                        case None        => ""
-                        case Some(field) => datum(field)
-                    }
-            }
+            val url = {
+                val evalUrl = tuktu.api.utils.evaluateTuktuString(urlField, datum)
+                // check if http need to be appended
+                if (!evalUrl.toLowerCase.startsWith("http")) {
+                    "http://" + evalUrl
+                } else {
+                    evalUrl
+                }                
+            } 
+                            
             val ws = WS.url(url)
 
             // Do we need to append a body or not?
@@ -76,11 +66,15 @@ class ESProcessor(resultName: String) extends BaseProcessor(resultName) {
             (httpMethod match {
                 case "post"   => ws.withHeaders("Content-Type" -> "application/json").post(body)
                 case "put"    => ws.put(body)
-                case "delete" => ws.delete()
+                case "delete" => ws.delete
                 case _        => ws.get
             }).map {
-                // Get all the occurrences of the field we are after
-                response => (response.json \\ jsonField)
+                // Get all the occurrences of the field we are after                
+                response => {((response.json match {
+                        case jsonString: JsValue => jsonString
+                        case null => Json.parse(response.body)
+                    }) \\ tuktu.api.utils.evaluateTuktuString(jsonField,datum))                    
+                }
             }
         })
 
@@ -97,5 +91,4 @@ class ESProcessor(resultName: String) extends BaseProcessor(resultName) {
             }
         )
     })
-
 }
