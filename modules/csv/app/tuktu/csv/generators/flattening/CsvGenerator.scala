@@ -81,7 +81,6 @@ class CsvGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
 	    case config: JsValue => {
 	        // Get filename, sheet name and data start
 	        val fileName = (config \ "filename").as[String]
-	        val sheetName = (config \ "sheet_name").as[String]
             val valueName = (config \ "value_name").as[String]
             
             // Get hierarchy
