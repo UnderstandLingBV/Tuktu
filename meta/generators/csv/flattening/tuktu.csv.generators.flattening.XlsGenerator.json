@@ -18,14 +18,81 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "interval",
+					"name": "filename",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "sheet_name",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "value_name",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "locators",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "name",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "type",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "params",
+									"type": "JsObject",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "flattened",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "data_start_col",
 					"type": "int",
 					"required": true
 				},
 				{
-					"name": "message",
-					"type": "string",
+					"name": "data_end_col",
+					"type": "int",
 					"required": true
+				},
+				{
+					"name": "end_field",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "column",
+							"type": "int",
+							"required": true
+						},
+						{
+							"name": "value",
+							"type": "string",
+							"required": true
+						}
+					]
 				}
 			]
 		}

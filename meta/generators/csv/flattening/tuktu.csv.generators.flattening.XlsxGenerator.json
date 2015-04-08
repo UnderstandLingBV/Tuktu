@@ -39,8 +39,25 @@
 					"parameters": [
 						{
 							"name": "",
-							"type": "JsObject",
-							"required": true
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "name",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "type",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "params",
+									"type": "JsObject",
+									"required": true
+								}
+							]
 						}
 					]
 				},
@@ -58,7 +75,24 @@
 				{
 					"name": "data_end_col",
 					"type": "int",
-					"required": false
+					"required": true
+				},
+				{
+					"name": "end_field",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "column",
+							"type": "int",
+							"required": true
+						},
+						{
+							"name": "value",
+							"type": "string",
+							"required": true
+						}
+					]
 				}
 			]
 		}
