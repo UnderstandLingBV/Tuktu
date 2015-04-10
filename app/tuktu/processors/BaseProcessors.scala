@@ -434,3 +434,23 @@ class TimestampAdderProcessor(resultName: String) extends BaseProcessor(resultNa
         })}
     })
 }
+
+/**
+ * Takes a (JSON) sequence object and returns packets for each of the values in it
+ */
+class SequenceExploderProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field = ""
+    
+    override def initialize(config: JsObject) = {
+        field = (config \ "field").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket((for (datum <- data.data) yield {
+            // Get the field and explode it
+            val values = datum(field).asInstanceOf[Seq[Any]]
+            
+            for (value <- values) yield datum + (field -> value)
+        }).flatten)
+    })
+}

@@ -8,10 +8,10 @@ import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
-import tuktu.nosql.util.sql
+import tuktu.nosql.util.sql._
 
 class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var client: sql.client = null
+    var client: client = null
     var append = false
     var query = ""
     
@@ -24,7 +24,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
         query = (config \ "query").as[String]
         
         // Set up the client
-        client = new sql.client(url, user, password, driver)
+        client = new client(url, user, password, driver)
         
         // Append result or not?
         append = (config \ "append").asOpt[Boolean].getOrElse(false)
@@ -33,7 +33,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         Future {new DataPacket(for (datum <- data.data) yield {
             // Evaluate query
-            val evalQuery = utils.evaluateTuktuString(query, datum)
+            val evalQuery = evaluateSqlString(query, datum)
             
             // See if we need to append the result
             append match {
@@ -44,7 +44,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                 }
                 case true => {
                     // Get the result and use it
-                    val res = client.queryResult(query).map(row => sql.rowToMap(row))
+                    val res = client.queryResult(query).map(row => rowToMap(row))
                     
                     datum + (resultName -> res)
                 }

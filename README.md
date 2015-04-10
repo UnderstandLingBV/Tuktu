@@ -17,7 +17,7 @@ Installing Tuktu can be done by either building from source as described below, 
 
 [http://tuktu.et4it.nl/downloads/tuktu-0.1.zip](http://tuktu.et4it.nl/downloads/tuktu-0.1.zip) 
 
-Note that Tuktu requires Java (JRE) to be present on the system it is run from. Tuktu has been tested against versions 1.7 and 1.8.
+Note that Tuktu requires Java (JRE) to be present on the system it is run from. While Tuktu can be compiled against different java versions, this download was build against **java 1.8** and hence that version of java is required to run it.
 
 # Building from Source
 
@@ -40,6 +40,10 @@ You can now navigate to [http://localhost:9000](http://localhost:9000) to access
 Tuktu offers a web interface that allows to access its core functionalities like submitting jobs and monitoring running jobs. Navigate to [http://localhost:9000](http://localhost:9000) to access the web interface.
 
 Tuktu jobs are essentially JSON configuration files that live in a pre-defined folder (the *configs* folder by default). Configuration files should adhere to standards. To learn how to create configuration files, the best way to start is by looking at some [examples](examples.md). In addition to creating configuration files by hand, which can be very error-prone, a visual editor is currently in the making. The visual editor will be released once mature enough.
+
+# Modeller
+
+Instead of writing configuration files yourself, you can make use of a graphical modeller that saves a lot of work and makes configuration creation dead simple. The modeller is a separate project that can be found [here](https://github.com/NTPape/tuktumodeller).
 
 # Examples
 
