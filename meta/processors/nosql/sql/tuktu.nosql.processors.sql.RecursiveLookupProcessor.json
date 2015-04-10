@@ -1,0 +1,75 @@
+{
+	"name": "Recursive Lookup Processor",
+	"class": "tuktu.nosql.processors.sql.RecursiveLookupProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "user",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "password",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "driver",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "columns",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "from",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "where",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "include_original",
+					"type": "boolean",
+					"required": false
+				},
+				{
+					"name": "n",
+					"type": "int",
+					"required": false
+				}
+			]
+		}
+	]
+}
