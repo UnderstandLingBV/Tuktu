@@ -1,0 +1,53 @@
+{
+	"name": "Elastic Search Rest Processor",
+	"class": "tuktu.nosql.processors.ESProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "host",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "port",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "http_method",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "type_field",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "id_field",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "index_field",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
