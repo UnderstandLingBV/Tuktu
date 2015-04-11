@@ -10,14 +10,14 @@ object Common {
 	         val keywordJson = (filters \ "keywords").asOpt[List[String]]
 	         keywordJson match {
 	             case Some(json) => json.toArray
-	             case None => null
+	             case None => Array[String]()
 	         }
 	     }
 	     val userids = {
 	         val usersJson = (filters \ "users").asOpt[List[String]]
 	         usersJson match {
 	             case Some(json) => json.toArray
-	             case None => null
+	             case None => Array[String]()
 	         }
 	     }
 	     val geoJson = (filters \ "geo").asOpt[JsObject]
@@ -36,7 +36,7 @@ object Common {
 		                 )
 		         )
 	         }
-	         case None => null
+	         case None => Array[Array[Double]]()
 	     }
 	     Map("keywords" -> keywords, "userids" -> userids, "geo" -> geo)
 	}

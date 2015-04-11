@@ -49,8 +49,8 @@ object Common {
     def parseHierarchy(obj: List[JsObject]): List[ParseNode] ={
         for (root <- obj) yield {
             // Set up the locator
-            val locatorType = (root \ "locator" \ "type").as[String]
-            val locatorParams = (root \ "locator" \ "params").as[JsValue]
+            val locatorType = (root \ "type").as[String]
+            val locatorParams = (root \ "params").as[JsValue]
             val clazz = Class.forName(locatorType)
             val inst = try {
                 clazz.getConstructor(classOf[JsValue]).newInstance(locatorParams)

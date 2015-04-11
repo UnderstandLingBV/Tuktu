@@ -10,7 +10,7 @@ class Column(params: JsValue) extends BaseLocator(params) {
     var previousValue: String = null
     
     override def getFromCsvRow: (List[String], Int, Int) => String = (row, rowIndex, colIndex) => {
-        if (rowIndex >= rowStart && colIndex > columnOffset) {
+        if (rowIndex >= rowStart && colIndex >= columnOffset) {
             rowEnd match {
                 // Get the column's value, ignore cell offsets
                 case Some(end) => {
