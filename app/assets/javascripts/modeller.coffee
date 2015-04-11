@@ -156,7 +156,7 @@ class Connection
 				@to.highlight()
 				@highlight()
 			@line.hover(mHoverInConn(this), mHoverOutConn(this))
-			@line.mousedown(mMouseDownConn())
+			@line.mousedown(mMouseDownConn(this))
 			@unhighlight() if @from isnt selected and @to isnt selected
 
 	connectTo: (to) ->
@@ -383,12 +383,7 @@ class Generator
 		dataClass.find('*[data-depth="0"]').each((i, data) => @getConfig(@config, data, 0))
 
 		# Update validation classes
-		dataClass.find('input[type="text"],input[type="number"],textarea').each((i, e) ->
-			if $(e).prop('required') is true and (not $(e).val()? or $(e).val().toString() is '')
-				$(e).closest('.form-group').addClass('has-error')
-			else
-				$(e).closest('.form-group').removeClass('has-error')
-		)
+		dataClass.find('input[type="text"],input[type="number"],textarea').each((i, e) -> checkValidity(e))
 
 	deactivateForm: ->
 		# Hide all forms, show Output
@@ -561,38 +556,47 @@ $('#preferences button[name="DeleteArrayElement"]').hover(
 	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '')
 )
 
+# Takes a DOM element and handles validity of its input using has-error and has-warning css classes
+checkValidity = (elem) ->
+	type = elem.dataset.type
+	switch type
+
+		when 'string'
+			if $(elem).prop('required') is true and $(elem).val() is ''
+				$(elem).closest('.form-group').addClass('has-warning')
+			else
+				$(elem).closest('.form-group').removeClass('has-warning')
+
+		when 'int'
+			if ($(elem).prop('required') is true and $(elem).val() is '') or not /^\s*[+-]?\d+\s*$/.test($(elem).val())
+				$(elem).closest('.form-group').addClass('has-error')
+			else
+				$(elem).closest('.form-group').removeClass('has-error')
+
+		when 'JsObject'
+			try
+				if (not _.isObject(JSON.parse($(elem).val())) or _.isArray(JSON.parse($(elem).val()))) and ($(elem).prop('required') is true or $(elem).val() isnt '')
+					$(elem).closest('.form-group').addClass('has-error')
+				else
+					$(elem).closest('.form-group').removeClass('has-error')
+			catch
+				$(elem).closest('.form-group').addClass('has-error')
+
+		when 'any'
+			if $(elem).prop('required') is false and $(elem).val() is ''
+				$(elem).closest('.form-group').removeClass('has-error')
+			else
+				try
+					JSON.parse($(elem).val())
+					$(elem).closest('.form-group').removeClass('has-error')
+				catch
+					$(elem).closest('.form-group').addClass('has-error')
+
 # Bind respective input types to check validity
-$('#preferences input[type="text"]').on('input', ->
-	if $(this).prop('required') is true and $(this).val() is ''
-		$(this).closest('.form-group').addClass('has-error')
-	else
-		$(this).closest('.form-group').removeClass('has-error')
-)
-$('#preferences input[type="number"][step="1"]').on('input', ->
-	if ($(this).prop('required') is true and $(this).val() is '') or not /^\s*[+-]?\d+\s*$/.test($(this).val())
-		$(this).closest('.form-group').addClass('has-error')
-	else
-		$(this).closest('.form-group').removeClass('has-error')
-)
-$('#preferences textarea[data-type="JsObject"]').on('input', ->
-	try
-		if (not _.isObject(JSON.parse($(this).val())) or _.isArray(JSON.parse($(this).val()))) and ($(this).prop('required') is true or $(this).val() isnt '')
-			$(this).closest('.form-group').addClass('has-error')
-		else
-			$(this).closest('.form-group').removeClass('has-error')
-	catch
-		$(this).closest('.form-group').addClass('has-error')
-)
-$('#preferences textarea[data-type="any"]').on('input', ->
-	if $(this).prop('required') is false and $(this).val() is ''
-		$(this).closest('.form-group').removeClass('has-error')
-	else
-		try
-			JSON.parse($(this).val())
-			$(this).closest('.form-group').removeClass('has-error')
-		catch
-			$(this).closest('.form-group').addClass('has-error')
-)
+$('#preferences input[type="text"]').on('input', -> checkValidity(this))
+$('#preferences input[type="number"][step="1"]').on('input', -> checkValidity(this))
+$('#preferences textarea[data-type="JsObject"]').on('input', -> checkValidity(this))
+$('#preferences textarea[data-type="any"]').on('input', -> checkValidity(this))
 
 $('#generatorName,#processorName').on('change', ->
 	selected.deactivateForm()
