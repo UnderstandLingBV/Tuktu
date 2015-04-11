@@ -59,6 +59,7 @@ background.click(mClickSVG)
 
 # Store the current position in data for all children of node
 mDownBox = (node) -> ->
+	document.activeElement.blur()
 	node.select() if node isnt selected
 	for elem in node.children
 		if elem.type is 'circle'
@@ -116,7 +117,8 @@ mHoverOutConn = (conn) -> ->
 		conn.to.unhighlight()
 
 mMouseDownConn = (conn) -> ->
-	conn.select()
+	document.activeElement.blur()
+	conn.select() if conn isnt selected
 
 class Connection
 	@line = null
@@ -477,6 +479,7 @@ class Processor extends Generator
 
 generateConfig = (e) ->
 	e.preventDefault() if e?
+	selected.deselect() if selected?
 	# Cycle through all nodes and add the array of successors to its config
 	gen = for g in allNodes.generators
 		conf = g.config
@@ -494,8 +497,9 @@ generateConfig = (e) ->
 	json =
 		generators:  gen
 		processors:  pro
-	$('#outputTextarea').val(JSON.stringify(json, null, '    '))
-	selected.deselect() if selected?
+	$('#outputTextarea').val(JSON.stringify(json, null, '    ')).focus()
+	$('#preferences > *').addClass('hidden')
+	$('#generatedOutput').removeClass('hidden')
 
 importConfig = (e) ->
 	e.preventDefault()
@@ -523,8 +527,10 @@ $('a[href="#GenerateConfig"]').on('click', generateConfig)
 
 $('a[href="#ConfigImport"]').on('click', (e) ->
 	e.preventDefault()
+	selected.deselect() if selected?
 	$('#preferences > *').addClass('hidden')
 	$('#importedConfig').removeClass('hidden')
+	$('#importTextarea').focus()
 )
 
 $('a[href="#ImportConfig"]').on('click', importConfig)
@@ -532,10 +538,12 @@ $('a[href="#ImportConfig"]').on('click', importConfig)
 $('a[href="#AddGenerator"]').on('click', (e) ->
 	e.preventDefault()
 	new Generator()
+	document.activeElement.blur()
 )
 $('a[href="#AddProcessor"]').on('click', (e) ->
 	e.preventDefault()
 	new Processor()
+	document.activeElement.blur()
 )
 $('#preferences button[name="deleteSelected"]').on('click', (e) ->
 	e.preventDefault()
@@ -608,4 +616,10 @@ $('#generatorName,#processorName').on('change', ->
 
 $('*[data-toggle="tooltip"]').each( (i, el) ->
 	$(el).tooltip() if $(el).closest('div[data-arraytype="prototype"]').length is 0
+)
+
+# Bind delete key to node deletion if active element is window
+document.addEventListener('keydown', (e) ->
+	if e.keyCode is 46 and document.activeElement.nodeName is 'BODY'
+		selected.destructor()
 )
