@@ -38,16 +38,23 @@ object sql {
             // See if this is a list or not
             val key = matcher.group(1).split(";")
             
-            if (key.size > 0 && vars(key(0)).asInstanceOf[Seq[Any]].size > 0) {
-                // It's some sort of list, do something with it depending on the type
-                vars(key(0)).asInstanceOf[Seq[Any]].head match {
-                    case el: Int => matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Int]].mkString(key(1)))
-                    case el: Double => matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Int]].mkString(key(1)))
-                    case el: Long => matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Int]].mkString(key(1)))
-                    case el: Any => {
-                        // Here we assume it's string
-                        matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Any]].map("'" + _.toString + "'").mkString(key(1)))
+            if (key.size > 0) {
+                // See if it's a sequence or single field
+                vars(key(0)) match {
+                    case seq: Seq[Any] if vars(key(0)).asInstanceOf[Seq[Any]].size > 0 => {
+                        // It's some sort of list, do something with it depending on the type
+                        vars(key(0)).asInstanceOf[Seq[Any]].head match {
+                            case el: Int => matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Int]].mkString(key(1)))
+                            case el: Double => matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Int]].mkString(key(1)))
+                            case el: Long => matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Int]].mkString(key(1)))
+                            case el: Any => {
+                                // Here we assume it's string
+                                matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Any]].map("'" + _.toString + "'").mkString(key(1)))
+                            }
+                        }
                     }
+                    case elem: String => matcher.appendReplacement(buff, "'" + elem + "'")
+                    case _ => matcher.appendReplacement(buff, vars(key(0)).toString)
                 }
             } else // Just regular string
                 matcher.appendReplacement(buff, vars(matcher.group(1)).toString)

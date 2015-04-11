@@ -39,12 +39,12 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
             append match {
                 case false => {
                     // No need for appending
-                    client.query(query)
+                    client.query(evalQuery)
                     datum
                 }
                 case true => {
                     // Get the result and use it
-                    val res = client.queryResult(query).map(row => rowToMap(row))
+                    val res = client.queryResult(evalQuery).map(row => rowToMap(row))
                     
                     datum + (resultName -> res)
                 }
