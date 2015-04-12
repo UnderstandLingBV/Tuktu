@@ -163,13 +163,22 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
 	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
 	        for {
 	                field <- fieldList
-	                source = (field \ "source").as[String]
-	                target = (field \ "target").as[String]
+                    
+                    fields = (field \ "path").as[List[String]]
+                    fieldName = (field \ "result").as[String]
+                    f = fields.head
+                    if (f.size > 0 && datum.contains(f))
 	        } {
-	            // Get source value
-	            val srcValue = datum(source)
+                // See what to do
+                val newValue = {
+                    if (datum(f).isInstanceOf[JsValue])
+                        fieldName -> tuktu.utils.util.jsonParser(datum(f).asInstanceOf[JsValue], fields.drop(1), null)
+                    else
+                        fieldName -> tuktu.utils.util.fieldParser(datum, fields, null)
+                }
+
 	            // Replace
-	            mutableDatum = mutableDatum - source + (target -> srcValue)
+	            mutableDatum = mutableDatum - f + newValue
 	        }
 	        
 	        mutableDatum.toMap
@@ -440,17 +449,45 @@ class TimestampAdderProcessor(resultName: String) extends BaseProcessor(resultNa
  */
 class SequenceExploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field = ""
+    var ignoreEmpty = true
     
     override def initialize(config: JsObject) = {
         field = (config \ "field").as[String]
+        ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         new DataPacket((for (datum <- data.data) yield {
             // Get the field and explode it
             val values = datum(field).asInstanceOf[Seq[Any]]
             
             for (value <- values) yield datum + (field -> value)
         }).flatten)
+    }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
+}
+
+/**
+ * Splits a string up into a list of values based on a separator
+ */
+class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field = ""
+    var separator = ""
+    var overwrite = false
+    
+    override def initialize(config: JsObject) = {
+        field = (config \ "field").as[String]
+        separator = (config \ "separator").as[String]
+        overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            // Get the field and explode it
+            val values = datum(field).toString.split(separator).toList
+            
+            datum + {
+                if (overwrite) field -> values else resultName -> values
+            }
+        })
     })
 }

@@ -18,7 +18,7 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
     var client: sql.client = null
     
     // Column to fetch
-    var fetchColumns = List[String]()
+    var fetchColumns = Map[String, String]()
     // From-clause
     var fromClause = ""
     // Where-clause
@@ -34,8 +34,17 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
         val password = (config \ "password").as[String]
         val driver = (config \ "driver").as[String]
         
-        // Get the column, from-clause and where-clause
-        fetchColumns = (config \ "columns").as[List[String]]
+        // The columns-field contains the columns to fetch from DB and the mapping to vars in the WHERE-body 
+        fetchColumns = {
+            (for (column <- (config \ "columns").as[List[JsObject]]) yield {
+                // Get the name of the column and the mapping to variable
+                (
+                    (column \ "name").as[String],
+                    (column \ "var").as[String]
+                )
+            }).toMap
+        }
+        // Get the from-clause and where-clause
         fromClause = (config \ "from").as[String]
         whereClause = (config \ "where").as[String]
         
@@ -70,13 +79,21 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
         case _ => {
             // Build and evaluate the query for this datum
             val query = {
-                "SELECT `" + fetchColumns.mkString("`,`") + "`" +
+                "SELECT " + fetchColumns.keys.mkString(",") +
                     " FROM " + sql.evaluateSqlString(fromClause, datum) +
                     " WHERE " + sql.evaluateSqlString(whereClause, datum)
             }
             
             // Get the result and use it to fetch new relations
-            val parents = client.queryResult(query).map(row => sql.rowToMap(row))
+            val parents = client.queryResult(query).map(row => {
+                val map = sql.rowToMap(row)
+                
+                // Replace the anorm table naming with what we need
+                map.map(elem => {
+                    // Find the column name that matches and map to variable
+                    fetchColumns(elem._1) -> elem._2
+                })
+            })
             
             // For each of these results, we need to do the same thing
             val grandParents = for (parent <- parents) yield recQueryFetcher(parent, iteration + 1)
