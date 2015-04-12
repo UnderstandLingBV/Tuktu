@@ -28,12 +28,19 @@
 							"required": true,
 							"parameters": [
 								{
-									"name": "source",
-									"type": "string",
-									"required": true
+									"name": "path",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"type": "string",
+											"required": true
+										}
+									]
 								},
 								{
-									"name": "target",
+									"name": "result",
 									"type": "string",
 									"required": true
 								}

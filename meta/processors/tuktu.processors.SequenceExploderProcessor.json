@@ -21,6 +21,12 @@
 					"name": "field",
 					"type": "string",
 					"required": false
+				},
+				{
+					"name": "ignore_empty",
+					"type": "boolean",
+					"description": "If set to true, will only continue with non-empty values",
+					"required": false
 				}
 			]
 		}
