@@ -1,5 +1,7 @@
 EclipseKeys.createSrc := EclipseCreateSrc.All
 
+javaOptions += "-Xmax-classfile-name 200"
+
 lazy val appResolvers = Seq(
     "JCenter" at "http://jcenter.bintray.com/",
     "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository"
