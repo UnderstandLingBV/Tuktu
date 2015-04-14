@@ -1,0 +1,21 @@
+{
+	"name": "EOF Buffer Processor",
+	"class": "tuktu.processors.EOFBufferProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true
+		}
+	]
+}
