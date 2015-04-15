@@ -2,35 +2,23 @@ package tuktu.processors.meta
 
 import java.lang.reflect.Method
 import java.util.concurrent.TimeoutException
+
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import akka.actor.Actor
-import akka.actor.ActorIdentity
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
-import akka.actor.Identify
-import akka.actor.PoisonPill
-import akka.actor.Props
-import akka.actor.actorRef2Scala
+
+import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play.current
+import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
-import play.api.libs.iteratee.Concurrent
-import play.api.libs.iteratee.Enumeratee
-import play.api.libs.iteratee.Iteratee
+import play.api.libs.iteratee._
 import play.api.libs.json.JsObject
-import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import tuktu.api.BaseProcessor
-import tuktu.api.DataPacket
-import tuktu.api.StopPacket
-import controllers.ProcessorDefinition
-import play.api.libs.iteratee.Enumerator
-import play.api.cache.Cache
+import tuktu.api._
 
 /**
  * Invokes a new generator

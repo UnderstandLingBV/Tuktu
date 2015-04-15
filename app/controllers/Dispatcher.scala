@@ -38,17 +38,6 @@ case class treeNode(
         children: List[Class[_]]
 )
 
-/**
- * Definition of a processor
- */
-case class ProcessorDefinition(
-        id: String,
-        name: String,
-        config: JsObject,
-        resultName: String,
-        next: List[String]
-)
-
 object Dispatcher {
     /**
      * Enumeratee for error-logging and handling

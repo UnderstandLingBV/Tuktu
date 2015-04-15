@@ -69,6 +69,17 @@ abstract class BaseProcessor(resultName: String) {
     def processor(): Enumeratee[DataPacket, DataPacket] = ???
 }
 
+/**
+ * Definition of a processor
+ */
+case class ProcessorDefinition(
+        id: String,
+        name: String,
+        config: JsObject,
+        resultName: String,
+        next: List[String]
+)
+
 abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends BaseProcessor(resultName: String) {}
 
 abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
