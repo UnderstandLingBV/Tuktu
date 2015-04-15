@@ -47,7 +47,6 @@ lazy val nosqlDependencies = Seq(
     "org.apache.kafka" %% "kafka" % "0.8.2-beta",
     "org.reactivemongo" %% "reactivemongo" % "0.10.5.0.akka23",
     "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.4",
-    "com.microsoft.sqlserver" % "sqljdbc4" % "4.0",
     "org.elasticsearch" % "elasticsearch" % "1.4.4"
 )
 
