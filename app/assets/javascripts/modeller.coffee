@@ -253,7 +253,7 @@ class Generator
 		child.remove() for child in @children
 		pred.line.destructor() for id, pred of @predecessors
 		succ.line.destructor() for id, succ of @successors
-		allNodes[@type.toLowerCase() + 's'].splice(allNodes[@type.toLowerCase() + 's'].indexOf(this))
+		allNodes[@type.toLowerCase() + 's'].splice(allNodes[@type.toLowerCase() + 's'].indexOf(this), 1)
 		generateConfig()
 
 	highlight: ->
