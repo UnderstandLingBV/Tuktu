@@ -42,29 +42,29 @@ object Global extends GlobalSettings {
     /**
 	 * Overwrite internal server error page (code 500)
 	 */
-	override def onError(request: RequestHeader, ex: Throwable) = {
+	/*override def onError(request: RequestHeader, ex: Throwable) = {
 		Future.successful(InternalServerError(
 	    		Json.obj("error" -> "Internal server error")
 	    ))
-	}
+	}*/
 	
 	/**
 	 * Overwrite not found error page (code 404)
 	 */
-	override def onHandlerNotFound(request: RequestHeader) = {
+	/*override def onHandlerNotFound(request: RequestHeader) = {
 		Future.successful(NotFound(
 				Json.obj("error" -> "API endpoint not found")
 		))
-	}
+	}*/
 	
 	/**
 	 * Overwrite bad request error page (route found, but no binding)
 	 */
-	override def onBadRequest(request: RequestHeader, error: String) = {
+	/*override def onBadRequest(request: RequestHeader, error: String) = {
 		Future.successful(BadRequest(
 		        Json.obj("error" -> "API endpoint not found")
 		))
-	}
+	}*/
 	
 	/*override def onStop(app: Application) {
 	    

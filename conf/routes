@@ -2,6 +2,9 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
+GET     /                                   controllers.Monitor.fetchLocalInfo
+GET     /index                              controllers.Monitor.fetchLocalInfo
+
 # Dispatching
 GET     /dispatch/:id				        controllers.Asynchronous.load(id)
 POST	/config						        controllers.Asynchronous.loadPost

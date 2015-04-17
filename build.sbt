@@ -1,6 +1,6 @@
 EclipseKeys.createSrc := EclipseCreateSrc.All
 
-javaOptions += "-Xmax-classfile-name 200"
+javaOptions += "-Xmax-classfile-name 100"
 
 lazy val appResolvers = Seq(
     "JCenter" at "http://jcenter.bintray.com/",
