@@ -21,7 +21,7 @@ class ReadProcessor(resultName: String) extends BaseProcessor(resultName) {
         new DataPacket(for {
             datum <- data.data
             
-               // Get the key fields' values
+            // Get the key fields' values
             key = datum(keyField)
             
             // Get cached value
