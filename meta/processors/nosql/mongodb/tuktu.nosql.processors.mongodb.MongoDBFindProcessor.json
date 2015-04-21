@@ -1,0 +1,65 @@
+{
+	"name": "MongoDB Find Processor",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBFindProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "query",
+					"type": "JsObject",
+					"required": true
+				},
+				{
+					"name": "filter",
+					"type": "JsObject",
+					"required": true
+				},
+				{
+					"name": "overwrite",
+					"type": "boolean",
+					"required": false
+				},
+				{
+					"name": "append",
+					"type": "boolean",
+					"required": false
+				}
+			]
+		}
+	]
+}

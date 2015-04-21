@@ -1,0 +1,57 @@
+{
+	"name": "MongoDB Processor",
+	"class": "tuktu.nosql.processors.MongoDBProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "fields",
+					"type": "string",
+					"required": array,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}
