@@ -1,6 +1,6 @@
 {
-	"name": "MongoDB Processor",
-	"class": "tuktu.nosql.processors.MongoDBProcessor",
+	"name": "MongoDB Insert Processor",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBInsertProcessor",
 	"parameters": [
 		{
 			"name": "id",
