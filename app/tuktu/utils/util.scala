@@ -16,7 +16,12 @@ object util {
         case someKey::trailPath => {
             // Get the remainder
             if (input.contains(someKey)) {
-                fieldParser(input(someKey).asInstanceOf[Map[String, Any]], trailPath, defaultValue)
+                // See if we can cast it
+                try {
+                    fieldParser(input(someKey).asInstanceOf[Map[String, Any]], trailPath, defaultValue)
+                } catch {
+                    case e: ClassCastException => defaultValue.getOrElse(null)
+                }
             } else {
                 // Couldn't find it
                 defaultValue.getOrElse(null)

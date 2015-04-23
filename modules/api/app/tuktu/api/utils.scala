@@ -45,7 +45,7 @@ object utils {
                 case a: Seq[Any] => anyListToJsonHelper(a)
                 case a: Map[_, _] => mapToJsonHelper(a.toList)
                 case _ => head._2.toString
-            }))
+            })) ++ mapToJsonHelper(remainder)
         }
         
         /**
