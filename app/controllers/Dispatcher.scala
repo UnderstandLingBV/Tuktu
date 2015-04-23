@@ -127,9 +127,8 @@ object Dispatcher {
                                         }
                                     }
                                     case false => {
-                                        val ppsadas = buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1)
                                         Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
-                                            ppsadas,
+                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
                                             None
                                         ))
                                     }
