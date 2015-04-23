@@ -8,17 +8,17 @@ import tuktu.api.DataPacket
  * Groups data in the specified field.
  */
 class GroupByProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
-    var groupBy = ""
+    var field = ""
     
     override def initialize(config: JsObject) = {
         // Get the field to group on
-        groupBy = (config \ "group_by").as[String]
+        field = (config \ "field").as[String]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
     
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {     
-        val grouped = data.groupBy(_(groupBy))
+        val grouped = data.groupBy(_(field))
         var groupedResult = collection.mutable.Map[String, Any]()
         
         List((for (group <- grouped) yield {

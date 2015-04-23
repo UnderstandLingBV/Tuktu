@@ -127,8 +127,9 @@ object Dispatcher {
                                         }
                                     }
                                     case false => {
+                                        val ppsadas = buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1)
                                         Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
-                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
+                                            ppsadas,
                                             None
                                         ))
                                     }
@@ -154,7 +155,7 @@ object Dispatcher {
                                 
                                 // Add method to all our entries so far
                                 val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
-                                accum.map(enum => method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]])
+                                accum.map(enum => enum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]])
                             }
                             else {
                                 val iClazz = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
