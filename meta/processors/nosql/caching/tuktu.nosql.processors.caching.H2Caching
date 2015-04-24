@@ -1,0 +1,61 @@
+{
+	"name": "H2 Caching Processor",
+	"class": "tuktu.nosql.processors.caching.H2Caching",
+	"description": "Creates a in memory H2 clone of a remote SQL database",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "user",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "password",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "driver",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "db_name",
+					"type": "string",
+					"required": true				
+				},
+				{
+					"name": "tables",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]				
+				}
+			]
+		}
+	]
+}
