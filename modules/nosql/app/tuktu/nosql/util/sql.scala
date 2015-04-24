@@ -42,18 +42,25 @@ object sql {
                 // See if it's a sequence or single field
                 vars(key(0)) match {
                     case seq: Seq[Any] if vars(key(0)).asInstanceOf[Seq[Any]].size > 0 => {
-                        // It's some sort of list, do something with it depending on the type
-                        vars(key(0)).asInstanceOf[Seq[Any]].head match {
-                            case el: Int => matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Int]].mkString(key(1)))
-                            case el: Double => matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Int]].mkString(key(1)))
-                            case el: Long => matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Int]].mkString(key(1)))
-                            case el: Any => {
-                                // Here we assume it's string
-                                matcher.appendReplacement(buff, vars(key(0)).asInstanceOf[Seq[Any]].map("'" + _.toString + "'").mkString(key(1)))
+                        // Iterate over the values
+                        val variableList = (for (singleVar <- vars(key(0)).asInstanceOf[Seq[Any]]) yield {
+                            // Parse depending on type
+                            singleVar match {
+                                case el: Int => el.toString
+                                case el: Double => el.toString
+                                case el: Long => el.toString
+                                case el: Boolean => if (el) "1" else "0"
+                                case el: Any => {
+                                    // Here we assume it's string
+                                    "'" + el.toString.replaceAll("'", "''") + "'"
+                                }
                             }
-                        }
+                        }).mkString(key(1))
+                        
+                        // Now append it to our string
+                        matcher.appendReplacement(buff, variableList)
                     }
-                    case elem: String => matcher.appendReplacement(buff, "'" + elem + "'")
+                    case elem: String => matcher.appendReplacement(buff, "'" + elem.replaceAll("'", "''") + "'")
                     case _ => matcher.appendReplacement(buff, vars(key(0)).toString)
                 }
             } else // Just regular string
