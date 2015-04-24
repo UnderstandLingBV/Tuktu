@@ -18,10 +18,23 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "field",
-					"type": "string",
-					"description": "The field to group on",
-					"required": true
+					"name": "fields",
+					"type": "array",
+					"description": "The fields to group on. First field will be used as root-grouping, then the next field etc.",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "flatten",
+					"type": "boolean",
+					"description": "Whether or not to flatten the resulting grouped tuples.",
+					"required": false
 				}
 			]
 		}
