@@ -260,14 +260,19 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
  */
 class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var value = ""
+    var isNumeric = false
     
     override def initialize(config: JsObject) = {
         value = (config \ "value").as[String]
+        isNumeric = (config \ "is_numeric").asOpt[Boolean].getOrElse(false)
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {new DataPacket(for (datum <- data.data) yield {
-	        datum + (resultName -> value.toString)
+            if(!isNumeric)
+	            datum + (resultName -> value.toString)
+            else
+                datum + (resultName -> value.toLong)
         })}
     })
 }
