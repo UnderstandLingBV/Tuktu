@@ -21,6 +21,11 @@
 					"name": "value",
 					"type": "string",
 					"required": true
+				},
+				{
+					"name": "is_numeric",
+					"type": "boolean",
+					"required": false
 				}
 			]
 		}
