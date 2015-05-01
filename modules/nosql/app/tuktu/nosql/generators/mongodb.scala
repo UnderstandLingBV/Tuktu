@@ -8,9 +8,12 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
+import play.modules.reactivemongo.json.collection.JSONCollection
+import play.modules.reactivemongo.json.collection.JSONCollectionProducer
 import reactivemongo.api.MongoDriver
-import tuktu.api._
-import play.modules.reactivemongo.json.collection._
+import tuktu.api.BaseGenerator
+import tuktu.api.DataPacket
+import tuktu.api.StopPacket
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -28,12 +31,11 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             // Select the collection
             val collection: JSONCollection = db(coll)
 
-            // Get query and filter
-            val query = (config \ "query").as[JsObject]
-            val filter = (config \ "filter").as[JsObject]
-
+            // Get query
+            val query = (config \ "query")            
+            
             collection.
-                find(query, filter).
+                find(query).
                 cursor[JsObject].
                 enumerate().apply(Iteratee.foreach { doc =>
                     // Pipe the document into channel
@@ -41,13 +43,12 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                             Map(resultName -> doc)
                     )))
                 })
-                
-            connection.close()
-            driver.close()
+            
             self ! StopPacket
         }
         case sp: StopPacket => {
             cleanup()
+            
         }
     }
 }
