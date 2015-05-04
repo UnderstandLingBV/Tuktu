@@ -110,6 +110,7 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
                     case a: Double => data.foldLeft[Double](0.0)(_ + _(field).asInstanceOf[Double])
                     case a: Long => data.foldLeft[Long](0L)(_ + _(field).asInstanceOf[Long])
                     case a: Float => data.foldLeft[Float](0.0f)(_ + _(field).asInstanceOf[Float])
+                    case a: BigDecimal => data.foldLeft[BigDecimal](0)(_ + _(field).asInstanceOf[BigDecimal])
                 }
             }))
         }

@@ -1,7 +1,7 @@
 package tuktu.nosql.generators
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
+import scala.util.Success
 import akka.actor.ActorRef
 import akka.actor.actorRef2Scala
 import play.api.libs.iteratee.Enumeratee
@@ -14,6 +14,7 @@ import reactivemongo.api.MongoDriver
 import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.StopPacket
+import scala.util.Failure
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -32,23 +33,36 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val collection: JSONCollection = db(coll)
 
             // Get query
-            val query = (config \ "query")            
+            val query = (config \ "query")     
             
-            collection.
-                find(query).
-                cursor[JsObject].
-                enumerate().apply(Iteratee.foreach { doc =>
-                    // Pipe the document into channel
-                    channel.push(new DataPacket(List(
-                            Map(resultName -> doc)
-                    )))
-                })
+            // Batch all the results before pushing it on the channel
+            val batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
+
+            if (batch) {
+                collection.find(query).cursor[JsObject].collect[List]().map {
+                    list =>
+                        list.map {
+                            obj => tuktu.api.utils.anyJsonToMap(obj)
+                        }
+                } onComplete {
+                    case Success(list) => channel.push(new DataPacket(list))
+                    case Failure(e) => e.printStackTrace
+                }
+            } else {
+                collection.
+                    find(query).
+                    cursor[JsObject].
+                    enumerate().apply(Iteratee.foreach { doc =>
+                        // Pipe the document into channel
+                        channel.push(new DataPacket(List(
+                            tuktu.api.utils.anyJsonToMap(doc))))
+                    })
+            }
             
             self ! StopPacket
         }
         case sp: StopPacket => {
-            cleanup()
-            
+            cleanup            
         }
     }
 }
