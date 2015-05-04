@@ -45,9 +45,9 @@
 					"required": true
 				},
 				{
-					"name": "filter",
-					"type": "JsObject",
-					"required": true
+					"name": "batch",
+					"type": "boolean",
+					"required": false
 				}
 			]
 		}
