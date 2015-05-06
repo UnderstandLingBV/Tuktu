@@ -14,7 +14,7 @@ import tuktu.api.DataPacket
 import tuktu.api.utils
 
 /**
- * Convers a String formatted Date, to an actual Java Date object.
+ * Converts a String formatted Date, to an actual Java Date object.
  * By default can convert a Java Date toString formatting back to an actual Date object.
  */
 class ConvertToDate(resultName: String) extends BaseProcessor(resultName) {
@@ -22,7 +22,7 @@ class ConvertToDate(resultName: String) extends BaseProcessor(resultName) {
     var formatter: SimpleDateFormat = _
     
     override def initialize(config: JsObject) = {
-        // Get the location of the file to write to
+        // The field containing the date
         field = (config \ "field").as[String]
         val format = (config \ "format").asOpt[String].getOrElse("EEE MMM dd HH:mm:ss zzz yyyy")
         val locale = (config \ "locale").asOpt[String].getOrElse("US")
