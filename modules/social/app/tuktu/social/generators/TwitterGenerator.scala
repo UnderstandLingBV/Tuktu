@@ -45,10 +45,14 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 	            def onScrubGeo(l: Long, l1: Long): Unit = {}
 	
 	            @Override
-	            def onException(e: Exception): Unit = {}
+	            def onException(e: Exception): Unit = {
+                 e.printStackTrace() 
+              }
 	            
 	            @Override
-	            def onStallWarning(warning: StallWarning): Unit = {}
+	            def onStallWarning(warning: StallWarning): Unit = {
+                 println(warning) 
+              }
 	        }
 	         
 	        //System.setProperty ("twitter4j.loggerFactory", "twitter4j.internal.logging.NullLoggerFactory")
