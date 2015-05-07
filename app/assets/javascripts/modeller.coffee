@@ -214,14 +214,12 @@ class Generator
 	@circle = null
 	@text = null
 
-	constructor: (@config = config: {}, select = true, @rectColor = '#00ccff', @rectSelectColor = '#0077ff', @type = 'Generator', @canBeConnected = false, @r = 0) ->
+	constructor: (@config = config: {}, select = true, @x = paperx + 2 * grid * (globalId % 10 + 1) + 2 * grid * (Math.floor(globalId / 10)), @y = papery + 2 * grid * (globalId % 10 + 1), @rectColor = '#00ccff', @rectSelectColor = '#0077ff', @type = 'Generator', @canBeConnected = false, @r = 0) ->
 		@children = []
 		@predecessors = {}
 		@successors = {}
 
 		@id = globalId++
-		@x = paperx + grid * (@id % 10 + 1) + grid * (Math.floor(@id / 10))
-		@y = papery + grid * (@id % 10 + 1)
 
 		@circle = paper.circle(@x + 120, @y + 30, 10)
 		@circle.attr({'fill': '#ffffff', 'stroke-width': 2, 'cursor': 'crosshair'})
@@ -458,8 +456,8 @@ class Processor extends Generator
 	@targetInner = null
 	@targetOuter = null
 
-	constructor: (config = config: {}, select = true) ->
-		super(config, select, '#00ff66', '#00bb00', 'Processor', true, 10)
+	constructor: (config = config: {}, select = true, @x = paperx + 20 * grid + 2 * grid * (globalId % 10 + 1) + 2 * grid * (Math.floor(globalId / 10)), @y = papery + 2 * grid * (globalId % 10 + 1)) ->
+		super(config, select, @x, @y, '#00ff66', '#00bb00', 'Processor', true, 10)
 
 		@targetOuter = paper.circle(@x, @y + 30, 10)
 		@targetOuter.attr({'fill': '#ffffff', 'stroke-width': 2, 'cursor': 'crosshair'})
@@ -504,17 +502,19 @@ generateConfig = (e) ->
 importConfig = (e) ->
 	e.preventDefault()
 	try
+		nodesPerRow = Math.floor(document.getElementById('flowchart').clientWidth / 200)
 		ids = {}
 		newConn = []
 		object = JSON.parse($('#importTextarea').val())
 		for el in allNodes.generators.concat(allNodes.processors)
 			el.destructor()
-		for generator in object.generators
-			gen = new Generator(generator, false)
+		globalId = 0
+		for generator, i in object.generators
+			gen = new Generator(generator, false, paperx + grid, papery + grid + i * grid * Math.ceil(100 / grid))
 			for succ in generator.next
 				newConn.push([gen, succ])
-		for processor in object.processors
-			pro = new Processor(processor, false)
+		for processor, i in object.processors
+			pro = new Processor(processor, false, paperx + grid + (i % (nodesPerRow - 1) + 1) * grid * Math.ceil(200 / grid), papery + grid + Math.floor(i / (nodesPerRow - 1)) * 100)
 			ids[processor.id] = pro
 			for succ in processor.next
 				newConn.push([pro, succ])
