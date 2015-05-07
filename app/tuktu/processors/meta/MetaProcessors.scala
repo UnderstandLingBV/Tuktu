@@ -28,7 +28,7 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
     
     var nextName = ""
     var fieldsToAdd: Option[List[JsObject]] = _
-    var config: JsObject = _
+    var conf: JsObject = _
     
     override def initialize(config: JsObject) = {
         // Get the name of the config file
@@ -39,7 +39,7 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
         // Open the config file to get contents
         val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
                 "/" + nextName + ".json", "utf-8")
-        val config = Json.parse(configFile.mkString).as[JsObject]
+        val conf = Json.parse(configFile.mkString).as[JsObject]
         configFile.close
     }
     
@@ -47,33 +47,35 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
         // See if we need to add the config or not
         fieldsToAdd match {
             case Some(fields) => {
+                data.data.foreach(datum => {
                 // Add fields to our config
                 val mapToAdd = (for (field <- fields) yield {
-                    // Get source and target name
-                    val source = (field \ "source").as[String]
-                    val target = (field \ "target").as[String]
+                        // Get source and target name
+                        val source = (field \ "source").as[String]
+                        val target = (field \ "target").as[String]
+                        
+                        // Add to our new config, we assume only one element, otherwise this makes little sense
+                        target -> datum(source).toString
+                    }).toMap
                     
-                    // Add to our new config, we assume only one element, otherwise this makes little sense
-                    target -> data.data.head(source).toString
-                }).toMap
-                
-                // We must obtain a new configuration file with our fields added to the generator(s)
-                val newConfig = {
-                    // Modify generators
-                    val generators = {
-                        (config \ "generators").as[List[JsObject]].map(generator => {
-                            generator ++ Json.toJson(mapToAdd).asInstanceOf[JsObject]
-                        })
+                    // We must obtain a new configuration file with our fields added to the generator(s)
+                    val newConfig = {
+                        // Modify generators
+                        val generators = {
+                            (conf \ "generators").as[List[JsObject]].map(generator => {
+                                generator ++ Json.toJson(mapToAdd).asInstanceOf[JsObject]
+                            })
+                        }
+                        
+                        // Remove old ones and add new ones
+                        (conf - "generators") ++ Json.obj("generators" -> generators)
                     }
                     
-                    // Remove old ones and add new ones
-                    (config - "generators") ++ Json.obj("generators" -> generators)
-                }
-                
-                // Invoke the new generator with custom config
-                Akka.system.actorSelection("user/TuktuDispatcher") ! {
-                    new controllers.DispatchRequest(nextName, Some(newConfig), false, false, false, None)
-                }
+                    // Invoke the new generator with custom config
+                    Akka.system.actorSelection("user/TuktuDispatcher") ! {
+                        new controllers.DispatchRequest(nextName, Some(newConfig), false, false, false, None)
+                    }
+                })
             }
             case None => {
                 // Invoke the new generator, as-is
