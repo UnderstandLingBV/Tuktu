@@ -27,20 +27,23 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var nextName = ""
-    var fieldsToAdd: Option[List[JsObject]] = None
-    var genConfig: JsObject = Json.obj()
+    var fieldsToAdd: Option[List[JsObject]] = _
+    var config: JsObject = _
     
     override def initialize(config: JsObject) = {
         // Get the name of the config file
         nextName = (config \ "name").as[String]
         // See if we need to populate the config file
         fieldsToAdd = (config \ "add_fields").asOpt[List[JsObject]]
-        
-        // Get config
-        genConfig = (config \ "config").as[JsObject]
+
+        // Open the config file to get contents
+        val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
+                "/" + nextName + ".json", "utf-8")
+        val config = Json.parse(configFile.mkString).as[JsObject]
+        configFile.close
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         // See if we need to add the config or not
         fieldsToAdd match {
             case Some(fields) => {
@@ -54,8 +57,18 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
                     target -> data.data.head(source).toString
                 }).toMap
                 
-                // Build the map and turn into JSON config
-                val newConfig = genConfig ++ Json.toJson(mapToAdd).asInstanceOf[JsObject]
+                // We must obtain a new configuration file with our fields added to the generator(s)
+                val newConfig = {
+                    // Modify generators
+                    val generators = {
+                        (config \ "generators").as[List[JsObject]].map(generator => {
+                            generator ++ Json.toJson(mapToAdd).asInstanceOf[JsObject]
+                        })
+                    }
+                    
+                    // Remove old ones and add new ones
+                    (config - "generators") ++ Json.obj("generators" -> generators)
+                }
                 
                 // Invoke the new generator with custom config
                 Akka.system.actorSelection("user/TuktuDispatcher") ! {
@@ -71,7 +84,7 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
         }
         
         // We can still continue with out data
-        Future {data}
+        data
     })
 }
 
