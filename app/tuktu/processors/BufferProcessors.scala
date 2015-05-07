@@ -14,6 +14,7 @@ import play.api.Play.current
 import tuktu.api._
 import play.api.libs.json.JsObject
 import play.api.cache.Cache
+import scala.collection.mutable.ListBuffer
 
 /**
  * This actor is used to buffer stuff in
@@ -43,6 +44,39 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
             sender ! "ok"
         }
     }
+}
+
+/**
+ * This actor is used to buffer grouped stuff in
+ */
+class GroupedBufferActor(remoteGenerator: ActorRef, fields: List[String]) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    val buffer = collection.mutable.Map[List[Any], ListBuffer[Map[String, Any]]]()
+            
+    def receive() = {
+        case "release" => {
+            // Create datapackets and clear buffer
+            buffer.foreach(item => remoteGenerator ! new DataPacket(item._2.toList))
+            buffer.clear
+            
+            sender ! "ok"
+        }
+        case sp: StopPacket => {
+            remoteGenerator ! sp
+            self ! PoisonPill
+        }
+        case item: Map[String, Any] => {            
+            val key = fields.map(field => item(field))
+            
+            // make sure a ListBuffer exists for this key
+            if (!buffer.contains(key)) buffer += (key -> ListBuffer[Map[String, Any]]() )
+            
+            buffer(key) += item            
+            sender ! "ok"
+        }
+    }
+    
 }
 
 /**
@@ -141,4 +175,36 @@ class EOFBufferProcessor(genActor: ActorRef, resultName: String) extends BufferP
         Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
         bufferActor ! new StopPacket
     })
+}
+
+/**
+ * Buffers and Groups data
+ */
+class GroupByBuffer(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    // Set up the buffering actor
+    var bufferActor: ActorRef = _
+    
+    var fields: List[String] = _
+    
+    override def initialize(config: JsObject) = {
+        // Get the field to group on
+        fields = (config \ "fields").as[List[String]]
+        bufferActor = Akka.system.actorOf(Props(classOf[GroupedBufferActor], genActor, fields))
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+        // Iterate over our data and add to the buffer
+        val fut = Future.sequence(for (datum <- data.data) yield bufferActor ? datum)
+        
+        // Wait for all of them to finish
+        Await.result(fut, Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+        
+        data
+    }) compose Enumeratee.onEOF(() => {
+        Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+        bufferActor ! new StopPacket
+    })
+        
 }
