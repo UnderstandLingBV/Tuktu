@@ -26,21 +26,15 @@ import tuktu.api._
 class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
-    var nextName = ""
+    var name = ""
     var fieldsToAdd: Option[List[JsObject]] = _
-    var conf: JsObject = _
     
     override def initialize(config: JsObject) = {
         // Get the name of the config file
-        nextName = (config \ "name").as[String]
+        name = (config \ "name").as[String]
+        
         // See if we need to populate the config file
         fieldsToAdd = (config \ "add_fields").asOpt[List[JsObject]]
-
-        // Open the config file to get contents
-        val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
-                "/" + nextName + ".json", "utf-8")
-        val conf = Json.parse(configFile.mkString).as[JsObject]
-        configFile.close
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -48,8 +42,14 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
         fieldsToAdd match {
             case Some(fields) => {
                 data.data.foreach(datum => {
-                // Add fields to our config
-                val mapToAdd = (for (field <- fields) yield {
+                    // Open the config file to get contents
+                    val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
+                            "/" + name + ".json", "utf-8")
+                    val conf = Json.parse(configFile.mkString).as[JsObject]
+                    configFile.close
+        
+                    // Add fields to our config
+                    val mapToAdd = (for (field <- fields) yield {
                         // Get source and target name
                         val source = (field \ "source").as[String]
                         val target = (field \ "target").as[String]
@@ -73,14 +73,21 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
                     
                     // Invoke the new generator with custom config
                     Akka.system.actorSelection("user/TuktuDispatcher") ! {
-                        new controllers.DispatchRequest(nextName, Some(newConfig), false, false, false, None)
+                        new controllers.DispatchRequest(utils.evaluateTuktuString(name, datum), Some(newConfig), false, false, false, None)
                     }
                 })
             }
             case None => {
-                // Invoke the new generator, as-is
-                val fut = Akka.system.actorSelection("user/TuktuDispatcher") ! {
-                    new controllers.DispatchRequest(nextName, None, false, false, false, None)
+                // Invoke the new generator, as-is, but see if the name depends on variables
+                if (utils.containsTuktuStringVariable(name)) {
+                    // Name contains a variable, so we must populate it for each datum
+                    data.data.foreach(datum => {
+                        Akka.system.actorSelection("user/TuktuDispatcher") !
+                            new controllers.DispatchRequest(utils.evaluateTuktuString(name, datum), None, false, false, false, None)
+                    })
+                }
+                else {
+                    Akka.system.actorSelection("user/TuktuDispatcher") ! new controllers.DispatchRequest(name, None, false, false, false, None)
                 }
             }
         }

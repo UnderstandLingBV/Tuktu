@@ -24,6 +24,14 @@ object utils {
     }
     
     /**
+     * Checks if a string contains variables that can be populated using evaluateTuktuString
+     */
+    def containsTuktuStringVariable(str: String) = {
+        val matcher = pattern.matcher(str)
+        matcher.find()
+    }
+    
+    /**
      * Turns a map of string -> any into a JSON object
      */
     def anyMapToJson(map: Map[String, Any]): JsObject = {
