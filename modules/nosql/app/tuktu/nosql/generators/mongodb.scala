@@ -39,27 +39,48 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
 
             if (batch) {
-                collection.find(query).cursor[JsObject].collect[List]().map {
+                val fut = collection.find(query).cursor[JsObject].collect[List]().map {
                     list =>
                         list.map {
                             obj => tuktu.api.utils.anyJsonToMap(obj)
                         }
-                } onComplete {
-                    case Success(list) => channel.push(new DataPacket(list))
-                    case Failure(e) => e.printStackTrace
+                }
+                
+                // Determine what to do and clean up connection
+                fut onSuccess {
+                    case list: List[Map[String, Any]] => {
+                        channel.push(new DataPacket(list))
+                        connection.close
+                        self ! new StopPacket
+                    }
+                }
+                fut onFailure {
+                    case e: Throwable => {
+                        e.printStackTrace
+                        connection.close
+                        self ! new StopPacket
+                    }
                 }
             } else {
-                collection.
+                val fut = collection.
                     find(query).
                     cursor[JsObject].
-                    enumerate().apply(Iteratee.foreach { doc =>
+                    enumerate().apply({
+                        Iteratee.foreach { doc =>
                         // Pipe the document into channel
                         channel.push(new DataPacket(List(
                             tuktu.api.utils.anyJsonToMap(doc))))
+                        }
                     })
+                    
+                // Close connection
+                fut onComplete {
+                    case _ => {
+                        connection.close
+                        self ! new StopPacket
+                    }
+                }
             }
-            
-            self ! StopPacket
         }
         case sp: StopPacket => {
             cleanup            
