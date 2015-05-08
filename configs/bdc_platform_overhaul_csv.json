@@ -1,0 +1,367 @@
+{
+    "generators": [
+        {
+            "result": "line",
+            "config": {
+                "filename": "C:/Users/erik/Werk/BigData.Company/Data/test_denhaag.csv",
+                "value_name": "value",
+                "locators": [
+                    {
+                        "name": "entities",
+                        "type": "tuktu.csv.locators.Column",
+                        "params": {
+                            "offset": 0,
+                            "row_start": 1
+                        }
+                    },
+                    {
+                        "name": "timestamp",
+                        "type": "tuktu.csv.locators.Column",
+                        "params": {
+                            "offset": 1,
+                            "row_start": 1
+                        }
+                    },
+                    {
+                        "name": "facts",
+                        "type": "tuktu.csv.locators.Column",
+                        "params": {
+                            "offset": 2,
+                            "row_start": 1
+                        }
+                    },
+                    {
+                        "name": "value",
+                        "type": "tuktu.csv.locators.Column",
+                        "params": {
+                            "offset": 3,
+                            "row_start": 1
+                        }
+                    }
+                ],
+                "flattened": true,
+                "data_start_col": 0,
+                "data_end_col": 3,
+                "end_field": {
+                    "column": 0,
+                    "value": "asdasdasdas"
+                },
+                "separator": ";"
+            },
+            "name": "tuktu.csv.generators.flattening.CsvGenerator",
+            "next": [
+                "entitySplitter"
+            ]
+        }
+    ],
+    "processors": [
+        {
+            "id": "entityLinkingCsv",
+            "result": "entities",
+            "config": {
+                "url": "jdbc:mysql://localhost/bdc",
+                "user": "bdc",
+                "password": "bdcpass",
+                "driver": "com.mysql.jdbc.Driver",
+                "query": "SELECT DISTINCT concept.id, concept.name FROM concept_keyword NATURAL JOIN concept WHERE `concept_type` = 'entity' AND keyword IN (${entities;,});",
+                "append": true
+            },
+            "name": "tuktu.nosql.processors.SQLProcessor",
+            "next": [
+                "entityExploderCsv"
+            ]
+        },
+        {
+            "id": "entitySplitter",
+            "result": "",
+            "config": {
+                "field": "entities",
+                "separator": ",",
+                "overwrite": true
+            },
+            "name": "tuktu.processors.StringSplitterProcessor",
+            "next": [
+                "entityLinkingCsv"
+            ]
+        },
+        {
+            "id": "entityParentLookupCsv",
+            "result": "parents",
+            "config": {
+                "url": "jdbc:mysql://localhost/bdc",
+                "user": "bdc",
+                "password": "bdcpass",
+                "driver": "com.mysql.jdbc.Driver",
+                "columns": [
+                    {
+                        "name": "concept_parent.parent_id",
+                        "var": "entity_id"
+                    },
+                    {
+                        "name": "concept.name",
+                        "var": "entity_name"
+                    }
+                ],
+                "from": "concept_parent NATURAL JOIN concept",
+                "where": "id = ${entity_id}",
+                "include_original": true
+            },
+            "name": "tuktu.nosql.processors.sql.RecursiveLookupProcessor",
+            "next": [
+                "factLinkingCsv"
+            ]
+        },
+        {
+            "id": "entityExploderCsv",
+            "result": "entities",
+            "config": {
+                "field": "entities",
+                "ignore_empty": true
+            },
+            "name": "tuktu.processors.SequenceExploderProcessor",
+            "next": [
+                "sqlRename"
+            ]
+        },
+        {
+            "id": "sqlRename",
+            "result": "dasdas",
+            "config": {
+                "fields": [
+                    {
+                        "path": [
+                            "entities",
+                            "concept.id"
+                        ],
+                        "result": "entity_id"
+                    },
+                    {
+                        "path": [
+                            "entities",
+                            "concept.name"
+                        ],
+                        "result": "entity_name"
+                    }
+                ]
+            },
+            "name": "tuktu.processors.FieldRenameProcessor",
+            "next": [
+                "entityParentLookupCsv"
+            ]
+        },
+        {
+            "id": "factLinkingCsv",
+            "result": "facts",
+            "config": {
+                "url": "jdbc:mysql://localhost/bdc",
+                "user": "bdc",
+                "password": "bdcpass",
+                "driver": "com.mysql.jdbc.Driver",
+                "query": "SELECT DISTINCT concept.id, concept.name FROM concept_keyword NATURAL JOIN concept WHERE `concept_type` = 'fact' AND keyword IN (${facts;,});",
+                "append": true
+            },
+            "name": "tuktu.nosql.processors.SQLProcessor",
+            "next": [
+                "factExploder"
+            ]
+        },
+        {
+            "id": "factRenamer",
+            "result": "dasdas",
+            "config": {
+                "fields": [
+                    {
+                        "path": [
+                            "facts",
+                            "concept.id"
+                        ],
+                        "result": "fact_id"
+                    },
+                    {
+                        "path": [
+                            "facts",
+                            "concept.name"
+                        ],
+                        "result": "fact_name"
+                    }
+                ]
+            },
+            "name": "tuktu.processors.FieldRenameProcessor",
+            "next": [
+                "metadataFetcher"
+            ]
+        },
+        {
+            "id": "factExploder",
+            "result": "facts",
+            "config": {
+                "field": "facts",
+                "ignore_empty": true
+            },
+            "name": "tuktu.processors.SequenceExploderProcessor",
+            "next": [
+                "factRenamer"
+            ]
+        },
+        {
+            "id": "mongoDbInserter",
+            "result": "mongodb",
+            "config": {
+                "hosts": [
+                    "n1.test"
+                ],
+                "database": "bdc",
+                "collection": "bdc_denhaag_records",
+                "fields": [
+                    "fact_id",
+                    "fact_name",
+                    "entity_id",
+                    "entity_name",
+                    "timestamp",
+                    "value",
+                    "value_type",
+                    "source",
+                    "metadata",
+                    "filename"
+                ]
+            },
+            "name": "tuktu.nosql.processors.mongodb.MongoDBInsertProcessor",
+            "next": []
+        },
+        {
+            "id": "typeAdder",
+            "result": "source",
+            "config": {
+                "value": "csv"
+            },
+            "name": "tuktu.processors.FieldConstantAdderProcessor",
+            "next": [
+                "valueAdder"
+            ]
+        },
+        {
+            "id": "valueAdder",
+            "result": "value_type",
+            "config": {
+                "value": "numeric"
+            },
+            "name": "tuktu.processors.FieldConstantAdderProcessor",
+            "next": [
+                "filenameAdder"
+            ]
+        },
+        {
+            "id": "metadataFetcher",
+            "result": "metadata",
+            "config": {
+                "url": "jdbc:mysql://localhost/bdc",
+                "user": "bdc",
+                "password": "bdcpass",
+                "driver": "com.mysql.jdbc.Driver",
+                "query": "SELECT concept_metadata.metadata FROM concept_metadata WHERE `id` = '${entity_id}';",
+                "append": true
+            },
+            "name": "tuktu.nosql.processors.SQLProcessor",
+            "next": [
+                "typeAdder"
+            ]
+        },
+        {
+            "id": "filenameAdder",
+            "result": "filename",
+            "config": {
+                "value": "C:/Users/erik/Dropbox/BDC - data/G4/Den Haag/Onderwijs/Verzuimmeldingen_v3_DenHaag.csv"
+            },
+            "name": "tuktu.processors.FieldConstantAdderProcessor",
+            "next": [
+                "formulaLookup"
+            ]
+        },
+        {
+            "id": "formulaLookup",
+            "result": "formulas",
+            "config": {
+                "url": "jdbc:mysql://localhost/bdc",
+                "user": "bdc",
+                "password": "bdcpass",
+                "driver": "com.mysql.jdbc.Driver",
+                "query": "SELECT DISTINCT formula.id, formula.flow_name FROM formula INNER JOIN formula_mapping ON formula.id = formula_mapping.formula_id WHERE formula_mapping.concept_id = ${fact_id} AND formula_mapping.concept_type = 'fact'",
+                "append": true
+            },
+            "name": "tuktu.nosql.processors.SQLProcessor",
+            "next": [
+                "formulaExploder"
+            ]
+        },
+        {
+            "id": "formulaRenamer",
+            "result": "rename",
+            "config": {
+                "fields": [
+                    {
+                        "path": [
+                            "formulas",
+                            "formula.id"
+                        ],
+                        "result": "formula_id"
+                    }
+                ]
+            },
+            "name": "tuktu.processors.FieldRenameProcessor",
+            "next": [
+                "formulaIdFilterer"
+            ]
+        },
+        {
+            "id": "formulaExploder",
+            "result": "formulas",
+            "config": {
+                "field": "formulas",
+                "ignore_empty": true
+            },
+            "name": "tuktu.processors.SequenceExploderProcessor",
+            "next": [
+                "formulaRenamer"
+            ]
+        },
+        {
+            "id": "debug",
+            "result": "debug",
+            "config": {},
+            "name": "tuktu.processors.ConsoleWriterProcessor",
+            "next": []
+        },
+        {
+            "id": "formulaIdFilterer",
+            "result": "fff",
+            "config": {
+                "fields": [
+                    {
+                        "default": 0,
+                        "path": [
+                            "formula_id"
+                        ],
+                        "result": "formula_id"
+                    }
+                ]
+            },
+            "name": "tuktu.processors.FieldFilterProcessor",
+            "next": [
+                "deduperFormula"
+            ]
+        },
+        {
+            "id": "deduperFormula",
+            "result": "formula",
+            "config": {
+                "fields": [
+                    "formula_id"
+                ]
+            },
+            "name": "tuktu.processors.bucket.DeduplicationProcessor",
+            "next": [
+                "debug"
+            ]
+        }
+    ]
+}
