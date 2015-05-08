@@ -2,13 +2,12 @@ package tuktu.nosql.processors.caching
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.nosql.util.sql.client
-import tuktu.nosql.util.sql.evaluateSqlString
+import tuktu.nosql.util.stringHandler
 
 /**
  * Create a clone of a remote Database to an in memory H2 Database.
@@ -47,7 +46,7 @@ class H2Caching (resultName: String) extends BaseProcessor(resultName) {
 
             //copy over each row to h2 db
             for (row <- sqlClient.queryResult(s"SELECT * FROM $dbName.$table")) { 
-                h2Client.query(evaluateSqlString("INSERT INTO `" + table + "` VALUES (${values;,})", Map("values" -> row.asList)))    
+                h2Client.query(stringHandler.evaluateString("INSERT INTO `" + table + "` VALUES (${values;,})", Map("values" -> row.asList)))    
             }
         }
     }

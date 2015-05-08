@@ -2,13 +2,13 @@ package tuktu.nosql.processors
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
 import tuktu.nosql.util.sql._
+import tuktu.nosql.util.stringHandler
 
 class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var client: client = null
@@ -33,7 +33,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         Future {new DataPacket(for (datum <- data.data) yield {
             // Evaluate query
-            val evalQuery = evaluateSqlString(query, datum)
+            val evalQuery = stringHandler.evaluateString(query, datum)
             
             // See if we need to append the result
             append match {
