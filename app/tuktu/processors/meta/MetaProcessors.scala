@@ -42,9 +42,12 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
         fieldsToAdd match {
             case Some(fields) => {
                 data.data.foreach(datum => {
+                    // Resolve name with potential variables
+                    val nextName = utils.evaluateTuktuString(name, datum)
+                    
                     // Open the config file to get contents
                     val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
-                            "/" + name + ".json", "utf-8")
+                            "/" + nextName + ".json", "utf-8")
                     val conf = Json.parse(configFile.mkString).as[JsObject]
                     configFile.close
         
@@ -63,7 +66,12 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
                         // Modify generators
                         val generators = {
                             (conf \ "generators").as[List[JsObject]].map(generator => {
-                                generator ++ Json.toJson(mapToAdd).asInstanceOf[JsObject]
+                                // Get config part
+                                val genConfig = (generator \ "config").as[JsObject]
+                                val newGenConfig = genConfig ++ Json.toJson(mapToAdd).asInstanceOf[JsObject]
+                                
+                                // Add new config to the generator
+                                (generator - "config") ++ Json.obj("config" -> newGenConfig)
                             })
                         }
                         
@@ -73,7 +81,7 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
                     
                     // Invoke the new generator with custom config
                     Akka.system.actorSelection("user/TuktuDispatcher") ! {
-                        new controllers.DispatchRequest(utils.evaluateTuktuString(name, datum), Some(newConfig), false, false, false, None)
+                        new controllers.DispatchRequest(nextName, Some(newConfig), false, false, false, None)
                     }
                 })
             }
