@@ -41,23 +41,13 @@
 				},
 				{
 					"name": "query",
-					"type": "JsObject",
+					"type": "string",
 					"required": true
 				},
 				{
 					"name": "filter",
-					"type": "JsObject",
+					"type": "string",
 					"required": true
-				},
-				{
-					"name": "overwrite",
-					"type": "boolean",
-					"required": false
-				},
-				{
-					"name": "append",
-					"type": "boolean",
-					"required": false
 				}
 			]
 		}
