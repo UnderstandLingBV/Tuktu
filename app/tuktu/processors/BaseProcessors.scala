@@ -545,7 +545,7 @@ class ContainsAllFilterProcessor(resultName: String) extends BaseProcessor(resul
     override def initialize(config: JsObject) = {
         field = (config \ "field").as[String]
         containsField = (config \ "contains_field").as[String]
-        fieldContainingList = (config \ "fieldList").as[String]
+        fieldContainingList = (config \ "field_list").as[String]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {

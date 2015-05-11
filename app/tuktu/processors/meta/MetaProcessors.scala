@@ -221,7 +221,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     
     val forwarder = Akka.system.actorOf(Props[SyncStreamForwarder])
     
-    var nextName: String = _
+    var name: String = _
     var node: JsObject = _
     var next: List[String] = _
     var flowPresent = true
@@ -229,7 +229,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     
     override def initialize(config: JsObject) = {
         // Get the name of the config file
-        nextName = (config \ "name").as[String]
+        name = (config \ "name").as[String]
         // Node to execute on
         node = (config \ "node").asOpt[String] match {
                     case Some(n) => Json.obj("node" -> n)
@@ -267,7 +267,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
             )
             
             // Send a message to our Dispatcher to create the (remote) actor and return us the actorref
-            val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(nextName, Some(customConfig), false, true, false, None)
+            val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(name, Some(customConfig), false, true, false, None)
             // Make sure we get actorref set before sending data
             val ar = Await.result(fut, Cache.getAs[Int]("timeout").getOrElse(5) seconds).asInstanceOf[ActorRef]
             forwarder ! (ar, false)
