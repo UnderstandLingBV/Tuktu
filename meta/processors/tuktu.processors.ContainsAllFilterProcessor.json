@@ -1,0 +1,38 @@
+{
+	"name": "Contains All - Filter Processor",
+	"class": "tuktu.processors.ContainsAllFilterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "contains_field",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "field_list",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,30 @@
+{
+	"name": "Convert Any to BigDecimal Processor",
+	"class": "tuktu.processors.ConvertToBigDecimal",
+	"description": "Converts a any to a BigDecimal",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "String",
+					"description": "The field containing the (sequence of) BigDecimal",
+					"required": true
+				}
+			]
+		}
+	]
+}

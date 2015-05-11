@@ -1,0 +1,51 @@
+{
+	"name": "Generator Config Stream Processor",
+	"class": "tuktu.processors.meta.GeneratorConfigStreamProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "name",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "node",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "next",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "flow_field",
+					"type": "string",
+					"required": true,
+					"description" : "Field containing the name of the flow to load"					
+				}
+			]
+		}
+	]
+}
