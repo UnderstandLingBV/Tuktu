@@ -281,11 +281,20 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
  * Dumps the data to console
  */
 class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var prettify = false
+    
+    override def initialize(config: JsObject) = {
+        prettify = (config \ "prettify").asOpt[Boolean].getOrElse(false)
+    }    
+    
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        for (datum <- data.data) {
-            prettify(datum)
-            println
+        if(prettify) {
+            for (datum <- data.data) {
+                println ("============= start DataPacket =============")
+                prettify(datum)            
+            }
         }
+        else println(data + "\r\n")
 
         Future {data}
     })
@@ -486,4 +495,40 @@ class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultNa
             }
         })
     })
+}
+
+/**
+ * Assumes the data is a List[Map[_]] and gets specific fields from the map to remain in the list
+ */
+class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var listField = ""
+    var mapField = ""
+    var ignoreEmpty = true
+    var overwrite = true
+    
+    override def initialize(config: JsObject) = {
+        listField = (config \ "list_field").as[String]
+        mapField = (config \ "map_field").as[String]
+        ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
+        overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(true)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            // Get the list field's value
+            val listValue = datum(listField).asInstanceOf[List[Map[String, Any]]]
+            
+            // Get the actual fields of the maps iteratively
+            val newList = listValue.map(listItem => {
+                // Get map field
+                listItem(mapField)
+            })
+            
+            // Return new list rather than old
+            if (overwrite)
+                datum + (listField -> newList)
+            else
+                datum + (resultName -> newList)
+        })
+    }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
 }
