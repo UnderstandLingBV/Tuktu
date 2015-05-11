@@ -281,11 +281,20 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
  * Dumps the data to console
  */
 class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var prettify = false
+    
+    override def initialize(config: JsObject) = {
+        prettify = (config \ "prettify").asOpt[Boolean].getOrElse(false)
+    }    
+    
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        for (datum <- data.data) {
-            prettify(datum)
-            println
+        if(prettify) {
+            for (datum <- data.data) {
+                println ("============= start DataPacket =============")
+                prettify(datum)            
+            }
         }
+        else println(data + "\r\n")
 
         Future {data}
     })
