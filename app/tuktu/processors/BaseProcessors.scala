@@ -18,6 +18,7 @@ import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import tuktu.api._
 import java.text.SimpleDateFormat
+import tuktu.nosql.util.stringHandler
 
 /**
  * Filters specific fields from the data tuple
@@ -530,5 +531,37 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
             else
                 datum + (resultName -> newList)
         })
+    }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
+}
+
+/**
+ * Verifies all fields are present before sending it on
+ */
+class ContainsAllFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var fieldContainingList: String = _
+    var field: String = _
+    var containsField = ""
+    
+    override def initialize(config: JsObject) = {
+        field = (config \ "field").as[String]
+        containsField = (config \ "contains_field").as[String]
+        fieldContainingList = (config \ "fieldList").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket((for (datum <- data.data) yield {
+            // Build the actual set of contain-values
+            val containsSet = collection.mutable.Set[Any]() ++ datum(containsField).asInstanceOf[Seq[Any]]
+            
+            // Get our record
+            val record = datum(fieldContainingList).asInstanceOf[List[Map[String,Any]]]
+            
+            // Do the matching
+            for (rec <- record if !containsSet.isEmpty)
+                containsSet -= rec(field).toString
+             
+            if (!containsSet.isEmpty) datum
+            else Map[String, Any]()
+        }).filter(elem => !elem.isEmpty))
     }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
 }

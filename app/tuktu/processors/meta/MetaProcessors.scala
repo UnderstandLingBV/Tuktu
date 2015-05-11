@@ -214,6 +214,74 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
 }
 
 /**
+ * Invokes a new generator
+ */
+class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    val forwarder = Akka.system.actorOf(Props[SyncStreamForwarder])
+    
+    var nextName: String = _
+    var node: JsObject = _
+    var next: List[String] = _
+    var flowPresent = true
+    var flowField: String = _
+    
+    override def initialize(config: JsObject) = {
+        // Get the name of the config file
+        nextName = (config \ "name").as[String]
+        // Node to execute on
+        node = (config \ "node").asOpt[String] match {
+                    case Some(n) => Json.obj("node" -> n)
+                    case None => Json.obj()
+                }
+        // Get the processors to send data into
+        next = (config \ "next").as[List[String]]
+        
+        // Check if the flow of processors if given or in an external JSON
+        flowPresent = (config \ "flow_given").asOpt[Boolean].getOrElse(true)
+        
+        // The field of the JSON to load
+        flowField = (config \ "flow_field").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] =  Enumeratee.mapM((data: DataPacket) => {
+        for (datum <- data.data) {
+            val processors = {
+                val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
+                            "/" + utils.evaluateTuktuString(flowField, datum) + ".json", "utf-8")
+                val cfg = Json.parse(configFile.mkString).as[JsObject]
+                configFile.close
+                (cfg \ "processors").as[List[JsObject]]
+            }
+                                            // Manipulate config and set up the remote actor
+            val customConfig = Json.obj(
+                "generators" -> List((Json.obj(
+                    "name" -> "tuktu.generators.AsyncStreamGenerator",
+                    "result" -> "",
+                    "config" -> Json.obj(),
+                    "next" -> next
+                ) ++ node 
+                )),
+                "processors" -> processors
+            )
+            
+            // Send a message to our Dispatcher to create the (remote) actor and return us the actorref
+            val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(nextName, Some(customConfig), false, true, false, None)
+            // Make sure we get actorref set before sending data
+            val ar = Await.result(fut, Cache.getAs[Int]("timeout").getOrElse(5) seconds).asInstanceOf[ActorRef]
+            forwarder ! (ar, false)
+            
+            //send the data forward
+            forwarder ! new DataPacket(List(datum))
+        }
+                 
+        Future{data}
+        
+    }) 
+}
+
+/**
  * Actor that deals with parallel processing
  * 
  */
