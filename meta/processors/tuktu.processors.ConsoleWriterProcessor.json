@@ -17,6 +17,12 @@
 			"type": "object",
 			"required": true,
 			"parameters": [
+				{
+					"name": "prettify",
+					"type": "boolean",
+					"description": "Try to prettify the result written to console.",
+					"required": false
+				}
 			]
 		}
 	]
