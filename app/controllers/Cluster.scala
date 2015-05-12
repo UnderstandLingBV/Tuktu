@@ -18,13 +18,47 @@ object Cluster extends Controller {
         val configRepo = Cache.getAs[String]("configRepo").getOrElse(null)
         val homeAddress = Cache.getAs[String]("homeAddress").getOrElse(null)
         val logLevel = Cache.getAs[String]("logLevel").getOrElse(null)
+        val timeout = Cache.getAs[Int]("timeout").getOrElse(5)
         val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(null)
 
         Ok(views.html.cluster.overview(
                 util.flashMessagesToMap(request),
-                configRepo, homeAddress, logLevel, clusterNodes
+                configRepo, homeAddress, logLevel, timeout, clusterNodes
         ))
     }
+    
+    case class updateClusterClass(
+        configRepo: String, homeAddress: String, logLevel: String, timeout: Int
+    )
+    
+    val updateClusterForm = Form(
+        mapping(
+            "configRepo" -> text.verifying(nonEmpty, minLength(1)),
+            "homeAddress" -> text.verifying(nonEmpty, minLength(5)),
+            "logLevel" -> text.verifying(nonEmpty, minLength(1)),
+            "timeout" -> number
+        ) (updateClusterClass.apply)(updateClusterClass.unapply)
+    )
+    /**
+     * Updates specifics (cached values) for the Tuktu cluster
+     */
+    def updateCluster() = Action { implicit request => {
+        updateClusterForm.bindFromRequest.fold(
+            formWithErrors => {
+                Redirect(routes.Cluster.overview).flashing("error" -> "Some values were found incorrect.")
+            },
+            cluster => {
+                // Update cache values
+                Cache.set("configRepo", cluster.configRepo)
+                Cache.set("homeAddress", cluster.homeAddress)
+                Cache.set("logLevel", cluster.logLevel)
+                Cache.set("timeout", cluster.timeout)
+                
+                // Redirect back to overview
+                Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully uodated cluster configuration!."))
+            }
+        )
+    }}
     
     /**
      * Removes a node from the cluster
@@ -60,19 +94,19 @@ object Cluster extends Controller {
     )
     def addNodePost() = Action { implicit request => {
         addNodeForm.bindFromRequest.fold(
-                formWithErrors => {
-                    Redirect(routes.Cluster.addNode).flashing("error" -> "Address or port number incorrect.")
-                },
-                node => {
-                    // Update cache
-                    Cache.set("clusterNodes", {
-                        Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]()) +
-                            (node.address -> node.port.toString)
-                    })
-                    
-                    // Redirect back to overview
-                    Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully added node " + node.address + ":" + node.port + " to the cluster."))
-                }
-            )
+            formWithErrors => {
+                Redirect(routes.Cluster.overview).flashing("error" -> "Address or port number incorrect.")
+            },
+            node => {
+                // Update cache
+                Cache.set("clusterNodes", {
+                    Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]()) +
+                        (node.address -> node.port.toString)
+                })
+                
+                // Redirect back to overview
+                Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully added node " + node.address + ":" + node.port + " to the cluster."))
+            }
+        )
     }}
 }

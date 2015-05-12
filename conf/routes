@@ -19,6 +19,7 @@ GET     /cluster                            controllers.Cluster.overview
 GET     /addNode                            controllers.Cluster.addNode
 POST    /addNode                            controllers.Cluster.addNodePost
 GET     /delNode/:address                   controllers.Cluster.removeNode(address)
+POST    /updateCluster                      controllers.Cluster.updateCluster
 
 # Embedded modeller
 GET     /modeller                           controllers.Modeller.modeller

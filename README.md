@@ -1,5 +1,5 @@
 # Tuktu - Commodity Big Data Analytics
-Tuktu is a big data analytics platform that focuses on ease of use. The idea of the platform its users can focus on (business) logic rather than dealing with technical implementation details. As such, the core of Tuktu offers a number of focal points.
+Tuktu is a big data analytics platform that focuses on ease of use. The idea of the platform is that its users can focus on (business) logic rather than dealing with technical implementation details. As such, the core of Tuktu offers a number of focal points.
 
 - Easy setup and usage
 - Social analytics out-of-the-box 

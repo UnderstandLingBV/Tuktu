@@ -1,4 +1,4 @@
-@(messages: Map[String, List[String]], configRepo: String, homeAddress: String, logLevel: String, clusterNodes: Map[String, String])
+@(messages: Map[String, List[String]], configRepo: String, homeAddress: String, logLevel: String, timeout: Int, clusterNodes: Map[String, String])
 
 @index("Cluster Info", messages) {
     @clusterMenu()
@@ -7,12 +7,12 @@
         Cluster Overview
     </h2>
     
-    <form>
+    <form method="post" action="@routes.Cluster.updateCluster">
 	    <div class="row">
 	        <div class="col-xs-12">
 	            <div class="form-group">
 	                <label for="configRepo">Configuration Repository</label>
-	                <input type="text" class="form-control" id="configRepo" value="@configRepo">
+	                <input type="text" class="form-control" id="configRepo" name="configRepo" value="@configRepo">
 	            </div>
 	        </div>
 	    </div>
@@ -20,7 +20,7 @@
 	        <div class="col-xs-12">
 	            <div class="form-group">
 	                <label for="homeAddress">Current Node Address</label>
-	                <span id="homeAddress">@homeAddress</span>
+	                <input type="text" class="form-control" id="homeAddress" name=homeAddress value="@homeAddress">
 	            </div>
 	        </div>
 	    </div>
@@ -28,10 +28,18 @@
 	        <div class="col-xs-12">
 	            <div class="form-group">
 	                <label for="logLevel">Logging Level</label>
-	                <input type="text" class="form-control" id="logLevel" value="@logLevel">
+	                <input type="text" class="form-control" id="logLevel" name="logLevel" value="@logLevel">
 	            </div>
 	        </div>
 	    </div>
+	    <div class="row">
+            <div class="col-xs-12">
+                <div class="form-group">
+                    <label for="timeout">Timeout</label>
+                    <input type="text" class="form-control" id="timeout" name="timeout" value="@timeout">
+                </div>
+            </div>
+        </div>
 	    <div class="row">
 	        <div class="col-xs-12">
 	            <div class="form-group">
@@ -73,5 +81,12 @@
 	            </div>
 	        </div>
 	    </div>
+	    <div class="row">
+            <div class="col-xs-12">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-default">Update cluster!</button>
+                </div>
+            </div>
+        </div>
 	</form>
 }
