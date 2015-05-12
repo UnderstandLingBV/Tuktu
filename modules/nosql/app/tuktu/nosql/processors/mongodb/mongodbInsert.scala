@@ -41,8 +41,9 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         // Insert data into MongoDB
-        data.data.foreach(datum => {
-            collection.insert(anyMapToJson(datum.filter(elem => fields.contains(elem._1)), true))
+        data.data.foreach(datum => fields match {
+            case Nil => collection.insert(anyMapToJson(datum, true))
+            case _ => collection.insert(anyMapToJson(datum.filter(elem => fields.contains(elem._1)), true))
         })
         
         data

@@ -499,7 +499,7 @@ class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultNa
 }
 
 /**
- * Assumes the data is a List[Map[_]] and gets specific fields from the map to remain in the list
+ * Assumes the data is a List[Map[_]] and gets one specific field from the map to remain in the list
  */
 class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var listField = ""
@@ -531,7 +531,47 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
             else
                 datum + (resultName -> newList)
         })
-    }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
+    }) compose Enumeratee.filter((data: DataPacket) => {if (ignoreEmpty) !data.data.isEmpty else true})
+}
+
+/**
+ * Assumes the data is a List[Map[_]] and gets specific fields from the map to remain in the list
+ */
+class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var listField = ""
+    var mapFields: List[String] = _
+    var ignoreEmpty = true
+    var overwrite = true
+    
+    override def initialize(config: JsObject) = {
+        listField = (config \ "list_field").as[String]
+        mapFields = (config \ "map_fields").as[List[String]]
+        ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            // Get the list field's value
+            val listValue = datum(listField).asInstanceOf[List[Map[String, Any]]]
+            
+            // Keep map of results
+            val resultMap = collection.mutable.Map[String, collection.mutable.ListBuffer[Any]]()
+            
+            // Get the actual fields of the maps iteratively
+            listValue.map(listItem => {
+                mapFields.foreach(field => {
+                    // Add to our resultMap
+                    if (!resultMap.contains(field))
+                        resultMap += field -> collection.mutable.ListBuffer[Any]()
+                    
+                    resultMap(field) += listItem(field)
+                })
+            })
+            
+            // Add to our total result
+            datum -- mapFields ++ resultMap.map(elem => elem._1 -> elem._2.toList)
+        })
+    }) compose Enumeratee.filter((data: DataPacket) => {if (ignoreEmpty) !data.data.isEmpty else true})
 }
 
 /**
