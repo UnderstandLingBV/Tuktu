@@ -549,19 +549,24 @@ class ContainsAllFilterProcessor(resultName: String) extends BaseProcessor(resul
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket((for (datum <- data.data) yield {
-            // Build the actual set of contain-values
-            val containsSet = collection.mutable.Set[Any]() ++ datum(containsField).asInstanceOf[Seq[Any]]
+        new DataPacket({
+            val resultMap = (for (datum <- data.data) yield {
+                // Build the actual set of contain-values
+                val containsSet = collection.mutable.Set[Any]() ++ datum(containsField).asInstanceOf[Seq[Any]]
+                
+                // Get our record
+                val record = datum(fieldContainingList).asInstanceOf[List[Map[String,Any]]]
+                
+                // Do the matching
+                for (rec <- record if !containsSet.isEmpty)
+                    containsSet -= rec(field)
+                 
+                if (containsSet.isEmpty) datum
+                else Map[String, Any]()
+            })
             
-            // Get our record
-            val record = datum(fieldContainingList).asInstanceOf[List[Map[String,Any]]]
-            
-            // Do the matching
-            for (rec <- record if !containsSet.isEmpty)
-                containsSet -= rec(field).toString
-             
-            if (!containsSet.isEmpty) datum
-            else Map[String, Any]()
-        }).filter(elem => !elem.isEmpty))
+            val filteredMap = resultMap.filter(elem => !elem.isEmpty)
+            filteredMap
+        })
     }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
 }

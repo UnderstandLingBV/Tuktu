@@ -3,7 +3,6 @@ package tuktu.nlp.processors
 import scala.collection.JavaConversions.mapAsScalaMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import nl.et4it.LIGA
 import nl.et4it.POSWrapper
 import nl.et4it.RBEMPolarity
@@ -15,6 +14,7 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsValue
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
+import tuktu.api.utils
 
 /**
  * Tokenizes a piece of data
@@ -82,31 +82,18 @@ class LIGAProcessor(resultName: String) extends BaseProcessor(resultName) {
 class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var taggers = scala.collection.mutable.Map[String, POSWrapper]()
     
-    var langSpec: JsValue = JsNull
-    var lang: Option[String] = None
+    var lang = ""
     var tokens = ""
     
     override def initialize(config: JsObject) = {
-        langSpec = (config \ "language").as[JsValue]
-        lang = (langSpec \ "field").asOpt[String]
+        lang = (config \ "language").as[String]
         tokens = (config \ "tokens").as[String]
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {new DataPacket(for (datum <- data.data) yield {
-            // Get the language, either fixed or from a data field
-            val language = {
-                lang match {
-                    case Some(l) => {
-                        // Need to get language from a data-field
-                        datum(l).asInstanceOf[String]
-                    }
-                    case None => {
-                        // Language is hard-coded
-                        langSpec.as[String]
-                    } 
-                }
-            }
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        Future {new DataPacket((for (datum <- data.data) yield {
+            // Get the language
+            val language = utils.evaluateTuktuString(lang, datum)
             // Get the tokens
             val tkns = datum(tokens).asInstanceOf[Array[String]]
             
@@ -120,12 +107,17 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
             val posTags = taggers(language).tag(tkns)
             * */
             // TODO: Stupid OpenNLP is not thread-safe, fix this later
-            val tagger = new POSWrapper(language)
-            val posTags = tagger.tag(tkns)
-            
-            datum + (resultName -> posTags)
-        })}
-    })
+            try {
+                val tagger = new POSWrapper(language)
+                val posTags = tagger.tag(tkns)
+                
+                datum + (resultName -> posTags)
+            }
+            catch {
+                case _: Throwable => Map[String, Any]()
+            }
+        }).filter(!_.isEmpty))}
+    }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
 }
 
 /**
@@ -135,33 +127,20 @@ class RBEMPolarityProcessor(resultName: String) extends BaseProcessor(resultName
     // Keep track of our models
     var models = scala.collection.mutable.Map[String, RBEMPolarity]()
     
-    var langSpec: JsValue = JsNull
-    var lang: Option[String] = None
+    var lang = ""
     var tokens = ""
     var tags = ""
     
     override def initialize(config: JsObject) = {
-        langSpec = (config \ "language").as[JsValue]
-        lang = (langSpec \ "field").asOpt[String]
+        lang = (config \ "language").as[String]
         tokens = (config \ "tokens").as[String]
         tags = (config \ "pos").as[String]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {new DataPacket(for (datum <- data.data) yield {
-            // Get the language, either fixed or from a data field
-            val language = {
-                lang match {
-                    case Some(l) => {
-                        // Need to get language from a data-field
-                        datum(l).asInstanceOf[String]
-                    }
-                    case None => {
-                        // Language is hard-coded
-                        langSpec.as[String]
-                    } 
-                }
-            }
+            // Get the language
+            val language = utils.evaluateTuktuString(lang, datum)
             // Get the tokens from data
             val tkns = datum(tokens).asInstanceOf[Array[String]]
             // We need POS-tags before we can do anything, must be given in a field
