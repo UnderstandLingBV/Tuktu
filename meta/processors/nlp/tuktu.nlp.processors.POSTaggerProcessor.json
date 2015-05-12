@@ -19,7 +19,7 @@
 			"parameters": [
 				{
 					"name": "language",
-					"type": "any",
+					"type": "string",
 					"required": true
 				},
 				{
