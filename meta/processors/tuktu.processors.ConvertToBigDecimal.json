@@ -20,7 +20,7 @@
 			"parameters": [
 				{
 					"name": "field",
-					"type": "String",
+					"type": "string",
 					"description": "The field containing the (sequence of) BigDecimal",
 					"required": true
 				}
