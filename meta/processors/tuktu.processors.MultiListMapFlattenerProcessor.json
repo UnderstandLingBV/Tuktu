@@ -1,7 +1,7 @@
 {
-	"name": "List-Map Flattener Processor",
-	"class": "tuktu.processors.ListMapFlattenerProcessor",
-	"description": "Takes a list of maps and flattens it by reading out a specific key of that map. The resulting list will only contain the value of the key field.",
+	"name": "Multi-Field List-Map Flattener Processor",
+	"class": "tuktu.processors.MultiListMapFlattenerProcessor",
+	"description": "Takes a list of maps and flattens it by reading out a number of specific keys of that map. The resulting lists will be appended to the datapacket.",
 	"parameters": [
 		{
 			"name": "id",
@@ -25,21 +25,22 @@
 					"required": true
 				},
 				{
-					"name": "map_field",
+					"name": "map_fields",
 					"type": "array",
-					"description": "The name of the field that needs to be extracted from the separate maps.",
-					"required": true
+					"description": "The name of the fields that need to be extracted from the separate maps.",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
 				},
 				{
 					"name": "ignore_empty",
 					"type": "boolean",
 					"description": "If set to true, will only continue with non-empty values",
-					"required": false
-				},
-				{
-					"name": "overwrite",
-					"type": "boolean",
-					"description": "Whether or not to overwrite the original list_field.",
 					"required": false
 				}
 			]
