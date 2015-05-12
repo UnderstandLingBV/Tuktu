@@ -2,6 +2,7 @@ package tuktu.api
 
 import java.util.regex.Pattern
 import play.api.libs.json._
+import java.util.Date
 
 object utils {
     val pattern = Pattern.compile("\\$\\{(.*?)\\}")
@@ -34,7 +35,7 @@ object utils {
     /**
      * Turns a map of string -> any into a JSON object
      */
-    def anyMapToJson(map: Map[String, Any]): JsObject = {
+    def anyMapToJson(map: Map[String, Any], mongo: Boolean = false): JsObject = {
         /**
          * Dealing with objects
          */
@@ -49,6 +50,7 @@ object utils {
                 case a: Short => a
                 case a: Float => a
                 case a: Boolean => a
+                case a: Date => if(mongo) Json.obj("$date" -> a.getTime) else a
                 case a: JsValue => a
                 case a: Seq[Any] => anyListToJsonHelper(a)
                 case a: Map[_, _] => mapToJsonHelper(a.toList)
@@ -59,7 +61,7 @@ object utils {
         /**
          * Dealing with arrays
          */
-        def anyListToJsonHelper(list: Seq[Any]): JsArray = list match {
+        def anyListToJsonHelper(list: Seq[Any], mongo: Boolean = false): JsArray = list match {
             case Nil => Json.arr()
             case elem::remainder => Json.arr(elem match {
                 case a: String => a
@@ -70,6 +72,7 @@ object utils {
                 case a: Short => a
                 case a: Float => a
                 case a: Boolean => a
+                case a: Date => if(mongo) Json.obj("$date" -> a.getTime) else a
                 case a: JsValue => a
                 case a: Seq[Any] => anyListToJsonHelper(a)
                 case _ => elem.toString
