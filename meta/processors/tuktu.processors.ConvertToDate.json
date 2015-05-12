@@ -20,19 +20,19 @@
 			"parameters": [
 				{
 					"name": "field",
-					"type": "String",
+					"type": "string",
 					"description": "The field containing the date",
 					"required": true
 				},
 				{
 					"name": "format",
-					"type": "String",
+					"type": "string",
 					"description": "The string formatter",
 					"required": false
 				},
 				{
 					"name": "locale",
-					"type": "String",
+					"type": "string",
 					"description": "The locale for the string formatter",
 					"required": false
 				}
