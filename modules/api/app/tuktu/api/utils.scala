@@ -3,6 +3,7 @@ package tuktu.api
 import java.util.regex.Pattern
 import play.api.libs.json._
 import java.util.Date
+import org.joda.time.DateTime
 
 object utils {
     val pattern = Pattern.compile("\\$\\{(.*?)\\}")
@@ -51,6 +52,7 @@ object utils {
                 case a: Float => a
                 case a: Boolean => a
                 case a: Date => if(mongo) Json.obj("$date" -> a.getTime) else a
+                case a: DateTime => if(mongo) Json.obj("$date" -> a.getMillis) else a
                 case a: JsValue => a
                 case a: Seq[Any] => anyListToJsonHelper(a)
                 case a: Map[_, _] => mapToJsonHelper(a.toList)
@@ -73,6 +75,7 @@ object utils {
                 case a: Float => a
                 case a: Boolean => a
                 case a: Date => if(mongo) Json.obj("$date" -> a.getTime) else a
+                case a: DateTime => if(mongo) Json.obj("$date" -> a.getMillis) else a
                 case a: JsValue => a
                 case a: Seq[Any] => anyListToJsonHelper(a)
                 case _ => elem.toString

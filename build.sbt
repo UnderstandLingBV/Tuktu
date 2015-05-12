@@ -68,7 +68,8 @@ lazy val coreDependencies = Seq(
     "net.sf.opencsv" % "opencsv" % "2.0",
     "org.codehaus.groovy" % "groovy-all" % "2.2.1",
     "com.typesafe.akka" %% "akka-remote" % "2.3.4",
-    "com.github.nscala-time" %% "nscala-time" % "1.8.0"
+    "com.github.nscala-time" %% "nscala-time" % "1.8.0",
+    "joda-time" % "joda-time" % "2.7"
 )
 
 lazy val tuktuDBDependencies = Seq(

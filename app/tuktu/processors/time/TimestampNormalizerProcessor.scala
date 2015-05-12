@@ -8,6 +8,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import com.github.nscala_time.time.Imports._
 import org.joda.time.format.DateTimeFormatter
+import play.api.libs.json.JsString
+import java.util.Locale
 
 /**
  * Floors a given datetimeField, based on the timeframes. Only one timeframe is used, e.g. only years or months,
@@ -15,8 +17,6 @@ import org.joda.time.format.DateTimeFormatter
  */
 class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(resultName) {
 
-    // the joda timeformatting
-    var datetimeFormat = ""
     // the field containing the datetime
     var datetimeField = ""
     // do we append or overwrite the datetimeField
@@ -33,8 +33,9 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
     var dateTimeFormatter: DateTimeFormatter = _
     
     override def initialize(config: JsObject) = {
-        datetimeFormat = (config \ "datetime_format").as[String]
+        val datetimeFormat = (config \ "datetime_format").as[String]
         datetimeField = (config \ "datetime_field").as[String]
+        val datetimeLocale = (config \ "datetime_locale").as[String]
         overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
         millis = (config \ "time" \ "millis").asOpt[Int].getOrElse(0)
         seconds = (config \ "time" \ "seconds").asOpt[Int].getOrElse(0)
@@ -48,13 +49,21 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
         if (seconds + minutes + hours + days + months + years == 0)
             seconds = 1
 
-        dateTimeFormatter = DateTimeFormat.forPattern(datetimeFormat)
+        dateTimeFormatter = DateTimeFormat.forPattern(datetimeFormat).withLocale(Locale.forLanguageTag(datetimeLocale))
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {
             new DataPacket(for (datum <- data.data) yield {
-                val dt = dateTimeFormatter.parseDateTime(tuktu.api.utils.evaluateTuktuString(datum(datetimeField).asInstanceOf[String], datum))
+                // Make string of it
+                val str = datum(datetimeField) match {
+                    case a: String => a
+                    case a: JsString => a.value
+                    case a: Any => a.toString
+                }
+                
+                // Prase
+                val dt = dateTimeFormatter.parseDateTime(tuktu.api.utils.evaluateTuktuString(str, datum))
                 val newDate = {
                     if (years > 0) {
                         val currentYear = dt.year.roundFloorCopy

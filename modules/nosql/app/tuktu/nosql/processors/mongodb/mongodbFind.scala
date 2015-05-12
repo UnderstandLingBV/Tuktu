@@ -54,7 +54,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
             val queryJson = Json.parse(stringHandler.evaluateString(query, datum,"\"",""))
             val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum))
             // Get data based on query and filter
-            val resultData = collection.find(queryJson, filterJson).cursor[JsObject].collect[List]()        
+            val resultData = collection.find(queryJson, filterJson).cursor[JsObject].collect[List]()
                 
             resultData.map { resultList => {
                 for (resultRow <- resultList) yield {
