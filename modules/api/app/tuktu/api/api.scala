@@ -110,6 +110,7 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
         
         channel.eofAndEnd
         context.stop(self)
+        self ! PoisonPill
     }
     
     def receive() = {

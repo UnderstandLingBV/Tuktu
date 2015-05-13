@@ -610,3 +610,24 @@ class ContainsAllFilterProcessor(resultName: String) extends BaseProcessor(resul
         })
     }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
 }
+
+/**
+ * Takes a Map[String, Any] and makes it a top-level citizen 
+ */
+class MapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field = ""
+    
+    override def initialize(config: JsObject) = {
+        field = (config \ "field").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            // Get map
+            val map = datum(field).asInstanceOf[Map[String, Any]]
+            
+            // Add to total
+            datum ++ map
+        })
+    })
+}

@@ -219,8 +219,6 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
 class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
-    val forwarder = Akka.system.actorOf(Props[SyncStreamForwarder])
-    
     var name: String = _
     var node: JsObject = _
     var next: List[String] = _
@@ -245,7 +243,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
         flowField = (config \ "flow_field").as[String]
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] =  Enumeratee.mapM((data: DataPacket) => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] =  Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data.data) {
             val processors = {
                 val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
@@ -269,15 +267,17 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
             // Send a message to our Dispatcher to create the (remote) actor and return us the actorref
             val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(name, Some(customConfig), false, true, false, None)
             // Make sure we get actorref set before sending data
-            val ar = Await.result(fut, Cache.getAs[Int]("timeout").getOrElse(5) seconds).asInstanceOf[ActorRef]
-            forwarder ! (ar, false)
-            
-            //send the data forward
-            forwarder ! new DataPacket(List(datum))
+            fut onSuccess {
+                case generatorActor: ActorRef => {
+                    //send the data forward
+                    generatorActor ! new DataPacket(List(datum))
+                    // Directly send stop packet
+                    generatorActor ! new StopPacket
+                }
+            }
         }
-                 
-        Future{data}
-        
+
+        data
     }) 
 }
 
