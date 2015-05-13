@@ -1,0 +1,28 @@
+{
+	"name": "Map Flattener Processor",
+	"class": "tuktu.processors.MapFlattenerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
