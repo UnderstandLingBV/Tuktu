@@ -34,13 +34,13 @@ class HDFSWriterProcessor(resultName: String) extends BaseProcessor(resultName) 
         fieldSeparator = (config \ "field_separator").as[String]
         dataPacketSeparator = (config \ "datapacket_separator").as[String]
         // The replication factor of the file
-        val replication = (config \ "replication").asOpt[Long].getOrElse(3)
+        val replication = (config \ "replication").asOpt[Int].getOrElse(3)
         conf = new Configuration()
         conf.set("fs.defaultFS", hdfsUri)
         conf.set("dfs.replication", replication.toString)
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {        
         val fs = FileSystem.get(conf)
         val os = {            
             if(fs.exists(fileName)) 
