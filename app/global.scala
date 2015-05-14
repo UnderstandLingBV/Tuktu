@@ -1,23 +1,23 @@
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
+
+import akka.actor.PoisonPill
 import akka.actor.Props
-import akka.util.Timeout
 import akka.routing.SmallestMailboxPool
+import akka.routing.Broadcast
+import akka.util.Timeout
 import controllers.Dispatcher
 import monitor.DataMonitor
 import play.api.Application
 import play.api.GlobalSettings
 import play.api.Play
 import play.api.Play.current
+import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.api.mvc.RequestHeader
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.Results.InternalServerError
 import play.api.mvc.Results.NotFound
-import play.api.cache.Cache
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -32,9 +32,9 @@ object Global extends GlobalSettings {
         val monActor = Akka.system.actorOf(Props[DataMonitor], name = "TuktuMonitor")
         monActor ! "init"
         
-        // Set up dispatcher
+        // Set up dispatcher(s), read from config how many
 		val dispActor = Akka.system.actorOf(
-                   SmallestMailboxPool(Play.current.configuration.getInt("tuktu.dispatcher.size").getOrElse(5))
+                   SmallestMailboxPool(Play.current.configuration.getInt("tuktu.dispatchers").getOrElse(5))
                    .props(Props(classOf[Dispatcher], monActor)), name = "TuktuDispatcher")
         dispActor ! "init"
 	}
@@ -66,7 +66,9 @@ object Global extends GlobalSettings {
 		))
 	}*/
 	
-	/*override def onStop(app: Application) {
-	    
-	}*/
+	override def onStop(app: Application) {
+	    // Terminate our dispatchers and monitor
+        Akka.system.actorSelection("user/TuktuMonitor") ! PoisonPill
+        Akka.system.actorSelection("user/TuktuDispatcher") ! Broadcast(PoisonPill)
+	}
 }
