@@ -49,7 +49,7 @@ lazy val nosqlDependencies = Seq(
     "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.0.akka23",
     "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.4",
     "org.elasticsearch" % "elasticsearch" % "1.4.4",
-    "org.apache.hadoop" % "hadoop-hdfs" % "2.6.0"
+    "org.apache.hadoop" % "hadoop-client" % "2.6.0"
 )
 
 lazy val mlDependencies = Seq(
