@@ -23,6 +23,7 @@ import java.lang.reflect.InvocationTargetException
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
 import tuktu.processors.EOFBufferProcessor
 import play.api.cache.Cache
+import controllers.nodehandlers.nodeHandler
 
 case class DispatchRequest(
         configName: String,
@@ -286,59 +287,46 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                 val next = (generator \ "next").as[List[String]]
                 val nodeAddress = (generator \ "node").asOpt[String]
                 
-                // See if this one needs to be started remotely or not
-                val (startRemotely, hostname) = nodeAddress match {
-                    case Some(remoteLocation) => {
+                // Parse the nodes field to see where this generator should be constructed
+                val nodeList = nodeHandler.handleNodesString(nodeAddress.getOrElse(""))
+                
+                // Go over all nodes and submit the generator there
+                for (nodeInstance <- nodeList) {
+                    // See if this one needs to be started remotely or not
+                    val (startRemotely, hostname) = {
                         // We may or may not need to start remotely
-                        if (remoteLocation == Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")) (false, "")
-                        else (true, remoteLocation)
+                        if (nodeInstance == Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")) (false, "")
+                        else (true, nodeInstance)
                     }
-                    case None => (false, "")
-                }
-                        
-                val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
-                if (startRemotely && !dr.isRemote && hostname != "" && clusterNodes.contains(hostname)) {
-                    // We need to start an actor on a remote location
-                    val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname) + "/user/TuktuDispatcher"
-                    
-                    // Get the identity
-                    val fut = Akka.system.actorSelection(location) ? Identify(None)
-                    val remoteDispatcher = Await.result(fut.mapTo[ActorIdentity], 5 seconds).getRef
-                    
-                    // Send a remoted dispatch request, which is just the obtained config
-                    dr.returnRef match {
-                        case true => {
-                            // We need to get the actor reference and return it
-                            val refFut = remoteDispatcher ? new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor)
-                            sender ? Await.result(refFut.mapTo[ActorRef], 5 seconds)
-                        }
-                        case false => remoteDispatcher ! new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor)
-                    }
-                } else {
-                    if (!startRemotely) {
-                        // Build the processor pipeline for this generator
-                        val processorEnumeratee = Dispatcher.buildEnums(next, processorMap, dr.configName + "/" + generatorName, dr.sourceActor)
-                        
-                        // Set up the generator, we assume the class is loaded
-                        val clazz = Class.forName(generatorName)
-                        
-                        try {
-                            val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName +  "_" + clazz.getName +  "_" + index)
                             
-                            // Send it the config
-                            actorRef ! generatorConfig
-                            if (dr.returnRef) sender ! actorRef
-                            
-                            // Send the monitoring actor notification of start
-                            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                                    actorRef.path.toStringWithoutAddress,
-                                    System.currentTimeMillis() / 1000L,
-                                    "start"
-                            )
+                    val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
+                    if (startRemotely && !dr.isRemote && hostname != "" && clusterNodes.contains(hostname)) {
+                        // We need to start an actor on a remote location
+                        val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname) + "/user/TuktuDispatcher"
+                        
+                        // Get the identity
+                        val fut = Akka.system.actorSelection(location) ? Identify(None)
+                        val remoteDispatcher = Await.result(fut.mapTo[ActorIdentity], 5 seconds).getRef
+                        
+                        // Send a remoted dispatch request, which is just the obtained config
+                        dr.returnRef match {
+                            case true => {
+                                // We need to get the actor reference and return it
+                                val refFut = remoteDispatcher ? new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor)
+                                sender ? Await.result(refFut.mapTo[ActorRef], 5 seconds)
+                            }
+                            case false => remoteDispatcher ! new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor)
                         }
-                        catch {
-                            case e: akka.actor.InvalidActorNameException => {
-                                val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName + "_" + clazz.getName +  "_" + java.util.UUID.randomUUID.toString)
+                    } else {
+                        if (!startRemotely) {
+                            // Build the processor pipeline for this generator
+                            val processorEnumeratee = Dispatcher.buildEnums(next, processorMap, dr.configName + "/" + generatorName, dr.sourceActor)
+                            
+                            // Set up the generator, we assume the class is loaded
+                            val clazz = Class.forName(generatorName)
+                            
+                            try {
+                                val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName +  "_" + clazz.getName +  "_" + index)
                                 
                                 // Send it the config
                                 actorRef ! generatorConfig
@@ -350,6 +338,22 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                         System.currentTimeMillis() / 1000L,
                                         "start"
                                 )
+                            }
+                            catch {
+                                case e: akka.actor.InvalidActorNameException => {
+                                    val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName + "_" + clazz.getName +  "_" + java.util.UUID.randomUUID.toString)
+                                    
+                                    // Send it the config
+                                    actorRef ! generatorConfig
+                                    if (dr.returnRef) sender ! actorRef
+                                    
+                                    // Send the monitoring actor notification of start
+                                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                                            actorRef.path.toStringWithoutAddress,
+                                            System.currentTimeMillis() / 1000L,
+                                            "start"
+                                    )
+                                }
                             }
                         }
                     }
