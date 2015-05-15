@@ -271,9 +271,9 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {new DataPacket(for (datum <- data.data) yield {
             if(!isNumeric)
-	            datum + (resultName -> value.toString)
+	            datum + (resultName -> tuktu.api.utils.evaluateTuktuString(value, datum))
             else
-                datum + (resultName -> value.toLong)
+                datum + (resultName -> tuktu.api.utils.evaluateTuktuString(value, datum).toLong)
         })}
     })
 }
