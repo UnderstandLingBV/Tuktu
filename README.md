@@ -23,6 +23,12 @@ Note that Tuktu requires Java (JRE) to be present on the system it is run from. 
 
 To build Tuktu from source, clone the repository. Tuktu was built against Play! version 2.3.x so you need that version of Play.
 
+**Important note:** If you want to build Tuktu as-is from cloning the git repository - including the NLP module - you will need to have the following NLP libraries installed to your local Maven or otherwise present on the classpath:
+
+- [LIGA](https://github.com/ErikTromp/LIGA) - Language Detection library
+- [OpenNLPPOSWrapper](https://github.com/ErikTromp/OpenNLPPOSWrapper) - Part-of-Speech Tagging wrapper around the OpenNLP library
+- [RBEM](https://github.com/ErikTromp/RBEM) - Multi-lingual Sentiment Analysis library
+
 To build Tuktu (for production), run:
 
 `activator clean dist`

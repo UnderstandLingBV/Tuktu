@@ -85,7 +85,12 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                 "result" -> "",
                 "config" -> Json.obj(),
                 "next" -> List("bufferer"),
-                "node" -> node)),
+                "nodes" -> Json.obj(
+                        "type" -> "SingleNode",
+                        "nodes" -> node,
+                        "instances" -> 1
+                )
+            )),
             "processors" -> List(
                 Json.obj(
                     "id" -> "bufferer",
@@ -116,8 +121,7 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
             false,
             true,
             true,
-            Some(forwarder),
-            1)
+            Some(forwarder))
         
         // We must sync here
         val ar = Await.result(fut, timeout.duration).asInstanceOf[ActorRef]

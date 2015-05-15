@@ -31,8 +31,7 @@ case class DispatchRequest(
         isRemote: Boolean,
         returnRef: Boolean,
         sync: Boolean,
-        sourceActor: Option[ActorRef],
-        instances: Int
+        sourceActor: Option[ActorRef]
 )
 case class treeNode(
         name: String,
@@ -316,10 +315,10 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                         dr.returnRef match {
                             case true => {
                                 // We need to get the actor reference and return it
-                                val refFut = remoteDispatcher ? new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor, instanceCount)
+                                val refFut = remoteDispatcher ? new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor)
                                 sender ? Await.result(refFut.mapTo[ActorRef], 5 seconds)
                             }
-                            case false => remoteDispatcher ! new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor, instanceCount)
+                            case false => remoteDispatcher ! new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor)
                         }
                     } else {
                         if (!startRemotely) {

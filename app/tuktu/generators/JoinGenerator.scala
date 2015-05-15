@@ -110,7 +110,7 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                 val index = el._2
                 
                 // We need to setup and start the two dataflows in a synchronous way
-                val fut = sender ? new controllers.DispatchRequest(source._1, None, false, true, true, Some(self), 1)
+                val fut = sender ? new controllers.DispatchRequest(source._1, None, false, true, true, Some(self))
                 fut.onSuccess {
                     case ar: ActorRef => sourceActors += ar -> index
                 }

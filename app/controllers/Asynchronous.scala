@@ -22,7 +22,7 @@ object Asynchronous extends Controller {
      */
     def load(id: String, instances: Int) = Action {
     	// Send this to our analytics async handler
-    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, None, false, false, false, None, instances)
+    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, None, false, false, false, None)
         
         Ok("")
     }
@@ -40,7 +40,7 @@ object Asynchronous extends Controller {
             val instances = (jsonBody \ "instances").asOpt[Int].getOrElse(1)
             
 	    	// Send this to our analytics async handler
-	    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, Some(jsonBody), false, false, false, None, instances)
+	    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, Some(jsonBody), false, false, false, None)
         }
 	    
         Ok("")
