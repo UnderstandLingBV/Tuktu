@@ -78,6 +78,7 @@ object utils {
                 case a: DateTime => if(mongo) Json.obj("$date" -> a.getMillis) else a
                 case a: JsValue => a
                 case a: Seq[Any] => anyListToJsonHelper(a)
+                case a: Map[_, _] => mapToJsonHelper(a.toList)
                 case _ => elem.toString
             }) ++ anyListToJsonHelper(remainder)
         }
