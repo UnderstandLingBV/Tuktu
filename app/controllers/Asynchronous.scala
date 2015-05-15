@@ -20,9 +20,9 @@ object Asynchronous extends Controller {
      * Loads a config and executes the data processing based on an ID
      * @param id String The ID (name) of the config to fetch
      */
-    def load(id: String) = Action {
+    def load(id: String, instances: Int) = Action {
     	// Send this to our analytics async handler
-    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, None, false, false, false, None)
+    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, None, false, false, false, None, instances)
         
         Ok("")
     }
@@ -36,8 +36,11 @@ object Asynchronous extends Controller {
         if (jsonBody != null) {
             // Get the ID from the request
             val id = (jsonBody \ "id").as[String]
+            // Get the number of instances
+            val instances = (jsonBody \ "instances").asOpt[Int].getOrElse(1)
+            
 	    	// Send this to our analytics async handler
-	    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, Some(jsonBody), false, false, false, None)
+	    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, Some(jsonBody), false, false, false, None, instances)
         }
 	    
         Ok("")

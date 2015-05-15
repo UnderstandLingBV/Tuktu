@@ -76,14 +76,16 @@ object Monitor extends Controller {
         }
     }
     
-    case class jobName(
-        name: String
+    case class job(
+        name: String,
+        instances: Int
     )
     
-    val jobNameForm = Form(
+    val jobForm = Form(
         mapping(
-            "name" -> text.verifying(nonEmpty, minLength(1))
-        ) (jobName.apply)(jobName.unapply)
+            "name" -> text.verifying(nonEmpty, minLength(1)),
+            "instances" -> number
+        ) (job.apply)(job.unapply)
     )
     
     /**
@@ -91,13 +93,13 @@ object Monitor extends Controller {
      */
     def startJob() = Action { implicit request => {
             // Bind
-            jobNameForm.bindFromRequest.fold(
+            jobForm.bindFromRequest.fold(
                 formWithErrors => {
-                    Redirect(routes.Monitor.startJobView).flashing("error" -> "Invalid job name")
+                    Redirect(routes.Monitor.startJobView).flashing("error" -> "Invalid job name or instances")
                 },
-                jobname => {
-                    Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(jobname.name, None, false, false, false, None)
-                    Redirect(routes.Monitor.fetchLocalInfo).flashing("success" -> ("Successfully started job " + jobname.name))
+                job => {
+                    Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(job.name, None, false, false, false, None, job.instances)
+                    Redirect(routes.Monitor.fetchLocalInfo).flashing("success" -> ("Successfully started job " + job.name))
                 }
             )
         }

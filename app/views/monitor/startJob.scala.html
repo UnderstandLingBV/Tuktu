@@ -4,7 +4,7 @@
     @monitorMenu()
 } {
     @if(configs.size > 0) {
-        <form method="post" action="@routes.Monitor.startJob">
+        <form method="post" action="@routes.Monitor.startJob" id="startJobForm">
             <div class="form-group">
 			    <select name="name" class="form-control">
 				    @for(config <- configs) {
@@ -15,10 +15,40 @@
 			    </select>
 			</div>
 			
+			<div class="checkbox">
+                <label>
+                    <input type="checkbox" onclick="toggleInstances()"> Multiple instances
+                </label>
+			</div>
+			
+			<div class="form-group">
+                <label for="instances">Instances</label>
+                <select name="instances" id="instances" class="form-control" disabled>
+                    <option value="1" selected="selected">
+                        1
+                    </selected>
+                    @for(i <- 2 to 25) {
+                        <option value="@i">
+                            @i
+                        </option>
+                    }
+                </select>
+			</div>
+			
 			<div class="form-group">
 	           <input type="submit" class="btn" value="Start Job">
 	       </div>
 	   </form>
+	   
+	   <script type="text/javascript">
+	       function toggleInstances() {
+	    	   $('#instances').prop('disabled', function(i, v) { return !v; });
+	       }
+
+	       $('#startJobForm').submit(function() {
+	    	    $("#instances").prop('disabled', false);
+    	    })
+	   </script>
 	} else {
 	   There are no configuration files in your config repository.
 	}

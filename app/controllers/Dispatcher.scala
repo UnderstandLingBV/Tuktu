@@ -1,16 +1,18 @@
 package controllers
 
 import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.Await
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
+import controllers.nodehandler.nodeHandler
 import play.api.Logger
 import play.api.Play
 import play.api.Play.current
+import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
@@ -19,11 +21,9 @@ import play.api.libs.json.Json
 import tuktu.api._
 import tuktu.generators.AsyncStreamGenerator
 import tuktu.generators.SyncStreamGenerator
-import java.lang.reflect.InvocationTargetException
-import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
 import tuktu.processors.EOFBufferProcessor
-import play.api.cache.Cache
-import controllers.nodehandlers.nodeHandler
+import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
+import akka.routing.SmallestMailboxPool
 
 case class DispatchRequest(
         configName: String,
@@ -31,7 +31,8 @@ case class DispatchRequest(
         isRemote: Boolean,
         returnRef: Boolean,
         sync: Boolean,
-        sourceActor: Option[ActorRef]
+        sourceActor: Option[ActorRef],
+        instances: Int
 )
 case class treeNode(
         name: String,
@@ -285,18 +286,21 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                 val generatorConfig = (generator \ "config").as[JsObject]
                 val resultName = (generator \ "result").as[String]
                 val next = (generator \ "next").as[List[String]]
-                val nodeAddress = (generator \ "node").asOpt[String]
+                val nodeAddress = (generator \ "nodes").asOpt[List[JsObject]]
                 
                 // Parse the nodes field to see where this generator should be constructed
-                val nodeList = nodeHandler.handleNodesString(nodeAddress.getOrElse(""))
+                val nodeList = nodeHandler.handleNodes(nodeAddress.getOrElse(List()))
                 
                 // Go over all nodes and submit the generator there
                 for (nodeInstance <- nodeList) {
+                    val hostname = nodeInstance._1
+                    val instanceCount = nodeInstance._2
+                    
                     // See if this one needs to be started remotely or not
-                    val (startRemotely, hostname) = {
+                    val startRemotely = {
                         // We may or may not need to start remotely
-                        if (nodeInstance == Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")) (false, "")
-                        else (true, nodeInstance)
+                        if (hostname == Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")) false
+                        else true
                     }
                             
                     val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
@@ -312,10 +316,10 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                         dr.returnRef match {
                             case true => {
                                 // We need to get the actor reference and return it
-                                val refFut = remoteDispatcher ? new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor)
+                                val refFut = remoteDispatcher ? new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor, instanceCount)
                                 sender ? Await.result(refFut.mapTo[ActorRef], 5 seconds)
                             }
-                            case false => remoteDispatcher ! new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor)
+                            case false => remoteDispatcher ! new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor, instanceCount)
                         }
                     } else {
                         if (!startRemotely) {
@@ -326,7 +330,13 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                             val clazz = Class.forName(generatorName)
                             
                             try {
-                                val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName +  "_" + clazz.getName +  "_" + index)
+                                // Make the amount of actors we require
+                                val actorRef = Akka.system.actorOf(
+                                        SmallestMailboxPool(instanceCount).props(
+                                            Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
+                                        ),
+                                        name = dr.configName +  "_" + clazz.getName +  "_" + index
+                                )
                                 
                                 // Send it the config
                                 actorRef ! generatorConfig
@@ -341,7 +351,12 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                             }
                             catch {
                                 case e: akka.actor.InvalidActorNameException => {
-                                    val actorRef = Akka.system.actorOf(Props(clazz, resultName, processorEnumeratee, dr.sourceActor), name = dr.configName + "_" + clazz.getName +  "_" + java.util.UUID.randomUUID.toString)
+                                    val actorRef = Akka.system.actorOf(
+                                            SmallestMailboxPool(instanceCount).props(
+                                                Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
+                                            ),
+                                            name = dr.configName + "_" + clazz.getName +  "_" + java.util.UUID.randomUUID.toString
+                                    )
                                     
                                     // Send it the config
                                     actorRef ! generatorConfig

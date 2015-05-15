@@ -2,12 +2,10 @@ package tuktu.processors.meta
 
 import java.lang.reflect.Method
 import java.util.concurrent.TimeoutException
-
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
@@ -19,6 +17,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import tuktu.api._
+import akka.routing.Broadcast
 
 /**
  * Invokes a new generator
@@ -81,7 +80,7 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
                     
                     // Invoke the new generator with custom config
                     Akka.system.actorSelection("user/TuktuDispatcher") ! {
-                        new controllers.DispatchRequest(nextName, Some(newConfig), false, false, false, None)
+                        new controllers.DispatchRequest(nextName, Some(newConfig), false, false, false, None, 1)
                     }
                 })
             }
@@ -91,11 +90,11 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
                     // Name contains a variable, so we must populate it for each datum
                     data.data.foreach(datum => {
                         Akka.system.actorSelection("user/TuktuDispatcher") !
-                            new controllers.DispatchRequest(utils.evaluateTuktuString(name, datum), None, false, false, false, None)
+                            new controllers.DispatchRequest(utils.evaluateTuktuString(name, datum), None, false, false, false, None, 1)
                     })
                 }
                 else {
-                    Akka.system.actorSelection("user/TuktuDispatcher") ! new controllers.DispatchRequest(name, None, false, false, false, None)
+                    Akka.system.actorSelection("user/TuktuDispatcher") ! new controllers.DispatchRequest(name, None, false, false, false, None, 1)
                 }
             }
         }
@@ -127,7 +126,7 @@ class SyncStreamForwarder() extends Actor with ActorLogging {
         }
         case sp: StopPacket => {
             remoteGenerator ! new StopPacket
-            remoteGenerator ! PoisonPill
+            remoteGenerator ! Broadcast(PoisonPill)
         }
     }
 }
@@ -145,7 +144,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         // Get the name of the config file
         val nextName = (config \ "name").as[String]
         // Node to execute on
-        val node = (config \ "node").asOpt[String]
+        val nodes = (config \ "nodes").asOpt[List[JsObject]]
         // Get the processors to send data into
         val next = (config \ "next").as[List[String]]
         // Get the actual config, being a list of processors
@@ -166,8 +165,8 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
                 "config" -> Json.obj(),
                 "next" -> next
             ) ++ {
-                node match {
-                    case Some(n) => Json.obj("node" -> n)
+                nodes match {
+                    case Some(n) => Json.obj("nodes" -> n)
                     case None => Json.obj()
                 }
             })),
@@ -178,8 +177,8 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         try {
             val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? {
                 sync match {
-                    case true => new controllers.DispatchRequest(nextName, Some(customConfig), false, true, true, None)
-                    case false => new controllers.DispatchRequest(nextName, Some(customConfig), false, true, false, None)
+                    case true => new controllers.DispatchRequest(nextName, Some(customConfig), false, true, true, None, 1)
+                    case false => new controllers.DispatchRequest(nextName, Some(customConfig), false, true, false, None, 1)
                 }
             }
             fut.onSuccess {
@@ -220,7 +219,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var name: String = _
-    var node: JsObject = _
+    var nodes: JsObject = _
     var next: List[String] = _
     var flowPresent = true
     var flowField: String = _
@@ -229,8 +228,8 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
         // Get the name of the config file
         name = (config \ "name").as[String]
         // Node to execute on
-        node = (config \ "node").asOpt[String] match {
-                    case Some(n) => Json.obj("node" -> n)
+        nodes = (config \ "nodes").asOpt[List[JsObject]] match {
+                    case Some(n) => Json.obj("nodes" -> n)
                     case None => Json.obj()
                 }
         // Get the processors to send data into
@@ -259,13 +258,13 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
                     "result" -> "",
                     "config" -> Json.obj(),
                     "next" -> next
-                ) ++ node 
+                ) ++ nodes 
                 )),
                 "processors" -> processors
             )
             
             // Send a message to our Dispatcher to create the (remote) actor and return us the actorref
-            val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(name, Some(customConfig), false, true, false, None)
+            val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(name, Some(customConfig), false, true, false, None, 1)
             // Make sure we get actorref set before sending data
             fut onSuccess {
                 case generatorActor: ActorRef => {

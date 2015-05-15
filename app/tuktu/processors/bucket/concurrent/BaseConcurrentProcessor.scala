@@ -116,7 +116,8 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
             false,
             true,
             true,
-            Some(forwarder))
+            Some(forwarder),
+            1)
         
         // We must sync here
         val ar = Await.result(fut, timeout.duration).asInstanceOf[ActorRef]
