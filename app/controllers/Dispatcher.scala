@@ -1,12 +1,14 @@
 package controllers
 
 import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.Await
+
 import akka.actor._
 import akka.pattern.ask
+import akka.routing.SmallestMailboxPool
 import akka.util.Timeout
 import controllers.nodehandler.nodeHandler
 import play.api.Logger
@@ -20,10 +22,10 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import tuktu.api._
 import tuktu.generators.AsyncStreamGenerator
+import tuktu.generators.EOFSyncStreamGenerator
 import tuktu.generators.SyncStreamGenerator
 import tuktu.processors.EOFBufferProcessor
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
-import akka.routing.SmallestMailboxPool
 
 case class DispatchRequest(
         configName: String,

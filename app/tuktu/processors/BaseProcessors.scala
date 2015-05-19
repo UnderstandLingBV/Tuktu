@@ -288,7 +288,7 @@ class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultNam
         prettify = (config \ "prettify").asOpt[Boolean].getOrElse(false)
     }    
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         if(prettify) {
             for (datum <- data.data) {
                 println ("============= start DataPacket =============")
@@ -297,7 +297,7 @@ class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultNam
         }
         else println(data + "\r\n")
 
-        Future {data}
+        data
     })
     
     def prettify(map: Map[String, Any], level: Int = 0): Unit = {
