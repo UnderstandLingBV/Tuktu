@@ -34,7 +34,7 @@ class HDFSWriterProcessor(resultName: String) extends BaseProcessor(resultName) 
         dataPacketSeparator = (config \ "datapacket_separator").as[String]
         // The replication factor of the file
         val replication = (config \ "replication").asOpt[Int].getOrElse(3)
-        conf = new Configuration()
+        conf = new Configuration
         conf.set("fs.defaultFS", hdfsUri)
         conf.set("dfs.replication", replication.toString)
     }

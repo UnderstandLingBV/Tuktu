@@ -289,28 +289,11 @@ class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultNam
     }    
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        if(prettify) {
-            for (datum <- data.data) {
-                println ("============= start DataPacket =============")
-                prettify(datum)            
-            }
-        }
+        if(prettify) data.data.foreach(datum => println(Json.prettyPrint(utils.anyMapToJson(datum))))         
         else println(data + "\r\n")
 
         data
     })
-    
-    def prettify(map: Map[String, Any], level: Int = 0): Unit = {
-        for (tuple <- map) {
-            print ("   " * level + tuple._1 + " : ")
-            if(tuple._2.isInstanceOf[Map[_,_]]) {
-                println  
-                prettify(tuple._2.asInstanceOf[Map[String, Any]], level+1) 
-            } else {
-                print (tuple._2 + "\r\n")
-            }
-        }
-    }
 }
 
 /**

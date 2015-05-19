@@ -1,13 +1,14 @@
 package tuktu.generators
 
-import tuktu.api._
+import java.io._
+import akka.actor._
 import akka.actor.Props
+import play.api.Play.current
+import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsValue
-import play.api.libs.concurrent.Akka
-import akka.actor._
-import play.api.Play.current
-import java.io._
+import tuktu.api._
+import scala.io.Codec
 
 case class LinePacket(reader: BufferedReader, line: Int)
 case class LineStopPacket(reader: BufferedReader)
@@ -20,9 +21,9 @@ class LineReader(parentActor: ActorRef, fileName: String, encoding: String, star
     
     def receive() = {
         case ip: InitPacket => {
-            // Open the file in reader
-            val reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), encoding))
-
+            // Open the file in reader            
+            val reader = tuktu.utils.util.genericReader(fileName)(Codec.apply(encoding))
+            
             // Start processing
             self ! new LinePacket(reader, 0)
         }
