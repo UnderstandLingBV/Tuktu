@@ -1,7 +1,7 @@
 {
 	"name": "Convert a Field to JSON Processor",
 	"class": "tuktu.processors.ConvertToJson",
-	"description": "Converts a field to JSON"
+	"description": "Converts a field to JSON",
 	"parameters": [
 		{
 			"name": "id",
