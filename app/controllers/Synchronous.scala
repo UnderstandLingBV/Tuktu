@@ -17,6 +17,7 @@ import scala.concurrent.duration.Duration
 import play.api.libs.concurrent.Akka
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Promise
+import tuktu.api.utils
 
 object Synchronous extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -43,11 +44,11 @@ object Synchronous extends Controller {
             // Invoke the flow and wait for a reply
             val generator = Await.result(
                     Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(id, None, false, true, true, None),
-                    timeout.duration
+                    customTimeout
             ).asInstanceOf[ActorRef]
             
-            // Forward data to generator and fetch result
-            val resultFuture = (generator ? (jsonBody \ "body").as[JsObject]).asInstanceOf[Future[DataPacket]]
+            // Forward data to generator and fetch result            
+            val resultFuture = (generator ? new DataPacket(List(utils.anyJsonToMap((jsonBody \ "body").as[JsObject])))).asInstanceOf[Future[DataPacket]]
             val timeoutFuture = Promise.timeout(TimeoutPacket, customTimeout)
             Future.firstCompletedOf(Seq(resultFuture, timeoutFuture)).map {
                 case dp: DataPacket => {
@@ -55,7 +56,8 @@ object Synchronous extends Controller {
                     val packet = dp.data.head
                     
                     // Read the responding field
-                    Ok(packet((jsonBody \ "field").as[String]).asInstanceOf[JsObject])
+                    val fieldName = (jsonBody \ "field").as[String]
+                    Ok(Json.obj(fieldName -> Json.parse(packet(fieldName).toString)))
                 }
                 case t: TimeoutPacket => InternalServerError(Json.obj(
                         "error" -> "Flow timed out during execution."

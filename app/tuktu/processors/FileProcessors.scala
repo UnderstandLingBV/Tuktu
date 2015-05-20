@@ -3,14 +3,16 @@ package tuktu.processors
 import java.io.BufferedWriter
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
+import tuktu.api.utils
+import scala.io.Codec
+import tuktu.api.file
+import scala.io.Source
 
 /**
  * Streams data into a file and closes it when it's done
@@ -100,4 +102,29 @@ class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resul
         writer.flush
         writer.close
     })
+}
+
+class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) {    
+    var fileName = ""
+    var encoding = "utf-8"
+    var startLine = 0
+    var lineSep: String = _
+    
+     override def initialize(config: JsObject) = {
+        // Get the location of the file to write to
+        fileName = (config \ "filename").as[String]
+        encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
+        startLine = (config \ "start_line").asOpt[Int].getOrElse(0)
+        lineSep = (config \ "line_separator").asOpt[String].getOrElse("\r\n")
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            val fileName = utils.evaluateTuktuString(this.fileName, datum)
+            val encoding = utils.evaluateTuktuString(this.encoding, datum)
+
+            val reader = file.genericReader(fileName)(Codec.apply(encoding))
+            datum + (resultName -> Stream.continually(reader.readLine()).takeWhile(_ != null).mkString(lineSep))
+        })
+    }) 
 }
