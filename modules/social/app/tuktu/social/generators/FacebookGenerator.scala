@@ -163,7 +163,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             // Filters that we need to check
 	         val filters = Common.getFilters(config)
 	         val keywords = filters("keywords").asInstanceOf[Array[String]]
-	         val users = filters("users").asInstanceOf[Array[String]]
+	         val users = filters("userids").asInstanceOf[Array[String]]
                       
             // Check period, if given
 	        val interval = (config \ "interval").asOpt[JsObject]

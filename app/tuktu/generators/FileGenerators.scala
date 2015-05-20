@@ -22,7 +22,7 @@ class LineReader(parentActor: ActorRef, fileName: String, encoding: String, star
     def receive() = {
         case ip: InitPacket => {
             // Open the file in reader            
-            val reader = tuktu.utils.util.genericReader(fileName)(Codec.apply(encoding))
+            val reader = file.genericReader(fileName)(Codec.apply(encoding))
             
             // Start processing
             self ! new LinePacket(reader, 0)

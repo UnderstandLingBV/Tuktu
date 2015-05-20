@@ -8,6 +8,8 @@ GET     /index                              controllers.Monitor.fetchLocalInfo
 # Dispatching
 GET     /dispatch/:id/:inst 		        controllers.Asynchronous.load(id, inst: Int)
 POST	/config						        controllers.Asynchronous.loadPost
+# Synchronous
+POST    /sync                               controllers.Synchronous.loadJsonPost
 
 # Monitoring
 GET     /terminate/:id/:force               controllers.Monitor.terminate(id, force: Boolean)
