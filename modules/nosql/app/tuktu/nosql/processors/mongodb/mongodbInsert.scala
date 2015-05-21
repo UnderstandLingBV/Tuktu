@@ -1,16 +1,16 @@
 package tuktu.nosql.processors.mongodb
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json.JsValue
-import tuktu.api._
-import tuktu.api.utils.anyMapToJson
 import scala.concurrent.Future
+
+import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
-import reactivemongo.api._
-import play.api.libs.iteratee.Iteratee
 import play.modules.reactivemongo.json.collection.JSONCollection
-import play.api.libs.json.Json
+import reactivemongo.api.MongoConnection
+import reactivemongo.api.MongoDriver
+import tuktu.api.BaseProcessor
+import tuktu.api.DataPacket
+import tuktu.api.utils.anyMapToJson
 
 /**
  * Inserts data into MongoDB
@@ -20,6 +20,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
     var collection: JSONCollection = _
     
     var fields = List[String]()
+    var sync = false
 
     override def initialize(config: JsObject) = {
         // Set up MongoDB client
@@ -37,9 +38,18 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         
         // What fields to write?
         fields = (config \ "fields").as[List[String]]
+        
+        //Should we write is synchronized?
+        sync = (config \ "sync").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = 
+    {
+        if (sync) Enumeratee.map(data => insert(data))
+        else Enumeratee.mapM(data => Future {insert(data)})
+    } 
+    
+    def insert(data: DataPacket) = {
         // Insert data into MongoDB
         data.data.foreach(datum => fields match {
             case Nil => collection.insert(anyMapToJson(datum, true))
@@ -47,5 +57,5 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         })
         
         data
-    })
+    }    
 }
