@@ -5,7 +5,6 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import akka.actor._
 import akka.pattern.ask
 import akka.routing.SmallestMailboxPool
@@ -26,6 +25,8 @@ import tuktu.generators.EOFSyncStreamGenerator
 import tuktu.generators.SyncStreamGenerator
 import tuktu.processors.EOFBufferProcessor
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
+import play.api.libs.iteratee.Concurrent
+import play.api.libs.iteratee.Iteratee
 
 case class DispatchRequest(
         configName: String,
@@ -59,11 +60,32 @@ object Dispatcher {
         /*val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
         val monitorActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef*/
         
-        Enumeratee.mapM(data => {
+        Enumeratee.mapM(data => Future {
             if (data.data.size > 0)
                 Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, generatorName, branch, data.data.size)
-            Future {data}
+            data
         })
+    }
+    
+    /**
+     * Whenever we branch in a flow, we need a special enumeratee that helps us with the broadcasting. The dispatcher
+     * should make sure the flow ends there and the broadcaster picks up.
+     */
+    def broadcastingEnumeratee(nextProcessors: List[Enumeratee[DataPacket, DataPacket]]): Iteratee[DataPacket, Unit] = {
+        // Set up the broadcast
+        val (enumerator, channel) = Concurrent.broadcast[DataPacket]
+        
+        // Set up broadcast
+        nextProcessors.foreach(processor => {
+            enumerator |>> processor &>> Iteratee.ignore
+        })
+        
+        // Make a broadcasting Enumeratee and sink Iteratee
+        (Enumeratee.mapM[DataPacket]((data: DataPacket) => Future {
+            // Broadcast data
+            channel.push(data)
+            data
+        }) compose Enumeratee.onEOF(() => channel.eofAndEnd) compose logEnumeratee) &>> Iteratee.ignore
     }
     
     /**
