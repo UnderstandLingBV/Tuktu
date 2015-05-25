@@ -40,17 +40,17 @@ object Monitor extends Controller {
      */
     def terminate(name: String, force: Boolean) = Action {
         // Send stop packet to actor
-        if (force) {
+        if (force)
             Akka.system.actorSelection(name) ! PoisonPill
-            // Must inform the monitor since the generator won't do it itself on poisonpill
-            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    name,
-                    System.currentTimeMillis / 1000L,
-                    "done"
-            )
-        }
-        else
+        else 
             Akka.system.actorSelection(name) ! new StopPacket
+            
+        // Inform the monitor since the generator won't do it itself
+        Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                name,
+                System.currentTimeMillis / 1000L,
+                "done"
+        )
         
         Redirect(routes.Monitor.fetchLocalInfo()).flashing("success" -> ("Successfully " + {
             force match {
