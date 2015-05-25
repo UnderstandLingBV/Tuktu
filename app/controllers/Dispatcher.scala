@@ -68,153 +68,170 @@ object Dispatcher {
     }
     
     /**
-     * Whenever we branch in a flow, we need a special enumeratee that helps us with the broadcasting. The dispatcher
-     * should make sure the flow ends there and the broadcaster picks up.
-     */
-    def broadcastingEnumeratee(nextProcessors: List[Enumeratee[DataPacket, DataPacket]]): Iteratee[DataPacket, Unit] = {
-        // Set up the broadcast
-        val (enumerator, channel) = Concurrent.broadcast[DataPacket]
-        
-        // Set up broadcast
-        nextProcessors.foreach(processor => {
-            enumerator |>> processor &>> Iteratee.ignore
-        })
-        
-        // Make a broadcasting Enumeratee and sink Iteratee
-        (Enumeratee.mapM[DataPacket]((data: DataPacket) => Future {
-            // Broadcast data
-            channel.push(data)
-            data
-        }) compose Enumeratee.onEOF(() => channel.eofAndEnd) compose logEnumeratee) &>> Iteratee.ignore
-    }
-    
-    /**
      * Takes a list of Enumeratees and iteratively composes them to form a single Enumeratee
      * @param nextId The names of the processors next to compose
      * @param processorMap A map cntaining the names of the processors and the processors themselves
      */
     def buildEnums (
-            nextId: List[String],
+            nextIds: List[String],
             processorMap: Map[String, ProcessorDefinition],
             monitorName: String,
             genActor: Option[ActorRef]
     ): List[Enumeratee[DataPacket, DataPacket]] = {
         /**
-         * Function that recursively builds the tree of processors
+         * Builds a chain of processors recursively
          */
-        def buildEnumsHelper(
-                next: List[String],
-                accum: List[Enumeratee[DataPacket, DataPacket]],
-                iterationCount: Integer
-        ): List[Enumeratee[DataPacket, DataPacket]] = {
-            if (iterationCount > 500) {
-                // Awful lot of enumeratees... cycle?
-                throw new Exception("Possible cycle detected in config file. Aborted")
+        def buildSequential(
+                procName: String,
+                accum: Enumeratee[DataPacket, DataPacket],
+                iterationCount: Int
+        ): Enumeratee[DataPacket, DataPacket] = {
+            // Get processor definition
+            val pd = processorMap(procName)
+            
+            // Initialize the processor
+            val procClazz = Class.forName(pd.name)
+            // Check if this processor is a bufferer
+            if (classOf[BufferProcessor].isAssignableFrom(procClazz) || classOf[BaseConcurrentProcessor].isAssignableFrom(procClazz)) {
+                /*
+                 * Bufferer processor, we pass on an actor that can take up the datapackets with the regular
+                 * flow and cut off regular flow for now
+                 */
+                
+                // Get sync or not
+                val sync = (pd.config \ "sync").asOpt[Boolean].getOrElse(false)
+                // Create generator
+                val generator = sync match {
+                    case true => {
+                        if (classOf[EOFBufferProcessor].isAssignableFrom(procClazz)) {
+                            Akka.system.actorOf(Props(classOf[tuktu.generators.EOFSyncStreamGenerator], "",
+                                pd.next.map(processorName => {
+                                    // Create the new lines of processors
+                                    buildSequential(processorName, logEnumeratee, iterationCount + 1)
+                                }),
+                                genActor
+                            ))
+                        } else {
+                            Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
+                                pd.next.map(processorName => {
+                                    // Create the new lines of processors
+                                    buildSequential(processorName, logEnumeratee, iterationCount + 1)
+                                }),
+                                {
+                                    if (classOf[BufferProcessor].isAssignableFrom(procClazz)) genActor
+                                    else None
+                                }
+                            ))
+                        }
+                    }
+                    case false => {
+                        Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
+                            pd.next.map(processorName => {
+                                // Create the new lines of processors
+                                buildSequential(processorName, logEnumeratee, iterationCount + 1)
+                            }),
+                            None
+                        ))
+                    }
+                }
+                
+                // Instantiate the processor now
+                val iClazz = procClazz.getConstructor(
+                        classOf[ActorRef],
+                        classOf[String]
+                ).newInstance(
+                        generator,
+                        pd.resultName
+                )
+            
+                // Initialize the processor first
+                try {
+                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                    initMethod.invoke(iClazz, pd.config)
+                } catch {
+                    case e: NoSuchElementException => {}
+                    case e: Exception => e.printStackTrace()
+                }
+                
+                // Add method to all our entries so far
+                val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
+                accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
             }
             else {
-                next match {
+                // 'Regular' processor
+                val iClazz = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
+            
+                // Initialize the processor first
+                try {
+                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                    initMethod.invoke(iClazz, pd.config)
+                } catch {
+                    case e: NoSuchElementException => {}
+                }
+                
+                val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
+                val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                
+                // Recurse, determine whether we need to branch or not
+                pd.next match {
                     case List() => {
-                        // We are done, return accumulator
-                        accum
+                        // No processors left, return accum
+                        accum compose procEnum
                     }
-                    case nextList => {
-                        // We have a branch here and need to expand the list of processors
-                        (for (id <- nextList) yield {
-                            val pd = processorMap(id)
-                            
-                            // Initialize the processor
-                            val procClazz = Class.forName(pd.name)
-                            // Check if this processor is a bufferer
-                            if (classOf[BufferProcessor].isAssignableFrom(procClazz) || classOf[BaseConcurrentProcessor].isAssignableFrom(procClazz)) {
-                                /*
-                                 * Bufferer processor, we pass on an actor that can take up the datapackets with the regular
-                                 * flow and cut off regular flow for now
-                                 */
-                                
-                                // Get sync or not
-                                val sync = (pd.config \ "sync").asOpt[Boolean].getOrElse(false)
-                                // Create generator
-                                val generator = sync match {
-                                    case true => {
-                                        if (classOf[EOFBufferProcessor].isAssignableFrom(procClazz)) {
-                                            Akka.system.actorOf(Props(classOf[tuktu.generators.EOFSyncStreamGenerator], "",
-                                                buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
-                                                genActor
-                                            ))
-                                        } else {
-                                            Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
-                                                buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
-                                                {
-                                                    if (classOf[BufferProcessor].isAssignableFrom(procClazz)) genActor
-                                                    else None
-                                                }
-                                            ))
-                                        }
-                                    }
-                                    case false => {
-                                        Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
-                                            buildEnumsHelper(pd.next, List(logEnumeratee[DataPacket]), iterationCount + 1),
-                                            None
-                                        ))
-                                    }
-                                }
-                                
-                                // Instantiate the processor now
-                                val iClazz = procClazz.getConstructor(
-                                        classOf[ActorRef],
-                                        classOf[String]
-                                ).newInstance(
-                                        generator,
-                                        pd.resultName
-                                )
-                            
-                                // Initialize the processor first
-                                try {
-                                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
-                                    initMethod.invoke(iClazz, pd.config)
-                                } catch {
-                                    case e: NoSuchElementException => {}
-                                    case e: Exception => e.printStackTrace()
-                                }
-                                
-                                // Add method to all our entries so far
-                                val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
-                                accum.map(enum => enum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]])
-                            }
-                            else {
-                                val iClazz = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
-                            
-                                // Initialize the processor first
-                                try {
-                                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
-                                    initMethod.invoke(iClazz, pd.config)
-                                } catch {
-                                    case e: NoSuchElementException => {}
-                                }
-                                
-                                val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
-                                val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
-                                
-                                // Recurse
-                                buildEnumsHelper(pd.next, accum.map(enum => enum compose procEnum), iterationCount + 1)
-                            }
-                        }).flatten
+                    case n::List() => {
+                        // No branching, just recurse
+                        buildSequential(n, accum compose procEnum, iterationCount + 1)
+                    }
+                    case _ => {
+                        // We need to branch, use the broadcasting enumeratee
+                        accum compose procEnum compose buildBranch(
+                                pd.next.map(nextProcessorName => {
+                                    buildSequential(nextProcessorName, logEnumeratee, iterationCount + 1)
+                                })
+                        )
                     }
                 }
             }
         }
         
+        /**
+         * Whenever we branch in a flow, we need a special enumeratee that helps us with the broadcasting. The dispatcher
+         * should make sure the flow ends there and the broadcaster picks up.
+         */
+        def buildBranch(
+                nextProcessors: List[Enumeratee[DataPacket, DataPacket]]
+        ): Enumeratee[DataPacket, DataPacket] = {
+            // Set up the broadcast
+            val (enumerator, channel) = Concurrent.broadcast[DataPacket]
+            
+            // Set up broadcast
+            nextProcessors.foreach(processor => {
+                enumerator |>> processor &>> Iteratee.ignore
+            })
+            
+            // Make a broadcasting Enumeratee and sink Iteratee
+            Enumeratee.mapM[DataPacket]((data: DataPacket) => Future {
+                // Broadcast data
+                channel.push(data)
+                data
+            }) compose Enumeratee.onEOF(() => channel.eofAndEnd) compose logEnumeratee
+        }
+        
         // Determine logging strategy and build the enumeratee
         Cache.getAs[String]("logLevel").getOrElse("all") match {
             case "all" => {
-                val enums = buildEnumsHelper(nextId, List(logEnumeratee[DataPacket]), 0)
-                for ((enum, index) <- enums.zipWithIndex) yield {
+                // First build all Enumeratees
+                nextIds.zipWithIndex.map(elem => {
+                    val nextId = elem._1
+                    val index = elem._2
+                    
+                    // Prepend a start packet for the monitor and append a stop packet
                     monitorEnumeratee(monitorName, index.toString, BeginType) compose
-                    enum compose
+                    buildSequential(nextId, logEnumeratee[DataPacket], 0) compose
                     monitorEnumeratee(monitorName, index.toString, EndType)
-                }
+                })
             }
-            case "none" => buildEnumsHelper(nextId, List(logEnumeratee[DataPacket]), 0)
+            case "none" => nextIds.map(nextId => buildSequential(nextId, logEnumeratee[DataPacket], 0))
         }
     }
 }
