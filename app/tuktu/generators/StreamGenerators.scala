@@ -44,7 +44,7 @@ class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataP
  * Special sync generator that processes a tuple and returns the actual result
  */
 class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    implicit var timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
@@ -87,7 +87,16 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
     
     def receive() = {
         case config: JsValue => {
+            // Return or not?
             dontReturnAtAll = (config \ "no_return").asOpt[Boolean].getOrElse(false)
+            // Custom timeout?
+            (config \ "timeout").asOpt[Int] match {
+                case Some(t) => {
+                    // Overwrite timeout
+                    timeout = Timeout(t seconds)
+                }
+                case None => {}
+            }
         }
         case sp: StopPacket => {
             // Send message to the monitor actor

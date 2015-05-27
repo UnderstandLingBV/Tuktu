@@ -20,7 +20,7 @@ import play.api.libs.concurrent.Promise
 import tuktu.api.utils
 
 object Synchronous extends Controller {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    implicit var timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     case class TimeoutPacket()
 
@@ -36,6 +36,8 @@ object Synchronous extends Controller {
             // Optional custom timeout?
             val customTimeout = (jsonBody \ "timeout").asOpt[Int] match {
                 case Some(t) => {
+                    // Set the timeout
+                    timeout = Timeout((t + 1) seconds)
                     Duration(t, "seconds")
                 }
                 case _ => timeout.duration
@@ -47,7 +49,7 @@ object Synchronous extends Controller {
                     customTimeout
             ).asInstanceOf[ActorRef]
             
-            // Forward data to generator and fetch result            
+            // Forward data to generator and fetch result
             val resultFuture = (generator ? new DataPacket(List(utils.anyJsonToMap((jsonBody \ "body").as[JsObject])))).asInstanceOf[Future[DataPacket]]
             val timeoutFuture = Promise.timeout(TimeoutPacket, customTimeout)
             Future.firstCompletedOf(Seq(resultFuture, timeoutFuture)).map {
@@ -62,7 +64,7 @@ object Synchronous extends Controller {
                 case t: TimeoutPacket => InternalServerError(Json.obj(
                         "error" -> "Flow timed out during execution."
                 ))
-                case t => InternalServerError(Json.obj(
+                case t: Any => InternalServerError(Json.obj(
                         "error" -> "Error during execution of flow.",
                         "description" -> t.toString
                 ))

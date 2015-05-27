@@ -5,6 +5,7 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+
 import akka.actor._
 import akka.pattern.ask
 import akka.routing.SmallestMailboxPool
@@ -15,18 +16,12 @@ import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
-import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
+import play.api.libs.iteratee._
+import play.api.libs.json._
 import tuktu.api._
-import tuktu.generators.AsyncStreamGenerator
-import tuktu.generators.EOFSyncStreamGenerator
-import tuktu.generators.SyncStreamGenerator
+import tuktu.generators._
 import tuktu.processors.EOFBufferProcessor
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
-import play.api.libs.iteratee.Concurrent
-import play.api.libs.iteratee.Iteratee
 
 case class DispatchRequest(
         configName: String,
