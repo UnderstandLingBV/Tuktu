@@ -49,7 +49,7 @@ class HDFSWriterProcessor(resultName: String) extends BaseProcessor(resultName) 
         encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {        
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {        
         val fs = FileSystem.get(conf)
 
         // Create a Map containing all the writers

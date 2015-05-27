@@ -1,6 +1,5 @@
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-
 import akka.actor.PoisonPill
 import akka.actor.Props
 import akka.routing.SmallestMailboxPool
@@ -18,6 +17,9 @@ import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.Results.InternalServerError
 import play.api.mvc.Results.NotFound
+import scala.concurrent.Future
+import play.api.mvc.RequestHeader
+import play.api.libs.json.Json
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
