@@ -19,7 +19,7 @@ Installing Tuktu can be done by either building from source as described below, 
 
 Note that Tuktu requires Java (JRE) to be present on the system it is run from. While Tuktu can be compiled against different java versions, this download was build against **java 1.8** and hence that version of java is required to run it.
 
-Note that in order to run Tuktu, you need to navigate a terminal or command prompt to the root folder and then execute the command bin\tuktu(.bat).
+Note that in order to run Tuktu, you need to navigate a terminal or command prompt to the root folder and then execute the command `bin\tuktu(.bat)`.
 
 # Building from Source
 
@@ -53,7 +53,7 @@ Tuktu jobs are essentially JSON configuration files that live in a pre-defined f
 
 Instead of writing configuration files yourself, you can make use of a graphical modeller that saves a lot of work and makes configuration creation dead simple. The modeller is a separate project that can be found [here](https://github.com/NTPape/tuktumodeller).
 
-The modeller can also be downloaded from the following URL [http://tuktu.et4it.nl/downloads/modeller-1.0.zip](http://tuktu.et4it.nl/downloads/modeller-1.0.zip) 
+The modeller can also be downloaded from the following URL [http://tuktu.et4it.nl/downloads/modeller-1.0.zip](http://tuktu.et4it.nl/downloads/modeller-1.0.zip). To run the modeller, you can do the same as for Tuktu, but when Tuktu is already running on port 9000, you might want to run the modeller on a different port as such: `bin\modeller(.bat) -Dhttp.port=9001`. The modeller is now available at [http://localhost:9001](http://localhost:9001).
 
 
 # Examples
