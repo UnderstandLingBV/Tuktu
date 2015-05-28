@@ -19,6 +19,8 @@ Installing Tuktu can be done by either building from source as described below, 
 
 Note that Tuktu requires Java (JRE) to be present on the system it is run from. While Tuktu can be compiled against different java versions, this download was build against **java 1.8** and hence that version of java is required to run it.
 
+Note that in order to run Tuktu, you need to navigate a terminal or command prompt to the root folder and then execute the command bin\tuktu(.bat).
+
 # Building from Source
 
 To build Tuktu from source, clone the repository. Tuktu was built against Play! version 2.3.x so you need that version of Play.
@@ -50,6 +52,9 @@ Tuktu jobs are essentially JSON configuration files that live in a pre-defined f
 # Modeller
 
 Instead of writing configuration files yourself, you can make use of a graphical modeller that saves a lot of work and makes configuration creation dead simple. The modeller is a separate project that can be found [here](https://github.com/NTPape/tuktumodeller).
+
+The modeller can also be downloaded from the following URL [http://tuktu.et4it.nl/downloads/modeller-1.0.zip](http://tuktu.et4it.nl/downloads/modeller-1.0.zip) 
+
 
 # Examples
 
