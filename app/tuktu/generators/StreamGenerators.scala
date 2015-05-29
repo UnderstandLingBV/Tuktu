@@ -26,16 +26,17 @@ import tuktu.api.StopPacket
 import tuktu.api.BaseGenerator
 import play.api.libs.iteratee.Input
 import play.api.cache.Cache
+import tuktu.api.AppMonitorPacket
+import tuktu.api.InitPacket
 
 /**
  * Async 'special' generator that just waits for DataPackets to come in and processes them
  */
 class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
+        case ip: InitPacket => setup
         case config: JsValue => { }
-        case sp: StopPacket => {
-            cleanup()
-        }
+        case sp: StopPacket => cleanup
         case p: DataPacket => channel.push(p)
     }
 }
@@ -86,6 +87,14 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
     }
     
     def receive() = {
+        case ip: InitPacket => {
+            // Send the monitoring actor notification of start
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                    self.path.toStringWithoutAddress,
+                    System.currentTimeMillis() / 1000L,
+                    "start"
+            )
+        }
         case config: JsValue => {
             // Return or not?
             dontReturnAtAll = (config \ "no_return").asOpt[Boolean].getOrElse(false)
@@ -100,20 +109,17 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         }
         case sp: StopPacket => {
             // Send message to the monitor actor
-            val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
-            fut.onSuccess {
-                case ai: ActorIdentity => {
-                    ai.getRef ! new MonitorPacket(
-                            CompleteType, self.path.toStringWithoutAddress, "master", 1
-                    )
-                }
-            }
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                    self.path.toStringWithoutAddress,
+                    System.currentTimeMillis / 1000L,
+                    "done"
+            )
             
             val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
             enum |>> (processors.head compose logEnumeratee) &>> sinkIteratee
 
             channel.eofAndEnd           
-            context.stop(self)
+            self ! PoisonPill
         }
         case dp: DataPacket => {
             // Push to all async processors
@@ -163,25 +169,28 @@ class ConcurrentStreamGenerator(resultName: String, processors: List[Enumeratee[
     }
     
     def receive() = {
-        case config: JsValue => {
-            dontReturnAtAll = (config \ "no_return").asOpt[Boolean].getOrElse(false)
+        case ip: InitPacket => {
+            // Send the monitoring actor notification of start
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                    self.path.toStringWithoutAddress,
+                    System.currentTimeMillis() / 1000L,
+                    "start"
+            )
         }
+        case config: JsValue => dontReturnAtAll = (config \ "no_return").asOpt[Boolean].getOrElse(false)
         case sp: StopPacket => {
             // Send message to the monitor actor
-            val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
-            fut.onSuccess {
-                case ai: ActorIdentity => {
-                    ai.getRef ! new MonitorPacket(
-                            CompleteType, self.path.toStringWithoutAddress, "master", 1
-                    )
-                }
-            }
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                    self.path.toStringWithoutAddress,
+                    System.currentTimeMillis / 1000L,
+                    "done"
+            )
             
             val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
             enum |>> (processors.head compose logEnumeratee) &>> sinkIteratee
 
             channel.eofAndEnd           
-            context.stop(self)
+            self ! PoisonPill
         }
         case dp: DataPacket => {
             // Push to all async processors
@@ -239,20 +248,25 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
     }
     
     def receive() = {
+        case ip: InitPacket => {
+            // Send the monitoring actor notification of start
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                    self.path.toStringWithoutAddress,
+                    System.currentTimeMillis() / 1000L,
+                    "start"
+            )
+        }
         case config: JsValue => {}
         case sp: StopPacket => {
             // Send message to the monitor actor
-            val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
-            fut.onSuccess {
-                case ai: ActorIdentity => {
-                    ai.getRef ! new MonitorPacket(
-                            CompleteType, self.path.toStringWithoutAddress, "master", 1
-                    )
-                }
-            }
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                    self.path.toStringWithoutAddress,
+                    System.currentTimeMillis / 1000L,
+                    "done"
+            )
             
             channel.eofAndEnd
-            context.stop(self)
+            self ! PoisonPill
         }
         case dp: DataPacket => {
             // Push to all async processors

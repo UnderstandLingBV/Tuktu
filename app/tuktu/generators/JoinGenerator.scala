@@ -2,7 +2,6 @@ package tuktu.generators
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.hashing.MurmurHash3
-
 import akka.actor._
 import akka.pattern.ask
 import akka.remote.RemoteScope
@@ -15,6 +14,7 @@ import play.api.libs.json.JsValue
 import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.StopPacket
+import tuktu.api.InitPacket
 
 case class JoinPacket(
     data: Map[String, Any],
@@ -124,6 +124,7 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             }
         }
         case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
         case dp: DataPacket => {
             // Here we need to hash the data packet based on key and forward it to the joiners
             dp.data.foreach {datum =>

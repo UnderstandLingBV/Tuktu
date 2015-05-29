@@ -208,8 +208,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
 	        pollerActor ! new FBDataRequest(urls, startTime, endTime)
 	    }
 	    case data: ResponsePacket => channel.push(new DataPacket(List(Map(resultName -> data.json))))
-	    case sp: StopPacket => {
-	        cleanup()
-	    }
+	    case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
 	}
 }

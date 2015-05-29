@@ -11,6 +11,7 @@ import tuktu.api.StopPacket
 import org.scribe.model.Verb
 import org.scribe.model.OAuthRequest
 import org.scribe.model.Token
+import tuktu.api.InitPacket
 
 /**
  * Gets data from a linkedin endpoint
@@ -58,6 +59,7 @@ class LinkedinGenerator(resultName: String, processors: List[Enumeratee[DataPack
             // Terminate
             self ! new StopPacket
         }
-        case sp: StopPacket => cleanup()
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
     }
 }

@@ -65,7 +65,8 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             val lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, fileName, encoding, startLine, endLine))
             lineGenActor ! new InitPacket()
         }
-        case sp: StopPacket => cleanup()
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
         case line: String => channel.push(new DataPacket(List(Map(resultName -> line))))
     }
 }

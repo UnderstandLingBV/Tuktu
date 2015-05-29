@@ -83,9 +83,8 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val csvGenActor = Akka.system.actorOf(Props(classOf[CsvReader], self, fileName, hasHeaders, headersGiven, separator, quote, escape))
             csvGenActor ! new InitPacket()
         }
-        case sp: StopPacket => {
-            cleanup()
-        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
         case headerlessLine: Array[String] => channel.push(new DataPacket(List(Map(resultName -> headerlessLine.toList))))
         case headerfullLine: Map[String, String] => flattened match {
             case false => channel.push(new DataPacket(List(Map(resultName -> headerfullLine))))

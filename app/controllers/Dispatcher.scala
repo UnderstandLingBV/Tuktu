@@ -373,16 +373,11 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                         name = dr.configName +  "_" + clazz.getName +  "_" + index
                                 )
                                 
+                                // Send init packet
+                                actorRef ! new InitPacket
                                 // Send it the config
                                 actorRef ! generatorConfig
                                 if (dr.returnRef) sender ! actorRef
-                                
-                                // Send the monitoring actor notification of start
-                                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                                        actorRef.path.toStringWithoutAddress,
-                                        System.currentTimeMillis() / 1000L,
-                                        "start"
-                                )
                             }
                             catch {
                                 case e: akka.actor.InvalidActorNameException => {
@@ -393,16 +388,11 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                             name = dr.configName + "_" + clazz.getName +  "_" + java.util.UUID.randomUUID.toString
                                     )
                                     
+                                    // Send init packet
+                                    actorRef ! new InitPacket
                                     // Send it the config
                                     actorRef ! generatorConfig
                                     if (dr.returnRef) sender ! actorRef
-                                    
-                                    // Send the monitoring actor notification of start
-                                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                                            actorRef.path.toStringWithoutAddress,
-                                            System.currentTimeMillis() / 1000L,
-                                            "start"
-                                    )
                                 }
                             }
                         }

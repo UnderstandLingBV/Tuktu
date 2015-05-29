@@ -116,5 +116,6 @@ class TwitterSearchGenerator(resultName: String, processors: List[Enumeratee[Dat
         }
         case rp: ReplyPacket => channel.push(new DataPacket(List(Map(resultName -> rp.tweet))))
         case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
     }
 }

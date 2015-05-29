@@ -8,6 +8,7 @@ import play.api.Play.current
 import play.api.cache.Cache
 import tuktu.api._
 import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.ActorRef
 
 class DataMonitor() extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -26,7 +27,7 @@ class DataMonitor() extends Actor with ActorLogging {
             case "start" => {
                 if (!appMonitor.contains(amp.name)) appMonitor += amp.name -> new AppMonitorObject(amp.name, amp.timestamp)
             }
-            case _ => {}
+            case _ => {println("Unknown status")}
         }
         case mp: MonitorPacket => {
             // Initialize if we have to
@@ -47,5 +48,6 @@ class DataMonitor() extends Actor with ActorLogging {
                 monitorData.get(mp.actorName).get(mp.typeOf).get(mp.branch) + mp.amount)
         }
         case mop: MonitorOverviewPacket => sender ! appMonitor.toMap
+        case m => println("Monitor received unknown message: " + m)
     }
 }

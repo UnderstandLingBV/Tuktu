@@ -24,6 +24,7 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
     var amountSent = 0
     
     override def receive() = {
+        case ip: InitPacket => setup
         case config: JsValue => {
             // Get the ticking frequency
             val tickInterval = (config \ "interval").as[Int]
@@ -42,7 +43,7 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
         }
         case sp: StopPacket => {
             schedulerActor.cancel
-            cleanup()
+            cleanup
         }
         case msg: String => {
             channel.push(new DataPacket(List(Map(resultName -> message))))
@@ -76,6 +77,7 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
     var randomActor: ActorRef = null
     
     override def receive() = {
+        case ip: InitPacket => setup
         case config: JsValue => {
             // Get the ticking frequency
             val tickInterval = (config \ "interval").as[Int]
@@ -93,7 +95,7 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
         }
         case sp: StopPacket => {
             schedulerActor.cancel
-            cleanup()
+            cleanup
         }
         case one: Int => {
             val fut = randomActor ? one
@@ -113,6 +115,7 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
     var vals = List[String]()
     
     override def receive() = {
+        case ip: InitPacket => setup
         case config: JsValue => {
             // Get the values
             vals = (config \ "values").as[List[String]]
@@ -120,7 +123,7 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             // Send message to self
             self ! 0
         }
-        case sp: StopPacket => cleanup()
+        case sp: StopPacket => cleanup
         case num: Int => {
             channel.push(new DataPacket(List(Map(resultName -> vals(num)))))
             // See if we're done or not

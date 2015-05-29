@@ -46,11 +46,16 @@ object Monitor extends Controller {
             Akka.system.actorSelection(name) ! new StopPacket
             
         // Inform the monitor since the generator won't do it itself
-        Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                name,
-                System.currentTimeMillis / 1000L,
-                "done"
-        )
+        val generatorName = Akka.system.actorSelection(name) ? Identify(None)
+        generatorName.onSuccess {
+            case generator: ActorRef => {
+                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                        generator.path.toStringWithoutAddress,
+                        System.currentTimeMillis / 1000L,
+                        "done"
+                )
+            } 
+        }
         
         Redirect(routes.Monitor.fetchLocalInfo()).flashing("success" -> ("Successfully " + {
             force match {

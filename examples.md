@@ -15,24 +15,26 @@ The first example we will try out simply generates a fixed set of data values an
     {
 	    "generators": [
 	        {
-	            "name": "tuktu.generators.ListGenerator",
 	            "result": "num",
 	            "config": {
 	                "values": [
-	                    "a", "b", "c"
+	                    "a",
+	                    "b",
+	                    "c"
 	                ]
 	            },
+	            "name": "tuktu.generators.ListGenerator",
 	            "next": [
 	                "debug"
 	            ]
 	        }
 	    ],
-		"processors": [
+	    "processors": [
 	        {
 	            "id": "debug",
-	            "name": "tuktu.processors.ConsoleWriterProcessor",
 	            "result": "",
 	            "config": {},
+	            "name": "tuktu.processors.ConsoleWriterProcessor",
 	            "next": []
 	        }
 	    ]
@@ -58,11 +60,11 @@ It is your task to find all reported incidents without a proper *Crime Type* ass
 	{
 	    "generators": [
 	        {
-	            "name": "tuktu.generators.LineGenerator",
 	            "result": "line",
 	            "config": {
 	                "filename": "data/2015-01-city-of-london-street.csv"
 	            },
+	            "name": "tuktu.generators.LineGenerator",
 	            "next": [
 	                "corrector"
 	            ]
@@ -71,7 +73,6 @@ It is your task to find all reported incidents without a proper *Crime Type* ass
 	    "processors": [
 	        {
 	            "id": "corrector",
-	            "name": "tuktu.processors.ReplaceProcessor",
 	            "result": "",
 	            "config": {
 	                "field": "line",
@@ -84,63 +85,65 @@ It is your task to find all reported incidents without a proper *Crime Type* ass
 	                    "On or near Further/Higher Educational Building"
 	                ]
 	            },
+	            "name": "tuktu.processors.ReplaceProcessor",
 	            "next": [
 	                "csvConverter"
 	            ]
 	        },
 	        {
 	            "id": "csvConverter",
-	            "name": "tuktu.csv.processors.CSVReaderProcessor",
 	            "result": "",
 	            "config": {
 	                "field": "line",
-	                "remove_original": true,
-	                "headers_from_first": true
+	                "headers_from_first": true,
+	                "remove_original": true
 	            },
+	            "name": "tuktu.csv.processors.CSVReaderProcessor",
 	            "next": [
 	                "locationFilter"
 	            ]
 	        },
 	        {
 	            "id": "locationFilter",
-	            "name": "tuktu.processors.InclusionProcessor",
 	            "result": "",
 	            "config": {
 	                "expression": "Location=No Location,Location=On or near Conference/Exhibition Centre,Location=On or near Further/Higher Educational Building",
 	                "type": "simple",
 	                "and_or": "or"
 	            },
+	            "name": "tuktu.processors.InclusionProcessor",
 	            "next": [
 	                "outcomeFilter"
 	            ]
 	        },
 	        {
 	            "id": "outcomeFilter",
-	            "name": "tuktu.processors.InclusionProcessor",
 	            "result": "",
 	            "config": {
 	                "expression": "Crime type=Other crime,Crime type=Other theft",
 	                "type": "simple",
 	                "and_or": "or"
 	            },
+	            "name": "tuktu.processors.InclusionProcessor",
 	            "next": [
-	                "debug", "writer"
+	                "writer",
+	                "debug"
 	            ]
 	        },
 	        {
-				"id": "writer",
-				"name": "tuktu.csv.processors.CSVWriterProcessor",
-				"result": "",
-				"config": {
-					"file_name": "data/my_first_tuktu_output.csv"
-				},
-				"next": []
-			},
+	            "id": "writer",
+	            "result": "",
+	            "config": {
+	                "file_name": "data/my_first_tuktu_output.csv"
+	            },
+	            "name": "tuktu.csv.processors.CSVWriterProcessor",
+	            "next": []
+	        },
 	        {
 	            "id": "debug",
-	            "name": "tuktu.processors.ConsoleWriterProcessor",
 	            "result": "",
 	            "config": {},
+	            "name": "tuktu.processors.ConsoleWriterProcessor",
 	            "next": []
 	        }
 	    ]
@@ -280,7 +283,6 @@ The complete Tuktu job looks as follows, you should now be able to follow it as 
 	{
 	    "generators": [
 	        {
-	            "name": "tuktu.social.generators.TwitterGenerator",
 	            "result": "data",
 	            "config": {
 	                "credentials": {
@@ -290,107 +292,120 @@ The complete Tuktu job looks as follows, you should now be able to follow it as 
 	                    "access_token_secret": "..."
 	                },
 	                "filters": {
-	                    "keywords": ["bigdata"],
-	                    "users": [],
-	                    "geos": []
+	                    "keywords": [
+	                        "bigdata"
+	                    ]
 	                }
 	            },
-	            "next": ["twitterSrcAdder"]
+	            "name": "tuktu.social.generators.TwitterGenerator",
+	            "next": [
+	                "twitterSrcAdder"
+	            ]
 	        },
 	        {
-	            "name": "tuktu.social.generators.FacebookGenerator",
 	            "result": "data",
 	            "config": {
 	                "credentials": {
 	                    "access_token": "..."
 	                },
 	                "filters": {
-	                    "keywords": [],
-	                    "userids": [
+	                    "users": [
 	                        "barackobama"
-	                    ],
-	                    "geos": []
+	                    ]
 	                }
 	            },
-	            "next": ["fbSrcAdder"]
+	            "name": "tuktu.social.generators.FacebookGenerator",
+	            "next": [
+	                "fbSrcAdder"
+	            ]
 	        }
 	    ],
 	    "processors": [
-			{
-				"id": "twitterSrcAdder",
-				"name": "tuktu.processors.FieldConstantAdderProcessor",
-				"result": "source",
-				"config": {
-					"value": "Twitter"
-				},
-				"next": [
-					"twitterMessageObtainer"
-				]
-			},
-			{
-				"id": "fbSrcAdder",
-				"name": "tuktu.processors.FieldConstantAdderProcessor",
-				"result": "source",
-				"config": {
-					"value": "Faceook"
-				},
-				"next": [
-					"fbMessageObtainer"
-				]
-			},
-			{
-				"id": "twitterMessageObtainer",
-				"name": "tuktu.processors.JsonFetcherProcessor",
-				"result": "",
-				"config": {
-					"fields": [
-						{
-							"default": "",
-							"path": ["data", "text"],
-							"result": "message"
-						}
-					]
-				},
-				"next": ["tokenizer"]
-			},
-			{
-				"id": "fbMessageObtainer",
-				"name": "tuktu.processors.JsonFetcherProcessor",
-				"result": "",
-				"config": {
-					"fields": [
-						{
-							"default": "",
-							"path": ["data", "message"],
-							"result": "message"
-						}
-					]
-				},
-				"next": ["tokenizer"]
-			},
-			{
-				"id": "tokenizer",
-				"name": "tuktu.nlp.TokenizerProcessor",
-				"result": "cleanedMsg",
-				"config": {
-					"field": "message"
-				},
-				"next": [
-					"liga"
-				]
-			},
-			{
-				"id": "liga",
-				"name": "tuktu.nlp.LIGAProcessor",
-				"result": "language",
-				"config": {
-					"field": "message"
-				},
-				"next": [
-					"langFilter"
-				]
-			},
-			{
+	        {
+	            "id": "twitterSrcAdder",
+	            "result": "source",
+	            "config": {
+	                "value": "Twitter"
+	            },
+	            "name": "tuktu.processors.FieldConstantAdderProcessor",
+	            "next": [
+	                "twitterMessageObtainer"
+	            ]
+	        },
+	        {
+	            "id": "fbSrcAdder",
+	            "name": "tuktu.processors.FieldConstantAdderProcessor",
+	            "result": "source",
+	            "config": {
+	                "value": "Faceook"
+	            },
+	            "next": [
+	                "fbMessageObtainer"
+	            ]
+	        },
+	        {
+	            "id": "twitterMessageObtainer",
+	            "name": "tuktu.processors.JsonFetcherProcessor",
+	            "result": "",
+	            "config": {
+	                "fields": [
+	                    {
+	                        "default": "",
+	                        "path": [
+	                            "data",
+	                            "text"
+	                        ],
+	                        "result": "message"
+	                    }
+	                ]
+	            },
+	            "next": [
+	                "tokenizer"
+	            ]
+	        },
+	        {
+	            "id": "fbMessageObtainer",
+	            "name": "tuktu.processors.JsonFetcherProcessor",
+	            "result": "",
+	            "config": {
+	                "fields": [
+	                    {
+	                        "default": "",
+	                        "path": [
+	                            "data",
+	                            "message"
+	                        ],
+	                        "result": "message"
+	                    }
+	                ]
+	            },
+	            "next": [
+	                "tokenizer"
+	            ]
+	        },
+	        {
+	            "id": "tokenizer",
+	            "name": "tuktu.nlp.TokenizerProcessor",
+	            "result": "cleanedMsg",
+	            "config": {
+	                "field": "message"
+	            },
+	            "next": [
+	                "liga"
+	            ]
+	        },
+	        {
+	            "id": "liga",
+	            "name": "tuktu.nlp.LIGAProcessor",
+	            "result": "language",
+	            "config": {
+	                "field": "message"
+	            },
+	            "next": [
+	                "langFilter"
+	            ]
+	        },
+	        {
 	            "id": "langFilter",
 	            "name": "tuktu.processors.InclusionProcessor",
 	            "result": "",
@@ -403,62 +418,67 @@ The complete Tuktu job looks as follows, you should now be able to follow it as 
 	                "postagger"
 	            ]
 	        },
-			{
-				"id": "postagger",
-				"name": "tuktu.nlp.POSTaggerProcessor",
-				"result": "POSTags",
-				"config": {
-					"language": "en_UK",
-					"field": "language",
-					"tokens": "cleanedMsg"
-				},
-				"next": [
-					"rbempol"
-				]
-			},
-			{
-				"id": "rbempol",
-				"name": "tuktu.nlp.RBEMPolarityProcessor",
-				"result": "polarity",
-				"config": {
-					"language": "en_UK",
-					"field": "language",
-					"tokens": "cleanedMsg",
-					"pos": "POSTags"
-				},
-				"next": [
-					"fieldImploder"
-				]
-			},
-			{
-				"id": "fieldImploder",
-				"name": "tuktu.processors.ImploderProcessor",
-				"result": "",
-				"config": {
-					"fields": [
-						{
-							"path": ["cleanedMsg"],
-							"separator": " "
-						},
-						{
-							"path": ["POSTags"],
-							"separator": " "
-						}
-					]
-				},
-				"next": [
-					"writer", "debug"
-				]
-			},
-			{
-				"id": "writer",
-				"name": "tuktu.csv.processors.CSVWriterProcessor",
-				"result": "",
-				"config": {
-					"file_name": "data/social_data.csv"
-				},
-				"next": []
-			},
+	        {
+	            "id": "postagger",
+	            "name": "tuktu.nlp.POSTaggerProcessor",
+	            "result": "POSTags",
+	            "config": {
+	                "language": "en_UK",
+	                "field": "language",
+	                "tokens": "cleanedMsg"
+	            },
+	            "next": [
+	                "rbempol"
+	            ]
+	        },
+	        {
+	            "id": "rbempol",
+	            "name": "tuktu.nlp.RBEMPolarityProcessor",
+	            "result": "polarity",
+	            "config": {
+	                "language": "en_UK",
+	                "field": "language",
+	                "tokens": "cleanedMsg",
+	                "pos": "POSTags"
+	            },
+	            "next": [
+	                "fieldImploder"
+	            ]
+	        },
+	        {
+	            "id": "fieldImploder",
+	            "name": "tuktu.processors.ImploderProcessor",
+	            "result": "",
+	            "config": {
+	                "fields": [
+	                    {
+	                        "path": [
+	                            "cleanedMsg"
+	                        ],
+	                        "separator": " "
+	                    },
+	                    {
+	                        "path": [
+	                            "POSTags"
+	                        ],
+	                        "separator": " "
+	                    }
+	                ]
+	            },
+	            "next": [
+	                "writer",
+	                "debug"
+	            ]
+	        },
+	        {
+	            "id": "writer",
+	            "name": "tuktu.csv.processors.CSVWriterProcessor",
+	            "result": "",
+	            "config": {
+	                "file_name": "data/social_data.csv"
+	            },
+	            "next": []
+	        },
 	        {
 	            "id": "debug",
 	            "name": "tuktu.processors.ConsoleWriterProcessor",
@@ -499,7 +519,7 @@ The complete Tuktu job looks as follows, you should now be able to follow it as 
                 },
                 "filters": {
                     "keywords": [],
-                    "userids": [
+                    "users": [
                         "barackobama"
                     ],
                     "geos": []

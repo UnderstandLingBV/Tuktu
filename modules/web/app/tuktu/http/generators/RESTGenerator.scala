@@ -66,16 +66,15 @@ class RESTGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                         )
                     ))
                 }
-                case _ => cleanup()
+                case _ => new StopPacket
             }
             
             // If failure occurs, just stop
             response.onFailure {
-                case _ => cleanup()
+                case _ => new StopPacket
             }
         }
-        case sp: StopPacket => {
-            cleanup()
-        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
     }
 }

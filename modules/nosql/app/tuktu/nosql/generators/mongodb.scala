@@ -15,6 +15,7 @@ import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.StopPacket
 import scala.util.Failure
+import tuktu.api.InitPacket
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -82,8 +83,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                 }
             }
         }
-        case sp: StopPacket => {
-            cleanup            
-        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
     }
 }

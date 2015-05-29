@@ -99,6 +99,7 @@ class BatchedCsvReader(parentActor: ActorRef, fileName: String, hasHeaders: Bool
 
 class BatchedCSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
+        case ip: InitPacket => setup
         case config: JsValue => {
             // Get filename
             val fileName = (config \ "filename").as[String]
@@ -115,7 +116,7 @@ class BatchedCSVGenerator(resultName: String, processors: List[Enumeratee[DataPa
             csvGenActor ! new InitPacket()
         }
         case sp: StopPacket => {
-            cleanup()
+            cleanup
         }
         case packet: DataPacket => channel.push(packet)
     }

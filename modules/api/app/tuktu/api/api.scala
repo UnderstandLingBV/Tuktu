@@ -113,7 +113,17 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
         self ! PoisonPill
     }
     
+    def setup() = {
+        // Send the monitoring actor notification of start
+        Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                self.path.toStringWithoutAddress,
+                System.currentTimeMillis() / 1000L,
+                "start"
+        )
+    }
+    
     def receive() = {
+        case ip: InitPacket => setup
         case config: JsValue => ???
         case sp: StopPacket => cleanup
         case _ => {}

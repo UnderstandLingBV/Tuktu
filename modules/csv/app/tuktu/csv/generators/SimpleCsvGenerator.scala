@@ -1,7 +1,6 @@
 package tuktu.csv.generators
 
 import java.io.FileReader
-
 import akka.actor.ActorRef
 import au.com.bytecode.opencsv.CSVReader
 import play.api.libs.iteratee.Enumeratee
@@ -9,6 +8,7 @@ import play.api.libs.json.JsValue
 import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.StopPacket
+import tuktu.api.InitPacket
 
 
 class SimpleCSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
@@ -59,8 +59,7 @@ class SimpleCSVGenerator(resultName: String, processors: List[Enumeratee[DataPac
             reader.close
             self ! new StopPacket
         }
-        case sp: StopPacket => {
-            cleanup()
-        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
     }
 }

@@ -2,10 +2,8 @@ package tuktu.nosql.generators
 
 import java.util.Properties
 import java.util.concurrent.Executors
-
 import scala.collection.JavaConversions.asScalaBuffer
 import scala.collection.JavaConversions.mapAsJavaMap
-
 import akka.actor.ActorRef
 import akka.actor.actorRef2Scala
 import kafka.consumer.Consumer
@@ -15,6 +13,7 @@ import play.api.libs.json.JsValue
 import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.StopPacket
+import tuktu.api.InitPacket
 
 class KafkaGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -76,8 +75,7 @@ class KafkaGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
                 })
             }
         }
-        case sp: StopPacket => {
-            cleanup()
-        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
     }
 }

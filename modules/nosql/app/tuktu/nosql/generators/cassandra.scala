@@ -1,7 +1,6 @@
 package tuktu.nosql.generators
 
 import scala.collection.JavaConversions.iterableAsScalaIterable
-
 import akka.actor.ActorRef
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsValue
@@ -9,6 +8,7 @@ import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.StopPacket
 import tuktu.nosql.util.cassandra
+import tuktu.api.InitPacket
 
 class CassandraGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -47,8 +47,7 @@ class CassandraGenerator(resultName: String, processors: List[Enumeratee[DataPac
             client.close()
             self ! StopPacket
         }
-        case sp: StopPacket => {
-            cleanup()
-        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
     }
 }

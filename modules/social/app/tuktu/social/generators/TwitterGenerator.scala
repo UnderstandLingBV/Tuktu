@@ -81,8 +81,7 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 	        // Add the query
 	        twitterStream.filter(fq)
 	    }
-        case sp: StopPacket => {
-            cleanup()
-        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
 	 }
 }
