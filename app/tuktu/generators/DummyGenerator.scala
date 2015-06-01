@@ -13,6 +13,7 @@ import akka.actor.ActorLogging
 import akka.actor.Actor
 import akka.pattern.ask
 import tuktu.api._
+import scala.concurrent.duration.Duration
 
 /**
  * Just generates dummy strings every tick
@@ -34,9 +35,17 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
             // See if we need to stop at some point
             maxAmount = (config \ "max_amount").asOpt[Int]
             
+            // Determine initial waiting time before sending
+            val initialDelay = {
+              if((config \ "send_immediately").asOpt[Boolean].getOrElse(false))
+                Duration.Zero
+              else
+                tickInterval milliseconds
+            }
+            
             // Set up the scheduler
             schedulerActor = Akka.system.scheduler.schedule(
-                    tickInterval milliseconds,
+                    initialDelay,
                     tickInterval milliseconds,
                     self,
                     message)
