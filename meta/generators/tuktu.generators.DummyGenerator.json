@@ -30,6 +30,12 @@
 							"type": "int",
 							"required": false,
 							"description": "The amount of instances per node of this handler type"
+						},
+						{
+							"name": "send_immediately",
+							"type": "boolean",
+							"required": false,
+							"description":"True if you want the initial message to be immediately send"
 						}
 					]
 				}
