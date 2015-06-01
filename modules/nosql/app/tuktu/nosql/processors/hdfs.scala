@@ -88,8 +88,6 @@ class HDFSWriterProcessor(resultName: String) extends BaseProcessor(resultName) 
             elem._2._2.close
             elem._2._1.close
         })
-        //close filesystem
-        fs.close
         
         data
     })

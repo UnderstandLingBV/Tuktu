@@ -111,9 +111,23 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
                     case a: Long => data.foldLeft[Long](0L)(_ + _(field).asInstanceOf[Long])
                     case a: Float => data.foldLeft[Float](0.0f)(_ + _(field).asInstanceOf[Float])
                     case a: BigDecimal => data.foldLeft[BigDecimal](0)(_ + _(field).asInstanceOf[BigDecimal])
+                    case a: List[Any] => sumList(a)
                 }
             }))
         }
+    }
+    
+    def sumList(data: List[Any]) = {
+      // See what type of data it is
+      data.head match {
+          case a: String => data.foldLeft[Double](0)(_ + _.asInstanceOf[String].toDouble)
+          case a: Int => data.foldLeft[Int](0)(_ + _.asInstanceOf[Int])
+          case a: Integer => data.foldLeft[Integer](0: Integer)(_ + _.asInstanceOf[Integer])
+          case a: Double => data.foldLeft[Double](0.0)(_ + _.asInstanceOf[Double])
+          case a: Long => data.foldLeft[Long](0L)(_ + _.asInstanceOf[Long])
+          case a: Float => data.foldLeft[Float](0.0f)(_ + _.asInstanceOf[Float])
+          case a: BigDecimal => data.foldLeft[BigDecimal](0)(_ + _.asInstanceOf[BigDecimal])                    
+      }     
     }
 }
 
