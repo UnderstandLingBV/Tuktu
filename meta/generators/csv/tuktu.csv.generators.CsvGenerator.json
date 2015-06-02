@@ -1,6 +1,6 @@
 {
 	"name": "CSV Generator",
-	"class": "tuktu.csv.generators.CsvGenerator",
+	"class": "tuktu.csv.generators.CSVGenerator",
 	"parameters": [
 		{
 			"name": "nodes",
