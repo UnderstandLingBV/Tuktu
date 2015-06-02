@@ -11,20 +11,20 @@ import tuktu.nosql.util.sql._
 import tuktu.nosql.util.stringHandler
 
 class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var client: client = null
+    var url = ""
+    var user = ""
+    var password = ""
+    var driver = ""
     var append = false
     var query = ""
     
     override def initialize(config: JsObject) = {
         // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
-        val url = (config \ "url").as[String]
-        val user = (config \ "user").as[String]
-        val password = (config \ "password").as[String]
-        val driver = (config \ "driver").as[String]
+        url = (config \ "url").as[String]
+        user = (config \ "user").as[String]
+        password = (config \ "password").as[String]
+        driver = (config \ "driver").as[String]
         query = (config \ "query").as[String]
-        
-        // Set up the client
-        client = new client(url, user, password, driver)
         
         // Append result or not?
         append = (config \ "append").asOpt[Boolean].getOrElse(false)
@@ -32,25 +32,33 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         Future {new DataPacket(for (datum <- data.data) yield {
-            // Evaluate query
-            val evalQuery = stringHandler.evaluateString(query, datum)
+            // Evaluate all
+            val evalQuery = stringHandler.evaluateString(query, datum)            
+            val evalUrl = tuktu.api.utils.evaluateTuktuString(url, datum)
+            val evalUser = tuktu.api.utils.evaluateTuktuString(user, datum)
+            val evalPassword = tuktu.api.utils.evaluateTuktuString(password, datum)
+            val evalDriver = tuktu.api.utils.evaluateTuktuString(driver, datum)            
+            
+            // Set up the client
+            val client = new client(evalUrl, evalUser, evalPassword, evalDriver)
             
             // See if we need to append the result
             append match {
                 case false => {
                     // No need for appending
                     client.query(evalQuery)
+                    //close client
+                    client.close
                     datum
                 }
                 case true => {
                     // Get the result and use it
                     val res = client.queryResult(evalQuery).map(row => rowToMap(row))
-                    
+                    //close client
+                    client.close
                     datum + (resultName -> res)
                 }
             }
         })}
-    }) compose Enumeratee.onEOF(() => {
-        client.close
-    })
+    }) 
 }
