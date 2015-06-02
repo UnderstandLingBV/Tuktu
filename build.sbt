@@ -79,6 +79,11 @@ lazy val tuktuDBDependencies = Seq(
     cache
 )
 
+lazy val dfsDependencies = Seq(
+    cache,
+    "com.typesafe.akka" %% "akka-remote" % "2.3.4"
+)
+
 lazy val api = (project in file("modules/api"))
     .enablePlugins(PlayScala)
     .settings(name := "Tuktu-api")
@@ -164,6 +169,17 @@ lazy val tuktudb = (project in file("modules/tuktudb"))
     .settings(EclipseKeys.skipParents in ThisBuild := false)
     .aggregate(api)
     .dependsOn(api)
+    
+lazy val dfs = (project in file("modules/dfs"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-DFS")
+    .settings(version := "0.1")
+    .settings(scalaVersion := "2.11.6")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= dfsDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
+    .aggregate(api)
+    .dependsOn(api)
 
 lazy val root = project
     .in(file("."))
@@ -174,5 +190,5 @@ lazy val root = project
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= coreDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
-    .aggregate(api, nlp, csv, social, nosql, ml, web, tuktudb)
-    .dependsOn(api, nlp, csv, social, nosql, ml, web, tuktudb)
+    .aggregate(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb)
+    .dependsOn(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb)
