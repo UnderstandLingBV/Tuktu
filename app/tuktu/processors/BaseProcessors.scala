@@ -19,6 +19,7 @@ import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import tuktu.api._
 import java.text.SimpleDateFormat
 import tuktu.nosql.util.stringHandler
+import tuktu.api.utils.evaluateTuktuString
 
 /**
  * Filters specific fields from the data tuple
@@ -214,7 +215,7 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
                 include = expressionType match {
                     case "groovy" => {
                         // Replace expression with values
-                    	val replacedExpression = tuktu.api.utils.evaluateTuktuString(expression, datum)
+                    	val replacedExpression = evaluateTuktuString(expression, datum)
                     	
 	                    try {
 	                        Eval.me(replacedExpression).asInstanceOf[Boolean]
@@ -240,7 +241,7 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
                         val evals = (for (m <- matches) yield {
                             val split = m.split("=").map(s => s.trim)
                             // Get field and value and see if they match
-                            datum(split(0)) == split(1)
+                            datum(evaluateTuktuString(split(0),datum)) == evaluateTuktuString(split(1),datum)
                         }).toList
                         // See if its and/or
                         if (andOr == "or") evals.exists(elem => elem)
@@ -271,9 +272,9 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {new DataPacket(for (datum <- data.data) yield {
             if(!isNumeric)
-	            datum + (resultName -> tuktu.api.utils.evaluateTuktuString(value, datum))
+	            datum + (resultName -> evaluateTuktuString(value, datum))
             else
-                datum + (resultName -> tuktu.api.utils.evaluateTuktuString(value, datum).toLong)
+                datum + (resultName -> evaluateTuktuString(value, datum).toLong)
         })}
     })
 }
