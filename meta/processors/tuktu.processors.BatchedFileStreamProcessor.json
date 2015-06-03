@@ -49,7 +49,7 @@
 					"parameters": [
 						{
 							"name": "",
-							"type": "stromg",
+							"type": "string",
 							"required": true
 						}
 					]
