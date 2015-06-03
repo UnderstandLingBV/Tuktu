@@ -16,10 +16,12 @@ class ReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // We first resolve all filenames
-        val tuktuFilename = data.data.map(datum => utils.evaluateTuktuString(filename, datum)).distinct
+        val tuktuFilenames = data.data.map(datum => utils.evaluateTuktuString(filename, datum)).distinct
         
         // See if we can get the files
-        
+        for (name <- tuktuFilenames) yield {
+            
+        }
         
         data
     })

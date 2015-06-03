@@ -73,6 +73,9 @@ object Dispatcher {
             monitorName: String,
             genActor: Option[ActorRef]
     ): List[Enumeratee[DataPacket, DataPacket]] = {
+        // Get log level
+        val logLevel = Cache.getAs[String]("logLevel").getOrElse("none")
+        
         /**
          * Builds a chain of processors recursively
          */
@@ -150,7 +153,11 @@ object Dispatcher {
                 
                 // Add method to all our entries so far
                 val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
-                accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                // Log enumeratee or not?
+                if (logLevel == "all")
+                    accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]] compose logEnumeratee
+                else
+                    accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
             }
             else {
                 // 'Regular' processor
@@ -171,11 +178,11 @@ object Dispatcher {
                 pd.next match {
                     case List() => {
                         // No processors left, return accum
-                        accum compose procEnum
+                        accum compose procEnum compose logEnumeratee
                     }
                     case n::List() => {
                         // No branching, just recurse
-                        buildSequential(n, accum compose procEnum, iterationCount + 1)
+                        buildSequential(n, accum compose procEnum compose logEnumeratee, iterationCount + 1)
                     }
                     case _ => {
                         // We need to branch, use the broadcasting enumeratee
