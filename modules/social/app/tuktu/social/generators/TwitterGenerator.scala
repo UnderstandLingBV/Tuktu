@@ -11,6 +11,8 @@ import akka.actor.PoisonPill
 import akka.actor.ActorRef
 
 class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var twitterStream: TwitterStream = _
+    
 	override def receive() = {
 	     case config: JsValue => {
 	         // Get credentials
@@ -66,7 +68,7 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 	            setOAuthAccessTokenSecret(accessTokenSecret)
 	        // Create a Twitter4J instance with the OAuth credentials and the listener
 	        val fact = new TwitterStreamFactory(cb.build)
-	        val twitterStream = fact.getInstance
+	        twitterStream = fact.getInstance
 	        twitterStream.addListener(listener)
 	
 	        // Add the filters (otherwise we get the sample)
@@ -81,7 +83,10 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 	        // Add the query
 	        twitterStream.filter(fq)
 	    }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => {
+            twitterStream.shutdown
+            cleanup
+        }
         case ip: InitPacket => setup
 	 }
 }

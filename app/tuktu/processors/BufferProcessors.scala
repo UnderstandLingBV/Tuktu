@@ -109,7 +109,10 @@ class SizeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
         if (curCount == maxSize) {
             // Send the relase but forget the result
             curCount = 0
-            bufferActor ! "release"
+            val dummyFut = bufferActor ? "release"
+            dummyFut.onComplete {
+                case _ => {}
+            }
         }
         
         Future {data}
