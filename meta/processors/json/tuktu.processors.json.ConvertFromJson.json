@@ -1,7 +1,7 @@
 {
-	"name": "Convert a Field to JSON Processor",
-	"class": "tuktu.processors.ConvertToJson",
-	"description": "Converts a field to JSON",
+	"name": "Convert from JSON Processor",
+	"class": "tuktu.processors.json.ConvertFromJson",
+	"description": "Takes a JSON field and converts it into something usable",
 	"parameters": [
 		{
 			"name": "id",
@@ -22,10 +22,10 @@
 					"name": "field",
 					"type": "string",
 					"required": true,
-					"description": "The field to be converted"
+					"description": "The field containing the JSON"
 				},
 				{
-					"name": "append",
+					"name": "overwrite",
 					"type": "boolean",
 					"required": false
 				}

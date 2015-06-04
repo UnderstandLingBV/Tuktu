@@ -1,0 +1,35 @@
+{
+	"name": "Convert a Field to JSON Processor",
+	"class": "tuktu.processors.json.ConvertToJson",
+	"description": "Converts a field to JSON",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "string",
+					"required": true,
+					"description": "The field to be converted"
+				},
+				{
+					"name": "append",
+					"type": "boolean",
+					"required": false
+				}
+			]
+		}
+	]
+}
