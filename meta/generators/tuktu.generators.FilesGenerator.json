@@ -1,0 +1,88 @@
+{
+	"name": "Files Generator",
+	"class": "tuktu.generators.FilesGenerator",
+  "description": "Generate a stream of File objects from selected files and directories.",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "filesAndDirs",
+          "description": "Files and directories to generate File objects from.",
+					"type": "array",
+					"required": true,
+          "parameters": [
+            {
+              "name": "fileOrDir",
+              "label": "File or Dir",
+              "description": "Path to file, or directory to generate File objects from.",
+              "type": "string",
+              "required": true
+            }
+          ]
+				},
+				{
+					"name": "extensions",
+          "description": "The extensions to filter files in directories for. Directly selected files are not subject to this filter.",
+					"type": "array",
+					"required": false,
+          "parameters": [
+            {
+              "name": "Extension",
+              "description": "An extension to filter files in directories for.",
+              "type": "string",
+              "required": true
+            }
+          ]
+				},
+				{
+					"name": "recursive",
+          "description": "If true, the directories will be searched recursively.",
+					"type": "boolean",
+					"required": false,
+          "default": false
+				}
+			]
+		}
+	]
+}
