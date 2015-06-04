@@ -1,4 +1,4 @@
-package tuktu.processors
+package tuktu.processors.json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -17,20 +17,20 @@ class ConvertToJson(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
     /** Append the data */
     var append: Boolean = false
-    
+
     override def initialize(config: JsObject) = {
         field = (config \ "field").as[String]
         append = (config \ "append").asOpt[Boolean].getOrElse(false)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {
             new DataPacket(for (datum <- data.data) yield {
-                if (!append) 
-                   datum + (field -> utils.anyMapToJson(datum))                  
+                if (!append)
+                    datum + (field -> utils.anyMapToJson(datum))
                 else
-                   datum + (resultName -> utils.anyMapToJson(datum))
+                    datum + (resultName -> utils.anyMapToJson(datum))
             })
         }
-    })    
+    })
 }
