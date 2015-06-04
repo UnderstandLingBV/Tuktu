@@ -1,6 +1,7 @@
 package tuktu.generators
 
 import java.io._
+import org.apache.commons.io.FileUtils
 import akka.actor._
 import akka.actor.Props
 import play.api.Play.current
@@ -68,5 +69,72 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
         case line: String => channel.push(new DataPacket(List(Map(resultName -> line))))
+    }
+}
+
+
+
+case class FileDirectoryPacket(filesAndDirs: List[String], iterator: java.util.Iterator[File])
+
+/**
+ * Actor that reads files and directories non-blocking
+ */
+class FileDirectoryReader(parentActor: ActorRef, extensions: Array[String], recursive: Boolean) extends Actor with ActorLogging {
+    def receive() = {
+        case sp: StopPacket => {
+            parentActor ! new StopPacket
+            self ! PoisonPill
+        }
+        case fdp: FileDirectoryPacket => {
+            // Check if iterator has elements
+            if (fdp.iterator != null && fdp.iterator.hasNext()) {
+                parentActor ! fdp.iterator.next()
+                self ! fdp
+            }
+            else {
+                fdp.filesAndDirs match {
+                    case fileOrDir :: filesAndDirs => {
+                        val file = new File(fileOrDir)
+                        if (file.isDirectory) {
+                            // Instantiate iterator with new directory
+                            self ! new FileDirectoryPacket(filesAndDirs, FileUtils.iterateFiles(file, extensions, recursive))
+                        }
+                        else {
+                            if (file.isFile) parentActor ! file
+                            self ! new FileDirectoryPacket(filesAndDirs, fdp.iterator)
+                        }
+                    }
+                    case Nil => {
+                        self ! new StopPacket
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Streams files of directories file by file (java.io.File)
+ */
+class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    override def receive() = {
+        case config: JsValue => {
+            // Get config variables
+            val filesAndDirs = (config \ "filesAndDirs").asOpt[List[String]].getOrElse(Nil)
+            val recursive = (config \ "recursive").asOpt[Boolean].getOrElse(false)
+            val extensions = (config \ "extensions").asOpt[List[String]].getOrElse(Nil) match {
+                // FileUtils.iterateFiles will return all files if extensions is null,
+                // while it would return no files with an empty array
+                case Nil => null
+                case l   => l.toArray
+            }
+
+            // Create non-blocking actor and start it
+            val fileDirActor = Akka.system.actorOf(Props(classOf[FileDirectoryReader], self, extensions, recursive))
+            fileDirActor ! new FileDirectoryPacket(filesAndDirs, null)
+        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
+        case file: File => channel.push(new DataPacket(List(Map(resultName -> file))))
     }
 }
