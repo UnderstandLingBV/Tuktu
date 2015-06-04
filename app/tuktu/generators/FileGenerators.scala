@@ -1,7 +1,7 @@
 package tuktu.generators
 
 import java.io._
-import org.apache.commons.io.FileUtils
+import java.nio.file._
 import akka.actor._
 import akka.actor.Props
 import play.api.Play.current
@@ -74,37 +74,52 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
 
 
 
-case class FileDirectoryPacket(filesAndDirs: List[String], iterator: java.util.Iterator[File])
+case class PathsPacket(paths: List[Path], iterator: java.util.Iterator[Path])
 
 /**
  * Actor that reads files and directories non-blocking
  */
-class FileDirectoryReader(parentActor: ActorRef, extensions: Array[String], recursive: Boolean) extends Actor with ActorLogging {
+class FileDirectoryReader(parentActor: ActorRef, pathMatcher: PathMatcher, recursive: Boolean) extends Actor with ActorLogging {
     def receive() = {
         case sp: StopPacket => {
             parentActor ! new StopPacket
             self ! PoisonPill
         }
-        case fdp: FileDirectoryPacket => {
+        case pp: PathsPacket => {
             // Check if iterator has elements
-            if (fdp.iterator != null && fdp.iterator.hasNext()) {
-                parentActor ! fdp.iterator.next()
-                self ! fdp
+            if (pp.iterator != null && pp.iterator.hasNext) {
+                val path = pp.iterator.next
+                if (Files.isDirectory(path)) {
+                    // If path is a directory and recursive is true, add it to the paths to be processed, otherwise ignore it
+                    if (recursive)
+                        self ! new PathsPacket(path :: pp.paths, pp.iterator)
+                    else
+                        self ! pp
+                }
+                else {
+                    // If we have a regular file that matches our pathMatcher, send it to parentActor
+                    if (Files.isRegularFile(path) && pathMatcher.matches(path))
+                        parentActor ! path
+                    self ! pp
+                }
             }
             else {
-                fdp.filesAndDirs match {
-                    case fileOrDir :: filesAndDirs => {
-                        val file = new File(fileOrDir)
-                        if (file.isDirectory) {
+                // Iterator is empty
+                pp.paths match {
+                    case path :: paths => {
+                        if (Files.isDirectory(path)) {
                             // Instantiate iterator with new directory
-                            self ! new FileDirectoryPacket(filesAndDirs, FileUtils.iterateFiles(file, extensions, recursive))
+                            self ! new PathsPacket(paths, Files.newDirectoryStream(path).iterator)
                         }
                         else {
-                            if (file.isFile) parentActor ! file
-                            self ! new FileDirectoryPacket(filesAndDirs, fdp.iterator)
+                            // Send regular file to parentActor if it matches our pathMatcher
+                            if (Files.isRegularFile(path) && pathMatcher.matches(path))
+                                parentActor ! path
+                            self ! new PathsPacket(paths, pp.iterator)
                         }
                     }
                     case Nil => {
+                        // Iterator is empty and no more paths to process: Stop
                         self ! new StopPacket
                     }
                 }
@@ -114,7 +129,7 @@ class FileDirectoryReader(parentActor: ActorRef, extensions: Array[String], recu
 }
 
 /**
- * Streams files of directories file by file (java.io.File)
+ * Streams files of directories file by file (as java.nio.file.Path)
  */
 class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -122,19 +137,16 @@ class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
             // Get config variables
             val filesAndDirs = (config \ "filesAndDirs").asOpt[List[String]].getOrElse(Nil)
             val recursive = (config \ "recursive").asOpt[Boolean].getOrElse(false)
-            val extensions = (config \ "extensions").asOpt[List[String]].getOrElse(Nil) match {
-                // FileUtils.iterateFiles will return all files if extensions is null,
-                // while it would return no files with an empty array
-                case Nil => null
-                case l   => l.toArray
-            }
+            val pathMatcher = (config \ "pathMatcher").asOpt[String].getOrElse("glob:**")
+
+            val defaultFS = FileSystems.getDefault
 
             // Create non-blocking actor and start it
-            val fileDirActor = Akka.system.actorOf(Props(classOf[FileDirectoryReader], self, extensions, recursive))
-            fileDirActor ! new FileDirectoryPacket(filesAndDirs, null)
+            val fileDirActor = Akka.system.actorOf(Props(classOf[FileDirectoryReader], self, defaultFS.getPathMatcher(pathMatcher), recursive))
+            fileDirActor ! new PathsPacket(filesAndDirs.map(defaultFS.getPath(_)), null)
         }
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
-        case file: File => channel.push(new DataPacket(List(Map(resultName -> file))))
+        case path: Path => channel.push(new DataPacket(List(Map(resultName -> path))))
     }
 }
