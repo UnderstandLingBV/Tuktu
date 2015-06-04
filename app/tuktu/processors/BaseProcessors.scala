@@ -379,20 +379,15 @@ class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(result
 class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
     def recursiveFlattener(mapping: Map[String, Any], currentKey: String, sep: String): Map[String, Any] = {
         // Get the values of the map
-        (for (mapElem <- mapping.toList) yield {
-            val key = mapElem._1
-            val value = mapElem._2
-            
-            value.isInstanceOf[Map[String, Any]] match {
-                case true => {
-		            // Get the sub fields recursively
-                    recursiveFlattener(value.asInstanceOf[Map[String, Any]], currentKey + sep + key, sep)
-		        }
-		        case false => {
-		            Map(currentKey + sep + key -> value)
-		        }
-            }
-        }).toList.foldLeft(Map[String, Any]())(_ ++ _)
+        (for ((key, value) <- mapping) yield {
+
+            if (value.isInstanceOf[Map[String, Any]])
+                // Get the sub fields recursively
+                recursiveFlattener(value.asInstanceOf[Map[String, Any]], currentKey + sep + key, sep)
+            else
+                Map(currentKey + sep + key -> value)
+
+        }).foldLeft(Map[String, Any]())(_ ++ _)
     }
     
     var fieldList = List[String]()
