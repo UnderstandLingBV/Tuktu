@@ -11,7 +11,6 @@ import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
 import scala.io.Codec
-import tuktu.api.file
 import scala.io.Source
 
 /**
@@ -123,7 +122,7 @@ class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) 
             val fileName = utils.evaluateTuktuString(this.fileName, datum)
             val encoding = utils.evaluateTuktuString(this.encoding, datum)
 
-            val reader = file.genericReader(fileName)(Codec.apply(encoding))
+            val reader = tuktu.api.file.genericReader(fileName)(Codec.apply(encoding))
             datum + (resultName -> Stream.continually(reader.readLine()).takeWhile(_ != null).mkString(lineSep))
         })
     }) 
