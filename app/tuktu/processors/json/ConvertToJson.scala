@@ -26,10 +26,10 @@ class ConvertToJson(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {
             new DataPacket(for (datum <- data.data) yield {
-                if(append) 
-                   datum + (field -> utils.anyMapToJson(datum) \ field)                  
+                if (!append) 
+                   datum + (field -> utils.anyMapToJson(datum))                  
                 else
-                   datum + (resultName -> utils.anyMapToJson(datum) \ field)
+                   datum + (resultName -> utils.anyMapToJson(datum))
             })
         }
     })    

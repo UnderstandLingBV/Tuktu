@@ -85,35 +85,51 @@ object utils {
         
         mapToJsonHelper(map.toList)
     }
+    
+    /**
+     * ---------------------
+     * JSON helper functions
+     * ---------------------
+     */
+    
+    def sequenceToMap(fields: Seq[(String, JsValue)]): Map[String, Any] =
+        (for (field <- fields) yield JsValueToAny(field)).toMap
+
+    def JsValueToAny(field: (String, JsValue)): (String, Any) =
+        field._1 -> (field._2 match {
+            case a: JsString  => a.value
+            case a: JsNumber  => a.value
+            case a: JsBoolean => a.value
+            case a: JsObject  => sequenceToMap(a.fields)
+            case a: JsArray   => arrayToAny(a)
+            case a            => a.toString
+        })
+
+    def arrayToAny(arr: JsArray): Any =
+        for (field <- arr.value) yield field match {
+            case a: JsString  => a.value
+            case a: JsNumber  => a.value
+            case a: JsBoolean => a.value
+            case a: JsObject  => sequenceToMap(a.fields)
+            case a: JsArray   => arrayToAny(a)
+            case a            => a.toString
+        }
+    
+    /**
+     * Takes a JsValue and returns a scala object
+     */
+    def anyJsonToAny(json: JsValue): Any = json match {
+        case a: JsString  => a.value
+        case a: JsNumber  => a.value
+        case a: JsBoolean => a.value
+        case a: JsObject  => sequenceToMap(a.fields)
+        case a: JsArray   => arrayToAny(a)
+        case a            => a.toString
+    }
 
     /**
      * Convert A Json to Map[String, Any]
      * 
      */
-    def anyJsonToMap(json: JsObject): Map[String, Any] = {
-        def sequenceToMap(fields: Seq[(String, JsValue)]): Map[String, Any] =
-            (for (field <- fields) yield JsValueToAny(field)).toMap
-
-        def JsValueToAny(field: (String, JsValue)): (String, Any) =
-            field._1 -> (field._2 match {
-                case a: JsString  => a.value
-                case a: JsNumber  => a.value
-                case a: JsBoolean => a.value
-                case a: JsObject  => sequenceToMap(a.fields)
-                case a: JsArray   => arrayToAny(a)
-                case a            => a.toString
-            })
-
-        def arrayToAny(arr: JsArray): Any =
-            for (field <- arr.value) yield field match {
-                case a: JsString  => a.value
-                case a: JsNumber  => a.value
-                case a: JsBoolean => a.value
-                case a: JsObject  => sequenceToMap(a.fields)
-                case a: JsArray   => arrayToAny(a)
-                case a            => a.toString
-            }
-
-        sequenceToMap(json.fields)
-    }
+    def anyJsonToMap(json: JsObject): Map[String, Any] = sequenceToMap(json.fields)
 }
