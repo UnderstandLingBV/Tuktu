@@ -62,18 +62,11 @@
           ]
 				},
 				{
-					"name": "extensions",
-          "description": "The extensions to filter files in directories for. Directly selected files are not subject to this filter.",
-					"type": "array",
+					"name": "pathMatcher",
+          "description": "The path matcher to match all encountered files against: For example glob:**.json for all json files, glob:**.{json,txt} for all json and txt files, glob:**/folder/*.{json,txt} for all json and text files in a directory named 'folder'. Also supports regex:pattern.",
+					"type": "string",
 					"required": false,
-          "parameters": [
-            {
-              "name": "Extension",
-              "description": "An extension to filter files in directories for.",
-              "type": "string",
-              "required": true
-            }
-          ]
+          "default": "glob:**"
 				},
 				{
 					"name": "recursive",
