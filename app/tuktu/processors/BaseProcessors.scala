@@ -448,7 +448,7 @@ class SequenceExploderProcessor(resultName: String) extends BaseProcessor(result
             
             for (value <- values) yield datum + (field -> value)
         }).flatten)
-    }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
+    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmpty && data.data.isEmpty)
 }
 
 /**
