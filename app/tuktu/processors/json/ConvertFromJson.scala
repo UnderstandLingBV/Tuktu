@@ -15,18 +15,18 @@ import play.api.libs.json.JsValue
 class ConvertFromJson(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
     var overwrite = false
-    
+
     override def initialize(config: JsObject) = {
         field = (config \ "field").as[String]
-        overwrite = (config \ "append").asOpt[Boolean].getOrElse(false)
+        overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         new DataPacket(for (datum <- data.data) yield {
-            if(overwrite) 
-               datum + (field -> utils.anyJsonToAny(datum(field).asInstanceOf[JsValue]))                  
+            if (overwrite)
+                datum + (field -> utils.anyJsonToAny(datum(field).asInstanceOf[JsValue]))
             else
-               datum + (resultName -> utils.anyJsonToAny(datum(field).asInstanceOf[JsValue]))
+                datum + (resultName -> utils.anyJsonToAny(datum(field).asInstanceOf[JsValue]))
         })
-    })    
+    })
 }

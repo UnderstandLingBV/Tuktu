@@ -63,7 +63,7 @@ object utils {
         /**
          * Dealing with arrays
          */
-        def anyListToJsonHelper(list: Seq[Any], mongo: Boolean = false): JsArray = list match {
+        def anyListToJsonHelper(list: Seq[Any], mongo: Boolean = false): JsArray = list.toList match {
             case Nil => Json.arr()
             case elem::remainder => Json.arr(elem match {
                 case a: String => a
