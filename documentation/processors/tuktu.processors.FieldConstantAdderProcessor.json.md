@@ -1,0 +1,13 @@
+### tuktu.processors.FieldConstantAdderProcessor
+No description present.
+
+  * **id** *(type: string)* `[Required]`
+
+  * **result** *(type: string)* `[Required]`
+
+  * **config** *(type: object)* `[Required]`
+
+    * **value** *(type: string)* `[Required]`
+
+    * **is_numeric** *(type: boolean)* `[Optional]`
+
