@@ -25,7 +25,7 @@ class MinProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
         else {
             // See what type of data it is
             val firstElem = data.head(field)
-            
+
             // Get the minimum based on type information
             List(
                 firstElem match {
@@ -63,7 +63,7 @@ class MaxProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
         else {
             // See what type of data it is
             val firstElem = data.head(field)
-            
+
             // Get the maximum based on type information
             List(
                 firstElem match {
@@ -101,7 +101,7 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
         else {
             // See what type of data it is
             val firstElem = data.head(field)
-            
+
             List(Map(field -> {
                 firstElem match {
                     case a: String => data.foldLeft[Double](0)(_ + _(field).asInstanceOf[String].toDouble)
@@ -116,18 +116,18 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
             }))
         }
     }
-    
+
     def sumList(data: List[Any]) = {
-      // See what type of data it is
-      data.head match {
-          case a: String => data.foldLeft[Double](0)(_ + _.asInstanceOf[String].toDouble)
-          case a: Int => data.foldLeft[Int](0)(_ + _.asInstanceOf[Int])
-          case a: Integer => data.foldLeft[Integer](0: Integer)(_ + _.asInstanceOf[Integer])
-          case a: Double => data.foldLeft[Double](0.0)(_ + _.asInstanceOf[Double])
-          case a: Long => data.foldLeft[Long](0L)(_ + _.asInstanceOf[Long])
-          case a: Float => data.foldLeft[Float](0.0f)(_ + _.asInstanceOf[Float])
-          case a: BigDecimal => data.foldLeft[BigDecimal](0)(_ + _.asInstanceOf[BigDecimal])                    
-      }     
+        // See what type of data it is
+        data.head match {
+            case a: String => data.foldLeft[Double](0)(_ + _.asInstanceOf[String].toDouble)
+            case a: Int => data.foldLeft[Int](0)(_ + _.asInstanceOf[Int])
+            case a: Integer => data.foldLeft[Integer](0: Integer)(_ + _.asInstanceOf[Integer])
+            case a: Double => data.foldLeft[Double](0.0)(_ + _.asInstanceOf[Double])
+            case a: Long => data.foldLeft[Long](0L)(_ + _.asInstanceOf[Long])
+            case a: Float => data.foldLeft[Float](0.0f)(_ + _.asInstanceOf[Float])
+            case a: BigDecimal => data.foldLeft[BigDecimal](0)(_ + _.asInstanceOf[BigDecimal])
+        }
     }
 }
 
@@ -136,16 +136,14 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
  */
 class CountProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var field = ""
-    
+
     override def initialize(config: JsObject) = {
         field = (config \ "field").as[String]
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(List(Map(field -> data.data.size)))
-    })
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        List(Map(field -> data.asInstanceOf[List[Map[String, Int]]].foldLeft(0)(_ + _(field))))
+        List(Map(field -> data.size))
     }
 }
