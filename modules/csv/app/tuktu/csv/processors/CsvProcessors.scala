@@ -19,37 +19,37 @@ import java.io.StringReader
  * Converts all fields into a CSV string
  */
 class CSVStringProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var separator = ','
+    var separator = ';'
     var quote = '"'
     var escape = '\\'
-    
+
     override def initialize(config: JsObject) = {
         separator = (config \ "separator").asOpt[String].getOrElse(";").head
         quote = (config \ "quote").asOpt[String].getOrElse("\"").head
         escape = (config \ "escape").asOpt[String].getOrElse("\\").head
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Set up writer
         val sw = new StringWriter
         val csvWriter = new CSVWriter(sw, separator, quote, escape, "")
-        
+
         // Convert data to CSV
         val newData = for (datum <- data.data) yield {
             // Strings are a bit annoying here
             val stringDatum = datum.map(someVal => someVal._2.toString)
             csvWriter.writeNext(stringDatum.toArray)
             val res = sw.toString
-           
+
             // See if we need to append headers or not
             datum + (resultName -> res)
         }
-        
+
         // Close
         csvWriter.close
         sw.close
-        
-        Future {new DataPacket(newData)}
+
+        Future { new DataPacket(newData) }
     })
 }
 
@@ -60,41 +60,40 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var headers: List[String] = null
     var headersFromFirst = false
     var field = ""
-    
-    var separator = ','
+
+    var separator = ';'
     var quote = '"'
     var escape = '\\'
-    
+
     var removeOriginal = false
-    
+
     override def initialize(config: JsObject) = {
         field = (config \ "field").as[String]
         // Get headers
         headers = (config \ "headers").asOpt[List[String]].getOrElse(null)
         headersFromFirst = (config \ "headers_from_first").asOpt[Boolean].getOrElse(false)
-        
-        
+
         separator = (config \ "separator").asOpt[String].getOrElse(",").head
         quote = (config \ "quote").asOpt[String].getOrElse("\"").head
         escape = (config \ "escape").asOpt[String].getOrElse("\\").head
-        
+
         removeOriginal = (config \ "remove_original").asOpt[Boolean].getOrElse(false)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         new DataPacket({
             // See if this is the first one
             val first = headers == null
-                
+
             // Get lines to mimic a CSV file
             (for (datum <- data.data) yield {
                 val value = datum(field).toString
-                
+
                 // Read CSV and process
                 val reader = new CSVReader(new StringReader(value), separator, quote, escape)
                 val line = reader.readNext
                 reader.close
-                
+
                 // Check if these are our headers
                 if (headers == null) {
                     if (headersFromFirst) headers = line.toList
@@ -122,14 +121,9 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
  */
 class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var writer: CSVWriter = null
-    var wroteHeaders = false
+    var headers: Array[String] = null
     var fields: Option[List[String]] = None
-    
-    def JsonStringToNormalString(value: JsString) = {
-        // Remove the annoying quotes
-       value.toString.drop(1).take(value.toString.size - 2)
-    }
-    
+
     override def initialize(config: JsObject) = {
         // Get the location of the file to write to
         val fileName = (config \ "file_name").as[String]
@@ -139,42 +133,34 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
         val quote = (config \ "quote").asOpt[String].getOrElse("\"").head
         val escape = (config \ "escape").asOpt[String].getOrElse("\\").head
         writer = new CSVWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding)), separator, quote, escape)
-        
+
         fields = (config \ "fields").asOpt[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Convert data to CSV
         for (datum <- data.data) {
-            // Write out headers
-            if (!wroteHeaders) {
-                fields match {
-                    case Some(flds) => writer.writeNext(flds.toArray)
-                    case None => writer.writeNext(datum.map(elem => elem._1).toArray)
+            // Get and write out headers
+            if (headers == null) {
+                headers = fields match {
+                    case Some(flds) => flds.toArray
+                    case None => datum.map(elem => elem._1).toArray
                 }
-                wroteHeaders = true
+
+                writer.writeNext(headers)
             }
-            
-            fields match {
-                case Some(fields) => {
-                    val values = fields.map(someVal => datum(someVal).isInstanceOf[JsString] match {
-                        case true => JsonStringToNormalString(datum(someVal).asInstanceOf[JsString])
-                        case false => datum(someVal).toString
-                    })
-                    writer.writeNext(values.toArray)
-                }
-                case None => {
-                    // Strings are a bit annoying here
-                    val stringDatum = datum.map(someVal => someVal._2.isInstanceOf[JsString] match {
-                        case true => JsonStringToNormalString(someVal._2.asInstanceOf[JsString])
-                        case false => someVal._2.toString
-                    })
-                    writer.writeNext(stringDatum.toArray)
-                }
-            }
+
+            val values = headers.map(header =>
+                // JsStrings are a bit annoying here
+                if (datum(header).isInstanceOf[JsString])
+                    datum(header).asInstanceOf[JsString].value
+                else
+                    datum(header).toString)
+
+            writer.writeNext(values)
         }
-        
-        Future {data}
+
+        Future { data }
     }) compose Enumeratee.onEOF(() => {
         writer.flush
         writer.close
