@@ -1,5 +1,6 @@
 {
 	"name": "Concurrent Mean Processor",
+	"description": "Computes the mean of a field of numerical values in a concurrent way.",
 	"class": "tuktu.processors.bucket.concurrent.statistics.MeanProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "field",
+					"description": "The mean over this field will be computed and returned under the field name.",
 					"type": "string",
 					"required": true
 				}

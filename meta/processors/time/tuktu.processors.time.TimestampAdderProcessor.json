@@ -1,5 +1,6 @@
 {
 	"name": "Timestamp Adder Processor",
+	"description": "Adds a simple timestamp to the data packet.",
 	"class": "tuktu.processors.TimestampAdderProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "format",
+					"description": "If provided, returns the timestamp formatted accordingly as a String. Otherwise returns the timestamp as Long.",
 					"type": "string",
 					"required": false
 				}

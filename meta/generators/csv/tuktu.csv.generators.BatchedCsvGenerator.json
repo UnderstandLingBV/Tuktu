@@ -1,5 +1,6 @@
 {
 	"name": "Batched CSV Generator",
+	"description": "Parses a given CSV file in batches with predefined or provided headers.",
 	"class": "tuktu.csv.generators.BatchedCsvGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]
@@ -47,17 +49,20 @@
 			"parameters": [
 				{
 					"name": "filename",
+					"description": "The name of the file to read from.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "has_headers",
+					"description": "If set to true, the first row will be considered the headers, and will be used as value names.",
 					"type": "boolean",
 					"required": false,
 					"default": false
 				},
 				{
 					"name": "predef_headers",
+					"description": "Will be ignored if has_headers is true. Otherwise the list provided will be used in order as headers, ie. as value names for the columns.",
 					"type": "array",
 					"required": false,
 					"parameters": [
@@ -70,28 +75,37 @@
 				},
 				{
 					"name": "flattened",
+					"description": "Will be ignored if has_headers is false and no predef_headers are provided. Otherwise it will flatten the result given by those headers, or not by mapping resultName to that map.",
 					"type": "boolean",
 					"required": false,
 					"default": false
 				},
 				{
 					"name": "separator",
+					"description": "The separator character used in the given CSV file.",
 					"type": "string",
+					"default": ";",
 					"required": false
 				},
 				{
 					"name": "quote",
+					"description": "The quote character used in the given CSV file.",
 					"type": "string",
+					"default": "\"",
 					"required": false
 				},
 				{
 					"name": "escape",
+					"description": "The escape character used in the given CSV file.",
 					"type": "string",
+					"default": "\\",
 					"required": false
 				},
 				{
 					"name": "batch_size",
+					"description": "The number of lines to add to the batch before flushing it.",
 					"type": "int",
+					"default": 100,
 					"required": false
 				}
 			]

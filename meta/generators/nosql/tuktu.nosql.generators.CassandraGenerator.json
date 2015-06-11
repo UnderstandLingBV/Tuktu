@@ -1,5 +1,6 @@
 {
 	"name": "Cassandra Generator",
+	"description": "Executes a query on a specified Cassandra node.",
 	"class": "tuktu.nosql.generators.CassandraGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]
@@ -47,29 +49,35 @@
 			"parameters": [
 				{
 					"name": "host",
+					"description": "The address of the node to connect to; optionally appended by :port, otherwise port 9042 will be assumed.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "type",
+					"description": "The execution type of the query.",
 					"type": "string",
 					"required": false
 				},
 				{
 					"name": "query",
+					"description": "The query to be run.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "flatten",
+					"description": "Flatten the result, otherwise resultName -> result will be returned.",
 					"type": "boolean",
 					"required": false,
 					"default": false
 				},
 				{
 					"name": "fetch_size",
+					"description": "The fetch size of the query.",
 					"type": "int",
-					"required": false
+					"required": false,
+					"default": 100
 				}
 			]
 		}

@@ -1,5 +1,6 @@
 {
 	"name": "MongoDB Generator",
+	"description": "Executes a query on a given list of nodes.",
 	"class": "tuktu.nosql.generators.MongoDBGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]
@@ -47,6 +49,7 @@
 			"parameters": [
 				{
 					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
 					"type": "array",
 					"required": true,
 					"parameters": [
@@ -59,23 +62,28 @@
 				},
 				{
 					"name": "database",
+					"description": "The database name.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "collection",
+					"description": "The name of the collection to open.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "query",
+					"description": "Find the documents matching these given criteria.",
 					"type": "JsObject",
 					"required": true
 				},
 				{
 					"name": "batch",
+					"description": "Are all results to be batched before pushing it on the channel.",
 					"type": "boolean",
-					"required": false
+					"required": false,
+					"default": false
 				}
 			]
 		}

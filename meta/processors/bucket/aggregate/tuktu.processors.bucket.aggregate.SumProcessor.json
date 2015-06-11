@@ -1,5 +1,6 @@
 {
 	"name": "Sum Processor",
+	"description": "Sums all values of a field in a bucket.",
 	"class": "tuktu.processors.bucket.aggregate.SumProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "field",
+					"description": "The field that is summed up. This is also where the result is returned.",
 					"type": "string",
 					"required": true
 				}

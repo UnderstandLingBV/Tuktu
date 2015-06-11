@@ -19,28 +19,34 @@
 			"parameters": [
 				{
 					"name": "consumer_key",
+					"description": "API key for Facebook.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "consumer_secret",
+					"description": "API secret for Facebook.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "access_token",
+					"description": "The token to access Facebook's API with.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "url",
+					"description": "The url to make the API call for.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "http_method",
+					"description": "'get' or 'post'",
 					"type": "string",
-					"required": false
+					"required": false,
+					"default": "get"
 				}
 			]
 		}

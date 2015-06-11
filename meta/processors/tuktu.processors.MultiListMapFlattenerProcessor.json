@@ -20,14 +20,14 @@
 			"parameters": [
 				{
 					"name": "list_field",
-					"type": "string",
 					"description": "The name of the field that contains the list of maps.",
+					"type": "string",
 					"required": true
 				},
 				{
 					"name": "map_fields",
-					"type": "array",
 					"description": "The name of the fields that need to be extracted from the separate maps.",
+					"type": "array",
 					"required": true,
 					"parameters": [
 						{
@@ -39,9 +39,10 @@
 				},
 				{
 					"name": "ignore_empty",
-					"type": "boolean",
 					"description": "If set to true, will only continue with non-empty values",
-					"required": false
+					"type": "boolean",
+					"required": false,
+					"default": true
 				}
 			]
 		}

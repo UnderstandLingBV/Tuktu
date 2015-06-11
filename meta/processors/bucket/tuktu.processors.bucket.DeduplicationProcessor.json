@@ -1,5 +1,6 @@
 {
 	"name": "Deduplication Processor",
+	"description": "Deduplicates all elements in a bucketed data packet.",
 	"class": "tuktu.processors.bucket.DeduplicationProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "fields",
+					"description": "The fields to deduplicate elements with same entries from.",
 					"type": "array",
 					"required": true,
 					"parameters": [

@@ -1,5 +1,6 @@
 {
 	"name": "Twitter Search Generator",
+	"description": "Searches for public tweets given a list of keywords.",
 	"class": "tuktu.social.generators.TwitterSearchGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]
@@ -52,30 +54,26 @@
 					"parameters": [
 						{
 							"name": "consumer_key",
-							"label": "Consumer Key",
 							"type": "string",
 							"required": true
 						},
 						{
 							"name": "consumer_secret",
-							"label": "Consumer Secret",
 							"type": "string",
 							"required": true
 						},
 						{
 							"name": "access_token",
-							"label": "Access Token",
 							"type": "string",
 							"required": true
 						},
 						{
 							"name": "access_token_secret",
-							"label": "Access Token Secret",
 							"type": "string",
 							"required": true
 						}
 					]
-				},				
+				},
 				{
 					"name": "filters",
 					"type": "object",
@@ -83,6 +81,7 @@
 					"parameters": [
 						{
 							"name": "keywords",
+							"description": "Keywords to search for in public tweets.",
 							"type": "array",
 							"required": true,
 							"parameters": [

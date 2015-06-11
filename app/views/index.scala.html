@@ -1,7 +1,6 @@
 @(generators: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])], processors: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])])
 
-@main("Tuktu Modeller") {
-
+@main {
 	<nav class="navbar navbar-default">
 		<div class="container-fluid">
 			<div class="navbar-header">
@@ -13,7 +12,7 @@
 				<li><a href="#ConfigImport">Import Config</a></li>
 				<li><a href="#GenerateConfig">Generate Config</a></li>
 			</ul>
-			
+
 		</div>
 	</nav>
 
@@ -123,5 +122,4 @@
 			</div>
 		</div>
 	</div>
-
 }

@@ -1,5 +1,6 @@
 {
 	"name": "Covariance Processor",
+	"description": "To be implemented...",
 	"class": "tuktu.processors.bucket.statistics.CovarianceProcessor",
 	"parameters": [
 		{

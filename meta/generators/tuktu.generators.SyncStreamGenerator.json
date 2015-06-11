@@ -1,6 +1,7 @@
 {
 	"name": "Sync Stream Generator",
 	"class": "tuktu.generators.SyncStreamGenerator",
+	"description": "Special sync generator that processes a tuple and returns the actual result.",
 	"parameters": [
 		{
 			"name": "nodes",
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]
@@ -39,6 +41,27 @@
 			"name": "result",
 			"type": "string",
 			"required": false
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "no_return",
+					"description": "Don't return data packets to the sender from which they were received.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "timeout",
+					"description": "Timeout in seconds for the processor that returns data packets to the sender.",
+					"type": "int",
+					"required": false,
+					"default": 5
+				}
+			]
 		}
 	]
 }

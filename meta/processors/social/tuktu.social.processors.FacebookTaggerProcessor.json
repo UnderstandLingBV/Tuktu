@@ -1,5 +1,6 @@
 {
 	"name": "Facebook Tagger Processor",
+	"description": "Returns a subset of provided keywords that are found in a message, and a subset of provided users that are author or recipient of the message.",
 	"class": "tuktu.social.processors.FacebookTaggerProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "object_field",
+					"description": "The name of the field in which the Facebook object is.",
 					"type": "string",
 					"required": true
 				},
@@ -29,6 +31,7 @@
 					"parameters": [
 						{
 							"name": "keywords",
+							"description": "The keywords to be filtered for what can be found in the message.",
 							"type": "array",
 							"required": true,
 							"parameters": [
@@ -41,6 +44,7 @@
 						},
 						{
 							"name": "users",
+							"description": "The users to be filtered for who is relevant to a message, that is the author and the recipient.",
 							"type": "array",
 							"required": true,
 							"parameters": [
@@ -55,8 +59,10 @@
 				},
 				{
 					"name": "exclude_on_none",
+					"description": "Exclude messages which do not match any filter.",
 					"type": "boolean",
-					"required": false
+					"required": true,
+					"default": false
 				}
 			]
 		}

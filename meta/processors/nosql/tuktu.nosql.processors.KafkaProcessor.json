@@ -1,5 +1,6 @@
 {
 	"name": "Kafka Processor",
+	"description": "Sends keyed messages to a Kafka producer.",
 	"class": "tuktu.nosql.processors.KafkaProcessor",
 	"parameters": [
 		{
@@ -19,11 +20,13 @@
 			"parameters": [
 				{
 					"name": "kafka_props",
-					"type": "object",
+					"description": "Kafka properties given by a JSON object with key, value pairs containing strings only.",
+					"type": "JsObject",
 					"required": true
 				},
 				{
 					"name": "key_field",
+					"description": "Field which contains the key for the keyed message.",
 					"type": "string",
 					"required": true
 				}

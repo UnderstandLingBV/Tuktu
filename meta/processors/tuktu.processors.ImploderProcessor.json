@@ -1,5 +1,6 @@
 {
 	"name": "Imploder Processor",
+	"description": "Implodes arrays into a string, overwriting its top-level ancestor.",
 	"class": "tuktu.processors.ImploderProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "fields",
+					"description": "The arrays to be imploded.",
 					"type": "array",
 					"required": true,
 					"parameters": [
@@ -29,6 +31,7 @@
 							"parameters": [
 								{
 									"name": "path",
+									"description": "The path to the array. The result will overwrite its top-level ancestor.",
 									"type": "array",
 									"required": true,
 									"parameters": [
@@ -41,6 +44,7 @@
 								},
 								{
 									"name": "separator",
+									"description": "The separator character used between elements.",
 									"type": "string",
 									"required": true
 								}

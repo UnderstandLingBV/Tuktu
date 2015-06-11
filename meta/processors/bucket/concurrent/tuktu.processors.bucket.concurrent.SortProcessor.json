@@ -41,7 +41,8 @@
 					"name": "asc_desc",
 					"type": "string",
 					"required": false,
-					"description": "Whether to sort ascending (asc) or descending (desc). Ascending by default."
+					"description": "Whether to sort ascending (asc) or descending (desc). Any value other than 'desc' will be assumed ascending.",
+					"default": "asc"
 				}
 			]
 		}

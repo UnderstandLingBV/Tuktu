@@ -1,5 +1,6 @@
 {
 	"name": "Field Rename Processor",
+	"description": "Renames / moves (nested) fields to the top under new field names, deleting its top-level ancestor.",
 	"class": "tuktu.processors.FieldRenameProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "fields",
+					"description": "The fields to be renamed / moved.",
 					"type": "array",
 					"required": true,
 					"parameters": [
@@ -29,6 +31,7 @@
 							"parameters": [
 								{
 									"name": "path",
+									"description": "The path at which the value is located.",
 									"type": "array",
 									"required": true,
 									"parameters": [
@@ -41,6 +44,7 @@
 								},
 								{
 									"name": "result",
+									"description": "The new result name of the value at the end of the path (or the default).",
 									"type": "string",
 									"required": true
 								}

@@ -20,8 +20,8 @@
 			"parameters": [
 				{
 					"name": "size",
+					"description": "The amount of data packets to buffer before continuing.",
 					"type": "int",
-					"description": "The amount of data packets to buffer before continuing",
 					"required": true
 				}
 			]

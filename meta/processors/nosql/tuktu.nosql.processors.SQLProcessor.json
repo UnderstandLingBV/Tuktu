@@ -19,33 +19,40 @@
 			"parameters": [
 				{
 					"name": "url",
+					"description": "A database url of the form jdbc:subprotocol:subname.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "user",
+					"description": "The database user on whose behalf the connection is being made.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "password",
+					"description": "The user's password.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "driver",
+					"description": "The driver to be used, for example org.h2.Driver.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "query",
+					"description": "SQL query to be executed.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "append",
+					"description": "Append the result to the data packet; otherwise the result is ignored.",
 					"type": "boolean",
-					"required": false
+					"required": false,
+					"default": false
 				}
 			]
 		}

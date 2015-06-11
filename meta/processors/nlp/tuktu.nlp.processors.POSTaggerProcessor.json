@@ -1,5 +1,6 @@
 {
 	"name": "Part-of-Speech Tagger Processor",
+	"description": "Performs POS tagging on an Array of tokens in a given language.",
 	"class": "tuktu.nlp.processors.POSTaggerProcessor",
 	"parameters": [
 		{
@@ -19,11 +20,14 @@
 			"parameters": [
 				{
 					"name": "language",
+					"description": "The language to be used for POS tagging.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "tokens",
+					"label": "Tokens field",
+					"description": "The field that contains an Array of Tokens.",
 					"type": "string",
 					"required": true
 				}

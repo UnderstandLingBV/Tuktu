@@ -1,5 +1,6 @@
 {
 	"name": "GroupBy Processor",
+	"description": "Buffers and groups data by the value list of the provided fields.",
 	"class": "tuktu.processors.GroupByBuffer",
 	"parameters": [
 		{

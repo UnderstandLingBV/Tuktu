@@ -1,5 +1,6 @@
 {
 	"name": "Flattener Processor",
+	"description": "Recursively flattens a map object, appending the keys to the previous keys separated by a given separator.",
 	"class": "tuktu.processors.FlattenerProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "fields",
+					"description": "The fields to be flattened.",
 					"type": "array",
 					"required": true,
 					"parameters": [
@@ -31,6 +33,7 @@
 				},
 				{
 					"name": "separator",
+					"description": "The separator inserted between two iterations.",
 					"type": "string",
 					"required": true
 				}

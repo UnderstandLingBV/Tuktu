@@ -1,5 +1,6 @@
 {
 	"name": "Twitter Stream Generator",
+	"description": "Given a list of keywords, users and a geo square, streams public tweets matching these filters.",
 	"class": "tuktu.social.generators.TwitterGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]
@@ -52,30 +54,26 @@
 					"parameters": [
 						{
 							"name": "consumer_key",
-							"label": "Consumer Key",
 							"type": "string",
 							"required": true
 						},
 						{
 							"name": "consumer_secret",
-							"label": "Consumer Secret",
 							"type": "string",
 							"required": true
 						},
 						{
 							"name": "access_token",
-							"label": "Access Token",
 							"type": "string",
 							"required": true
 						},
 						{
 							"name": "access_token_secret",
-							"label": "Access Token Secret",
 							"type": "string",
 							"required": true
 						}
 					]
-				},				
+				},
 				{
 					"name": "filters",
 					"type": "object",
@@ -83,6 +81,7 @@
 					"parameters": [
 						{
 							"name": "keywords",
+							"description": "Specifies the keywords to track.",
 							"type": "array",
 							"required": false,
 							"parameters": [
@@ -95,6 +94,7 @@
 						},
 						{
 							"name": "userids",
+							"description": "Specifies the users, by ID, to receive public tweets from.",
 							"type": "array",
 							"required": false,
 							"parameters": [
@@ -107,13 +107,50 @@
 						},
 						{
 							"name": "geo",
-							"type": "array",
+							"type": "object",
 							"required": false,
 							"parameters": [
 								{
-									"name": "",
-									"type": "string",
-									"required": true
+									"name": "p1",
+									"type": "object",
+									"required": false,
+									"parameters": [
+										{
+											"name": "long",
+											"label": "P1 longitude",
+											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
+											"type": "string",
+											"required": false
+										},
+										{
+											"name": "lat",
+											"label": "P1 latitude",
+											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
+											"type": "string",
+											"required": false
+										}
+									]
+								},
+								{
+									"name": "p2",
+									"type": "object",
+									"required": false,
+									"parameters": [
+										{
+											"name": "long",
+											"label": "P2 longitude",
+											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
+											"type": "string",
+											"required": false
+										},
+										{
+											"name": "lat",
+											"label": "P2 latitude",
+											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
+											"type": "string",
+											"required": false
+										}
+									]
 								}
 							]
 						}

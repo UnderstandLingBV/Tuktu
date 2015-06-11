@@ -1,5 +1,6 @@
 {
 	"name": "Random ID Generator",
+	"description": "Generates random integers.",
 	"class": "tuktu.generators.RandomGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]
@@ -47,11 +49,13 @@
 			"parameters": [
 				{
 					"name": "interval",
+					"description": "Tick interval in milliseconds in which random numbers are to be generated.",
 					"type": "int",
 					"required": true
 				},
 				{
 					"name": "max",
+					"description": "Random integers generated are uniformly distributed between 0 (inclusive) and the this value (exclusive).",
 					"type": "int",
 					"required": true
 				}

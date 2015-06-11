@@ -1,5 +1,6 @@
 {
 	"name": "Line Generator",
+	"description": "Streams a file line by line.",
 	"class": "tuktu.generators.LineGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]
@@ -47,21 +49,27 @@
 			"parameters": [
 				{
 					"name": "filename",
+					"description": "The path to the file.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "encoding",
+					"description": "The encoding of the file.",
 					"type": "string",
-					"required": false
+					"required": false,
+					"default": "utf-8"
 				},
 				{
 					"name": "start_line",
+					"description": "The start line to start streaming from.",
 					"type": "int",
-					"required": false
+					"required": false,
+					"default": 0
 				},
 				{
 					"name": "end_line",
+					"description": "The end line to stop streaming on, inclusively. Streamed until end of file if omitted.",
 					"type": "int",
 					"required": false
 				}

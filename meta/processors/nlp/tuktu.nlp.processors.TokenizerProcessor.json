@@ -1,5 +1,6 @@
 {
 	"name": "Tokenizer Processor",
+	"description": "Tokenizes a piece of data in a given field.",
 	"class": "tuktu.nlp.processors.TokenizerProcessor",
 	"parameters": [
 		{
@@ -19,13 +20,16 @@
 			"parameters": [
 				{
 					"name": "field",
+					"description": "The field to be tokenized. The field's content must be a String or a JsString.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "as_string",
+					"description": "If false, an Array of Tokens (Strings) is returned; otherwise a String is returned where the tokens are separated by blanks (' ').",
 					"type": "boolean",
-					"required": false
+					"required": false,
+					"default": false
 				}
 			]
 		}

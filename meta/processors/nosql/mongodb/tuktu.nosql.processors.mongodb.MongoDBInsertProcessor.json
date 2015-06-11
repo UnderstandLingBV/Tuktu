@@ -1,57 +1,69 @@
 {
-    "name": "MongoDB Insert Processor",
-    "class": "tuktu.nosql.processors.mongodb.MongoDBInsertProcessor",
-    "parameters": [
-        {
-            "name": "id",
-            "type": "string",
-            "required": true
-        },
-        {
-            "name": "result",
-            "type": "string",
-            "required": true
-        },
-        {
-            "name": "config",
-            "type": "object",
-            "required": true,
-            "parameters": [
-                {
-                    "name": "hosts",
-                    "type": "array",
-                    "required": true,
-                    "parameters": [
-                        {
-                            "name": "",
-                            "type": "string",
-                            "required": true
-                        }
-                    ]
-                },
-                {
-                    "name": "database",
-                    "type": "string",
-                    "required": true
-                },
-                {
-                    "name": "collection",
-                    "type": "string",
-                    "required": true
-                },
-                {
-                    "name": "fields",
-                    "type": "array",
-                    "required": true,
-                    "parameters": [
-                        {
-                            "name": "",
-                            "type": "string",
-                            "required": true
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
+	"name": "MongoDB Insert Processor",
+	"description": "Inserts data into MongoDB.",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBInsertProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"description": "The database name.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"description": "The name of the collection to open.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "fields",
+					"description": "The fields to be inserted: Leave empty to insert all fields.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "sync",
+					"description": "Insert data in an (a)synchronous fashion.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
 }

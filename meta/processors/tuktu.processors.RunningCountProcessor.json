@@ -1,5 +1,6 @@
 {
 	"name": "Running Count Processor",
+	"description": "Adds a running count integer to the data packets coming in.",
 	"class": "tuktu.processors.RunningCountProcessor",
 	"parameters": [
 		{
@@ -19,19 +20,24 @@
 			"parameters": [
 				{
 					"name": "start_at",
+					"description": "The integer to start with.",
 					"type": "int",
-					"required": false
+					"required": false,
+					"default": 0
 				},
 				{
 					"name": "per_block",
+					"description": "Increase the integer for each data packet, or for each element in each data packet.",
 					"type": "boolean",
 					"required": false,
 					"default": false
 				},
 				{
 					"name": "step_size",
+					"description": "The step in which the integer is increased with each data packet.",
 					"type": "int",
-					"required": false
+					"required": false,
+					"default": 1
 				}
 			]
 		}

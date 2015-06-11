@@ -1,5 +1,6 @@
 {
 	"name": "Midrange Processor",
+	"description": "Individually computes the midrange over a list of fields containing numerical values.",
 	"class": "tuktu.processors.bucket.statistics.MidrangeProcessor",
 	"parameters": [
 		{
@@ -17,6 +18,19 @@
 			"type": "object",
 			"required": true,
 			"parameters": [
+				{
+					"name": "fields",
+					"description": "The midrange over these fields will be individually computed and returned under the respective field name.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
 			]
 		}
 	]

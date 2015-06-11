@@ -1,7 +1,7 @@
 {
 	"name": "Convert String to Date Processor",
+	"description": "Converts a String to a Java Date.",
 	"class": "tuktu.processors.ConvertToDate",
-	"description": "Converts a String to a Java Date",
 	"parameters": [
 		{
 			"name": "id",
@@ -20,20 +20,20 @@
 			"parameters": [
 				{
 					"name": "field",
+					"description": "The field containing the date.",
 					"type": "string",
-					"description": "The field containing the date",
 					"required": true
 				},
 				{
 					"name": "format",
+					"description": "The string formatter.",
 					"type": "string",
-					"description": "The string formatter",
 					"required": false
 				},
 				{
 					"name": "locale",
+					"description": "The locale for the string formatter.",
 					"type": "string",
-					"description": "The locale for the string formatter",
 					"required": false
 				}
 			]

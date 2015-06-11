@@ -1,86 +1,98 @@
 {
-   "name":"Timestamp Normalizer Processor",
-   "class":"tuktu.processors.time.TimestampNormalizerProcessor",
-   "description":"Floors a given timestamp, based on the time fields; e.g. floored to the nearest 10 minutes.",
-   "parameters":[
-      {
-         "name":"id",
-         "type":"string",
-         "required":true
-      },
-      {
-         "name":"result",
-         "type":"string",
-         "required":true
-      },
-      {
-         "name":"config",
-         "type":"object",
-         "required":true,
-         "parameters":[
-            {
-               "name":"datetime_format",
-               "type":"string",
-               "required":true
-            },
-            {
-               "name":"datetime_field",
-               "type":"string",
-               "required":true
-            },
-			{
-               "name":"datetime_locale",
-               "type":"string",
-               "required":true
-            },
-            {
-               "name":"overwrite",
-               "type":"boolean",
-               "required":false
-            },
-            {
-               "name":"time",
-               "type":"object",
-               "required":true,
-               "parameters":[
-                  {
-                     "name":"years",
-                     "type":"int",
-                     "required":false
-                  },
-                  {
-                     "name":"months",
-                     "type":"int",
-                     "required":false
-                  },
-                  {
-                     "name":"days",
-                     "type":"int",
-                     "required":false
-                  },
-                  {
-                     "name":"hours",
-                     "type":"int",
-                     "required":false
-                  },
-                  {
-                     "name":"minutes",
-                     "type":"int",
-                     "required":false
-                  },
-                  {
-                     "name":"seconds",
-                     "type":"int",
-                     "required":false
-                  },
-                  {
-                     "name":"millis",
-                     "type":"int",
-                     "required":false
-                  }                  
-               ]
-            }
-         ]
-      }
-   ]
+	"name": "Timestamp Normalizer Processor",
+	"class": "tuktu.processors.time.TimestampNormalizerProcessor",
+	"description": "Floors a given timestamp, based on the time fields; e.g. floored to the nearest 10 minutes.",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "datetime_format",
+					"description": "The datetime format to parse the given field with.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "datetime_field",
+					"description": "The field which contains a formatted datetime.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "datetime_locale",
+					"description": "The locale of the datetime format to parse the field with.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "overwrite",
+					"description": "Overwrite the datetime field with the normalized timestamp, or save it under result.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "time",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "years",
+							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"type": "int",
+							"required": false
+						},
+						{
+							"name": "months",
+							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"type": "int",
+							"required": false
+						},
+						{
+							"name": "days",
+							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"type": "int",
+							"required": false
+						},
+						{
+							"name": "hours",
+							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"type": "int",
+							"required": false
+						},
+						{
+							"name": "minutes",
+							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"type": "int",
+							"required": false
+						},
+						{
+							"name": "seconds",
+							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"type": "int",
+							"required": false
+						},
+						{
+							"name": "millis",
+							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"type": "int",
+							"required": false
+						}
+					]
+				}
+			]
+		}
+	]
 }

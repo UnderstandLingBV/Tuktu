@@ -1,5 +1,6 @@
 {
 	"name": "CSV Writer Processor",
+	"description": "Writes CSV with headers to a file.",
 	"class": "tuktu.csv.processors.CSVWriterProcessor",
 	"parameters": [
 		{
@@ -26,8 +27,9 @@
 				{
 					"name": "encoding",
 					"type": "string",
-					"description": "The character encoding, UTF-8 by default.",
-					"required": false
+					"description": "The character encoding.",
+					"required": false,
+					"default": "utf-8"
 				},
 				{
 					"name": "fields",
@@ -45,20 +47,23 @@
 				{
 					"name": "separator",
 					"type": "string",
-					"description": "The separator. Semicolon (;) by default.",
-					"required": false
+					"description": "The separator character.",
+					"required": false,
+					"default": ";"
 				},
 				{
 					"name": "quote",
 					"type": "string",
-					"description": "The quote character. Double quote (\") by default.",
-					"required": false
+					"description": "The quote character.",
+					"required": false,
+					"default": "\""
 				},
 				{
 					"name": "escape",
 					"type": "string",
-					"description": "The escape character. Double backslash (\\) by default.",
-					"required": false
+					"description": "The escape character.",
+					"required": false,
+					"default": "\\"
 				}
 			]
 		}

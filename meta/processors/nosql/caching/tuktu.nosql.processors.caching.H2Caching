@@ -1,7 +1,7 @@
 {
 	"name": "H2 Caching Processor",
 	"class": "tuktu.nosql.processors.caching.H2Caching",
-	"description": "Creates a in memory H2 clone of a remote SQL database",
+	"description": "Creates an in-memory H2 clone of a remote SQL database.",
 	"parameters": [
 		{
 			"name": "id",
@@ -20,31 +20,37 @@
 			"parameters": [
 				{
 					"name": "url",
+					"description": "A database url of the form jdbc:subprotocol:subname.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "user",
+					"description": "The database user on whose behalf the connection is being made.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "password",
+					"description": "The user's password.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "driver",
+					"description": "The driver to be used, for example org.h2.Driver.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "db_name",
+					"description": "The name of the database from which tables will be cloned.",
 					"type": "string",
-					"required": true				
+					"required": true
 				},
 				{
 					"name": "tables",
+					"description": "The tables from the database above which will be cloned.",
 					"type": "array",
 					"required": true,
 					"parameters": [
@@ -53,7 +59,7 @@
 							"type": "string",
 							"required": true
 						}
-					]				
+					]
 				}
 			]
 		}

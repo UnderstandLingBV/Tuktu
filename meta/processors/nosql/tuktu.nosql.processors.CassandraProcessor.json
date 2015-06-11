@@ -1,5 +1,6 @@
 {
 	"name": "Cassandra Processor",
+	"description": "Executes a query on a given Cassandra node, optionally appending the result to the data packet.",
 	"class": "tuktu.nosql.processors.CassandraProcessor",
 	"parameters": [
 		{
@@ -19,18 +20,22 @@
 			"parameters": [
 				{
 					"name": "address",
+					"description": "The address of the node to connect to; optionally appended by :port, otherwise port 9042 will be assumed.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "query",
+					"description": "The query to be run.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "append",
+					"description": "Append the result to the data packet; otherwise the result is ignored.",
 					"type": "boolean",
-					"required": false
+					"required": false,
+					"default": false
 				}
 			]
 		}

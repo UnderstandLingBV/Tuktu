@@ -1,5 +1,6 @@
 {
 	"name": "Train Logistic Regression Processor",
+	"description": "To be implemented...",
 	"class": "tuktu.ml.processors.LogisticRegressionTrainProcessor",
 	"parameters": [
 		{

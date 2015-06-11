@@ -1,5 +1,6 @@
 {
 	"name": "Dummy Generator",
+	"description": "Generates dummy strings every tick",
 	"class": "tuktu.generators.DummyGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						},
 						{
@@ -53,11 +55,13 @@
 			"parameters": [
 				{
 					"name": "interval",
+					"description": "Tick interval in which to send the messages, in milliseconds.",
 					"type": "int",
 					"required": true
 				},
 				{
 					"name": "message",
+					"description": "The message to send every tick.",
 					"type": "string",
 					"required": true
 				}

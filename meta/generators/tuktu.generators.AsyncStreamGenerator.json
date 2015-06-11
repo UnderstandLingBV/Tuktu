@@ -1,5 +1,6 @@
 {
 	"name": "Async Stream Generator",
+	"description": "Async 'special' generator that just waits for DataPackets to come in and processes them.",
 	"class": "tuktu.generators.AsyncStreamGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]

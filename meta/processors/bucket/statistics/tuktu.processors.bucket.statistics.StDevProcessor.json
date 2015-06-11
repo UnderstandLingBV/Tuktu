@@ -1,5 +1,6 @@
 {
 	"name": "Standard Deviation Processor",
+	"description": "To be implemented...",
 	"class": "tuktu.processors.bucket.statistics.StDevProcessor",
 	"parameters": [
 		{

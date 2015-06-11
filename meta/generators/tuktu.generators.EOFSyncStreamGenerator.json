@@ -1,5 +1,6 @@
 {
 	"name": "EOF Sync Stream Generator",
+	"description": "Special sync generator that processes a tuple and returns the actual result.",
 	"class": "tuktu.generators.EOFSyncStreamGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]

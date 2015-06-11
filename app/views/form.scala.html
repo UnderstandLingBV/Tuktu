@@ -43,7 +43,7 @@
 @if((json \ "type").as[String] == "object") {
 	<div data-depth="@depth" data-type="object" data-key="@{(json \ "name").as[String]}" data-required="@{(json \ "required").asOpt[Boolean].getOrElse(true)}">
 		@for(param <- (json \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
-			@form(param, depth + 1, array)
+			@this(param, depth + 1, array)
 		}
 	</div>
 } else {
@@ -60,7 +60,7 @@
 				</div>
 			}
 			<div class="hidden" data-arrayType="prototype">
-				@form(param, depth + 1, true)
+				@this(param, depth + 1, true)
 			</div>
 		}
 	</div>

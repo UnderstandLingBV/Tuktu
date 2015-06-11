@@ -1,5 +1,6 @@
 {
 	"name": "File Stream Processor",
+	"description": "Streams data into a file and closes it when it's done.",
 	"class": "tuktu.processors.FileStreamProcessor",
 	"parameters": [
 		{
@@ -19,26 +20,33 @@
 			"parameters": [
 				{
 					"name": "file_name",
+					"description": "The file to be streamed into.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "encoding",
+					"description": "The encoding used for writing.",
 					"type": "string",
-					"required": false
+					"required": false,
+					"default": "utf-8"
 				},
 				{
 					"name": "field_separator",
+					"description": "The field separator character.",
 					"type": "string",
-					"required": false
+					"required": false,
+					"default": ","
 				},
 				{
 					"name": "line_separator",
+					"description": "The line separator character, default is \r\n.",
 					"type": "string",
 					"required": false
 				},
 				{
 					"name": "fields",
+					"description": "The fields to be written.",
 					"type": "array",
 					"required": true,
 					"parameters": [

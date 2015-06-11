@@ -1,5 +1,6 @@
 {
 	"name": "Console Writer Processor",
+	"description": "Prints out data packets to console.",
 	"class": "tuktu.processors.ConsoleWriterProcessor",
 	"parameters": [
 		{
@@ -21,7 +22,8 @@
 					"name": "prettify",
 					"type": "boolean",
 					"description": "Try to prettify the result written to console.",
-					"required": false
+					"required": false,
+					"default": false
 				}
 			]
 		}

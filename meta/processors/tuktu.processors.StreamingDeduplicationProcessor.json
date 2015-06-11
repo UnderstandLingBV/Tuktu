@@ -1,5 +1,6 @@
 {
 	"name": "Streaming Deduplication Processor",
+	"description": "Deduplicates in a stream, meaning that only previously unseen data packets are forwarded.",
 	"class": "tuktu.processors.StreamingDeduplicationProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "fields",
+					"description": "The field combination to deduplicate for.",
 					"type": "array",
 					"required": true,
 					"parameters": [

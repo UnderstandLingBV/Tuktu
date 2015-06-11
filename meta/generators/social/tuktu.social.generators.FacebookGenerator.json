@@ -1,5 +1,6 @@
 {
 	"name": "Facebook Generator",
+	"description": "Gets posts containing keywords or from specific users from a given time interval.",
 	"class": "tuktu.social.generators.FacebookGenerator",
 	"parameters": [
 		{
@@ -29,6 +30,7 @@
 							"name": "instances",
 							"type": "int",
 							"required": false,
+							"default": 1,
 							"description": "The amount of instances per node of this handler type"
 						}
 					]
@@ -52,7 +54,7 @@
 					"parameters": [
 						{
 							"name": "access_token",
-							"label": "Access Token",
+							"description": "The token to access Facebook's API with.",
 							"type": "string",
 							"required": true
 						}
@@ -65,6 +67,7 @@
 					"parameters": [
 						{
 							"name": "keywords",
+							"description": "The keywords to search for in any posts.",
 							"type": "array",
 							"required": false,
 							"parameters": [
@@ -77,11 +80,13 @@
 						},
 						{
 							"name": "users",
+							"description": "The users (given by their Facebook user id) from which to get everything from their feed, independently from keywords above.",
 							"type": "array",
 							"required": false,
 							"parameters": [
 								{
 									"name": "",
+									"description": "Facebook user id.",
 									"type": "string",
 									"required": true
 								}
@@ -91,23 +96,27 @@
 				},
 				{
 					"name": "update_time",
-					"label": "Frequency of updating",
+					"label": "Update frequency",
+					"description": "Time in seconds between requests, if applicable.",
 					"type": "long",
-					"required": false
+					"required": false,
+					"default": 5
 				},
 				{
 					"name": "interval",
-					"label": "Time interval to collect data for",
+					"description": "Time interval to collect data for.",
 					"type": "object",
 					"required": false,
 					"parameters": [
 						{
 							"name": "start",
+							"description": "Timestamp of start time of time interval to collect data for. Can be left empty. If a start-time is given, everything from that time on will be fetched. If it is omitted the current time is assumed.",
 							"type": "long",
 							"required": false
 						},
 						{
 							"name": "end",
+							"description": "Timestamp of end time of time interval to collect data for. Can be left empty. If an end-time is given, everything until that time will be fetched. If it is omitted, no end time is assumed and everything will be fetched perpetually.",
 							"type": "long",
 							"required": false
 						}

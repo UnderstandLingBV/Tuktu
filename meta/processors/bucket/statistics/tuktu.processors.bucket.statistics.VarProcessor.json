@@ -1,5 +1,6 @@
 {
 	"name": "Variance Processor",
+	"description": "To be implemented",
 	"class": "tuktu.processors.bucket.statistics.VarProcessor",
 	"parameters": [
 		{

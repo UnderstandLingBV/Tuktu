@@ -20,27 +20,29 @@
 			"parameters": [
 				{
 					"name": "list_field",
-					"type": "string",
 					"description": "The name of the field that contains the list of maps.",
+					"type": "string",
 					"required": true
 				},
 				{
 					"name": "map_field",
-					"type": "string",
 					"description": "The name of the field that needs to be extracted from the separate maps.",
+					"type": "string",
 					"required": true
 				},
 				{
 					"name": "ignore_empty",
-					"type": "boolean",
 					"description": "If set to true, will only continue with non-empty values",
-					"required": false
+					"type": "boolean",
+					"required": false,
+					"default": true
 				},
 				{
 					"name": "overwrite",
-					"type": "boolean",
 					"description": "Whether or not to overwrite the original list_field.",
-					"required": false
+					"type": "boolean",
+					"required": false,
+					"default": true
 				}
 			]
 		}

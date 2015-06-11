@@ -1,5 +1,6 @@
 {
 	"name": "Contains All - Filter Processor",
+	"description": "Given a field with a list of maps, a field with a list of values, and a field, check for all possible field -> value pairs whether there is at least one map in the list which contains it, or drop that data packet.",
 	"class": "tuktu.processors.ContainsAllFilterProcessor",
 	"parameters": [
 		{
@@ -19,16 +20,19 @@
 			"parameters": [
 				{
 					"name": "field",
+					"description": "The field to check for the values.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "contains_field",
+					"description": "The field which contains an array of the values to check for.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "field_list",
+					"description": "A field which contains a list of maps.",
 					"type": "string",
 					"required": true
 				}

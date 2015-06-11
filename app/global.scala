@@ -12,6 +12,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.Json
 import com.fasterxml.jackson.core.JsonParseException
 import play.api.libs.json.JsValue
+import scala.language.postfixOps
+
+import javax.inject.Inject
+
+import play.api.http.HttpFilters
+import play.filters.gzip.GzipFilter
+
+class Filters @Inject() (gzipFilter: GzipFilter) extends HttpFilters {
+    def filters = Seq(gzipFilter)
+}
+
 
 object Global extends GlobalSettings {
     def getDescriptors(files: List[File]) = {

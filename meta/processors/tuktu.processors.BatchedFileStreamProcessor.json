@@ -1,5 +1,6 @@
 {
 	"name": "Batched File Stream Processor",
+	"description": "Streams data into a file and closes it when it's done.",
 	"class": "tuktu.processors.BatchedFileStreamProcessor",
 	"parameters": [
 		{
@@ -19,31 +20,39 @@
 			"parameters": [
 				{
 					"name": "file_name",
+					"description": "The location of the file to write to.",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "encoding",
+					"description": "The encoding used to write to the file.",
 					"type": "string",
-					"required": false
+					"required": false,
+					"default": "utf-8"
 				},
 				{
 					"name": "field_separator",
+					"description": "Field separator character.",
 					"type": "string",
-					"required": false
+					"required": false,
+					"default": ","
 				},
 				{
 					"name": "line_separator",
+					"description": "Line separator character, default is \r\n.",
 					"type": "string",
 					"required": false
 				},
 				{
 					"name": "batch_size",
+					"description": "The size of the batch (buffer) to be written into the file.",
 					"type": "int",
 					"required": true
 				},
 				{
 					"name": "fields",
+					"description": "The fields to be written out.",
 					"type": "array",
 					"required": true,
 					"parameters": [

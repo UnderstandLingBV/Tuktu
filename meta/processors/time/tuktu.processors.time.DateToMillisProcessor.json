@@ -1,7 +1,7 @@
 {
 	"name": "Date to Milliseconds Processor",
 	"class": "tuktu.processors.time.DateToMillisProcessor",
-	"description": "Converts a date to miliseconds (unix timestamp)",
+	"description": "Converts a date to milliseconds (unix timestamp).",
 	"parameters": [
 		{
 			"name": "id",
@@ -20,8 +20,9 @@
 			"parameters": [
 				{
 					"name": "field",
+					"description": "The field in which the date is; will be converted to Long in-place.",
 					"type": "string",
-					"required": false
+					"required": true
 				}
 			]
 		}

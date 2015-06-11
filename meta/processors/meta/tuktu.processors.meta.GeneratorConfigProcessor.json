@@ -1,5 +1,6 @@
 {
 	"name": "Generator Config Processor",
+	"description": "Invokes a new generator via config, which can be appended by data packets.",
 	"class": "tuktu.processors.meta.GeneratorConfigProcessor",
 	"parameters": [
 		{
@@ -19,11 +20,13 @@
 			"parameters": [
 				{
 					"name": "name",
+					"description": "The name of the config file, without extension (.json).",
 					"type": "string",
 					"required": true
 				},
 				{
 					"name": "add_fields",
+					"description": "Fields to add to the config.",
 					"type": "array",
 					"required": false,
 					"parameters": [
@@ -34,11 +37,13 @@
 							"parameters": [
 								{
 									"name": "source",
+									"description": "The field (key) whose value will be used as value for the config, with the key given below: target -> data(source)",
 									"type": "string",
 									"required": true
 								},
 								{
 									"name": "target",
+									"description": "The key used for the config with the value from the data packet at the given field provided above: target -> data(source)",
 									"type": "string",
 									"required": true
 								}

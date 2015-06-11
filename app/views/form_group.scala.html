@@ -4,13 +4,14 @@
 class="form-group"
 data-toggle="tooltip"
 data-placement="left"
-title="@{(json \ "description").asOpt[String].map(_ + "\n").getOrElse("")
-}Type: @{(json \ "type").as[String].capitalize}
-Required: @{(json \ "required").as[Boolean]
-}@{(json \ "default").asOpt[play.api.libs.json.JsValue].map("\nDefault: " + _.toString).getOrElse("")}"
+title="@{(json \ "name").asOpt[String].map(x => if (x.isEmpty) "[unnamed]" else x).getOrElse("[unnamed]")}
+@{(json \ "description").asOpt[String].map(_ + "\n").getOrElse("")}
+Type: @{(json \ "type").as[String].capitalize}
+Required: @{(json \ "required").as[Boolean]}
+@{(json \ "default").asOpt[play.api.libs.json.JsValue].map("Default: " + _.toString).getOrElse("")}"
 >
 	<label class="col-xs-3 control-label">
-		@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}
+		@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).replace('_', ' ').capitalize}
 	</label>
 	@html
 	@if(array) {
@@ -19,4 +20,3 @@ Required: @{(json \ "required").as[Boolean]
 		</div>
 	}
 </div>
-

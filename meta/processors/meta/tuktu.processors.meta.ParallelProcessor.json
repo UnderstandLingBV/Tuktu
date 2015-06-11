@@ -1,5 +1,6 @@
 {
 	"name": "Parallel Processor",
+	"description": "Starts parallel processor pipelines, which are merge upon completion.",
 	"class": "tuktu.processors.meta.ParallelProcessor",
 	"parameters": [
 		{
@@ -18,7 +19,14 @@
 			"required": true,
 			"parameters": [
 				{
+					"name": "merger",
+					"description": "The merger class to be used to merge the results of the processors.",
+					"type": "string",
+					"required": true
+				},
+				{
 					"name": "processors",
+					"description": "Each entry is defining a pipeline of processors for which an Enumeratee is built. The results of each is then merged using the merger class.",
 					"type": "array",
 					"required": true,
 					"parameters": [
@@ -29,11 +37,13 @@
 							"parameters": [
 								{
 									"name": "start",
+									"description": "The ID of the processor to compose first.",
 									"type": "string",
 									"required": true
 								},
 								{
 									"name": "pipeline",
+									"description": "The actual pipeline of processors.",
 									"type": "array",
 									"required": true,
 									"parameters": [
@@ -44,26 +54,31 @@
 											"parameters": [
 												{
 													"name": "id",
+													"description": "The Id of the processor.",
 													"type": "string",
 													"required": true
 												},
 												{
 													"name": "name",
+													"description": "The name of the processor.",
 													"type": "string",
 													"required": true
 												},
 												{
 													"name": "config",
-													"type": "any",
+													"description": "The config of the processor.",
+													"type": "JsObject",
 													"required": true
 												},
 												{
 													"name": "result",
+													"description": "The result of the processor.",
 													"type": "string",
 													"required": true
 												},
 												{
 													"name": "next",
+													"description": "The next processors to be composed.",
 													"type": "array",
 													"required": true,
 													"parameters": [
@@ -81,11 +96,6 @@
 							]
 						}
 					]
-				},
-				{
-					"name": "merger",
-					"type": "string",
-					"required": true
 				}
 			]
 		}

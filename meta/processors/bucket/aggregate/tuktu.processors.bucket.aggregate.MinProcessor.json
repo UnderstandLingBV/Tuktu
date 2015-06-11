@@ -1,5 +1,6 @@
 {
 	"name": "Minimum Processor",
+	"description": "Returns the minimum of a bucket, sorted by a given field.",
 	"class": "tuktu.processors.bucket.aggregate.MinProcessor",
 	"parameters": [
 		{
@@ -19,6 +20,7 @@
 			"parameters": [
 				{
 					"name": "field",
+					"description": "The field to sort by. This is also where the result is returned.",
 					"type": "string",
 					"required": true
 				}

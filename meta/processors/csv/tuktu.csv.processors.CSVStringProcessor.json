@@ -21,20 +21,23 @@
 				{
 					"name": "separator",
 					"type": "string",
-					"description": "The separator. Semicolon (;) by default.",
-					"required": false
+					"description": "The separator character.",
+					"required": false,
+					"default": ";"
 				},
 				{
 					"name": "quote",
 					"type": "string",
-					"description": "The quote character. Double quote (\") by default.",
-					"required": false
+					"description": "The quote character.",
+					"required": false,
+					"default": "\""
 				},
 				{
 					"name": "escape",
 					"type": "string",
-					"description": "The escape character. Double backslash (\\) by default.",
-					"required": false
+					"description": "The escape character.",
+					"required": false,
+					"default": "\\"
 				}
 			]
 		}
