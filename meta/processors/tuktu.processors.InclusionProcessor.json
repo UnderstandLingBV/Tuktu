@@ -26,7 +26,7 @@
 				},
 				{
 					"name": "type",
-					"description": "The type of the expression: 'normal', 'negate', or 'groovy'."
+					"description": "The type of the expression: 'normal', 'negate', or 'groovy'.",
 					"type": "string",
 					"required": true
 				},
