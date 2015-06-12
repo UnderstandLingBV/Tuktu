@@ -9,9 +9,9 @@ Recursively flattens a map object, appending the keys to the previous keys separ
 
     * **fields** *(type: array)* `[Required]`
     - The fields to be flattened.
- 
+
       * **[UNNAMED]** *(type: string)* `[Required]`
 
     * **separator** *(type: string)* `[Required]`
     - The separator inserted between two iterations.
- 
+

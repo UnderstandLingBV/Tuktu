@@ -9,6 +9,6 @@ Deduplicates all elements in a bucketed data packet.
 
     * **fields** *(type: array)* `[Required]`
     - The fields to deduplicate elements with same entries from.
- 
+
       * **[UNNAMED]** *(type: string)* `[Required]`
 

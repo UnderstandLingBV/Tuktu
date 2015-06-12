@@ -9,19 +9,18 @@ Streams data into a file and closes it when it's done.
 
     * **file_name** *(type: string)* `[Required]`
     - The file to be streamed into.
- 
-    * **encoding** *(type: string)* `[Optional]`
+
+    * **encoding** *(type: string)* `[Optional, default = "utf-8"]`
     - The encoding used for writing.
- 
-    * **field_separator** *(type: string)* `[Optional]`
+
+    * **field_separator** *(type: string)* `[Optional, default = ","]`
     - The field separator character.
- 
+
     * **line_separator** *(type: string)* `[Optional]`
-    - The line separator character, default is 
-.
- 
+    - The line separator character, default is newline (\r\n).
+
     * **fields** *(type: array)* `[Required]`
     - The fields to be written.
- 
+
       * **[UNNAMED]** *(type: string)* `[Required]`
 

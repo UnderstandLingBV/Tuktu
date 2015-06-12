@@ -9,7 +9,7 @@ Takes a JSON field and converts it into something usable.
 
     * **field** *(type: string)* `[Required]`
     - The field containing the JSON to be converted into a Map.
- 
-    * **overwrite** *(type: boolean)* `[Optional]`
+
+    * **overwrite** *(type: boolean)* `[Optional, default = false]`
     - Overwrite field, or append the data as resultName.
- 
+

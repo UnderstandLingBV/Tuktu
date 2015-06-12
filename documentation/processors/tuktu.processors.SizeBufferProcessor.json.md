@@ -9,4 +9,4 @@ Buffers data packets until a specific amount has been reached, then releases the
 
     * **size** *(type: int)* `[Required]`
     - The amount of data packets to buffer before continuing.
- 
+

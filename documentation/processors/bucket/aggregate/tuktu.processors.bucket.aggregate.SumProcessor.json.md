@@ -9,4 +9,4 @@ Sums all values of a field in a bucket.
 
     * **field** *(type: string)* `[Required]`
     - The field that is summed up. This is also where the result is returned.
- 
+

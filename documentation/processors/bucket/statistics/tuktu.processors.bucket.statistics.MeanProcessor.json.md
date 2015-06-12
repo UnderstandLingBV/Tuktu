@@ -9,6 +9,6 @@ Individually computes the mean over a list of fields containing numerical values
 
     * **fields** *(type: array)* `[Required]`
     - The mean over these fields will be individually computed and returned under the respective field name.
- 
+
       * **[UNNAMED]** *(type: string)* `[Required]`
 

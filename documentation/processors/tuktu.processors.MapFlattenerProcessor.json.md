@@ -9,4 +9,4 @@ Takes a Map[String, Any] and makes it a top-level citizen, overwriting other top
 
     * **field** *(type: string)* `[Required]`
     - The field which contains the map.
- 
+

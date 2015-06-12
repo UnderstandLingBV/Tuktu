@@ -9,6 +9,6 @@ Individually computes the midrange over a list of fields containing numerical va
 
     * **fields** *(type: array)* `[Required]`
     - The midrange over these fields will be individually computed and returned under the respective field name.
- 
+
       * **[UNNAMED]** *(type: string)* `[Required]`
 

@@ -7,6 +7,6 @@ Prints out data packets to console.
 
   * **config** *(type: object)* `[Required]`
 
-    * **prettify** *(type: boolean)* `[Optional]`
+    * **prettify** *(type: boolean)* `[Optional, default = false]`
     - Try to prettify the result written to console.
- 
+

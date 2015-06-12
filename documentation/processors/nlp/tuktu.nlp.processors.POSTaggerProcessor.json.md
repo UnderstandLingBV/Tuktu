@@ -9,7 +9,7 @@ Performs POS tagging on an Array of tokens in a given language.
 
     * **language** *(type: string)* `[Required]`
     - The language to be used for POS tagging.
- 
+
     * **tokens** *(type: string)* `[Required]`
     - The field that contains an Array of Tokens.
- 
+

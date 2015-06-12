@@ -9,4 +9,4 @@ Converts an Any to a BigDecimal.
 
     * **field** *(type: string)* `[Required]`
     - The field containing the (sequence of) BigDecimal.
- 
+

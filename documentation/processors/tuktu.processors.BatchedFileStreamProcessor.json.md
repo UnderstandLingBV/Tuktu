@@ -9,22 +9,22 @@ Streams data into a file and closes it when it's done.
 
     * **file_name** *(type: string)* `[Required]`
     - The location of the file to write to.
- 
-    * **encoding** *(type: string)* `[Optional]`
+
+    * **encoding** *(type: string)* `[Optional, default = "utf-8"]`
     - The encoding used to write to the file.
- 
-    * **field_separator** *(type: string)* `[Optional]`
+
+    * **field_separator** *(type: string)* `[Optional, default = ","]`
     - Field separator character.
- 
+
     * **line_separator** *(type: string)* `[Optional]`
     - Line separator character, default is 
 .
- 
+
     * **batch_size** *(type: int)* `[Required]`
     - The size of the batch (buffer) to be written into the file.
- 
+
     * **fields** *(type: array)* `[Required]`
     - The fields to be written out.
- 
+
       * **[UNNAMED]** *(type: string)* `[Required]`
 

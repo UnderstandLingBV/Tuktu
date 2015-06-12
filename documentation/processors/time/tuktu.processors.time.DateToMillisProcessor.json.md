@@ -9,4 +9,4 @@ Converts a date to milliseconds (unix timestamp).
 
     * **field** *(type: string)* `[Required]`
     - The field in which the date is; will be converted to Long in-place.
- 
+

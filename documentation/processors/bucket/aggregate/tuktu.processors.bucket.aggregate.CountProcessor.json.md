@@ -9,4 +9,4 @@ Counts the amount of values in a bucket.
 
     * **field** *(type: string)* `[Required]`
     - The field under which the result is returned.
- 
+

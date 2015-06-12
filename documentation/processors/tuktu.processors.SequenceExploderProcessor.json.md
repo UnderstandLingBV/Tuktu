@@ -9,7 +9,7 @@ Takes a (JSON) sequence object and returns packets for each of the values in it 
 
     * **field** *(type: string)* `[Optional]`
     - The field containing a sequence object.
- 
-    * **ignore_empty** *(type: boolean)* `[Optional]`
+
+    * **ignore_empty** *(type: boolean)* `[Optional, default = true]`
     - If set to true, will only continue with non-empty values, otherwise those will be filtered out.
- 
+

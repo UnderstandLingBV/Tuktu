@@ -9,4 +9,4 @@ Performs language detection on a given field.
 
     * **field** *(type: string)* `[Required]`
     - The field to be performed language detection on. The field's content must be a String or a JsString.
- 
+

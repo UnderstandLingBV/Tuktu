@@ -7,12 +7,12 @@ Turns the entire datapacket into a comma-separated (or other separators) string.
 
   * **config** *(type: object)* `[Required]`
 
-    * **separator** *(type: string)* `[Optional]`
+    * **separator** *(type: string)* `[Optional, default = ";"]`
     - The separator character.
- 
-    * **quote** *(type: string)* `[Optional]`
+
+    * **quote** *(type: string)* `[Optional, default = "\""]`
     - The quote character.
- 
-    * **escape** *(type: string)* `[Optional]`
+
+    * **escape** *(type: string)* `[Optional, default = "\\"]`
     - The escape character.
- 
+

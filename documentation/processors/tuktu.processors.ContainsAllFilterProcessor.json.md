@@ -9,10 +9,10 @@ Given a field with a list of maps, a field with a list of values, and a field, c
 
     * **field** *(type: string)* `[Required]`
     - The field to check for the values.
- 
+
     * **contains_field** *(type: string)* `[Required]`
     - The field which contains an array of the values to check for.
- 
+
     * **field_list** *(type: string)* `[Required]`
     - A field which contains a list of maps.
- 
+

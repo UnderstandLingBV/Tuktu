@@ -9,7 +9,7 @@ Sorts elements in a bucket by a given field.
 
     * **field** *(type: string)* `[Required]`
     - The field to sort on.
- 
-    * **asc_desc** *(type: string)* `[Optional]`
+
+    * **asc_desc** *(type: string)* `[Optional, default = "asc"]`
     - Whether to sort ascending (asc) or descending (desc). Any value other than 'desc' will be assumed ascending.
- 
+

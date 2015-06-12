@@ -9,7 +9,7 @@ Tokenizes a piece of data in a given field.
 
     * **field** *(type: string)* `[Required]`
     - The field to be tokenized. The field's content must be a String or a JsString.
- 
-    * **as_string** *(type: boolean)* `[Optional]`
+
+    * **as_string** *(type: boolean)* `[Optional, default = false]`
     - If false, an Array of Tokens (Strings) is returned; otherwise a String is returned where the tokens are separated by blanks (' ').
- 
+

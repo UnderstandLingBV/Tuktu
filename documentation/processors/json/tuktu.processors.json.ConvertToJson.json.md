@@ -9,7 +9,7 @@ Converts a field to JSON.
 
     * **field** *(type: string)* `[Required]`
     - The field containing the value to be converted to JSON.
- 
-    * **append** *(type: boolean)* `[Optional]`
+
+    * **append** *(type: boolean)* `[Optional, default = false]`
     - Append the data as resultName or overwrite field.
- 
+

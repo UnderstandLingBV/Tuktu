@@ -9,4 +9,4 @@ Buffers data packets for a specific amount of time.
 
     * **interval** *(type: int)* `[Required]`
     - The amount of milliseconds to buffer for.
- 
+

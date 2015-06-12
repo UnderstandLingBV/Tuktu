@@ -9,6 +9,6 @@ Individually computes the median over a list of fields containing numerical valu
 
     * **fields** *(type: array)* `[Required]`
     - The median over these fields will be individually computed and returned under the respective field name.
- 
+
       * **[UNNAMED]** *(type: string)* `[Required]`
 

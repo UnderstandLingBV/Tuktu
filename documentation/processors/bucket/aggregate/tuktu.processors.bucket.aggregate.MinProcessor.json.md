@@ -9,4 +9,4 @@ Returns the minimum of a bucket, sorted by a given field.
 
     * **field** *(type: string)* `[Required]`
     - The field to sort by. This is also where the result is returned.
- 
+
