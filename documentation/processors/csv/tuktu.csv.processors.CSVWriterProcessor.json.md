@@ -1,5 +1,5 @@
 ### tuktu.csv.processors.CSVWriterProcessor
-No description present.
+Writes CSV with headers to a file.
 
   * **id** *(type: string)* `[Required]`
 
@@ -11,7 +11,7 @@ No description present.
     - The filename to write to.
  
     * **encoding** *(type: string)* `[Optional]`
-    - The character encoding, UTF-8 by default.
+    - The character encoding.
  
     * **fields** *(type: array)* `[Optional]`
     - A selection of the fields to write out. If not set, all fields are written.
@@ -19,11 +19,11 @@ No description present.
       * **[UNNAMED]** *(type: string)* `[Required]`
 
     * **separator** *(type: string)* `[Optional]`
-    - The separator. Semicolon (;) by default.
+    - The separator character.
  
     * **quote** *(type: string)* `[Optional]`
-    - The quote character. Double quote (") by default.
+    - The quote character.
  
     * **escape** *(type: string)* `[Optional]`
-    - The escape character. Double backslash (\) by default.
+    - The escape character.
  

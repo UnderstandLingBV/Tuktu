@@ -1,5 +1,5 @@
 ### tuktu.processors.FieldConstantAdderProcessor
-No description present.
+Adds a field with a constant (static) value to the data packet.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,6 +8,8 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **value** *(type: string)* `[Required]`
-
+    - A Tuktu String to evaluate and add.
+ 
     * **is_numeric** *(type: boolean)* `[Optional]`
-
+    - Convert Tuktu String to Long, or not.
+ 

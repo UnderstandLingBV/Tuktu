@@ -19,14 +19,14 @@ Reads out values as CSV from a field.
     - If set to true, the first data packet will be used to extract headers from.
  
     * **remove_original** *(type: boolean)* `[Optional]`
-    - Whehter to remove the original field.
+    - Whether to remove the original field.
  
     * **separator** *(type: string)* `[Optional]`
-    - The separator. Semicolon (;) by default.
+    - The separator character.
  
     * **quote** *(type: string)* `[Optional]`
-    - The quote character. Double quote (") by default.
+    - The quote character.
  
     * **escape** *(type: string)* `[Optional]`
-    - The escape character. Double backslash (\) by default.
+    - The escape character.
  

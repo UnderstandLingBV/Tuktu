@@ -1,5 +1,5 @@
 ### tuktu.generators.EOFSyncStreamGenerator
-No description present.
+Special sync generator that processes a tuple and returns the actual result.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.

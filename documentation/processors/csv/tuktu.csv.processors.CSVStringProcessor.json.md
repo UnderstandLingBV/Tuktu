@@ -8,11 +8,11 @@ Turns the entire datapacket into a comma-separated (or other separators) string.
   * **config** *(type: object)* `[Required]`
 
     * **separator** *(type: string)* `[Optional]`
-    - The separator. Semicolon (;) by default.
+    - The separator character.
  
     * **quote** *(type: string)* `[Optional]`
-    - The quote character. Double quote (") by default.
+    - The quote character.
  
     * **escape** *(type: string)* `[Optional]`
-    - The escape character. Double backslash (\) by default.
+    - The escape character.
  

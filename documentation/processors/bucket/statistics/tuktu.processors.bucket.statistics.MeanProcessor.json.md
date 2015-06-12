@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.statistics.MeanProcessor
-No description present.
+Individually computes the mean over a list of fields containing numerical values.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,6 +8,7 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **fields** *(type: array)* `[Required]`
-
-      * **[UNNAMED]** *(type: array)* `[Required]`
+    - The mean over these fields will be individually computed and returned under the respective field name.
+ 
+      * **[UNNAMED]** *(type: string)* `[Required]`
 

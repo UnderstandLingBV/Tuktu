@@ -1,5 +1,5 @@
 ### tuktu.processors.ConvertToBigDecimal
-Converts a any to a BigDecimal
+Converts an Any to a BigDecimal.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,5 +8,5 @@ Converts a any to a BigDecimal
   * **config** *(type: object)* `[Required]`
 
     * **field** *(type: string)* `[Required]`
-    - The field containing the (sequence of) BigDecimal
+    - The field containing the (sequence of) BigDecimal.
  

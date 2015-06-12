@@ -1,5 +1,5 @@
 ### tuktu.nosql.processors.ESProcessor
-No description present.
+Makes an HTTP request to Elastic Search, using the REST API.
 
   * **id** *(type: string)* `[Required]`
 
@@ -7,15 +7,15 @@ No description present.
 
   * **config** *(type: object)* `[Required]`
 
-    * **host** *(type: string)* `[Required]`
-
-    * **port** *(type: int)* `[Required]`
-
-    * **http_method** *(type: string)* `[Required]`
-
-    * **type_field** *(type: string)* `[Required]`
-
-    * **id_field** *(type: string)* `[Required]`
-
-    * **index_field** *(type: string)* `[Required]`
-
+    * **url** *(type: string)* `[Required]`
+    - The HTTP address to make the request to.
+ 
+    * **http_method** *(type: string)* `[Optional]`
+    - Usually one of get, post, put, delete.
+ 
+    * **body** *(type: any)* `[Optional]`
+    - The body to be send with the request.
+ 
+    * **field** *(type: string)* `[Required]`
+    - The JSON field to be extracted from the response JSON.
+ 

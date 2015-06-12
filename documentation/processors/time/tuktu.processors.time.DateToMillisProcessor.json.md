@@ -1,5 +1,5 @@
 ### tuktu.processors.time.DateToMillisProcessor
-Converts a date to miliseconds (unix timestamp)
+Converts a date to milliseconds (unix timestamp).
 
   * **id** *(type: string)* `[Required]`
 
@@ -7,5 +7,6 @@ Converts a date to miliseconds (unix timestamp)
 
   * **config** *(type: object)* `[Required]`
 
-    * **field** *(type: string)* `[Optional]`
-
+    * **field** *(type: string)* `[Required]`
+    - The field in which the date is; will be converted to Long in-place.
+ 

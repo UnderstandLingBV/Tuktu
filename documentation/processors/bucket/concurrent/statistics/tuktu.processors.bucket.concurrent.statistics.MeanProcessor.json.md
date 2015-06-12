@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.concurrent.statistics.MeanProcessor
-No description present.
+Computes the mean of a field of numerical values in a concurrent way.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,4 +8,5 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **field** *(type: string)* `[Required]`
-
+    - The mean over this field will be computed and returned under the field name.
+ 

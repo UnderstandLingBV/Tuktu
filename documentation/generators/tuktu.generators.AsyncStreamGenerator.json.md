@@ -1,5 +1,5 @@
 ### tuktu.generators.AsyncStreamGenerator
-No description present.
+Async 'special' generator that just waits for DataPackets to come in and processes them.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.

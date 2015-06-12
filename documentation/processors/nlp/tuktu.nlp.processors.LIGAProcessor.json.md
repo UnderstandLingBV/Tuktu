@@ -1,5 +1,5 @@
 ### tuktu.nlp.processors.LIGAProcessor
-No description present.
+Performs language detection on a given field.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,4 +8,5 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **field** *(type: string)* `[Required]`
-
+    - The field to be performed language detection on. The field's content must be a String or a JsString.
+ 

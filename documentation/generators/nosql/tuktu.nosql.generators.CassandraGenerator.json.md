@@ -1,5 +1,5 @@
 ### tuktu.nosql.generators.CassandraGenerator
-No description present.
+Executes a query on a specified Cassandra node.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -20,12 +20,17 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **host** *(type: string)* `[Required]`
-
+    - The address of the node to connect to; optionally appended by :port, otherwise port 9042 will be assumed.
+ 
     * **type** *(type: string)* `[Optional]`
-
+    - The execution type of the query.
+ 
     * **query** *(type: string)* `[Required]`
-
+    - The query to be run.
+ 
     * **flatten** *(type: boolean)* `[Optional]`
-
+    - Flatten the result, otherwise resultName -> result will be returned.
+ 
     * **fetch_size** *(type: int)* `[Optional]`
-
+    - The fetch size of the query.
+ 

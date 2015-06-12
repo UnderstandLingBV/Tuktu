@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.aggregate.CountProcessor
-No description present.
+Counts the amount of values in a bucket.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,4 +8,5 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **field** *(type: string)* `[Required]`
-
+    - The field under which the result is returned.
+ 

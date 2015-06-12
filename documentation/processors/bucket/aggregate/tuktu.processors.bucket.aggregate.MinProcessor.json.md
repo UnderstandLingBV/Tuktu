@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.aggregate.MinProcessor
-No description present.
+Returns the minimum of a bucket, sorted by a given field.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,4 +8,5 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **field** *(type: string)* `[Required]`
-
+    - The field to sort by. This is also where the result is returned.
+ 

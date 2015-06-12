@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.DeduplicationProcessor
-No description present.
+Deduplicates all elements in a bucketed data packet.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,6 +8,7 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **fields** *(type: array)* `[Required]`
-
+    - The fields to deduplicate elements with same entries from.
+ 
       * **[UNNAMED]** *(type: string)* `[Required]`
 

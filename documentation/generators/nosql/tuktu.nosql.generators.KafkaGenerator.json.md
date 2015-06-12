@@ -1,5 +1,5 @@
 ### tuktu.nosql.generators.KafkaGenerator
-No description present.
+Creates a Kafka consumer generating data packets from the feed of messages for a given topic.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -20,14 +20,20 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **kafka_properties** *(type: JsObject)* `[Required]`
-
+    - Kafka properties given by a JSON object with key, value pairs containing strings only.
+ 
     * **topic** *(type: string)* `[Required]`
-
+    - The topic that messages are to be fetched about.
+ 
     * **stop_message** *(type: string)* `[Optional]`
-
+    - Stop as soon as this message is encountered. Ignored if to_string is false.
+ 
     * **to_string** *(type: boolean)* `[Optional]`
-
+    - Convert the message to a string, or keep it as a byte array.
+ 
     * **charset** *(type: string)* `[Optional]`
-
+    - The charset used to convert the message to a string. Ignored if to_string is false.
+ 
     * **threads** *(type: int)* `[Optional]`
-
+    - Number of threads to read partitions with.
+ 

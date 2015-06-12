@@ -1,5 +1,5 @@
 ### tuktu.generators.DummyGenerator
-No description present.
+Generates dummy strings every tick
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -23,6 +23,8 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **interval** *(type: int)* `[Required]`
-
+    - Tick interval in which to send the messages, in milliseconds.
+ 
     * **message** *(type: string)* `[Required]`
-
+    - The message to send every tick.
+ 

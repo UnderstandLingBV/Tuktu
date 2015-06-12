@@ -1,5 +1,5 @@
 ### tuktu.nlp.processors.RBEMPolarityProcessor
-No description present.
+Performs polarity detection given a language, an Array of tokens and an Array of POS tags.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,8 +8,11 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **language** *(type: string)* `[Required]`
-
+    - The language to be used.
+ 
     * **tokens** *(type: string)* `[Required]`
-
+    - The field that contains an Array of tokens.
+ 
     * **pos** *(type: string)* `[Required]`
-
+    - The field that contains an Array of POS tags.
+ 

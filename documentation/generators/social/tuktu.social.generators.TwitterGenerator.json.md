@@ -1,5 +1,5 @@
 ### tuktu.social.generators.TwitterGenerator
-No description present.
+Given a list of keywords, users and a geo square, streams public tweets matching these filters.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -32,14 +32,30 @@ No description present.
     * **filters** *(type: object)* `[Required]`
 
       * **keywords** *(type: array)* `[Optional]`
-
+      - Specifies the keywords to track.
+ 
         * **[UNNAMED]** *(type: string)* `[Required]`
 
       * **userids** *(type: array)* `[Optional]`
-
+      - Specifies the users, by ID, to receive public tweets from.
+ 
         * **[UNNAMED]** *(type: string)* `[Required]`
 
-      * **geo** *(type: array)* `[Optional]`
+      * **geo** *(type: object)* `[Optional]`
 
-        * **[UNNAMED]** *(type: string)* `[Required]`
+        * **p1** *(type: object)* `[Optional]`
 
+          * **long** *(type: string)* `[Optional]`
+          - Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.
+ 
+          * **lat** *(type: string)* `[Optional]`
+          - Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.
+ 
+        * **p2** *(type: object)* `[Optional]`
+
+          * **long** *(type: string)* `[Optional]`
+          - Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.
+ 
+          * **lat** *(type: string)* `[Optional]`
+          - Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.
+ 

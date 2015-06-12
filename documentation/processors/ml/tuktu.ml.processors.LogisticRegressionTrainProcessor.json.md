@@ -1,5 +1,5 @@
 ### tuktu.ml.processors.LogisticRegressionTrainProcessor
-No description present.
+To be implemented...
 
   * **id** *(type: string)* `[Required]`
 

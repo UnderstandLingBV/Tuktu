@@ -1,5 +1,5 @@
 ### tuktu.generators.LineGenerator
-No description present.
+Streams a file line by line.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -20,10 +20,14 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **filename** *(type: string)* `[Required]`
-
+    - The path to the file.
+ 
     * **encoding** *(type: string)* `[Optional]`
-
+    - The encoding of the file.
+ 
     * **start_line** *(type: int)* `[Optional]`
-
+    - The start line to start streaming from.
+ 
     * **end_line** *(type: int)* `[Optional]`
-
+    - The end line to stop streaming on, inclusively. Streamed until end of file if omitted.
+ 

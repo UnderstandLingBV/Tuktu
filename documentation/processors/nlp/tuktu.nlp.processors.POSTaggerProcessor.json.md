@@ -1,5 +1,5 @@
 ### tuktu.nlp.processors.POSTaggerProcessor
-No description present.
+Performs POS tagging on an Array of tokens in a given language.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,6 +8,8 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **language** *(type: string)* `[Required]`
-
+    - The language to be used for POS tagging.
+ 
     * **tokens** *(type: string)* `[Required]`
-
+    - The field that contains an Array of Tokens.
+ 

@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.aggregate.SumProcessor
-No description present.
+Sums all values of a field in a bucket.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,4 +8,5 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **field** *(type: string)* `[Required]`
-
+    - The field that is summed up. This is also where the result is returned.
+ 

@@ -1,5 +1,5 @@
 ### tuktu.nosql.generators.SQLGenerator
-No description present.
+Executes a query on an SQL database.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -20,14 +20,20 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **url** *(type: string)* `[Required]`
-
+    - A database url of the form jdbc:subprotocol:subname.
+ 
     * **user** *(type: string)* `[Required]`
-
+    - The database user on whose behalf the connection is being made.
+ 
     * **password** *(type: string)* `[Required]`
-
+    - The user's password.
+ 
     * **query** *(type: string)* `[Required]`
-
+    - SQL query to be executed.
+ 
     * **driver** *(type: string)* `[Required]`
-
+    - The driver to be used, for example org.h2.Driver.
+ 
     * **flatten** *(type: boolean)* `[Optional]`
-
+    - Flatten the results, or return resultName -> results.
+ 

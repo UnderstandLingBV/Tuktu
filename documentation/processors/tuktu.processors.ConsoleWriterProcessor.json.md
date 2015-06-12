@@ -1,5 +1,5 @@
 ### tuktu.processors.ConsoleWriterProcessor
-No description present.
+Prints out data packets to console.
 
   * **id** *(type: string)* `[Required]`
 

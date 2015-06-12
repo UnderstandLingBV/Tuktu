@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.statistics.StDevProcessor
-No description present.
+To be implemented...
 
   * **id** *(type: string)* `[Required]`
 

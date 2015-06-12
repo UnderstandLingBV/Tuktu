@@ -1,5 +1,5 @@
 ### tuktu.nosql.processors.KafkaProcessor
-No description present.
+Sends keyed messages to a Kafka producer.
 
   * **id** *(type: string)* `[Required]`
 
@@ -7,7 +7,9 @@ No description present.
 
   * **config** *(type: object)* `[Required]`
 
-    * **kafka_props** *(type: object)* `[Required]`
-
+    * **kafka_props** *(type: JsObject)* `[Required]`
+    - Kafka properties given by a JSON object with key, value pairs containing strings only.
+ 
     * **key_field** *(type: string)* `[Required]`
-
+    - Field which contains the key for the keyed message.
+ 

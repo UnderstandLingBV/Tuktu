@@ -1,5 +1,5 @@
 ### tuktu.processors.GroupByBuffer
-No description present.
+Buffers and groups data by the value list of the provided fields.
 
   * **id** *(type: string)* `[Required]`
 

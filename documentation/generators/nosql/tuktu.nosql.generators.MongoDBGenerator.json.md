@@ -1,5 +1,5 @@
 ### tuktu.nosql.generators.MongoDBGenerator
-No description present.
+Executes a query on a given list of nodes.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -20,14 +20,19 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **hosts** *(type: array)* `[Required]`
-
+    - A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.
+ 
       * **[UNNAMED]** *(type: string)* `[Required]`
 
     * **database** *(type: string)* `[Required]`
-
+    - The database name.
+ 
     * **collection** *(type: string)* `[Required]`
-
+    - The name of the collection to open.
+ 
     * **query** *(type: JsObject)* `[Required]`
-
+    - Find the documents matching these given criteria.
+ 
     * **batch** *(type: boolean)* `[Optional]`
-
+    - Are all results to be batched before pushing it on the channel.
+ 

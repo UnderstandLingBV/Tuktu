@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.SortProcessor
-No description present.
+Sorts elements in a bucket by a given field.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,6 +8,8 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **field** *(type: string)* `[Required]`
-
+    - The field to sort on.
+ 
     * **asc_desc** *(type: string)* `[Optional]`
-
+    - Whether to sort ascending (asc) or descending (desc). Any value other than 'desc' will be assumed ascending.
+ 

@@ -1,5 +1,5 @@
 ### tuktu.generators.ListGenerator
-No description present.
+Generates a list of given values.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -20,6 +20,7 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **values** *(type: array)* `[Required]`
-
+    - List of values to be streamed.
+ 
       * **[UNNAMED]** *(type: string)* `[Required]`
 

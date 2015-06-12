@@ -1,5 +1,5 @@
 ### tuktu.processors.TimestampAdderProcessor
-No description present.
+Adds a simple timestamp to the data packet.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,4 +8,5 @@ No description present.
   * **config** *(type: object)* `[Required]`
 
     * **format** *(type: string)* `[Optional]`
-
+    - If provided, returns the timestamp formatted accordingly as a String. Otherwise returns the timestamp as Long.
+ 

@@ -16,5 +16,5 @@ Sorts items in a bucket in a distributed fashion based on some field.
     - The field (key) to sort items on.
  
     * **asc_desc** *(type: string)* `[Optional]`
-    - Whether to sort ascending (asc) or descending (desc). Ascending by default.
+    - Whether to sort ascending (asc) or descending (desc). Any value other than 'desc' will be assumed ascending.
  

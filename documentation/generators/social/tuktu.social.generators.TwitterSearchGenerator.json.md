@@ -1,5 +1,5 @@
 ### tuktu.social.generators.TwitterSearchGenerator
-No description present.
+Searches for public tweets given a list of keywords.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -32,6 +32,7 @@ No description present.
     * **filters** *(type: object)* `[Required]`
 
       * **keywords** *(type: array)* `[Required]`
-
+      - Keywords to search for in public tweets.
+ 
         * **[UNNAMED]** *(type: string)* `[Required]`
 

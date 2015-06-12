@@ -1,5 +1,5 @@
 ### tuktu.processors.EOFBufferProcessor
-No description present.
+Buffers until EOF (end of data stream) is found.
 
   * **id** *(type: string)* `[Required]`
 
