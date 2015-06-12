@@ -36,9 +36,10 @@ class CSVStringProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         // Convert data to CSV
         val newData = for (datum <- data.data) yield {
-            // Strings are a bit annoying here
-            val stringDatum = datum.map(someVal => someVal._2.toString)
-            csvWriter.writeNext(stringDatum.toArray)
+            // Sort the datum by key to guarantee a consistent order for all similar data packets,
+            // before mapping to their value's string representation
+            val stringDatum = datum.toArray.sortBy(_._1).map(_._2.toString)
+            csvWriter.writeNext(stringDatum)
             val res = sw.toString
 
             // See if we need to append headers or not
@@ -122,7 +123,7 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
 class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var writer: CSVWriter = null
     var headers: Array[String] = null
-    var fields: Option[List[String]] = None
+    var fields: Option[Array[String]] = None
 
     override def initialize(config: JsObject) = {
         // Get the location of the file to write to
@@ -134,7 +135,7 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
         val escape = (config \ "escape").asOpt[String].getOrElse("\\").head
         writer = new CSVWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding)), separator, quote, escape)
 
-        fields = (config \ "fields").asOpt[List[String]]
+        fields = (config \ "fields").asOpt[Array[String]]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
@@ -143,7 +144,7 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
             // Get and write out headers
             if (headers == null) {
                 headers = fields match {
-                    case Some(flds) => flds.toArray
+                    case Some(flds) => flds
                     case None => datum.map(elem => elem._1).toArray
                 }
 
