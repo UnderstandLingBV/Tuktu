@@ -502,24 +502,46 @@ generateConfig = (e) ->
 importConfig = (e) ->
 	e.preventDefault()
 	try
-		nodesPerRow = Math.floor(document.getElementById('flowchart').clientWidth / 200)
-		ids = {}
-		newConn = []
-		object = JSON.parse($('#importTextarea').val())
 		for el in allNodes.generators.concat(allNodes.processors)
 			el.destructor()
 		globalId = 0
+
+		nodesPerRow = Math.floor(document.getElementById('flowchart').clientWidth / 200)
+		object = JSON.parse($('#importTextarea').val())
+		processorIds = {}
+		for processor in object.processors
+			processorIds[processor.id] = processor
+		ids = {}
+		pros = 0
+		newConnections = []
+
+		importProcessor = (id) ->
+			if not _.has(processorIds, id)
+				console.log("Processor with id #{id} was not found.")
+				return
+			if not _.has(ids, id)
+				ids[id] = new Processor(processorIds[id], false, paperx + grid + (pros % (nodesPerRow - 1) + 1) * grid * Math.ceil(200 / grid), papery + grid + Math.floor(pros / (nodesPerRow - 1)) * 100)
+				pros += 1
+				for succ in processorIds[id].next
+					importProcessor(succ)
+					newConnections.push([ids[id], succ])
+
+		# Start from all generators and build their descendants recursively, depth first
 		for generator, i in object.generators
 			gen = new Generator(generator, false, paperx + grid, papery + grid + i * grid * Math.ceil(100 / grid))
 			for succ in generator.next
-				newConn.push([gen, succ])
-		for processor, i in object.processors
-			pro = new Processor(processor, false, paperx + grid + (i % (nodesPerRow - 1) + 1) * grid * Math.ceil(200 / grid), papery + grid + Math.floor(i / (nodesPerRow - 1)) * 100)
-			ids[processor.id] = pro
-			for succ in processor.next
-				newConn.push([pro, succ])
-		for pair in newConn
-			new Connection(pair[0], ids[pair[1]])
+				importProcessor(succ)
+				newConnections.push([gen, succ])
+
+		# Import processors that don't have a generator ancestor
+		for processor in object.processors
+			importProcessor(processor.id)
+
+		for pair in newConnections
+			if not _.has(ids, pair[1])
+				console.log("Processor with id #{id} was not found.")
+			else
+				new Connection(pair[0], ids[pair[1]])
 
 
 # Bind click events
