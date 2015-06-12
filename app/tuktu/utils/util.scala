@@ -52,15 +52,7 @@ object util {
             }
         }
     }
-    
-    /**
-     * Turns a JSON string (with enclosing quotes) into a normal string (with no quotes)
-     */
-    def JsonStringToNormalString(value: JsString) = {
-        // Remove the annoying quotes
-       value.toString.drop(1).take(value.toString.size - 2)
-    }
-    
+
     /**
      * Converts a flash from an HTTP request into a map of messages
      */

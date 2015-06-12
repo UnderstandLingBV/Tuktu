@@ -363,7 +363,7 @@ class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(result
 	            }
 	            // Now iterate over the objects
 	            val gluedValue = values.map(value => {
-	                tuktu.utils.util.JsonStringToNormalString(tuktu.utils.util.jsonParser(value, subpath, None).as[JsString])
+	                tuktu.utils.util.jsonParser(value, subpath, None).as[JsString].value
 	            }).mkString(sep)
 	            // Replace
 	            mutableDatum += field -> gluedValue
