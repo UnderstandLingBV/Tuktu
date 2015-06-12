@@ -54,6 +54,7 @@ object utils {
                 case a: Date => if(mongo) Json.obj("$date" -> a.getTime) else a
                 case a: DateTime => if(mongo) Json.obj("$date" -> a.getMillis) else a
                 case a: JsValue => a
+                case a: BigDecimal => a
                 case a: Seq[Any] => anyListToJsonHelper(a)
                 case a: Map[_, _] => mapToJsonHelper(a.toList)
                 case _ => head._2.toString
@@ -77,6 +78,7 @@ object utils {
                 case a: Date => if(mongo) Json.obj("$date" -> a.getTime) else a
                 case a: DateTime => if(mongo) Json.obj("$date" -> a.getMillis) else a
                 case a: JsValue => a
+                case a: BigDecimal => a
                 case a: Seq[Any] => anyListToJsonHelper(a)
                 case a: Map[_, _] => mapToJsonHelper(a.toList)
                 case _ => elem.toString
