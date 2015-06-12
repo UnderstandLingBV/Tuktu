@@ -40,7 +40,7 @@
 				},
 				{
 					"name": "line_separator",
-					"description": "The line separator character, default is \r\n.",
+					"description": "The line separator character, default is newline (\\r\\n).",
 					"type": "string",
 					"required": false
 				},
