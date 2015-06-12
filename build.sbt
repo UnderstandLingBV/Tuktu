@@ -72,7 +72,8 @@ lazy val coreDependencies = Seq(
     "org.codehaus.groovy" % "groovy-all" % "2.2.1",
     "com.typesafe.akka" %% "akka-remote" % "2.3.4",
     "com.github.nscala-time" %% "nscala-time" % "1.8.0",
-    "joda-time" % "joda-time" % "2.7"
+    "joda-time" % "joda-time" % "2.7",
+    "org.apache.commons" % "commons-math3" % "3.5"
 )
 
 lazy val tuktuDBDependencies = Seq(

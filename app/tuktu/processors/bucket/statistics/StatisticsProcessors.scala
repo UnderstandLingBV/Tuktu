@@ -3,10 +3,12 @@ package tuktu.processors.bucket.statistics
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import tuktu.api._
 import tuktu.processors.bucket.BaseBucketProcessor
 import tuktu.processors.bucket.SortProcessor
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import org.apache.commons.math3.stat.correlation.Covariance
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation
 
 object StatHelper {
     def anyToDouble(num: Any) = num match {
@@ -15,6 +17,36 @@ object StatHelper {
         case a: Double => a
         case a: Long => a.toDouble
         case a: Float => a.toDouble
+        case a: Any => a.toString.toDouble
+    }
+    
+    /**
+     * Gets variance
+     */
+    def getVarSums(data: List[Map[String, Any]], fields: List[String]) = {
+        // First compute the means
+        var sums = collection.mutable.Map[String, Double]()
+        
+        // Go over the data
+        data.foreach(datum => {
+            // Update sums
+            fields.foreach(field => sums contains field match {
+                case true => sums(field) = sums(field) + StatHelper.anyToDouble(datum(field))
+                case false => sums(field) = StatHelper.anyToDouble(datum(field))
+            })
+        })
+        
+        // Now compute the sums over the quadratic of the difference with the mean
+        var varSums = collection.mutable.Map[String, Double]()
+        data.foreach(datum => {
+            // Update sums
+            fields.foreach(field => varSums contains field match {
+                case true => varSums(field) = varSums(field) + Math.pow(StatHelper.anyToDouble(datum(field)) - sums(field) / data.size, 2)
+                case false => varSums(field) = Math.pow(StatHelper.anyToDouble(datum(field)) - sums(field) / data.size, 2)
+            })
+        })
+        
+        varSums.toMap
     }
 }
 
@@ -32,15 +64,13 @@ class MeanProcessor(resultName: String) extends BaseBucketProcessor(resultName) 
     
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         var sums = collection.mutable.Map[String, Double]()
-        fields.foreach(field => sums += field -> 0.0)
         
         // Go over the data
         data.foreach(datum => {
             // Update sums
-            sums.foreach(sum => sum match {
-                case (field, value) => {
-                    sums(field) = value + StatHelper.anyToDouble(datum(field))
-                }
+            fields.foreach(field => sums contains field match {
+                case true => sums(field) = sums(field) + StatHelper.anyToDouble(datum(field))
+                case false => sums(field) = StatHelper.anyToDouble(datum(field))
             })
         })
         
@@ -164,14 +194,21 @@ class MidrangeProcessor(resultName: String) extends BaseBucketProcessor(resultNa
  * Computes the standard deviation over a field containing numerical values
  */
 class StDevProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
+    var fields: List[String] = _
+    
     override def initialize(config: JsObject) = {
-        
+        // Get the fields to compute StDev over
+        fields = (config \ "fields").as[List[String]]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
     
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        null
+        // Get variances
+        val vars = StatHelper.getVarSums(data, fields)
+        
+        // Sqrt them to get StDevs
+        List(vars.map(v => v._1 -> Math.sqrt(v._2 / data.size)))
     }
 }
 
@@ -179,14 +216,21 @@ class StDevProcessor(resultName: String) extends BaseBucketProcessor(resultName)
  * Computes the variance over a field containing numerical values
  */
 class VarProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
+    var fields: List[String] = _
+    
     override def initialize(config: JsObject) = {
-        
+        // Get the fields to compute variance over
+        fields = (config \ "fields").as[List[String]]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
     
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        null
+        // Get variances
+        val vars = StatHelper.getVarSums(data, fields)
+        
+        // Sqrt them to get StDevs
+        List(vars.map(v => v._1 -> v._2 / data.size))
     }
 }
 
@@ -194,14 +238,25 @@ class VarProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
  * Computes correlation between a number of fields of numerical values
  */
 class CorrelationProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
+    var fields: List[String] = _
+    
     override def initialize(config: JsObject) = {
-        
+        fields = (config \ "fields").as[List[String]]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
     
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        null
+        // Collect all data
+        val values = (for (field <- fields) yield {
+            (for (datum <- data) yield StatHelper.anyToDouble(datum(field))).toArray
+        }).toArray
+        
+        // Compute correlations
+        val correlations = new PearsonsCorrelation().computeCorrelationMatrix(values)
+        
+        // Return the matrix
+        List(Map(resultName -> correlations.getData))
     }
 }
 
@@ -209,13 +264,24 @@ class CorrelationProcessor(resultName: String) extends BaseBucketProcessor(resul
  * Computes covariance between a number of fields of numerical values
  */
 class CovarianceProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
+    var fields: List[String] = _
+    
     override def initialize(config: JsObject) = {
-        
+        fields = (config \ "fields").as[List[String]]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
     
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        null
+        // Collect all data
+        val values = (for (field <- fields) yield {
+            (for (datum <- data) yield StatHelper.anyToDouble(datum(field))).toArray
+        }).toArray
+        
+        // Compute correlations
+        val covariances = new Covariance(values).getCovarianceMatrix
+        
+        // Return the matrix
+        List(Map(resultName -> covariances.getData))
     }
 }
