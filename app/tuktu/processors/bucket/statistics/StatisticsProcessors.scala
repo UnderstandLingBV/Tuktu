@@ -19,34 +19,37 @@ object StatHelper {
         case a: Float => a.toDouble
         case a: Any => a.toString.toDouble
     }
-    
+
     /**
-     * Gets variance
+     * Gets means
      */
-    def getVarSums(data: List[Map[String, Any]], fields: List[String]) = {
-        // First compute the means
-        var sums = collection.mutable.Map[String, Double]()
-        
-        // Go over the data
-        data.foreach(datum => {
-            // Update sums
-            fields.foreach(field => sums contains field match {
-                case true => sums(field) = sums(field) + StatHelper.anyToDouble(datum(field))
-                case false => sums(field) = StatHelper.anyToDouble(datum(field))
-            })
-        })
-        
+    def getMeans(data: List[Map[String, Any]], fields: List[String]): Map[String, Double] = {
+        var sums = collection.mutable.Map[String, Double]().withDefaultValue(0.0)
+
+        // Go over the data and update sums for each field
+        for (datum <- data; field <- fields) {
+            sums(field) += anyToDouble(datum(field))
+        }
+
+        // Return the means
+        sums.map(sum => sum._1 -> sum._2 / data.size).toMap
+    }
+
+    /**
+     * Gets variances
+     */
+    def getVariances(data: List[Map[String, Any]], fields: List[String]): Map[String, Double] = {
+        // Get the means
+        val means = getMeans(data, fields)
+
         // Now compute the sums over the quadratic of the difference with the mean
-        var varSums = collection.mutable.Map[String, Double]()
-        data.foreach(datum => {
-            // Update sums
-            fields.foreach(field => varSums contains field match {
-                case true => varSums(field) = varSums(field) + Math.pow(StatHelper.anyToDouble(datum(field)) - sums(field) / data.size, 2)
-                case false => varSums(field) = Math.pow(StatHelper.anyToDouble(datum(field)) - sums(field) / data.size, 2)
-            })
-        })
-        
-        varSums.toMap
+        var varSums = collection.mutable.Map[String, Double]().withDefaultValue(0.0)
+        for (datum <- data; field <- fields) {
+            varSums(field) += math.pow(anyToDouble(datum(field)) - means(field), 2)
+        }
+
+        // Return variances
+        varSums.map(sum => sum._1 -> sum._2 / data.size).toMap
     }
 }
 
@@ -55,30 +58,16 @@ object StatHelper {
  */
 class MeanProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields = List[String]()
-    
+
     override def initialize(config: JsObject) = {
         fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        var sums = collection.mutable.Map[String, Double]()
-        
-        // Go over the data
-        data.foreach(datum => {
-            // Update sums
-            fields.foreach(field => sums contains field match {
-                case true => sums(field) = sums(field) + StatHelper.anyToDouble(datum(field))
-                case false => sums(field) = StatHelper.anyToDouble(datum(field))
-            })
-        })
-        
-        // Build result
-        val n = data.size
-        List((for ((field, sum) <- sums) yield {
-            field -> (sum / n)
-        }).toMap)
+        // Get and return means
+        List(StatHelper.getMeans(data, fields))
     }
 }
 
@@ -87,28 +76,27 @@ class MeanProcessor(resultName: String) extends BaseBucketProcessor(resultName) 
  */
 class MedianProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields = List[String]()
-    
+
     override def initialize(config: JsObject) = {
         fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        List((for (field <- fields) yield {
-            // We must stor the data before continuing
-            val sp = new SortProcessor("")
-            sp.initialize(Json.obj("field" -> field))
-            val sortedData = sp.doProcess(data)
-            
+        List((for (field <- fields) yield field -> {
+            // We must sort the data first
+            val sortedData = data.map(datum => StatHelper.anyToDouble(datum(field))).sorted
+
             // Find the mid element
             val n = sortedData.size
             if (n % 2 == 0) {
                 // Get the two elements and average them
                 val n2 = n / 2
                 val n1 = n2 - 1
-                field -> ((StatHelper.anyToDouble(sortedData(n1)(field)) + StatHelper.anyToDouble(sortedData(n2)(field))) / 2)
-            } else field -> StatHelper.anyToDouble(sortedData(n / 2)(field))
+                (sortedData(n1) + sortedData(n2)) / 2
+            } else
+                sortedData((n - 1) / 2)
         }).toMap)
     }
 }
@@ -118,39 +106,25 @@ class MedianProcessor(resultName: String) extends BaseBucketProcessor(resultName
  */
 class ModeProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields = List[String]()
-    var valueCountMapper = collection.mutable.Map[String, collection.mutable.Map[Any, Int]]()
-    
+
     override def initialize(config: JsObject) = {
         fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        data.foreach(datum => {
-            fields.foreach(field => {
-                // Initialize if required
-                if (!valueCountMapper.contains(field)) valueCountMapper += field -> collection.mutable.Map[Any, Int]()
-                
-                // Get value
-                val value = datum(field)
-                if (!valueCountMapper(field).contains(value)) valueCountMapper(field) += value -> 1
-                else valueCountMapper(field)(value) += 1
-            })
-        })
-        
-        // Find all most frequently occurring elements
-        for (
-                field <- fields
-                if (valueCountMapper.contains(field))
-        ) yield {
-            val values = valueCountMapper(field)
-            val mostFrequent = values.maxBy(elem => elem._2)
-            
-            // Return element and the occurence count
-            Map(
-                    field -> mostFrequent._2, resultName -> mostFrequent._1
-            )
+        for (field <- fields) yield {
+            // Initialize the value counter
+            var valueCounter = collection.mutable.Map[Any, Int]().withDefaultValue(0)
+
+            // Count values
+            for (datum <- data) { valueCounter(datum(field)) += 1 }
+
+            // Return most frequent element and its occurrence count
+            val mostFrequent = valueCounter.maxBy(_._2)
+            Map(field -> mostFrequent._2, resultName -> mostFrequent._1)
+
         }
     }
 }
@@ -161,32 +135,28 @@ class ModeProcessor(resultName: String) extends BaseBucketProcessor(resultName) 
 class MidrangeProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields = List[String]()
     // Keep track of min, max
-    var mins = collection.mutable.Map[String, Double]()
-    var maxs = collection.mutable.Map[String, Double]()
-    
+    var mins = collection.mutable.Map[String, Double]().withDefaultValue(Double.MaxValue)
+    var maxs = collection.mutable.Map[String, Double]().withDefaultValue(Double.MinValue)
+
     override def initialize(config: JsObject) = {
         fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Iterate over data and fields
         for (datum <- data; field <- fields) {
-            // Initialize
-            if (!mins.contains(field)) mins += field -> Double.MaxValue
-            if (!maxs.contains(field)) maxs += field -> Double.MinValue
-            
-            // Get the field we are after and see if its a new min/max
+            // Get the field we are after and update min/max
             val value = StatHelper.anyToDouble(datum(field))
-            if (value < mins(field)) mins(field) = value
-            if (value > maxs(field)) maxs(field) = value
+            mins(field) = math.min(mins(field), value)
+            maxs(field) = math.max(maxs(field), value)
         }
-        
+
         // Return the midrange
-        List(
-            maxs.map(fieldMax => fieldMax._1 -> ((fieldMax._2 + mins(fieldMax._1)) / 2)).toMap
-        )
+        List((for (field <- fields) yield {
+            field -> (mins(field) + maxs(field)) / 2
+        }).toMap)
     }
 }
 
@@ -195,20 +165,20 @@ class MidrangeProcessor(resultName: String) extends BaseBucketProcessor(resultNa
  */
 class StDevProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
-    
+
     override def initialize(config: JsObject) = {
         // Get the fields to compute StDev over
         fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Get variances
-        val vars = StatHelper.getVarSums(data, fields)
-        
+        val vars = StatHelper.getVariances(data, fields)
+
         // Sqrt them to get StDevs
-        List(vars.map(v => v._1 -> Math.sqrt(v._2 / data.size)))
+        List(vars.map(v => v._1 -> math.sqrt(v._2)))
     }
 }
 
@@ -217,20 +187,17 @@ class StDevProcessor(resultName: String) extends BaseBucketProcessor(resultName)
  */
 class VarProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
-    
+
     override def initialize(config: JsObject) = {
         // Get the fields to compute variance over
         fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        // Get variances
-        val vars = StatHelper.getVarSums(data, fields)
-        
-        // Sqrt them to get StDevs
-        List(vars.map(v => v._1 -> v._2 / data.size))
+        // Get and return variances
+        List(StatHelper.getVariances(data, fields))
     }
 }
 
@@ -239,22 +206,22 @@ class VarProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
  */
 class CorrelationProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
-    
+
     override def initialize(config: JsObject) = {
         fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Collect all data
         val values = (for (field <- fields) yield {
             (for (datum <- data) yield StatHelper.anyToDouble(datum(field))).toArray
         }).toArray
-        
+
         // Compute correlations
         val correlations = new PearsonsCorrelation().computeCorrelationMatrix(values)
-        
+
         // Return the matrix
         List(Map(resultName -> correlations.getData))
     }
@@ -265,22 +232,22 @@ class CorrelationProcessor(resultName: String) extends BaseBucketProcessor(resul
  */
 class CovarianceProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
-    
+
     override def initialize(config: JsObject) = {
         fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Collect all data
         val values = (for (field <- fields) yield {
             (for (datum <- data) yield StatHelper.anyToDouble(datum(field))).toArray
         }).toArray
-        
+
         // Compute correlations
         val covariances = new Covariance(values).getCovarianceMatrix
-        
+
         // Return the matrix
         List(Map(resultName -> covariances.getData))
     }
