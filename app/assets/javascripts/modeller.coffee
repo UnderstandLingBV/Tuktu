@@ -598,7 +598,7 @@ checkValidity = (elem) ->
 				$(elem).closest('.form-group').removeClass('has-warning')
 
 		when 'int'
-			if ($(elem).prop('required') is true and $(elem).val() is '') or not /^\s*[+-]?\d+\s*$/.test($(elem).val())
+			if elem.validity.valid is false
 				$(elem).closest('.form-group').addClass('has-error')
 			else
 				$(elem).closest('.form-group').removeClass('has-error')
