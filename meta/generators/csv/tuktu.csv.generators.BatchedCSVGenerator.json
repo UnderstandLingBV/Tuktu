@@ -1,7 +1,7 @@
 {
 	"name": "Batched CSV Generator",
 	"description": "Parses a given CSV file in batches with predefined or provided headers.",
-	"class": "tuktu.csv.generators.BatchedCsvGenerator",
+	"class": "tuktu.csv.generators.BatchedCSVGenerator",
 	"parameters": [
 		{
 			"name": "nodes",

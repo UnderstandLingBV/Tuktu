@@ -1,6 +1,6 @@
 {
 	"name": "Correlation Processor",
-	"description": "To be implemented...",
+	"description": "Computes the correlation matrix of a list of fields containing numerical values.",
 	"class": "tuktu.processors.bucket.statistics.CorrelationProcessor",
 	"parameters": [
 		{
@@ -18,6 +18,19 @@
 			"type": "object",
 			"required": true,
 			"parameters": [
+				{
+					"name": "fields",
+					"description": "The correlation matrix over these fields will be computed and returned under result as a single datum.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
 			]
 		}
 	]
