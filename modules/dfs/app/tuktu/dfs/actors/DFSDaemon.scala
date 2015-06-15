@@ -8,7 +8,8 @@ import play.api.Play
 import play.api.Play.current
 
 case class ReadRequest(
-        filename: String
+        filename: String,
+        bufferSize: Int
 )
 case class ProbeRequest(
         filename: String
@@ -49,6 +50,15 @@ class DFSDaemon extends Actor with ActorLogging {
     buildFileTable(new File(Play.current.configuration.getString("tuktu.dfs.root").getOrElse("dfs")))
     
     def receive() = {
-        case _ => {}
+        case pr: ProbeRequest => {
+            // Check if the file exists
+            Cache.get(pr.filename) match {
+                case None => sender ! false
+                case _ => sender ! true
+            }
+        }
+        case rr: ReadRequest => {
+            // Fetch the file
+        }
     }
 }
