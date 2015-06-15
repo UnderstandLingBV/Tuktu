@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.statistics.MidrangeProcessor
-Individually computes the midrange over a list of fields containing numerical values.
+Individually computes the midrange of a list of fields containing numerical values.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,7 +8,7 @@ Individually computes the midrange over a list of fields containing numerical va
   * **config** *(type: object)* `[Required]`
 
     * **fields** *(type: array)* `[Required]`
-    - The midrange over these fields will be individually computed and returned under the respective field name.
+    - The midrange over these fields will be individually computed and returned under the respective field names as a single datum.
 
       * **[UNNAMED]** *(type: string)* `[Required]`
 

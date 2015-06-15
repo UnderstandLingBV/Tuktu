@@ -1,4 +1,4 @@
-### tuktu.csv.generators.BatchedCsvGenerator
+### tuktu.csv.generators.BatchedCSVGenerator
 Parses a given CSV file in batches with predefined or provided headers.
 
   * **nodes** *(type: array)* `[Optional]`
