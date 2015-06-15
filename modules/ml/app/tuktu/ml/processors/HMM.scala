@@ -9,13 +9,13 @@ class HMM(numHidden: Int, numObserved: Int) {
     // Initialize matrices
     
     // State probabilities
-    var pi = for (i <- 0 to numHidden - 1) yield 0.0
+    var pi = for (i <- 0 to numHidden - 1) yield 1.0 / numHidden
     // Transition probabilities
     var A = for (i <- 0 to numHidden - 1) yield
-        for (j <- 0 to numHidden - 1) yield 0.0
+        for (j <- 0 to numHidden - 1) yield 1.0 / numHidden
     // Emission probabilities
     var B = for (i <- 0 to numHidden - 1) yield
-        for (j <- 0 to numObserved - 1) yield 0.0
+        for (j <- 0 to numObserved - 1) yield 1.0 / numObserved
     
     /**
      * Applies the Baum-Welch algorithm for training the HMM

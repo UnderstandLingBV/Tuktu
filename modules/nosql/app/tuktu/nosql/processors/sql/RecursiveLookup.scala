@@ -57,7 +57,7 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
         client = new sql.client(url, user, password, driver)
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         new DataPacket((for (datum <- data.data) yield {
                 // Get the ancestors
                 val ancestors = recQueryFetcher(datum, 0)
