@@ -35,8 +35,8 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
         client = new client(url, user, password, driver)
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        Future {new DataPacket(for (datum <- data.data) yield {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+        new DataPacket(for (datum <- data.data) yield {
             // Evaluate all
             val evalQuery = stringHandler.evaluateString(query, datum)            
             val evalUrl = tuktu.api.utils.evaluateTuktuString(url, datum)
@@ -67,6 +67,6 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                     datum + (resultName -> res)
                 }
             }
-        })}
+        })
     }) compose Enumeratee.onEOF(() => client.close)
 }

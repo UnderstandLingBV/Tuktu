@@ -36,9 +36,8 @@ class HMM(numHidden: Int, numObserved: Int) {
     
     private def RunForward(observations: List[Int]) = {
         // Base-case, initialize for time 0
-        val probs = for (i <- 0 to numHidden - 1) yield {
-            
-        }
+        val probs = for (i <- 0 to numHidden - 1) yield 
+            pi(i) * B(i)(observations(0))
     }
     
     private def RunBackward(observations: List[Int]) = {

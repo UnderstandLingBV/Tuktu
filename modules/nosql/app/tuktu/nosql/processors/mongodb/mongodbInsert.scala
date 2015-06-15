@@ -20,7 +20,6 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
     var collection: JSONCollection = _
     
     var fields = List[String]()
-    var sync = false
 
     override def initialize(config: JsObject) = {
         // Set up MongoDB client
@@ -38,17 +37,9 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         
         // What fields to write?
         fields = (config \ "fields").as[List[String]]
-        
-        //Should we write is synchronized?
-        sync = (config \ "sync").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = {
-        if (sync) Enumeratee.map((data: DataPacket) => insert(data))
-        else Enumeratee.mapM((data: DataPacket) => Future {insert(data)})
-    }  compose Enumeratee.onEOF(() => connection.close)
-    
-    def insert(data: DataPacket) = {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Insert data into MongoDB
         data.data.foreach(datum => fields match {
             case Nil => collection.insert(anyMapToJson(datum, true))
@@ -56,5 +47,5 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         })
         
         data
-    }    
+    }) compose Enumeratee.onEOF(() => connection.close)
 }
