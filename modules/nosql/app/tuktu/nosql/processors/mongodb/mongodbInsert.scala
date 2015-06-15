@@ -43,11 +43,10 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         sync = (config \ "sync").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = 
-    {
-        if (sync) Enumeratee.map(data => insert(data))
-        else Enumeratee.mapM(data => Future {insert(data)})
-    } 
+    override def processor(): Enumeratee[DataPacket, DataPacket] = {
+        if (sync) Enumeratee.map((data: DataPacket) => insert(data))
+        else Enumeratee.mapM((data: DataPacket) => Future {insert(data)})
+    }  compose Enumeratee.onEOF(() => connection.close)
     
     def insert(data: DataPacket) = {
         // Insert data into MongoDB

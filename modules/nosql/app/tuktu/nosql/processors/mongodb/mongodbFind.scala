@@ -47,7 +47,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         filter = (config \ "filter").as[String]
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Get data from Mongo and sequence
         val resultListFutures = Future.sequence(for(datum <- data.data) yield {
             // Evaluate the query en filter strings and convert to JSON
@@ -73,5 +73,5 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         
         // Gather results
         new DataPacket(Await.result(dataFuture, Cache.getAs[Int]("timeout").getOrElse(5) seconds))
-    })
+    }) compose Enumeratee.onEOF(() => connection.close)
 }

@@ -69,7 +69,7 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
                     })
             }).flatten
         )
-    })
+    }) compose Enumeratee.onEOF(() => client.close)
     
     /**
      * This function recursively finds all ancestors until there are no more, no cycle detection here though!

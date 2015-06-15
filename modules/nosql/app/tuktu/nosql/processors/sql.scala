@@ -18,6 +18,8 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var append = false
     var query = ""
     
+    var client: client = _
+    
     override def initialize(config: JsObject) = {
         // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
         url = (config \ "url").as[String]
@@ -28,6 +30,9 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
         
         // Append result or not?
         append = (config \ "append").asOpt[Boolean].getOrElse(false)
+        
+        // Set up the client
+        client = new client(url, user, password, driver)
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
@@ -37,10 +42,13 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
             val evalUrl = tuktu.api.utils.evaluateTuktuString(url, datum)
             val evalUser = tuktu.api.utils.evaluateTuktuString(user, datum)
             val evalPassword = tuktu.api.utils.evaluateTuktuString(password, datum)
-            val evalDriver = tuktu.api.utils.evaluateTuktuString(driver, datum)            
+            val evalDriver = tuktu.api.utils.evaluateTuktuString(driver, datum)
             
-            // Set up the client
-            val client = new client(evalUrl, evalUser, evalPassword, evalDriver)
+            // See if we need to update the client
+            if (evalUrl != url || evalUser != user || evalPassword != password || evalDriver != driver) {
+                client.close
+                client = new client(evalUrl, evalUser, evalPassword, evalDriver)
+            }
             
             // See if we need to append the result
             append match {
@@ -60,5 +68,5 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                 }
             }
         })}
-    }) 
+    }) compose Enumeratee.onEOF(() => client.close)
 }

@@ -1,4 +1,4 @@
-package tuktu.ml
+package tuktu.ml.models.regression
 
 object Regression {
     class LogisticRegression(lr: Double, nIterations: Int) {
