@@ -45,25 +45,22 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
             val evalDriver = tuktu.api.utils.evaluateTuktuString(driver, datum)
             
             // See if we need to update the client
-            if (evalUrl != url || evalUser != user || evalPassword != password || evalDriver != driver) {
+            val reEvaluated = if (evalUrl != url || evalUser != user || evalPassword != password || evalDriver != driver) {
                 client.close
                 client = new client(evalUrl, evalUser, evalPassword, evalDriver)
-            }
+                true
+            } else false
             
             // See if we need to append the result
             append match {
                 case false => {
                     // No need for appending
                     client.query(evalQuery)
-                    //close client
-                    client.close
                     datum
                 }
                 case true => {
                     // Get the result and use it
                     val res = client.queryResult(evalQuery).map(row => rowToMap(row))
-                    //close client
-                    client.close
                     datum + (resultName -> res)
                 }
             }

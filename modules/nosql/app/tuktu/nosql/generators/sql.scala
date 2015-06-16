@@ -8,6 +8,10 @@ import anorm._
 import tuktu.nosql.util.sql
 import akka.actor.ActorRef
 
+case class StopHelper(
+        client: sql.client
+)
+
 class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
         case config: JsValue => {
@@ -22,7 +26,7 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
 
             // Load the driver, set up the client
-            val client = new sql.client(url, user, password, driver)
+            val client = new tuktu.nosql.util.sql.client(url, user, password, driver)
 
             // Run the query
             val rows = client.queryResult(query)
@@ -32,10 +36,12 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             }
 
             // We stop once the query is done
-            client.close
-            self ! StopPacket
+            self ! StopHelper(client)
         }
-        case sp: StopPacket => cleanup
+        case sh: StopHelper => {
+            cleanup
+            sh.client.close
+        }
         case ip: InitPacket => setup
     }
 }
