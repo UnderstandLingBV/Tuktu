@@ -2,7 +2,6 @@ package tuktu.nosql.processors.mongodb
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.modules.reactivemongo.json.collection.JSONCollection
@@ -11,41 +10,46 @@ import reactivemongo.api.MongoDriver
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils.anyMapToJson
+import tuktu.nosql.util.MongoCollectionPool
+import tuktu.nosql.util.MongoSettings
+import play.api.cache.Cache
+import play.api.Play.current
+import scala.concurrent.duration._
+import scala.concurrent.Await
 
 /**
  * Inserts data into MongoDB
  */
 class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var connection: MongoConnection = _
-    var collection: JSONCollection = _
-    
+    var hosts: List[String] = _
+    var database: String = _
+    var coll: String = _    
     var fields = List[String]()
+    var settings: MongoSettings = _
+    var collection: JSONCollection = _
 
     override def initialize(config: JsObject) = {
         // Set up MongoDB client
-        val hosts = (config \ "hosts").as[List[String]]
-        val database = (config \ "database").as[String]
-        val coll = (config \ "collection").as[String]
-
-        // Set up connection
-        val driver = new MongoDriver
-        connection = driver.connection(hosts)
-        // Connect to DB
-        val db = connection(database)
-        // Select the collection
-        collection = db(coll)
+        hosts = (config \ "hosts").as[List[String]]
+        database = (config \ "database").as[String]
+        coll = (config \ "collection").as[String]
         
+        settings = MongoSettings(hosts, database, coll)
+        collection = MongoCollectionPool.getCollection(settings)
+
         // What fields to write?
         fields = (config \ "fields").as[List[String]]
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {        
         // Insert data into MongoDB
-        data.data.foreach(datum => fields match {
+        val futures = data.data.map(datum => fields match {
             case Nil => collection.insert(anyMapToJson(datum, true))
             case _ => collection.insert(anyMapToJson(datum.filter(elem => fields.contains(elem._1)), true))
         })
         
+        futures.foreach { f => Await.ready(f, Cache.getAs[Int]("timeout").getOrElse(5) seconds) }
+        
         data
-    }) compose Enumeratee.onEOF(() => connection.close)
+    }) compose Enumeratee.onEOF(() => MongoCollectionPool.closeCollection(settings))
 }
