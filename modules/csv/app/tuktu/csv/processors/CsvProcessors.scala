@@ -12,6 +12,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
+import tuktu.api.utils
 import au.com.bytecode.opencsv.CSVReader
 import java.io.StringReader
 
@@ -121,19 +122,20 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
  * Writes CSV to a file
  */
 class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var writer: CSVWriter = null
-    var headers: Array[String] = null
+    var writers = scala.collection.mutable.Map[String, CSVWriter]()
+    var headers = scala.collection.mutable.Map[String, Array[String]]()
     var fields: Option[Array[String]] = None
+    var fileName, encoding: String = _
+    var separator, quote, escape: Char = _
 
     override def initialize(config: JsObject) = {
         // Get the location of the file to write to
-        val fileName = (config \ "file_name").as[String]
-        val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
+        fileName = (config \ "file_name").as[String]
+        encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
 
-        val separator = (config \ "separator").asOpt[String].getOrElse(";").head
-        val quote = (config \ "quote").asOpt[String].getOrElse("\"").head
-        val escape = (config \ "escape").asOpt[String].getOrElse("\\").head
-        writer = new CSVWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding)), separator, quote, escape)
+        separator = (config \ "separator").asOpt[String].getOrElse(";").head
+        quote = (config \ "quote").asOpt[String].getOrElse("\"").head
+        escape = (config \ "escape").asOpt[String].getOrElse("\\").head
 
         fields = (config \ "fields").asOpt[Array[String]]
     }
@@ -141,29 +143,40 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Convert data to CSV
         for (datum <- data.data) {
-            // Get and write out headers
-            if (headers == null) {
-                headers = fields match {
-                    case Some(flds) => flds
-                    case None => datum.map(elem => elem._1).toArray
+            val evaluated_fileName = utils.evaluateTuktuString(fileName, datum)
+
+            // Check if headers are already set
+            if (!headers.contains(evaluated_fileName)) {
+                // Get headers from fields or from the datum keys
+                headers += evaluated_fileName -> {
+                    fields match {
+                        case Some(flds) => flds
+                        case None => datum.map(elem => elem._1).toArray
+                    }
                 }
 
-                writer.writeNext(headers)
+                // Create new writer for the fileName
+                writers += evaluated_fileName -> new CSVWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(evaluated_fileName), encoding)), separator, quote, escape)
+
+                // Write out headers
+                writers(evaluated_fileName).writeNext(headers(evaluated_fileName))
             }
 
-            val values = headers.map(header =>
-                // JsStrings are a bit annoying here
+            val values = headers(evaluated_fileName).map(header =>
+                // JsStrings are a bit annoying here, because toString includes surrounding quotes "" for them
                 if (datum(header).isInstanceOf[JsString])
                     datum(header).asInstanceOf[JsString].value
                 else
                     datum(header).toString)
 
-            writer.writeNext(values)
+            writers(evaluated_fileName).writeNext(values)
         }
 
         Future { data }
     }) compose Enumeratee.onEOF(() => {
-        writer.flush
-        writer.close
+        for (writer <- writers) {
+            writer._2.flush
+            writer._2.close
+        }
     })
 }

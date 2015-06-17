@@ -147,3 +147,5 @@ class CountProcessor(resultName: String) extends BaseBucketProcessor(resultName)
         List(Map(field -> data.size))
     }
 }
+
+

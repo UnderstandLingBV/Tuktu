@@ -2,6 +2,7 @@ package tuktu.ml.processors
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
