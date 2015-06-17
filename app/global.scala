@@ -20,6 +20,8 @@ import play.api.mvc.Results.NotFound
 import scala.concurrent.Future
 import play.api.mvc.RequestHeader
 import play.api.libs.json.Json
+import org.reflections.Reflections
+import scala.collection.JavaConverters._
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -27,11 +29,11 @@ object Global extends GlobalSettings {
     /**
      * Load module globals
      */
-    private val moduleGlobals = List[GlobalSettings]()
+    private val moduleGlobals = collection.mutable.ListBuffer[GlobalSettings]()
     private def LoadModuleGlobals(app: Application) = {
         // Fetch all globals
         val reflections = new Reflections("globals")
-        val moduleGlobalClasses = reflections.getSubTypesOf(classOf[GlobalSettings])
+        val moduleGlobalClasses = reflections.getSubTypesOf(classOf[GlobalSettings]).asScala
 
         moduleGlobalClasses.foreach(moduleGlobal => moduleGlobals += moduleGlobal.newInstance().asInstanceOf[GlobalSettings])
     }
@@ -52,6 +54,17 @@ object Global extends GlobalSettings {
                    SmallestMailboxPool(Play.current.configuration.getInt("tuktu.dispatchers").getOrElse(5))
                    .props(Props(classOf[Dispatcher], monActor)), name = "TuktuDispatcher")
         dispActor ! "init"
+        
+        // Load module globals
+        try {
+            LoadModuleGlobals(app)
+        } catch {
+            case e: Exception => {
+                System.err.println("Failed to load module globals.")
+                e.printStackTrace()
+            }
+        }
+        moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStart(app))
 	}
     
     /**
@@ -85,5 +98,8 @@ object Global extends GlobalSettings {
 	    // Terminate our dispatchers and monitor
         Akka.system.actorSelection("user/TuktuMonitor") ! PoisonPill
         Akka.system.actorSelection("user/TuktuDispatcher") ! Broadcast(PoisonPill)
+        
+        // Call onStop for module globals too
+        moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStop(app))
 	}
 }
