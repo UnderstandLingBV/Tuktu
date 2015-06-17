@@ -1,0 +1,30 @@
+{
+	"name": "Arithmetics Processor",
+	"description": "Calculates the result of the given formula.",
+	"class": "tuktu.processors.arithmetics.ArithmeticProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "calculation",
+					"description": "The formula which is calculated.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
