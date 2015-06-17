@@ -1,203 +1,220 @@
 package tuktu.ml.models.hmm
 
+import java.util.HashMap
+import tuktu.ml.models.BaseModel
+
 /**
  * Implements a Hidden Markov Model (HMM)
- * 
- * Code taken from https://github.com/balshor/shimm
- * 
- * @param numberOfStates The number of hidden states
- * @param numberOfObservations The number of observed states
+ * @param numHidden The number of hidden states
+ * @param numObserved The number of observed states
  */
-class HiddenMarkovModel(
-    val numberOfStates: Int,
-    val numberOfObservations: Int) {
+class HMM(numHidden: Int, numObserved: Int) extends BaseModel() {
+    // Initialize matrices
+    
+    // State probabilities
+    var pi = collection.mutable.ListBuffer[Double]()
+    for (i <- 0 to numHidden - 1) pi += 1.0 / numHidden
+    
+    // Transition probabilities
+    var A = collection.mutable.ListBuffer[collection.mutable.ListBuffer[Double]]() 
+    for (i <- 0 to numHidden - 1) {
+        A(i) = collection.mutable.ListBuffer[Double]()
+        for (j <- 0 to numHidden - 1) A(i) += 1.0 / numHidden
+    }
+    // Emission probabilities
+    var B = collection.mutable.ListBuffer[collection.mutable.ListBuffer[Double]]()
+    for (i <- 0 to numHidden - 1) {
+        B(i) = collection.mutable.ListBuffer[Double]()
+        for (j <- 0 to numObserved - 1) B(i) += 1.0 / numObserved
+    }
+    
+    /**
+     * Applies the Baum-Welch algorithm for training the HMM
+     * @param observations The observed states, in-order
+     * @param steps The number of steps
+     */
+    def TrainBaumWelch(observations: List[Int], steps: Int) = {
+        var piNew = pi
+        var ANew = A
+        var BNew = B
+            
+        // For each step, we do a forward-backward step
+        for (iteration <- 0 to steps - 1) {
+            // Run forward step and backward step
+            val forward = RunForward(observations)
+            val backward = RunBackward(observations)
+            
+            // Update the initial state probabilities
+            for (i <- 0 to numHidden - 1)
+                piNew(i) = ComputeGamma(i, 0, observations, forward, backward)
 
-    import java.util.Random
-
-    val A = new TransitionProbabilities(numberOfStates)
-    val B = new ObservationProbabilities(numberOfStates, numberOfObservations)
-    val Pi = new InitialStateDistribution(numberOfStates)
-
-    /* Randomly generates a tuple of (observations, states) */
-    def apply(numTransitions: Int, startingState: Option[Int] = None)(implicit random: Random): (IndexedSeq[Int], IndexedSeq[Int]) = {
-        import scala.collection.mutable._
-        val observations = new ArrayBuffer[Int](numTransitions)
-        val states = new ArrayBuffer[Int](numTransitions)
-
-        var state = startingState getOrElse Pi.getInitialState(random.nextDouble)
-        states.append(state)
-        observations.append(B.getObservation(state, random.nextDouble))
-        (1 until numTransitions) foreach { _ =>
-            state = A.getNextState(state, random.nextDouble)
-            states.append(state)
-            observations.append(B.getObservation(state, random.nextDouble))
+            // Update transition matrix
+            for (i <- 0 to numHidden - 1) {
+                for (j <- 0 to numHidden - 1) {
+                    var numerator = 0.0
+                    var denominator = 0.0
+                    
+                    // Go over time series
+                    for (t <- 0 to observations.size - 1) {
+                        numerator += ComputeProb(t, i, j, observations, forward, backward)
+                        denominator += ComputeGamma(i, t, observations, forward, backward)
+                    }
+                    
+                    // Update
+                    ANew(i)(j) = if (numerator == 0.0) 0.0 else numerator / denominator
+                }
+            }
+            
+            // Update emission matrix
+            for (i <- 0 to numHidden - 1) {
+                for (k <- 0 to numObserved - 1) {
+                    var numerator = 0.0
+                    var denominator = 0.0
+                    
+                    // Go over the time series
+                    for (t <- 0 to observations.size - 1) {
+                        val gamma = ComputeGamma(i, t, observations, forward, backward)
+                        numerator += {if (k == observations(t)) gamma else 0.0}
+                        denominator += gamma
+                    }
+                    
+                    // Update
+                    BNew(i)(k) = if (numerator == 0.0) 0.0 else numerator / denominator
+                }
+            }
+            
+            // Update with new matrices
+            pi = piNew
+            A = ANew
+            B = BNew
         }
-
-        (observations, states)
     }
+    
+    /**
+     * Runs the Viterbi algorithm to find the most likely emission after a sequence of observations
+     */
+    def Viterbi(observations: Seq[Int]) = {
+        val cache = collection.mutable.Map[(Int, Int), (Double, Seq[Int])]()
 
-    def normalize() {
-        A.normalize()
-        B.normalize()
-        Pi.normalize()
-    }
-
-    def prettyPrint(w: java.io.PrintStream) {
-        import w.{ print, println }
-        (0 to numberOfStates - 1) foreach { row =>
-            if (row == 0) {
-                print("A: [ ")
+        /**
+         * Computes (delta_t(i), psi_t(i))
+         */
+        def apply(t: Int, i: Int): (Double, Seq[Int]) = {
+    
+            implicit val cmp = new Ordering[(Double, Seq[Int])] {
+                def compare(x: (Double, Seq[Int]), y: (Double, Seq[Int])): Int = {
+                    java.lang.Double.compare(x._1, y._1)
+                }
+            }
+    
+            if (cache contains (t, i)) {
+                cache((t, i))
             } else {
-                print("     ")
-            }
-            print(A.data(row) mkString ("[", " ", "]"))
-            if (row == numberOfStates - 1) {
-                print(" ]")
-            }
-            println
-        }
-        (0 to numberOfStates - 1) foreach { row =>
-            if (row == 0) {
-                print("B: [ ")
-            } else {
-                print("     ")
-            }
-            print(B.data(row) mkString ("[", " ", "]"))
-            if (row == numberOfStates - 1) {
-                print(" ]")
-            }
-            println
-        }
-        print("Pi:  ")
-        print(Pi.weights mkString ("[", " ", "]"))
-        println
-    }
-}
-
-/**
- * A = \{ a_{ij} \} State transition probability matrix.
- * a_{ij} = P(q_{t+1} = S_j | q_t = S_i), ie the probability of transitioning from state i to state j
- */
-class TransitionProbabilities(val numberOfStates: Int) {
-    val data: Array[Array[Double]] = Array.ofDim(numberOfStates, numberOfStates)
-
-    def apply(i: Int, j: Int): Double = data(i)(j)
-    def update(i: Int, j: Int, value: Double) = {
-        data(i)(j) = value
-    }
-
-    def normalize() {
-        val sums = data map (_.sum)
-
-        sums indexOf (0.0) match {
-            case x if x >= 0 => throw new IllegalStateException("Cannot normalize zero transition probabilities for index " + x)
-            case -1          => // noop
-        }
-
-        (0 until numberOfStates) foreach { i =>
-            (0 until numberOfStates) foreach { j =>
-                data(i)(j) /= sums(i)
+                val result: (Double, Seq[Int]) = if (t == 1) {
+                    (pi(i) * B(i)(observations(t - 1)), Seq(i))
+                } else {
+                    (0 to numHidden - 1) map { j =>
+                        val previousResult: (Double, Seq[Int]) = apply(t - 1, j)
+                        (previousResult._1 * A(j)(i) * B(i)(observations(t - 1)), previousResult._2 :+ j)
+                    } max
+                }
+                cache((t, i)) = result
+                result
             }
         }
     }
-
-    def getNextState(currentState: Int, random: Double) = {
-        if (random < 0.0 || random > 1.0) {
-            throw new IllegalArgumentException("Must supply a random double between 0.0 and 1.0 inclusive.")
+    
+    /**
+     * Performs the forward step of the algorithm
+     */
+    private def RunForward(observations: List[Int]) = {
+        var probs = collection.mutable.ListBuffer[collection.mutable.ListBuffer[Double]]()
+        
+        // Base-case, initialize for time 0
+        for (i <- 0 to numHidden - 1) {
+            probs(i) += (pi(i) * B(i)(observations(0)))
+            for (j <- 1 to observations.size - 1) probs(i) += 0.0
         }
-        val transitionDistribution = data(currentState)
-        val weightedRandom = random * transitionDistribution.sum
-
-        var accumulated = 0.0
-        var nextState = 0
-        while (accumulated < weightedRandom) {
-            accumulated += transitionDistribution(nextState)
-            nextState += 1
-        }
-        nextState - 1
-    }
-}
-
-/**
- * B = \{ b_j(k) \} observation probabilities.
- * b_j(k) = P(v_k at t | q_t = S_j), ie the probabily of seeing observation k at state j
- */
-class ObservationProbabilities(numberOfStates: Int, numberOfObservations: Int) {
-    val data: Array[Array[Double]] = Array.ofDim(numberOfStates, numberOfObservations)
-
-    def apply(stateIndex: Int, observationIndex: Int): Double = data(stateIndex)(observationIndex)
-    def update(stateIndex: Int, observationIndex: Int, value: Double) = {
-        data(stateIndex)(observationIndex) = value
-    }
-
-    def normalize() {
-        val sums = data map (_.sum)
-
-        sums indexOf (0.0) match {
-            case x if x >= 0 => throw new IllegalStateException("Cannot normalize zero observation probabilities for index " + x)
-            case -1          => // noop
-        }
-
-        (0 until numberOfStates) foreach { i =>
-            (0 until numberOfObservations) foreach { j =>
-                data(i)(j) /= sums(i)
+        
+        // Induction step, update state probabilities
+        for (time <- 0 to observations.size - 2) {
+            for (j <- 0 to numHidden - 1) {
+                // Init time offset
+                probs(j)(time + 1) = 0.0
+                
+                // Update temp transition matrix
+                for (i <- 0 to numHidden - 1)
+                    probs(j)(time + 1) = probs(j)(time + 1) + probs(i)(time) * A(i)(j)
+                    
+                // Emission matrix
+                probs(j)(time + 1) = probs(j)(time + 1) * B(j)(observations(time + 1))
             }
         }
+        
+        probs.toList.map(_.toList)
     }
-
-    def getObservation(currentState: Int, random: Double) = {
-        if (random < 0.0 || random > 1.0) {
-            throw new IllegalArgumentException("Must supply a random double between 0.0 and 1.0 inclusive.")
+    
+    /**
+     * Performs the backward step of the algorithm
+     */
+    private def RunBackward(observations: List[Int]) = {
+        var probs = collection.mutable.ListBuffer[collection.mutable.ListBuffer[Double]]()
+        
+        // Base-case, initialize for time T-1
+        for (i <- 0 to numHidden - 1) {
+            for (j <- 0 to observations.size - 2) probs(i) += 0.0
+            probs(i) += 1.0
         }
-        val observationDistribution = data(currentState)
-        val weightedRandom = random * observationDistribution.sum
-
-        var accumulated = 0.0
-        var observation = 0
-        while (accumulated < weightedRandom) {
-            accumulated += observationDistribution(observation)
-            observation += 1
+        
+        // Induction step, update state probabilities
+        for (time <- observations.size - 2 to 0 by -1) {
+            for (i <- 0 to numHidden - 1) {
+                // Init time offset
+                probs(i)(time) = 0.0
+                
+                // Step
+                for (j <- 0 to numHidden - 1)
+                    probs(i)(time) = probs(i)(time) + probs(j)(time + 1) * A(i)(j) + B(j)(observations(time + 1))
+            }
         }
-        observation - 1
+        
+        probs.toList.map(_.toList)
     }
-
-}
-
-/**
- * \pi Initial state probability distribution.
- * \pi_i = P(q_1 = S_i), ie the probability that the first state is i.
- */
-class InitialStateDistribution(val numberOfStates: Int) {
-    val weights = Array.fill(numberOfStates)(0.0)
-
-    def apply(i: Int) = weights(i)
-    def update(i: Int, value: Double) = {
-        weights(i) = value
+    
+    /**
+     * Computes the gamma function of i and t
+     */
+    private def ComputeGamma(i: Int, t: Int, observations: List[Int], fwd: List[List[Double]], bwd: List[List[Double]]) = {
+        val numerator = fwd(i)(t) * bwd(i)(t)
+        var denominator = 0.0
+        
+        // Compute denominator
+        for (j <- 0 to numHidden - 1) denominator += fwd(j)(t) * bwd(j)(t)
+        
+        // Return gamma
+        if (numerator == 0.0) 0.0 else numerator / denominator
     }
-
-    def normalize() {
-        val sum = weights sum
-
-        if (sum == 0) {
-            throw new IllegalStateException("Cannot normalize with zero total weights.")
-        }
-        (0 until numberOfStates) foreach { i =>
-            weights(i) /= sum
-        }
+    
+    /**
+     * Computes the probability P(X_t = s_i, X_(t+1) = s_j | observations)
+     */
+    private def ComputeProb(t: Int, i: Int, j: Int, observations: List[Int], fwd: List[List[Double]], bwd: List[List[Double]]) = {
+        val numerator = if (t == observations.size - 1) fwd(i)(t) * A(i)(j)
+            else fwd(i)(t) * A(i)(j) * B(j)(observations(t + 1)) * bwd(j)(t + 1)
+        
+        var denominator = 0.0
+        for (k <- 0 to numHidden - 1)
+            denominator += fwd(k)(t) * bwd(k)(t)
+            
+        // Return probability
+        if (numerator == 0.0) 0.0 else numerator / denominator
     }
-
-    def getInitialState(random: Double) = {
-        if (random < 0.0 || random > 1.0) {
-            throw new IllegalArgumentException("Must supply a random double between 0.0 and 1.0 inclusive.")
-        }
-        val weightedRandom = random * weights.sum
-
-        var accumulated = 0.0
-        var state = 0
-        while (accumulated < weightedRandom) {
-            accumulated += weights(state)
-            state += 1
-        }
-        state - 1
+    
+    def saveModel(location: String) = {
+        
+    }
+    
+    def loadModel(location: String) = {
+        
     }
 }
