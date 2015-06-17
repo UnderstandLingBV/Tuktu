@@ -148,25 +148,4 @@ class CountProcessor(resultName: String) extends BaseBucketProcessor(resultName)
     }
 }
 
-/**
- * Calculates simple arithmetic
- */
-class ArithmeticProcessor(resultName: String) extends BaseProcessor(resultName) {  
-    var calculate: String = _
-    
-    override def initialize(config: JsObject) = {
-        calculate = (config \ "calculate").as[String]          
-    }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {
-          new DataPacket(for (datum <- data.data) yield {
-            val formula = utils.evaluateTuktuString(calculate, datum)
-            val result = tuktu.utils.ArithmeticParser.readExpression(formula)
-            if (result.isDefined)
-              datum + (resultName -> result.get())
-            else datum
-          })
-        }
-    })  
-}
+
