@@ -24,6 +24,9 @@ class ModelRepository() extends Actor with ActorLogging {
     val modelRepository = collection.mutable.Map[String, BaseModel]()
     
     def receive() = {
+        case "init" => {
+            // Initialize
+        }
         case gm: GetModel => {
             // Check if the model exists, otherwise initialize it
             modelRepository contains gm.name match {

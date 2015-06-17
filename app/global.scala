@@ -35,7 +35,15 @@ object Global extends GlobalSettings {
         val reflections = new Reflections("globals")
         val moduleGlobalClasses = reflections.getSubTypesOf(classOf[GlobalSettings]).asScala
 
-        moduleGlobalClasses.foreach(moduleGlobal => moduleGlobals += moduleGlobal.newInstance().asInstanceOf[GlobalSettings])
+        moduleGlobalClasses.foreach(moduleGlobal => try {
+                moduleGlobals += moduleGlobal.newInstance().asInstanceOf[GlobalSettings]
+            } catch {
+                case e: Exception => {
+                    System.err.println("Failed loading Global of " + moduleGlobal.getName)
+                    e.getMessage
+                }
+            }
+        )
     }
     
     /**
@@ -56,14 +64,7 @@ object Global extends GlobalSettings {
         dispActor ! "init"
         
         // Load module globals
-        try {
-            LoadModuleGlobals(app)
-        } catch {
-            case e: Exception => {
-                System.err.println("Failed to load module globals.")
-                e.printStackTrace()
-            }
-        }
+        LoadModuleGlobals(app)
         moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStart(app))
 	}
     
