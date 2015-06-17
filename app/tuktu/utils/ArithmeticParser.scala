@@ -7,7 +7,7 @@ package tuktu.utils
  */
 object ArithmeticParser extends scala.util.parsing.combinator.RegexParsers {
  
-  def readExpression(input: String) : Option[()=>Int] = {
+  def readExpression(input: String) : Option[()=>Double] = {
     parseAll(expr, input) match {
       case Success(result, _) =>
         Some(result)
@@ -17,21 +17,21 @@ object ArithmeticParser extends scala.util.parsing.combinator.RegexParsers {
     }
   }
  
-  private def expr : Parser[()=>Int] = {
+  private def expr : Parser[()=>Double] = {
     (term<~"+")~expr ^^ { case l~r => () => l() + r() } |
     (term<~"-")~expr ^^ { case l~r => () => l() - r() } |
     term
   }
  
-  private def term : Parser[()=>Int] = {
+  private def term : Parser[()=>Double] = {
     (factor<~"*")~term ^^ { case l~r => () => l() * r() } |
     (factor<~"/")~term ^^ { case l~r => () => l() / r() } |
     factor
   }
  
-  private def factor : Parser[()=>Int] = {
+  private def factor : Parser[()=>Double] = {
     "("~>expr<~")" |
-    "\\d+".r ^^ { x => () => x.toInt } |
+    "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?".r ^^ { x => () => x.toDouble } |
     failure("Expected a value")
   }
 }
