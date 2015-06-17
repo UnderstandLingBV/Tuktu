@@ -23,6 +23,19 @@ import play.api.libs.json.Json
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
+    
+    /**
+     * Load module globals
+     */
+    private val moduleGlobals = List[GlobalSettings]()
+    private def LoadModuleGlobals(app: Application) = {
+        // Fetch all globals
+        val reflections = new Reflections("globals")
+        val moduleGlobalClasses = reflections.getSubTypesOf(classOf[GlobalSettings])
+
+        moduleGlobalClasses.foreach(moduleGlobal => moduleGlobals += moduleGlobal.newInstance().asInstanceOf[GlobalSettings])
+    }
+    
     /**
      * Load this on startup. The application is given as parameter
      */

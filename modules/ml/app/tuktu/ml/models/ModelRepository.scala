@@ -4,12 +4,12 @@ import akka.actor.ActorLogging
 import akka.actor.Actor
 
 // Helper classes for messages
-case class AddModel[BM <: BaseModel] (
-        model: BM
+case class GetModel (
+        name: String
 )
-case class GetModel[BM <: BaseModel] (
+case class UpsertModel (
         name: String,
-        modelType: BM
+        model: BaseModel
 )
 case class DestroyModel (
         name: String
@@ -21,7 +21,23 @@ case class DestroyModel (
  * store new ones in memory and it can destroy ML models.
  */
 class ModelRepository() extends Actor with ActorLogging {
+    val modelRepository = collection.mutable.Map[String, BaseModel]()
+    
     def receive() = {
-        case _ => {}
+        case gm: GetModel => {
+            // Check if the model exists, otherwise initialize it
+            modelRepository contains gm.name match {
+                case true => sender ! modelRepository(gm.name)
+                case false => sender ! null
+            }
+        }
+        case um: UpsertModel => {
+            // Insert or overwrite the model
+            modelRepository += um.name -> um.model
+        }
+        case dm: DestroyModel => {
+            // Simply remove it from the repository
+            modelRepository -= dm.name
+        }
     }
 }

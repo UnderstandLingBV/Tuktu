@@ -73,7 +73,8 @@ lazy val coreDependencies = Seq(
     "com.typesafe.akka" %% "akka-remote" % "2.3.4",
     "com.github.nscala-time" %% "nscala-time" % "1.8.0",
     "joda-time" % "joda-time" % "2.7",
-    "org.apache.commons" % "commons-math3" % "3.5"
+    "org.apache.commons" % "commons-math3" % "3.5",
+    "org.reflections" % "reflections" % "0.9.10"
 )
 
 lazy val tuktuDBDependencies = Seq(

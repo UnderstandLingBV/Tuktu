@@ -7,7 +7,6 @@ import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
-import tuktu.ml.models.hmm.HiddenMarkovModel
 import tuktu.ml.models.hmm.HMM
 
 /**
