@@ -16,6 +16,8 @@ import tuktu.api.DataPacket
 import tuktu.api.StopPacket
 import scala.util.Failure
 import tuktu.api.InitPacket
+import tuktu.nosql.util.MongoCollectionPool
+import tuktu.nosql.util.MongoSettings
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -26,12 +28,8 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val coll = (config \ "collection").as[String]
 
             // Set up connection
-            val driver = new MongoDriver
-            val connection = driver.connection(hosts)
-            // Connect to DB
-            val db = connection(database)
-            // Select the collection
-            val collection: JSONCollection = db(coll)
+            val settings = MongoSettings(hosts, database, coll)
+            val collection = MongoCollectionPool.getCollection(settings)
 
             // Get query
             val query = (config \ "query")     
@@ -51,14 +49,12 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                 fut onSuccess {
                     case list: List[Map[String, Any]] => {
                         channel.push(new DataPacket(list))
-                        connection.close
                         self ! new StopPacket
                     }
                 }
                 fut onFailure {
                     case e: Throwable => {
                         e.printStackTrace
-                        connection.close
                         self ! new StopPacket
                     }
                 }
@@ -73,11 +69,9 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                             tuktu.api.utils.anyJsonToMap(doc))))
                         }
                     })
-                    
-                // Close connection
+                                    
                 fut onComplete {
                     case _ => {
-                        connection.close
                         self ! new StopPacket
                     }
                 }
