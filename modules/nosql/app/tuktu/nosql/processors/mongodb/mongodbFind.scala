@@ -16,15 +16,15 @@ import scala.concurrent.duration.DurationInt
 import play.api.libs.json.Json
 import tuktu.nosql.util.sql
 import tuktu.nosql.util.stringHandler
+import tuktu.nosql.util.MongoCollectionPool
+import tuktu.nosql.util.MongoSettings
 
 /**
  * Queries MongoDB for data
  */
 // TODO: Support dynamic querying, is now static
 class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var connection: MongoConnection = _
     var collection: JSONCollection = _
-
     var query: String = _
     var filter: String = _
 
@@ -35,12 +35,8 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         val coll = (config \ "collection").as[String]
 
         // Set up connection
-        val driver = new MongoDriver
-        connection = driver.connection(hosts)
-        // Connect to DB
-        val db = connection(database)
-        // Select the collection
-        collection = db(coll)
+        val settings = MongoSettings(hosts, database, coll)
+        collection = MongoCollectionPool.getCollection(settings)
 
         // Get query and filter
         query = (config \ "query").as[String]
@@ -73,5 +69,5 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         
         // Gather results
         new DataPacket(Await.result(dataFuture, Cache.getAs[Int]("timeout").getOrElse(5) seconds))
-    }) compose Enumeratee.onEOF(() => connection.close)
+    }) 
 }

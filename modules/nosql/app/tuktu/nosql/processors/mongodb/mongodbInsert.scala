@@ -20,21 +20,18 @@ import scala.concurrent.Await
 /**
  * Inserts data into MongoDB
  */
-class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var hosts: List[String] = _
-    var database: String = _
-    var coll: String = _    
+class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultName) { 
     var fields = List[String]()
-    var settings: MongoSettings = _
     var collection: JSONCollection = _
 
     override def initialize(config: JsObject) = {
         // Set up MongoDB client
-        hosts = (config \ "hosts").as[List[String]]
-        database = (config \ "database").as[String]
-        coll = (config \ "collection").as[String]
+        val hosts = (config \ "hosts").as[List[String]]
+        val database = (config \ "database").as[String]
+        val coll = (config \ "collection").as[String]
         
-        settings = MongoSettings(hosts, database, coll)
+        // create connectionPool
+        val settings = MongoSettings(hosts, database, coll)
         collection = MongoCollectionPool.getCollection(settings)
 
         // What fields to write?
@@ -47,9 +44,9 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
             case Nil => collection.insert(anyMapToJson(datum, true))
             case _ => collection.insert(anyMapToJson(datum.filter(elem => fields.contains(elem._1)), true))
         })
-        
-        futures.foreach { f => Await.ready(f, Cache.getAs[Int]("timeout").getOrElse(5) seconds) }
+        // Wait for all the results to be retrieved
+        futures.foreach { f => if(!f.isCompleted) Await.ready(f, Cache.getAs[Int]("timeout").getOrElse(5) seconds) }
         
         data
-    }) compose Enumeratee.onEOF(() => MongoCollectionPool.closeCollection(settings))
+    }) 
 }
