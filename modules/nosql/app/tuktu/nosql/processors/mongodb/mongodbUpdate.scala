@@ -24,20 +24,26 @@ import tuktu.nosql.util.stringHandler
  * Updates data into MongoDB
  */
 class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultName) { 
-    var fields = List[String]()
+    // the collection to write to
     var collection: JSONCollection = _
+    // If set to true, creates a new document when no document matches the query criteria. 
     var upsert = false
-    var selector: String = _
-    var insert: String = _
+    // The selection criteria for the update. 
+    var query: String = _
+    // The modifications to apply. 
+    var update: String = _
+    //  If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document. 
+    var multi = false
 
     override def initialize(config: JsObject) = {
         // Set up MongoDB client
         val hosts = (config \ "hosts").as[List[String]]
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
-        selector = (config \ "selector").as[String]
-        insert = (config \ "insert").as[String]
+        query = (config \ "query").as[String]
+        update = (config \ "update").as[String]
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
+        multi = (config \ "multi").asOpt[Boolean].getOrElse(false)
                 
         // create connectionPool
         val settings = MongoSettings(hosts, database, coll)
@@ -47,12 +53,13 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Update data into MongoDB
         val futures = data.data.map(datum => 
-          collection.update(Json.parse(stringHandler.evaluateString(selector, datum,"\"","")), 
-            Json.parse(stringHandler.evaluateString(selector, datum,"\"","")), 
-            upsert = upsert
+          collection.update(Json.parse(stringHandler.evaluateString(query, datum,"\"","")), 
+            Json.parse(stringHandler.evaluateString(query, datum,"\"","")), 
+            upsert = upsert,
+            multi = multi
           )
         )
-        // Wait for all the results to be retrieved
+        // Wait for all the updates to be finished
         futures.foreach { f => if(!f.isCompleted) Await.ready(f, Cache.getAs[Int]("timeout").getOrElse(5) seconds) }
         
         data
