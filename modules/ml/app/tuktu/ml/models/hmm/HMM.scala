@@ -93,7 +93,7 @@ class HMM(numHidden: Int, numObserved: Int) extends BaseModel() {
     /**
      * Runs the Viterbi algorithm to find the most likely emission after a sequence of observations
      */
-    def Viterbi(observations: Seq[Int]) = {
+    class Viterbi(observations: Seq[Int]) {
         val cache = collection.mutable.Map[(Int, Int), (Double, Seq[Int])]()
 
         /**

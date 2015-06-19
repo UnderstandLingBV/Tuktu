@@ -7,74 +7,80 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
-import tuktu.api.utils
+import tuktu.ml.models.BaseModel
 import tuktu.ml.models.hmm.HMM
 
 /**
  * Trains a hidden markov model using observations
  */
-class HMMTrainer(resultName: String) extends BaseProcessor(resultName) {
+class HMMTrainer(resultName: String) extends BaseMLTrainProcessor[HMM](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
-    // Get the name of the HMM to store in cache
-    var modelName = ""
     // How many steps to execute while training?
     var steps = 5
-    // Destory the model on EOF?
-    var destroyEOF = true
+    
+    // Initialization params
+    var numHidden = 0
+    var numObservable = 0
     
     // Keep track of how many packets we have seen
     var packetCount = 0
     
-    // Our hidden markov model
-    var hmm: HMM = _
-    
     override def initialize(config: JsObject) = {
         observationsField = (config \ "observations_field").as[String]
-        modelName = (config \ "model_name").as[String]
         steps = (config \ "steps").asOpt[Int].getOrElse(5)
-        destroyEOF = (config \ "destroy_on_eof").asOpt[Boolean].getOrElse(true)
         
         // Get number of hidden and observable states
-        val numHidden = (config \ "num_hidden").as[Int]
-        val numObservable = (config \ "num_observable").as[Int]
+        numHidden = (config \ "num_hidden").as[Int]
+        numObservable = (config \ "num_observable").as[Int]
         
-        // @TODO: Get the HMM from our model repository
-        hmm = new HMM(numHidden, numObservable)
+        super.initialize(config)
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        data.data.foreach(datum => {
-            // Should we add the model?
-            val modelNameEval = utils.evaluateTuktuString(modelName, datum)
-            
+    // Instantiates a Hidden Markov Model with a number of hidden states and a number of observable states
+    override def instantiate(): HMM =
+        new HMM(numHidden, numObservable)
+    
+    // Trains the Hidden Markov Model using a sequence of observations for a number of steps
+    override def train(data: List[Map[String, Any]], model: HMM): HMM = {
+        data.foreach(datum => {
             // Get the observations, as sequence
             val observations = datum(observationsField).asInstanceOf[Seq[Int]].toList
             
             // Further train the HMM
-            hmm.TrainBaumWelch(observations, steps)
+            model.TrainBaumWelch(observations, steps)
         })
         
-        data
-    }) compose Enumeratee.onEOF(() => destroyEOF match {
-        case true => {
-            // @TODO: Send model repository the signal to clean up the model
-        }
-        case _ => {}
-    })
+        model
+    }
 }
 
 /**
  * Applies a hidden markov model to new sequences to find the most likely emission
  */
-class HMMApply(resultName: String) extends BaseProcessor(resultName) {
-    var hmmField = ""
+class HMMApply(resultName: String) extends BaseMLApplyProcessor[HMM](resultName) {
+    // From which field to we extract the observations
+    var observationsField = ""
+    // The state we ended up in
+    var endStateField = ""
     
     override def initialize(config: JsObject) = {
-        hmmField = (config \ "hmm_field").as[String]
+        observationsField = (config \ "observations_field").as[String]
+        endStateField = (config \ "end_state_field").as[String]
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        data
-    })
+    // Apply the HMM using the Viterbi algorithm to all our data points
+    override def applyModel(resultName: String, data: List[Map[String, Any]], model: HMM): List[Map[String, Any]] = {
+        for (datum <- data) yield {
+            // Apply viterbi algorithm
+            val observations = datum(observationsField).asInstanceOf[Seq[Int]]
+            val viterbi = new model.Viterbi(observations)
+            val result = viterbi(observations.size, datum(endStateField).asInstanceOf[Int])
+            
+            datum + (resultName -> Map(
+                    "delta" -> result._1,
+                    "sequence" -> result._2
+            ))
+        }
+    }
 }
