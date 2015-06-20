@@ -20,7 +20,7 @@
 			"parameters": [
 				{
 					"name": "model_name",
-					"description": "Name of the model to be trained. If a model with that name is already available, that model will be used for additional training. Otherwise a new model with this name will be instantiated.",
+					"description": "Name of the model to be applied. If a model with this name cannot be found, the data will go through unchanged.",
 					"type": "string",
 					"required": true
 				},
