@@ -18,39 +18,41 @@ class HMMTrainer(resultName: String) extends BaseMLTrainProcessor[HMM](resultNam
     var observationsField = ""
     // How many steps to execute while training?
     var steps = 5
-    
+
     // Initialization params
     var numHidden = 0
     var numObservable = 0
-    
+
     // Keep track of how many packets we have seen
     var packetCount = 0
-    
-    override def initialize(config: JsObject) = {
+
+    override def initialize(config: JsObject) {
         observationsField = (config \ "observations_field").as[String]
         steps = (config \ "steps").asOpt[Int].getOrElse(5)
-        
+
         // Get number of hidden and observable states
         numHidden = (config \ "num_hidden").as[Int]
         numObservable = (config \ "num_observable").as[Int]
-        
+
         super.initialize(config)
     }
     
+    override def processor = super.processor
+
     // Instantiates a Hidden Markov Model with a number of hidden states and a number of observable states
     override def instantiate(): HMM =
         new HMM(numHidden, numObservable)
-    
+
     // Trains the Hidden Markov Model using a sequence of observations for a number of steps
     override def train(data: List[Map[String, Any]], model: HMM): HMM = {
         data.foreach(datum => {
             // Get the observations, as sequence
             val observations = datum(observationsField).asInstanceOf[Seq[Int]].toList
-            
+
             // Further train the HMM
             model.TrainBaumWelch(observations, steps)
         })
-        
+
         model
     }
 }
@@ -61,26 +63,24 @@ class HMMTrainer(resultName: String) extends BaseMLTrainProcessor[HMM](resultNam
 class HMMApply(resultName: String) extends BaseMLApplyProcessor[HMM](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
-    // The state we ended up in
-    var endStateField = ""
-    
-    override def initialize(config: JsObject) = {
+
+    override def initialize(config: JsObject) {
         observationsField = (config \ "observations_field").as[String]
-        endStateField = (config \ "end_state_field").as[String]
     }
     
+    override def processor = super.processor
+
     // Apply the HMM using the Viterbi algorithm to all our data points
     override def applyModel(resultName: String, data: List[Map[String, Any]], model: HMM): List[Map[String, Any]] = {
         for (datum <- data) yield {
             // Apply viterbi algorithm
             val observations = datum(observationsField).asInstanceOf[Seq[Int]]
             val viterbi = new model.Viterbi(observations)
-            val result = viterbi(observations.size, datum(endStateField).asInstanceOf[Int])
-            
+            val result = viterbi(observations.size, observations.last)
+
             datum + (resultName -> Map(
-                    "delta" -> result._1,
-                    "sequence" -> result._2
-            ))
+                "delta" -> result._1,
+                "sequence" -> result._2))
         }
     }
 }

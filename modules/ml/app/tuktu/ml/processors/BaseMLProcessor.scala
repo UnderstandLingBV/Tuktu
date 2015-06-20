@@ -20,56 +20,55 @@ import tuktu.ml.models.UpsertModel
 import tuktu.ml.models.DestroyModel
 
 /**
- * Abstract class that trains an ML model, supervised or unsupverised
+ * Abstract class that trains an ML model, supervised or unsupervised
  */
 abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    
+
     var modelName = ""
     var destroyOnEOF = true
-    
-    override def initialize(config: JsObject) = {
+
+    override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
         destroyOnEOF = (config \ "destroy_on_eof").asOpt[Boolean].getOrElse(true)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Ask model repository for this model
-        val modelFut = Akka.system.actorSelection("user/TuktuMonitor") ? new GetModel(modelName)
+        val modelFut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new GetModel(modelName)
         // We cannot but wait here
-        val model = Await.result(modelFut, timeout.duration).asInstanceOf[BM]
-        val modelInstance = if (model == null) {
-            // No model was found, create it and send it to our repository
-            val model = instantiate
-            Akka.system.actorSelection("user/TuktuMonitor") ! new UpsertModel(modelName, model)
-            
-            model
+        val model = Await.result(modelFut, timeout.duration).asInstanceOf[Option[BM]]
+        val modelInstance = model match {
+            case None => {
+                // No model was found, create it and send it to our repository
+                val model = instantiate
+                Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, model)
+
+                model
+            }
+            case Some(m) => m
         }
-        else {
-            // Model exists
-            model
-        }
-        
+
         // Train our model
         val newModel = train(data.data, modelInstance)
-        
+
         // Write back to our model repository
-        Akka.system.actorSelection("user/TuktuMonitor") ! new UpsertModel(modelName, newModel)
-        
+        Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, newModel)
+
         data
     }) compose Enumeratee.onEOF(() => destroyOnEOF match {
         case true => {
             // Send model repository the signal to clean up the model
-            Akka.system.actorSelection("user/TuktuMonitor") ! new DestroyModel(modelName)
+            Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new DestroyModel(modelName)
         }
         case _ => {}
     })
-    
+
     /**
      * Instantiates the model
      */
     def instantiate(): BM = ???
-    
+
     /**
      * Trains the model
      */
@@ -81,34 +80,34 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
  */
 abstract class BaseMLApplyProcessor[BM <: BaseModel](resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    
+
     var modelName = ""
     var destroyOnEOF = true
-    
-    override def initialize(config: JsObject) = {
+
+    override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
         destroyOnEOF = (config \ "destroy_on_eof").asOpt[Boolean].getOrElse(true)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Ask model repository for this model
-        val modelFut = Akka.system.actorSelection("user/TuktuMonitor") ? new GetModel(modelName)
+        val modelFut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new GetModel(modelName)
         // We cannot but wait here
-        val model = Await.result(modelFut, timeout.duration).asInstanceOf[BM]
-        
+        val model = Await.result(modelFut, timeout.duration).asInstanceOf[Option[BM]]
+
         // Model cannot be null
-        if (model != null) {
-            // Apply our model
-            new DataPacket(applyModel(resultName, data.data, model))
-        } else data
+        model match {
+            case Some(m) => new DataPacket(applyModel(resultName, data.data, m))
+            case None    => data
+        }
     }) compose Enumeratee.onEOF(() => destroyOnEOF match {
         case true => {
             // Send model repository the signal to clean up the model
-            Akka.system.actorSelection("user/TuktuMonitor") ! new DestroyModel(modelName)
+            Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new DestroyModel(modelName)
         }
         case _ => {}
     })
-    
+
     /**
      * Applies the model to our data and return the results
      */

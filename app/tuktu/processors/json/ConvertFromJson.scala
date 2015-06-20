@@ -24,9 +24,9 @@ class ConvertFromJson(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         new DataPacket(for (datum <- data.data) yield {
             if (overwrite)
-                datum + (field -> utils.anyJsonToAny(datum(field).asInstanceOf[JsValue]))
+                datum + (field -> utils.JsValueToAny(datum(field).asInstanceOf[JsValue]))
             else
-                datum + (resultName -> utils.anyJsonToAny(datum(field).asInstanceOf[JsValue]))
+                datum + (resultName -> utils.JsValueToAny(datum(field).asInstanceOf[JsValue]))
         })
     })
 }

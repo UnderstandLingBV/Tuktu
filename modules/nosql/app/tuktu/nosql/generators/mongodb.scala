@@ -41,7 +41,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                 val fut = collection.find(query).cursor[JsObject].collect[List]().map {
                     list =>
                         list.map {
-                            obj => tuktu.api.utils.anyJsonToMap(obj)
+                            obj => tuktu.api.utils.JsObjectToMap(obj)
                         }
                 }
                 
@@ -66,7 +66,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                         Iteratee.foreach { doc =>
                         // Pipe the document into channel
                         channel.push(new DataPacket(List(
-                            tuktu.api.utils.anyJsonToMap(doc))))
+                            tuktu.api.utils.JsObjectToMap(doc))))
                         }
                     })
                                     

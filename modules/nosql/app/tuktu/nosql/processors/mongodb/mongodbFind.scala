@@ -54,7 +54,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
                 
             resultData.map { resultList => {
                 for (resultRow <- resultList) yield {
-                    tuktu.api.utils.anyJsonToMap(resultRow)
+                    tuktu.api.utils.JsObjectToMap(resultRow)
                 }
             }}    
         })

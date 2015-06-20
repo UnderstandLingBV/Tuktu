@@ -30,8 +30,8 @@ class ModelRepository() extends Actor with ActorLogging {
         case gm: GetModel => {
             // Check if the model exists, otherwise initialize it
             modelRepository contains gm.name match {
-                case true => sender ! modelRepository(gm.name)
-                case false => sender ! null
+                case true => sender ! Some(modelRepository(gm.name))
+                case false => sender ! None
             }
         }
         case um: UpsertModel => {

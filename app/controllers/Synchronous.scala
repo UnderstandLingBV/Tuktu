@@ -50,7 +50,7 @@ object Synchronous extends Controller {
             ).asInstanceOf[ActorRef]
             
             // Forward data to generator and fetch result
-            val resultFuture = (generator ? new DataPacket(List(utils.anyJsonToMap((jsonBody \ "body").as[JsObject])))).asInstanceOf[Future[DataPacket]]
+            val resultFuture = (generator ? new DataPacket(List(utils.JsObjectToMap((jsonBody \ "body").as[JsObject])))).asInstanceOf[Future[DataPacket]]
             val timeoutFuture = Promise.timeout(TimeoutPacket, customTimeout)
             Future.firstCompletedOf(Seq(resultFuture, timeoutFuture)).map {
                 case dp: DataPacket => {
