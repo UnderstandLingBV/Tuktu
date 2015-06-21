@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class TimestampAdderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var format: Option[String] = None
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         format = (config \ "format").asOpt[String]
     }
 

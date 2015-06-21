@@ -59,11 +59,9 @@ object StatHelper {
 class MeanProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields = List[String]()
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Get and return means
@@ -77,11 +75,9 @@ class MeanProcessor(resultName: String) extends BaseBucketProcessor(resultName) 
 class MedianProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields = List[String]()
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         List((for (field <- fields) yield field -> {
@@ -107,11 +103,9 @@ class MedianProcessor(resultName: String) extends BaseBucketProcessor(resultName
 class ModeProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields = List[String]()
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         for (field <- fields) yield {
@@ -138,11 +132,9 @@ class MidrangeProcessor(resultName: String) extends BaseBucketProcessor(resultNa
     var mins = collection.mutable.Map[String, Double]().withDefaultValue(Double.MaxValue)
     var maxs = collection.mutable.Map[String, Double]().withDefaultValue(Double.MinValue)
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Iterate over data and fields
@@ -166,12 +158,10 @@ class MidrangeProcessor(resultName: String) extends BaseBucketProcessor(resultNa
 class StDevProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the fields to compute StDev over
         fields = (config \ "fields").as[List[String]]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Get variances
@@ -188,12 +178,10 @@ class StDevProcessor(resultName: String) extends BaseBucketProcessor(resultName)
 class VarProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the fields to compute variance over
         fields = (config \ "fields").as[List[String]]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Get and return variances
@@ -207,11 +195,9 @@ class VarProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
 class CorrelationProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Collect all data
@@ -233,11 +219,9 @@ class CorrelationProcessor(resultName: String) extends BaseBucketProcessor(resul
 class CovarianceProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Collect all data

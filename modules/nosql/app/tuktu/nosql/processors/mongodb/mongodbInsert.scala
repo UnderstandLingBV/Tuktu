@@ -24,7 +24,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
     var fields = List[String]()
     var collection: JSONCollection = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Set up MongoDB client
         val hosts = (config \ "hosts").as[List[String]]
         val database = (config \ "database").as[String]

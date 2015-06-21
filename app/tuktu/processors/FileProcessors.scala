@@ -22,7 +22,7 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
     var fieldSep: String = null
     var lineSep: String = null
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the location of the file to write to
         val fileName = (config \ "file_name").as[String]
         val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
@@ -64,7 +64,7 @@ class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resul
     var batch = new StringBuilder()
     var batchCount = 0
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the location of the file to write to
         val fileName = (config \ "file_name").as[String]
         val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
@@ -109,7 +109,7 @@ class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) 
     var startLine = 0
     var lineSep: String = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the location of the file to write to
         fileName = (config \ "filename").as[String]
         encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")

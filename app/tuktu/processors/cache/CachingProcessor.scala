@@ -29,7 +29,7 @@ class CachingProcessor(resultName: String) extends BaseProcessor(resultName) {
     var startProcessor = ""
     var actor: ActorRef = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // The key name of the
         cacheKey = (config \ "cache_key").as[String]
         // Get the field we are after as result

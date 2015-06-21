@@ -18,7 +18,7 @@ class H2Caching (resultName: String) extends BaseProcessor(resultName) {
     var dbName: String = _
     var tables: List[String] = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
         val url = (config \ "url").as[String]
         val user = (config \ "user").as[String]

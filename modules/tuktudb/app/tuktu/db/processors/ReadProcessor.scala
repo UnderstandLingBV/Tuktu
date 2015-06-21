@@ -12,7 +12,7 @@ class ReadProcessor(resultName: String) extends BaseProcessor(resultName) {
     var keyField = ""
     var namespace = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         keyField = (config \ "key_field").as[String]
         namespace = (config \ "namespace").as[String]
     }

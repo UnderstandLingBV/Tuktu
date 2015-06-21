@@ -60,7 +60,7 @@ object Common {
                     null
                 }
             }
-            val method = clazz.getDeclaredMethods.filter(m => m.getName == "getFromCsvRow").head
+            val method = clazz.getMethods.filter(m => m.getName == "getFromCsvRow").head
             val proc = method.invoke(inst).asInstanceOf[(List[String], Int, Int) => String]
             
             // Create the node

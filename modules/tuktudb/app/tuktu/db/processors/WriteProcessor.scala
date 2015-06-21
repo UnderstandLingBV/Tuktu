@@ -16,7 +16,7 @@ class WriteProcessor(resultName: String) extends BaseProcessor(resultName) {
     var namespace = ""
     var valueFields: List[String] = _
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         keyField = (config \ "key_field").as[String]
         namespace = (config \ "namespace").as[String]
         valueFields = (config \ "value_fields").as[List[String]]

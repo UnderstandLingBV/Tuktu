@@ -13,7 +13,7 @@ class StreamingDeduplicationProcessor(resultName: String) extends BaseProcessor(
     var fields = collection.mutable.ListBuffer[String]()
     var seenRecords = collection.mutable.ArrayBuffer[List[Any]]()
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the field to sort on
         fields.appendAll((config \ "fields").as[List[String]])
     }

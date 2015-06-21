@@ -9,7 +9,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class ReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var filename = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get file name
         filename = (config \ "filename").as[String]
     }

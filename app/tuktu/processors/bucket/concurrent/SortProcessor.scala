@@ -12,7 +12,7 @@ import akka.actor.ActorRef
  * Sorts elements in a distributed fashion
  */
 class SortProcessor(genActor: ActorRef, resultName: String) extends BaseConcurrentProcessor(genActor, resultName) {
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Initialize
         this.initializeNodes(
                 (config \ "nodes").as[List[String]],
@@ -21,6 +21,4 @@ class SortProcessor(genActor: ActorRef, resultName: String) extends BaseConcurre
                 null
         )
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 }

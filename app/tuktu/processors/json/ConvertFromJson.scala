@@ -16,7 +16,7 @@ class ConvertFromJson(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
     var overwrite = false
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
     }

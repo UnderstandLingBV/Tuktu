@@ -13,12 +13,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class MinProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var field = ""
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the field to sort on
         field = (config \ "field").as[String]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         if (data.size == 0) List()
@@ -51,12 +49,10 @@ class MinProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
 class MaxProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var field = ""
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the field to sort on
         field = (config \ "field").as[String]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         if (data.size == 0) List()
@@ -89,12 +85,10 @@ class MaxProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
 class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var field = ""
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the field to sort on
         field = (config \ "field").as[String]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         if (data.size == 0) List()
@@ -137,11 +131,9 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
 class CountProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var field = ""
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         List(Map(field -> data.size))

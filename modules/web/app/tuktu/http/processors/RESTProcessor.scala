@@ -27,7 +27,7 @@ class RESTProcessor(resultName: String) extends BaseProcessor(resultName) {
     var httpMethod = ""
     var requestBody: Option[JsValue] = None
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get URL, port and REST options        
         url = (config \ "url").as[String]
         port = (config \ "port").as[Int]

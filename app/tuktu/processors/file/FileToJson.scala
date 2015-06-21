@@ -20,7 +20,7 @@ class FileToJson(resultName: String) extends BaseProcessor(resultName) {
     var field = ""
     var overwrite = false
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         charset = (config \ "charset").asOpt[String].getOrElse("utf-8")
         field = (config \ "file_field").as[String]
         overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)

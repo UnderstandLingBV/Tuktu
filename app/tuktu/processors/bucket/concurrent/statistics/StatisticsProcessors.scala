@@ -24,8 +24,8 @@ object NumericHelper {
  */
 class MeanProcessor(genActor: ActorRef, resultName: String) extends BaseConcurrentProcessor(genActor, resultName) {
     var field = ""
-    
-    override def initialize(config: JsObject) = {
+
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         // Initialize
         this.initializeNodes(
@@ -38,9 +38,7 @@ class MeanProcessor(genActor: ActorRef, resultName: String) extends BaseConcurre
                 mergeProcess
         )
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     def mergeProcess(): List[List[Map[String, Any]]] => DataPacket = results => {
         // Sum is first, count second
         val iter = results(0).zip(results(1))

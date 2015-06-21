@@ -12,7 +12,7 @@ import akka.actor.ActorRef
  * Removes duplicates in a distributed fashion
  */
 class DeduplicationProcessor(genActor: ActorRef, resultName: String) extends BaseConcurrentProcessor(genActor, resultName) {
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Initialize
         this.initializeNodes(
                 (config \ "nodes").as[List[String]],
@@ -21,6 +21,4 @@ class DeduplicationProcessor(genActor: ActorRef, resultName: String) extends Bas
                 null
         )
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 }

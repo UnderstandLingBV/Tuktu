@@ -27,7 +27,7 @@ import tuktu.api.utils.evaluateTuktuString
 class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Find out which fields we should extract
         fieldList = (config \ "fields").as[List[JsObject]]
     }
@@ -62,7 +62,7 @@ class RunningCountProcessor(resultName: String) extends BaseProcessor(resultName
     var perBlock = false
     var stepSize = 1
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         cnt = (config \ "start_at").asOpt[Int].getOrElse(0)
         perBlock = (config \ "per_block").asOpt[Boolean].getOrElse(false)
         stepSize = (config \ "step_size").asOpt[Int].getOrElse(1)
@@ -100,7 +100,7 @@ class ReplaceProcessor(resultName: String) extends BaseProcessor(resultName) {
         }
     }
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         sources = (config \ "sources").as[List[String]]
         targets = (config \ "targets").as[List[String]]
@@ -123,7 +123,7 @@ class ReplaceProcessor(resultName: String) extends BaseProcessor(resultName) {
 class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Find out which fields we should extract
         fieldList = (config \ "fields").as[List[JsObject]]
     }
@@ -156,7 +156,7 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
 class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fieldList = (config \ "fields").as[List[JsObject]]
     }
     
@@ -196,7 +196,7 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
     var expressionType: String = null
     var andOr: String = null
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the groovy expression that determines whether to include or exclude
         expression = (config \ "expression").as[String]
         // See if this is a simple or groovy expression
@@ -264,7 +264,7 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
     var value = ""
     var isNumeric = false
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         value = (config \ "value").as[String]
         isNumeric = (config \ "is_numeric").asOpt[Boolean].getOrElse(false)
     }
@@ -285,7 +285,7 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
 class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var prettify = false
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         prettify = (config \ "prettify").asOpt[Boolean].getOrElse(false)
     }    
     
@@ -302,7 +302,7 @@ class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultNam
  */
 class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fieldList = (config \ "fields").as[List[JsObject]]
     }
     
@@ -341,7 +341,7 @@ class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
 class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fieldList = (config \ "fields").as[List[JsObject]]
     }
     
@@ -393,7 +393,7 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[String]()
     var separator = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the field to flatten
         fieldList = (config \ "fields").as[List[String]]
         separator = (config \ "separator").as[String]
@@ -436,7 +436,7 @@ class SequenceExploderProcessor(resultName: String) extends BaseProcessor(result
     var field = ""
     var ignoreEmpty = true
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
     }
@@ -459,7 +459,7 @@ class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultNa
     var separator = ""
     var overwrite = false
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         separator = (config \ "separator").as[String]
         overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
@@ -486,7 +486,7 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
     var ignoreEmpty = true
     var overwrite = true
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         listField = (config \ "list_field").as[String]
         mapField = (config \ "map_field").as[String]
         ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
@@ -522,7 +522,7 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
     var ignoreEmpty = true
     var overwrite = true
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         listField = (config \ "list_field").as[String]
         mapFields = (config \ "map_fields").as[List[String]]
         ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
@@ -561,7 +561,7 @@ class ContainsAllFilterProcessor(resultName: String) extends BaseProcessor(resul
     var field: String = _
     var containsField = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         containsField = (config \ "contains_field").as[String]
         fieldContainingList = (config \ "field_list").as[String]
@@ -596,7 +596,7 @@ class ContainsAllFilterProcessor(resultName: String) extends BaseProcessor(resul
 class MapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
     }
     

@@ -161,11 +161,11 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                     val iClazz = procClazz.getConstructor(classOf[String]).newInstance("processed_data_" + index)
                     
                     // Initialize the processor
-                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                    val initMethod = procClazz.getMethods.filter(m => m.getName == "initialize").head
                     initMethod.invoke(iClazz, configs(index).asInstanceOf[JsObject] - "nodes")
                 
                     // Now invoke the process function
-                    val processMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "doProcess").head
+                    val processMethod = procClazz.getMethods.filter(m => m.getName == "doProcess").head
                     try {
                         processMethod.invoke(iClazz, combinedResult.map(elem => elem(index))).asInstanceOf[List[Map[String, Any]]]
                     } catch {

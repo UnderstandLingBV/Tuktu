@@ -21,7 +21,7 @@ class KafkaProcessor(resultName: String) extends BaseProcessor(resultName) {
     var producer: Producer[String, String] = null
     var keyField = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Kafka properties
         val props = new Properties()
         val kafkaProps = (config \ "kafka_props").as[JsObject]

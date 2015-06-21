@@ -20,7 +20,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     
     var client: client = _
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
         url = (config \ "url").as[String]
         user = (config \ "user").as[String]

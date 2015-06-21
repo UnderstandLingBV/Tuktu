@@ -18,7 +18,7 @@ class ConvertToJson(resultName: String) extends BaseProcessor(resultName) {
     /** Append the data */
     var append: Boolean = false
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         append = (config \ "append").asOpt[Boolean].getOrElse(false)
     }

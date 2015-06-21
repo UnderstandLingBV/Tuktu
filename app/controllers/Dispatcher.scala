@@ -144,7 +144,7 @@ object Dispatcher {
             
                 // Initialize the processor first
                 try {
-                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                    val initMethod = procClazz.getMethods.filter(m => m.getName == "initialize").head
                     initMethod.invoke(iClazz, pd.config)
                 } catch {
                     case e: NoSuchElementException => {}
@@ -152,7 +152,7 @@ object Dispatcher {
                 }
                 
                 // Add method to all our entries so far
-                val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
+                val method = procClazz.getMethods.filter(m => m.getName == "processor").head
                 // Log enumeratee or not?
                 if (logLevel == "all")
                     accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]] compose logEnumeratee
@@ -165,13 +165,13 @@ object Dispatcher {
             
                 // Initialize the processor first
                 try {
-                    val initMethod = procClazz.getDeclaredMethods.filter(m => m.getName == "initialize").head
+                    val initMethod = procClazz.getMethods.filter(m => m.getName == "initialize").head
                     initMethod.invoke(iClazz, pd.config)
                 } catch {
                     case e: NoSuchElementException => {}
                 }
                 
-                val method = procClazz.getDeclaredMethods.filter(m => m.getName == "processor").head
+                val method = procClazz.getMethods.filter(m => m.getName == "processor").head
                 val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
                 
                 // Recurse, determine whether we need to branch or not

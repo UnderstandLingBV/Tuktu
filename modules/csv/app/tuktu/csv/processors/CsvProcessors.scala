@@ -24,7 +24,7 @@ class CSVStringProcessor(resultName: String) extends BaseProcessor(resultName) {
     var quote = '"'
     var escape = '\\'
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         separator = (config \ "separator").asOpt[String].getOrElse(";").head
         quote = (config \ "quote").asOpt[String].getOrElse("\"").head
         escape = (config \ "escape").asOpt[String].getOrElse("\\").head
@@ -69,7 +69,7 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
 
     var removeOriginal = false
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         // Get headers
         headers = (config \ "headers").asOpt[List[String]].getOrElse(null)
@@ -128,7 +128,7 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fileName, encoding: String = _
     var separator, quote, escape: Char = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the location of the file to write to
         fileName = (config \ "file_name").as[String]
         encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")

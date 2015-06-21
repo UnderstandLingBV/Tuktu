@@ -24,7 +24,7 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldName = ""
     var asString = false
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get fields
         fieldName = (config \ "field").as[String]
         asString = (config \ "as_string").asOpt[Boolean].getOrElse(false)
@@ -58,7 +58,7 @@ class LIGAProcessor(resultName: String) extends BaseProcessor(resultName) {
     
     var fieldName = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         fieldName = (config \ "field").as[String]
     }
     
@@ -86,7 +86,7 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var lang = ""
     var tokens = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         lang = (config \ "language").as[String]
         tokens = (config \ "tokens").as[String]
     }
@@ -132,7 +132,7 @@ class RBEMPolarityProcessor(resultName: String) extends BaseProcessor(resultName
     var tokens = ""
     var tags = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         lang = (config \ "language").as[String]
         tokens = (config \ "tokens").as[String]
         tags = (config \ "pos").as[String]
@@ -179,7 +179,7 @@ class RBEMEmotionProcessor(resultName: String) extends BaseProcessor(resultName)
     var tokens = ""
     var tags = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         lang = (config \ "language").as[String]
         tokens = (config \ "tokens").as[String]
         tags = (config \ "pos").as[String]

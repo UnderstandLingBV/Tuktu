@@ -13,13 +13,11 @@ import scala.collection.GenTraversableOnce
 class DeduplicationProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields = collection.mutable.ListBuffer[String]()
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the field to sort on
         fields.appendAll((config \ "fields").as[List[String]])
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
-    
+
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         var deduplicatedResult = collection.mutable.Map[List[Any], Map[String, Any]]()
         

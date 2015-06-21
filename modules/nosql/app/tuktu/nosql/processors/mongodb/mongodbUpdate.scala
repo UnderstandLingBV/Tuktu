@@ -35,7 +35,7 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     //  If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document. 
     var multi = false
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Set up MongoDB client
         val hosts = (config \ "hosts").as[List[String]]
         val database = (config \ "database").as[String]

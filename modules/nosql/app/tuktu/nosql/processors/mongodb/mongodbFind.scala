@@ -28,7 +28,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     var query: String = _
     var filter: String = _
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Set up MongoDB client
         val hosts = (config \ "hosts").as[List[String]]
         val database = (config \ "database").as[String]

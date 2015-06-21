@@ -33,7 +33,7 @@ class HDFSWriterProcessor(resultName: String) extends BaseProcessor(resultName) 
     
     var encoding = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         val hdfsUri = (config \ "uri").as[String]
         fileName = (config \ "file_name").as[String]
         fields = (config \ "fields").as[List[String]]

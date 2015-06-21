@@ -8,7 +8,7 @@ import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 
 class LogisticRegressionTrainProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         
     }
     
@@ -20,7 +20,7 @@ class LogisticRegressionTrainProcessor(resultName: String) extends BaseProcessor
 }
 
 class LogisticRegressionApplyProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         
     }
     

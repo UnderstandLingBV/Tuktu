@@ -14,7 +14,7 @@ class CassandraProcessor(resultName: String) extends BaseProcessor(resultName) {
     var append = false
     var query = ""
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get hostname
         val address = (config \ "address").as[String]
         // Initialize client

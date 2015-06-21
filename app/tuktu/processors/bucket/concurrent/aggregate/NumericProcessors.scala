@@ -10,7 +10,7 @@ import tuktu.api.DataPacket
  * Gets the minimum of a stream in a distributed fashion
  */
 class MinProcessor(genActor: ActorRef, resultName: String) extends BaseConcurrentProcessor(genActor, resultName) {
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Initialize
         this.initializeNodes(
                 (config \ "nodes").as[List[String]],
@@ -19,15 +19,13 @@ class MinProcessor(genActor: ActorRef, resultName: String) extends BaseConcurren
                 null
         )
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 }
 
 /**
  * Gets the maximum of a stream in a distributed fashion
  */
 class MaxProcessor(genActor: ActorRef, resultName: String) extends BaseConcurrentProcessor(genActor, resultName) {
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Initialize
         this.initializeNodes(
                 (config \ "nodes").as[List[String]],
@@ -36,15 +34,13 @@ class MaxProcessor(genActor: ActorRef, resultName: String) extends BaseConcurren
                 null
         )
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 }
 
 /**
  * Gets the sum of a field of a stream in a distributed fashion
  */
 class SumProcessor(genActor: ActorRef, resultName: String) extends BaseConcurrentProcessor(genActor, resultName) {
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Initialize
         this.initializeNodes(
                 (config \ "nodes").as[List[String]],
@@ -53,15 +49,13 @@ class SumProcessor(genActor: ActorRef, resultName: String) extends BaseConcurren
                 null
         )
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 }
 
 /**
  * Gets the number of elements of a stream in a distributed fashion
  */
 class CountProcessor(genActor: ActorRef, resultName: String) extends BaseConcurrentProcessor(genActor, resultName) {
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Initialize
         this.initializeNodes(
                 (config \ "nodes").as[List[String]],
@@ -70,6 +64,4 @@ class CountProcessor(genActor: ActorRef, resultName: String) extends BaseConcurr
                 null
         )
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = super.processor
 }

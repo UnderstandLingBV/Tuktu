@@ -27,7 +27,7 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
     var includeOriginal = false
     var iterationDepth: Option[Int] = None
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
         val url = (config \ "url").as[String]
         val user = (config \ "user").as[String]

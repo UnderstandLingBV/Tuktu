@@ -19,25 +19,25 @@ import java.util.Locale
 class ConvertToDate(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
     var formatter: DateTimeFormatter = _
-    
-    override def initialize(config: JsObject) = {
+
+    override def initialize(config: JsObject) {
         // The field containing the date
         field = (config \ "field").as[String]
         val format = (config \ "format").asOpt[String].getOrElse("EEE MMM dd HH:mm:ss zzz yyyy")
         val locale = (config \ "locale").asOpt[String].getOrElse("US")
         formatter = DateTimeFormat.forPattern(format).withLocale(Locale.forLanguageTag(locale))
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {
-            new DataPacket(for (datum <- data.data) yield {              
-              val dateField = utils.evaluateTuktuString(datum(field).toString, datum)
-              val dateAsString = datum(field) match {
-                case g: String => g
-                case g: JsString => g.value
-                case g: Any => g.toString
-              }
-              datum + (field -> formatter.parseDateTime(dateAsString))
+            new DataPacket(for (datum <- data.data) yield {
+                val dateField = utils.evaluateTuktuString(datum(field).toString, datum)
+                val dateAsString = datum(field) match {
+                    case g: String   => g
+                    case g: JsString => g.value
+                    case g: Any      => g.toString
+                }
+                datum + (field -> formatter.parseDateTime(dateAsString))
             })
         }
     })

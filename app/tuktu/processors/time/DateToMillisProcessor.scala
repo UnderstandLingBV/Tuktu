@@ -14,17 +14,17 @@ import java.time.LocalDate
  */
 class DateToMillisProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field = ""
-    
-    override def initialize(config: JsObject) = {
+
+    override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         new DataPacket(for (datum <- data.data) yield {
             datum + (field -> {
                 datum(field) match {
-                    case d: Date => d.getTime
-                    case d: DateTime => d.getMillis
+                    case d: Date      => d.getTime
+                    case d: DateTime  => d.getMillis
                     case d: LocalDate => d.toEpochDay * 86400 * 1000
                 }
             })

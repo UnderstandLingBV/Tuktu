@@ -36,8 +36,6 @@ class HMMTrainer(resultName: String) extends BaseMLTrainProcessor[HMM](resultNam
 
         super.initialize(config)
     }
-    
-    override def processor = super.processor
 
     // Instantiates a Hidden Markov Model with a number of hidden states and a number of observable states
     override def instantiate(): HMM =
@@ -66,9 +64,9 @@ class HMMApply(resultName: String) extends BaseMLApplyProcessor[HMM](resultName)
 
     override def initialize(config: JsObject) {
         observationsField = (config \ "observations_field").as[String]
+
+        super.initialize(config)
     }
-    
-    override def processor = super.processor
 
     // Apply the HMM using the Viterbi algorithm to all our data points
     override def applyModel(resultName: String, data: List[Map[String, Any]], model: HMM): List[Map[String, Any]] = {

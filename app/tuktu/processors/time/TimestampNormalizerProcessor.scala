@@ -29,10 +29,10 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
     var days = 0
     var months = 0
     var years = 0
-    
+
     var dateTimeFormatter: DateTimeFormatter = _
-    
-    override def initialize(config: JsObject) = {
+
+    override def initialize(config: JsObject) {
         val datetimeFormat = (config \ "datetime_format").as[String]
         datetimeField = (config \ "datetime_field").as[String]
         val datetimeLocale = (config \ "datetime_locale").as[String]
@@ -44,7 +44,7 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
         days = (config \ "time" \ "days").asOpt[Int].getOrElse(0)
         months = (config \ "time" \ "months").asOpt[Int].getOrElse(0)
         years = (config \ "time" \ "years").asOpt[Int].getOrElse(0)
-        
+
         // make sure at least a timeframe is set
         if (seconds + minutes + hours + days + months + years == 0)
             seconds = 1
@@ -57,11 +57,11 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
             new DataPacket(for (datum <- data.data) yield {
                 // Make string of it
                 val str = datum(datetimeField) match {
-                    case a: String => a
+                    case a: String   => a
                     case a: JsString => a.value
-                    case a: Any => a.toString
+                    case a: Any      => a.toString
                 }
-                
+
                 // Prase
                 val dt = dateTimeFormatter.parseDateTime(tuktu.api.utils.evaluateTuktuString(str, datum))
                 val newDate = {
@@ -88,7 +88,7 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
                         currentMillis.minusMillis(currentMillis.millisOfDay.get % millis)
                     }
                 }
-                
+
                 datum + {
                     if (overwrite) datetimeField -> newDate
                     else resultName -> newDate
@@ -96,5 +96,5 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
             })
         }
     })
-    
+
 }

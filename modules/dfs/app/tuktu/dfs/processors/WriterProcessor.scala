@@ -7,7 +7,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class WriterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         
     }
     

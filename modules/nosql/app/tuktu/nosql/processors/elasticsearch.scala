@@ -30,7 +30,7 @@ class ESProcessor(resultName: String) extends BaseProcessor(resultName) {
     // The JSON field to obtain
     var jsonField = ""
 
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get parameters required to set up ES HTTP calls
         urlField = (config \ "url").as[String]
         httpMethod = (config \ "http_method").asOpt[String].getOrElse("get")

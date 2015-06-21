@@ -91,7 +91,7 @@ class SizeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
     // Set up the buffering actor
     val bufferActor = Akka.system.actorOf(Props(classOf[BufferActor], genActor))
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         maxSize = (config \ "size").as[Int]
     }
     
@@ -134,7 +134,7 @@ class TimeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
     // Set up the buffering actor
     val bufferActor = Akka.system.actorOf(Props(classOf[BufferActor], genActor))
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         interval = (config \ "interval").as[Int]
         
         // Schedule periodic release
@@ -191,7 +191,7 @@ class GroupByBuffer(genActor: ActorRef, resultName: String) extends BufferProces
     
     var fields: List[String] = _
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get the field to group on
         fields = (config \ "fields").as[List[String]]
         bufferActor = Akka.system.actorOf(Props(classOf[GroupedBufferActor], genActor, fields))

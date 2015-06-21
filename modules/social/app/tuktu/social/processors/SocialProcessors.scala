@@ -30,7 +30,7 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
     var geos: Option[List[String]] = None
     var excludeOnNone = false
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get name of the field in which the Twitter object is
         objField = (config \ "object_field").as[String]
         // Get the actual tags
@@ -116,7 +116,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
     var keywords: Option[List[String]] = None
     var users: Option[List[String]] = None
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Get name of the field in which the Twitter object is
         objField = (config \ "object_field").as[String]
         // Get the actual tags
@@ -187,7 +187,7 @@ class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName
     var url = ""
     var httpMethod = Verb.GET
     
-    override def initialize(config: JsObject) = {
+    override def initialize(config: JsObject) {
         // Set up FB client
         val consumerKey = (config \ "consumer_key").as[String]
         val consumerSecret = (config \ "consumer_secret").as[String]
