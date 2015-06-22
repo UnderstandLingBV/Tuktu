@@ -6,7 +6,7 @@ import tuktu.ml.models.hmm.HMM
 import tuktu.ml.models.hmm.HiddenMarkovModel
 import tuktu.ml.models.hmm.ViterbiAlgorithm
 
-class HiddenMarlpvModelTrainer(resultName: String) extends BaseMLTrainProcessor[HiddenMarkovModel](resultName) {
+class HiddenMarkovModelTrainer(resultName: String) extends BaseMLTrainProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
     // How many steps to execute while training?
@@ -50,7 +50,7 @@ class HiddenMarlpvModelTrainer(resultName: String) extends BaseMLTrainProcessor[
     }
 }
 
-class HiddenMarlpvModelApply(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
+class HiddenMarkovModelApply(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
 
