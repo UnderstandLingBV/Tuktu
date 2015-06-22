@@ -143,14 +143,9 @@ object Dispatcher {
                 )
             
                 // Initialize the processor first
-                try {
-                    val initMethod = procClazz.getMethods.filter(m => m.getName == "initialize").head
-                    initMethod.invoke(iClazz, pd.config)
-                } catch {
-                    case e: NoSuchElementException => {}
-                    case e: Exception => e.printStackTrace()
-                }
-                
+                val initMethod = procClazz.getMethods.filter(m => m.getName == "initialize").head
+                initMethod.invoke(iClazz, pd.config)
+
                 // Add method to all our entries so far
                 val method = procClazz.getMethods.filter(m => m.getName == "processor").head
                 // Log enumeratee or not?
@@ -164,12 +159,8 @@ object Dispatcher {
                 val iClazz = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
             
                 // Initialize the processor first
-                try {
-                    val initMethod = procClazz.getMethods.filter(m => m.getName == "initialize").head
-                    initMethod.invoke(iClazz, pd.config)
-                } catch {
-                    case e: NoSuchElementException => {}
-                }
+                val initMethod = procClazz.getMethods.filter(m => m.getName == "initialize").head
+                initMethod.invoke(iClazz, pd.config)
                 
                 val method = procClazz.getMethods.filter(m => m.getName == "processor").head
                 val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
