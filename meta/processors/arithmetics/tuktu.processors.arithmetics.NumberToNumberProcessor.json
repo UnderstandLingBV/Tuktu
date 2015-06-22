@@ -1,0 +1,36 @@
+{
+	"name": "Number to Number Processor",
+	"description": "The numbers of one type into numbers of another type.",
+	"class": "tuktu.processors.arithmetics.NumberToNumberProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The name of the field to read the numbers from.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "target_type",
+					"description": "The target number type (one of Long, Double, Float, BigDecimal or Int by default)",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
