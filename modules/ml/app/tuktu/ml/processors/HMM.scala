@@ -8,11 +8,9 @@ import tuktu.ml.models.hmm.ViterbiAlgorithm
 /**
  * Trains a hidden markov model
  */
-class HiddenMarkovModelTrainer(resultName: String) extends BaseMLTrainProcessor[HiddenMarkovModel](resultName) {
+class HMMTrainer(resultName: String) extends BaseMLTrainProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
-    // How many steps to execute while training?
-    var steps = 5
 
     // Initialization params
     var numHidden = 0
@@ -23,7 +21,6 @@ class HiddenMarkovModelTrainer(resultName: String) extends BaseMLTrainProcessor[
 
     override def initialize(config: JsObject) {
         observationsField = (config \ "observations_field").as[String]
-        steps = (config \ "steps").asOpt[Int].getOrElse(5)
 
         // Get number of hidden and observable states
         numHidden = (config \ "num_hidden").as[Int]
@@ -54,7 +51,7 @@ class HiddenMarkovModelTrainer(resultName: String) extends BaseMLTrainProcessor[
 /**
  * Applies a hidden markov model
  */
-class HiddenMarkovModelApply(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
+class HMMApply(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
 
