@@ -9,7 +9,7 @@ import tuktu.ml.models.hmm.PredictAlgorithm
 /**
  * Trains a hidden markov model
  */
-class HMMTrainer(resultName: String) extends BaseMLTrainProcessor[HiddenMarkovModel](resultName) {
+class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
 
@@ -53,7 +53,7 @@ class HMMTrainer(resultName: String) extends BaseMLTrainProcessor[HiddenMarkovMo
  * Runs the Viterbi algorithm using a given HMM to decode. This will yield the most probable
  * hidden state sequence for a given observable state sequence
  */
-class HMMApplyDecode(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
+class HMMApplyDecodeProcessor(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
 
@@ -81,7 +81,7 @@ class HMMApplyDecode(resultName: String) extends BaseMLApplyProcessor[HiddenMark
 /**
  * Predicts the most likely sequence of future steps given a hidden markov model
  */
-class HMMApplyPredict(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
+class HMMApplyPredictProcessor(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var steps: Int = _
 
