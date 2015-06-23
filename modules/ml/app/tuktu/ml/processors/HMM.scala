@@ -4,6 +4,7 @@ import play.api.libs.json.JsObject
 import tuktu.ml.models.hmm.BaumWelchMethod
 import tuktu.ml.models.hmm.HiddenMarkovModel
 import tuktu.ml.models.hmm.ViterbiAlgorithm
+import tuktu.ml.models.hmm.PredictAlgorithm
 
 /**
  * Trains a hidden markov model
@@ -49,9 +50,10 @@ class HMMTrainer(resultName: String) extends BaseMLTrainProcessor[HiddenMarkovMo
 }
 
 /**
- * Applies a hidden markov model
+ * Runs the Viterbi algorithm using a given HMM to decode. This will yield the most probable
+ * hidden state sequence for a given observable state sequence
  */
-class HMMApply(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
+class HMMApplyDecode(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
 
@@ -72,6 +74,30 @@ class HMMApply(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovMode
             datum + (resultName -> Map(
                 "delta" -> result._1,
                 "sequence" -> result._2))
+        }
+    }
+}
+
+/**
+ * Predicts the most likely sequence of future steps given a hidden markov model
+ */
+class HMMApplyPredict(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
+    // From which field to we extract the observations
+    var steps: Int = _
+
+    override def initialize(config: JsObject) {
+        steps = (config \ "steps").as[Int]
+
+        super.initialize(config)
+    }
+
+    // Apply the HMM using the Viterbi algorithm to all our data points
+    override def applyModel(resultName: String, data: List[Map[String, Any]], model: HiddenMarkovModel): List[Map[String, Any]] = {
+        for (datum <- data) yield {
+            // Apply prediction algorithm
+            val sequence = PredictAlgorithm.predict(model, steps)
+
+            datum + (resultName -> sequence)
         }
     }
 }
