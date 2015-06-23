@@ -1,7 +1,7 @@
 {
-	"name": "Apply HMM",
-	"description": "Applies a hidden markov model to new sequences to find the most likely emission.",
-	"class": "tuktu.ml.processors.HMMApply",
+	"name": "Apply Decode HMM",
+	"description": "Applies a hidden markov model to find the most likely hidden state sequence given an observable state sequence.",
+	"class": "tuktu.ml.processors.HMMApplyDecodeProcessor",
 	"parameters": [
 		{
 			"name": "id",

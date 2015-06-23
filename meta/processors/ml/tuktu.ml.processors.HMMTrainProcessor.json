@@ -1,7 +1,7 @@
 {
 	"name": "Train HMM",
 	"description": "Trains a hidden markov model using observations.",
-	"class": "tuktu.ml.processors.HMMTrainer",
+	"class": "tuktu.ml.processors.HMMTrainProcessor",
 	"parameters": [
 		{
 			"name": "id",
