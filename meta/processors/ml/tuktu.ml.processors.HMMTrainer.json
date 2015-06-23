@@ -38,13 +38,6 @@
 					"required": true
 				},
 				{
-					"name": "steps",
-					"description": "The number of steps to run the Baum-Welch algorithm on each sequence of integers within the bucket.",
-					"type": "int",
-					"required": false,
-					"default": 5
-				},
-				{
 					"name": "num_hidden",
 					"description": "The number of distinct hidden states.",
 					"type": "int",
