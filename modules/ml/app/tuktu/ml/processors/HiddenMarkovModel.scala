@@ -33,19 +33,18 @@ class HiddenMarkovModelTrainer(resultName: String) extends BaseMLTrainProcessor[
     // Instantiates a Hidden Markov Model with a number of hidden states and a number of observable states
     override def instantiate(): HiddenMarkovModel =
         new HiddenMarkovModel(numHidden, numObservable)
-
+        
     // Trains the Hidden Markov Model using a sequence of observations for a number of steps
     override def train(data: List[Map[String, Any]], model: HiddenMarkovModel): HiddenMarkovModel = {
-        var newModel = model
-        data.foreach(datum => {
+        val observations = (for (datum <- data) yield {
             // Get the observations, as sequence
-            val observations = Map(datum(observationsField).asInstanceOf[Seq[Int]] -> steps)
-
-            // Further train the HMM
-            val method = new BaumWelchMethod(observations)
-            newModel = method.apply(model)
-        })
-
+            datum(observationsField).asInstanceOf[Seq[Int]]
+        }).groupBy(elem => elem).mapValues(value => value.size)
+        
+        // Further train the HMM
+        val method = new BaumWelchMethod(observations)
+        val newModel = method.apply(model)
+        
         newModel
     }
 }
