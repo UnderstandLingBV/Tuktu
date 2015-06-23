@@ -9,12 +9,16 @@ lazy val appResolvers = Seq(
 
 lazy val apiDependencies = Seq(
     cache,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "org.apache.hadoop" % "hadoop-client" % "2.6.0",
     "com.netaporter" %% "scala-uri" % "0.4.7"
 )
 
 lazy val nlpDependencies = Seq(
     cache,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "nl.et4it" % "LIGA" % "1.0",
     "nl.et4it" % "OpenNLPPOSWrapper" % "1.0",
     "nl.et4it" % "RBEM" % "1.0",
@@ -23,6 +27,8 @@ lazy val nlpDependencies = Seq(
 
 lazy val csvDependencies = Seq(
     cache,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "net.sf.opencsv" % "opencsv" % "2.0",
     "org.apache.poi" % "poi" % "3.11-beta2",
     "org.apache.poi" % "poi-ooxml" % "3.11-beta2"
@@ -30,6 +36,8 @@ lazy val csvDependencies = Seq(
 
 lazy val socialDependencies = Seq(
     cache,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "org.twitter4j" % "twitter4j-core" % "[4.0,)",
     "org.twitter4j" % "twitter4j-stream" % "[4.0,)",
     "org.scribe" % "scribe" % "1.3.5",
@@ -41,6 +49,8 @@ lazy val nosqlDependencies = Seq(
     anorm,
     cache,
     ws,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "mysql" % "mysql-connector-java" % "5.1.34",
     "org.mariadb.jdbc" % "mariadb-java-client" % "1.1.7",
     "com.h2database" % "h2" % "1.3.176",
@@ -55,12 +65,16 @@ lazy val nosqlDependencies = Seq(
 )
 
 lazy val mlDependencies = Seq(
-    cache
+    cache,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
 lazy val webDependencies = Seq(
     ws,
-    cache
+    cache,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
 lazy val coreDependencies = Seq(
@@ -68,6 +82,8 @@ lazy val coreDependencies = Seq(
     anorm,
     cache,
     ws,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "net.sf.opencsv" % "opencsv" % "2.0",
     "org.codehaus.groovy" % "groovy-all" % "2.2.1",
     "com.typesafe.akka" %% "akka-remote" % "2.3.4",
@@ -78,11 +94,15 @@ lazy val coreDependencies = Seq(
 )
 
 lazy val tuktuDBDependencies = Seq(
-    cache
+    cache,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
 lazy val dfsDependencies = Seq(
     cache,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "com.typesafe.akka" %% "akka-remote" % "2.3.4"
 )
 
