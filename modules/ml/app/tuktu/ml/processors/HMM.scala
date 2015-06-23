@@ -31,11 +31,28 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
     }
 
     // Instantiates a Hidden Markov Model with a number of hidden states and a number of observable states
-    override def instantiate(): HiddenMarkovModel =
-        new HiddenMarkovModel(numHidden, numObservable)
+    override def instantiate(): HiddenMarkovModel = {
+        new HiddenMarkovModel(numHidden, numObservable) {
+            // Initialize A, B, Pi
+            for {
+                i <- 0 to numHidden - 1
+                j <- 0 to numHidden - 1
+            } A(i, j) = 1.0 / numHidden
+            for {
+                i <- 0 to numHidden - 1
+                j <- 0 to numObservable - 1
+            } B(i, j) = 1.0 / numObservable
+            for (i <- 0 to numHidden - 1) Pi(i) = 1.0 / numHidden
+        }
+    }
         
     // Trains the Hidden Markov Model using a sequence of observations for a number of steps
     override def train(data: List[Map[String, Any]], model: HiddenMarkovModel): HiddenMarkovModel = {
+        /*println("Before training:")
+        println(model)
+        println(model.A.data.map(elem => elem.toList).toList)
+        println(model.B.data.map(elem => elem.toList).toList)
+        println(model.Pi.weights.toList)*/
         val observations = (for (datum <- data) yield {
             // Get the observations, as sequence
             datum(observationsField).asInstanceOf[Seq[Int]]
@@ -44,6 +61,11 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
         // Further train the HMM
         val method = new BaumWelchMethod(observations)
         val newModel = method.apply(model)
+        /*println("After training:")
+        println(newModel)
+        println(newModel.A.data.map(elem => elem.toList).toList)
+        println(newModel.B.data.map(elem => elem.toList).toList)
+        println(newModel.Pi.weights.toList)*/
         
         newModel
     }
@@ -93,6 +115,10 @@ class HMMApplyPredictProcessor(resultName: String) extends BaseMLApplyProcessor[
 
     // Apply the HMM using the Viterbi algorithm to all our data points
     override def applyModel(resultName: String, data: List[Map[String, Any]], model: HiddenMarkovModel): List[Map[String, Any]] = {
+        println(model)
+        println(model.A.data.map(elem => elem.toList).toList)
+        println(model.B.data.map(elem => elem.toList).toList)
+        println(model.Pi.weights.toList)
         for (datum <- data) yield {
             // Apply prediction algorithm
             val sequence = PredictAlgorithm.predict(model, steps)

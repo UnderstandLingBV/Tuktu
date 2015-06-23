@@ -13,7 +13,11 @@ object PredictAlgorithm {
         var hiddenState = {
             val randNr = rand.nextDouble
             var state = 0
-            while (model.Pi(state) < randNr) state += 1
+            var cumul = 0.0
+            while (cumul + model.Pi(state) < randNr) {
+                cumul += model.Pi(state)
+                state += 1
+            }
             
             state
         }
@@ -24,7 +28,11 @@ object PredictAlgorithm {
             val outputState = {
                 val randNr = rand.nextDouble
                 var state = 0
-                while (model.B(hiddenState, state) < randNr) state += 1
+                var cumul = 0.0
+                while (cumul + model.B(hiddenState, state) < randNr) {
+                    cumul += model.B(hiddenState, state)
+                    state += 1
+                }
                 
                 state
             }
@@ -33,7 +41,11 @@ object PredictAlgorithm {
             hiddenState =  {
                 val randNr = rand.nextDouble
                 var state = 0
-                while (model.A(hiddenState, state) < randNr) state += 1
+                var cumul = 0.0
+                while (cumul + model.A(hiddenState, state) < randNr) {
+                    cumul += model.A(hiddenState, state)
+                    state += 1
+                }
                 
                 state
             }

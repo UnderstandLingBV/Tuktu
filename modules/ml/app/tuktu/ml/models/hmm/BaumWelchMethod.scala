@@ -45,10 +45,10 @@ class BaumWelchMethod(val samples: Map[Seq[Int], Int]) {
     
     (0 until numberOfStates) foreach { i =>
       (0 until numberOfStates) foreach { j =>
-        next.A(i,j) /= aDenominators(i)
+        next.A(i,j) = if (next.A(i,j) == 0) 0 else next.A(i,j) / aDenominators(i)
       }
       (0 until numberOfObservations) foreach { k =>
-        next.B(i,k) /= bDenominators(k)
+        next.B(i,k) = if (next.B(i,k) == 0) 0 else next.B(i,k) / bDenominators(k)
       }
     }
     

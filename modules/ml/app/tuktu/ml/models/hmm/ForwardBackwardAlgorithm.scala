@@ -65,7 +65,7 @@ class ForwardBackwardAlgorithm(val observations: Seq[Int])(implicit val model: H
         val numerator = f(i)
         val denominator = (0 to numberOfStates - 1) map (f) sum
 
-        numerator / denominator
+        if (numerator == 0) 0 else numerator / denominator
     }
 
     /*
@@ -81,6 +81,6 @@ class ForwardBackwardAlgorithm(val observations: Seq[Int])(implicit val model: H
             }
         } sum
 
-        numerator / denominator
+        if (numerator == 0) 0 else numerator / denominator
     }
 }

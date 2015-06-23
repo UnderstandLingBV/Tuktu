@@ -69,8 +69,8 @@ class NumberToNumberProcessor(resultName: String) extends BaseProcessor(resultNa
                 case "BigDecimal" => a
                 case _ => a.toInt
             }
-            case a: Iterable[Any] => a.map(elem => converter(elem))
             case a: Map[Any, Any] => a.map(elem => elem._1 -> converter(elem._2))
+            case a: Iterable[Any] => a.map(elem => converter(elem))
         }
     }
 }
