@@ -34,6 +34,62 @@ object utils {
     }
 
     /**
+     * Recursively traverses a path of keys until it finds a value (or fails to traverse,
+     * in which case a default value is used)
+     */
+    def fieldParser(input: Map[String, Any], path: List[String], defaultValue: Option[JsValue]): Any = path match {
+        case Nil => input
+        case someKey :: Nil => {
+            if (input.contains(someKey))
+                input(someKey)
+            else
+                defaultValue.getOrElse(null)
+        }
+        case someKey :: trailPath => {
+            // Get the remainder
+            if (input.contains(someKey)) {
+                // See if we can cast it
+                try {
+                    if (input(someKey).isInstanceOf[JsValue])
+                        jsonParser(input(someKey).asInstanceOf[JsValue], trailPath, defaultValue)
+                    else
+                        fieldParser(input(someKey).asInstanceOf[Map[String, Any]], trailPath, defaultValue)
+                } catch {
+                    case e: ClassCastException => defaultValue.getOrElse(null)
+                }
+            } else {
+                // Couldn't find it
+                defaultValue.getOrElse(null)
+            }
+        }
+    }
+
+    /**
+     * Recursively traverses a JSON object of keys until it finds a value (or fails to traverse,
+     * in which case a default value is used)
+     */
+    def jsonParser(json: JsValue, jsPath: List[String], defaultValue: Option[JsValue]): JsValue = jsPath match {
+        case List() => json
+        case js :: trailPath => {
+            // Get the remaining value from the json
+            val newJson = (json \ js).asOpt[JsValue]
+            newJson match {
+                case Some(nj) => {
+                    // Recurse into new JSON
+                    jsonParser(nj, trailPath, defaultValue)
+                }
+                case None => {
+                    // Couldn't find it, return the best we can
+                    defaultValue match {
+                        case Some(value) => value
+                        case None        => json
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Turns a map of string -> any into a JSON object
      */
     def anyMapToJson(map: Map[String, Any], mongo: Boolean = false): JsObject = {
@@ -94,16 +150,6 @@ object utils {
      * ---------------------
      */
 
-    def JsArrayToSeqAny(arr: JsArray): Seq[Any] =
-        for (field <- arr.value) yield field match {
-            case a: JsString  => a.value
-            case a: JsNumber  => a.value
-            case a: JsBoolean => a.value
-            case a: JsObject  => JsObjectToMap(a)
-            case a: JsArray   => JsArrayToSeqAny(a)
-            case a            => a.toString
-        }
-
     /**
      * Takes a JsValue and returns a scala object
      */
@@ -115,6 +161,12 @@ object utils {
         case a: JsArray   => JsArrayToSeqAny(a)
         case a            => a.toString
     }
+
+    /**
+     * Converts a JsArray to a Seq[Any]
+     */
+    def JsArrayToSeqAny(arr: JsArray): Seq[Any] =
+        for (field <- arr.value) yield JsValueToAny(field)
 
     /**
      * Converts a JsObject to Map[String, Any]

@@ -34,7 +34,7 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {new DataPacket(for (datum <- data.data) yield {
-            val newData = (for {
+            (for {
                     fieldItem <- fieldList
                     default = (fieldItem \ "default").asOpt[JsValue]
                     fields = (fieldItem \ "path").as[List[String]]
@@ -42,14 +42,8 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
                     field = fields.head
                     if (fields.size > 0 && datum.contains(field))
             } yield {
-                // See what to do
-                if (datum(field).isInstanceOf[JsValue])
-                    fieldName -> tuktu.utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), default)
-                else
-                    fieldName -> tuktu.utils.util.fieldParser(datum, fields, default)
+                fieldName -> utils.fieldParser(datum, fields, default)
             }).toMap
-            
-            newData
         })}
     })
 }
@@ -138,11 +132,7 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
                     field = fields.head
                     if (fields.size > 0 && datum.contains(field))
             } yield {
-                // See what to do
-                if (datum(field).isInstanceOf[JsValue])
-                    fieldName -> tuktu.utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), default)
-                else
-                    fieldName -> tuktu.utils.util.fieldParser(datum, fields, default)
+                fieldName -> utils.fieldParser(datum, fields, default)
             }).toMap
             
             datum ++ newData
@@ -171,13 +161,7 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
                     f = fields.head
                     if (f.size > 0 && datum.contains(f))
 	        } {
-                // See what to do
-                val newValue = {
-                    if (datum(f).isInstanceOf[JsValue])
-                        fieldName -> tuktu.utils.util.jsonParser(datum(f).asInstanceOf[JsValue], fields.drop(1), null)
-                    else
-                        fieldName -> tuktu.utils.util.fieldParser(datum, fields, null)
-                }
+                val newValue = fieldName -> utils.fieldParser(datum, fields, null)
 
 	            // Replace
 	            mutableDatum = mutableDatum - f + newValue
@@ -298,7 +282,7 @@ class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultNam
 }
 
 /**
- * Implodes an array into a string
+ * Implodes an array of strings into a string
  */
 class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
@@ -309,34 +293,27 @@ class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {new DataPacket(for (datum <- data.data) yield {
             // Find out which fields we should extract
-	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
-	        for (fieldObject <- fieldList) {
-	            // Get fields
+	        datum ++ (for (fieldObject <- fieldList) yield {
+	            // Get fields and separator
 	            val fields = (fieldObject \ "path").as[List[String]]
 	            val sep = (fieldObject \ "separator").as[String]
-	            // Get field name
-	            val field = fields.head
-	            // Get the actual value
+	            // Get the array of strings
 	            val value = {
-	                if (datum(field).isInstanceOf[JsValue])
-	                    tuktu.utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), None).as[List[String]]
-	                else {
-	                	val someVal = tuktu.utils.util.fieldParser(datum, fields, None)
-	                	if (someVal.isInstanceOf[Array[String]]) someVal.asInstanceOf[Array[String]].toList
-	                	else if (someVal.isInstanceOf[Seq[String]]) someVal.asInstanceOf[Seq[String]].toList
-	                	else someVal.asInstanceOf[List[String]]
-	                }
+                    val someVal = utils.fieldParser(datum, fields, None)
+                    if (someVal.isInstanceOf[JsValue])
+                        someVal.asInstanceOf[JsValue].as[Traversable[String]]
+                    else
+                        someVal.asInstanceOf[Traversable[String]]
 	            }
-	            // Replace
-	            mutableDatum += field -> value.mkString(sep)
-	        }
-	        mutableDatum.toMap
+                // Overwrite top-level field
+	            fields.head -> value.mkString(sep)
+	        })
         })}
     })
 }
 
 /**
- * Implodes an array  of JSON object-fields into a string
+ * Implodes an array of JSON object-fields that contain strings at a subpath into a string
  */
 class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
@@ -348,27 +325,26 @@ class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(result
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
         Future {new DataPacket(for (datum <- data.data) yield {
             // Find out which fields we should extract
-	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
-	        for (fieldObject <- fieldList) {
+	        datum ++ (for (fieldObject <- fieldList) yield {
 	            // Get fields
 	            val fields = (fieldObject \ "path").as[List[String]]
 	            val subpath = (fieldObject \ "subpath").as[List[String]]
 	            val sep = (fieldObject \ "separator").as[String]
-	            // Get field name
-	            val field = fields.head
 	            // Get the actual value
 	            val values = {
-	                if (datum(field).isInstanceOf[JsArray]) tuktu.utils.util.jsonParser(datum(field).asInstanceOf[JsValue], fields.drop(1), None).as[List[JsObject]]
-	                else List[JsObject]()
+                    val arr = utils.fieldParser(datum, fields, None)
+                    if (arr.isInstanceOf[JsValue])
+                        arr.asInstanceOf[JsValue].as[Traversable[JsObject]]
+                    else
+                        Nil
 	            }
 	            // Now iterate over the objects
 	            val gluedValue = values.map(value => {
-	                tuktu.utils.util.jsonParser(value, subpath, None).as[JsString].value
+	                utils.jsonParser(value, subpath, None).as[JsString].value
 	            }).mkString(sep)
-	            // Replace
-	            mutableDatum += field -> gluedValue
-	        }
-	        mutableDatum.toMap
+	            // Replace top-level field
+	            fields.head -> gluedValue
+	        })
         })}
     })
 }
