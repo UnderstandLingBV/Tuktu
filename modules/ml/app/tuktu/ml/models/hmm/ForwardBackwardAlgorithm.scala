@@ -3,6 +3,11 @@ package tuktu.ml.models.hmm
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.Map
 
+/**
+ * Runs the forward-backward algorithm to update transition and emission probabilities
+ * 
+ * Implementation from https://github.com/balshor/shimm
+ */
 class ForwardBackwardAlgorithm(val observations: Seq[Int])(implicit val model: HiddenMarkovModel) {
     import model._
     import scala.collection.mutable.{ Map, HashMap }

@@ -4,6 +4,11 @@ import java.util.Random
 import scala.collection.mutable.ArrayBuffer
 import tuktu.ml.models.BaseModel
 
+/**
+ * Implements a hidden markov model
+ * 
+ * Implementation from https://github.com/balshor/shimm
+ */
 class HiddenMarkovModel(
     val numberOfStates: Int,
     val numberOfObservations: Int) extends BaseModel() {

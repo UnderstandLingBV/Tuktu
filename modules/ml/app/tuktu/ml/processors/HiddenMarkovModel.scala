@@ -2,10 +2,12 @@ package tuktu.ml.processors
 
 import play.api.libs.json.JsObject
 import tuktu.ml.models.hmm.BaumWelchMethod
-import tuktu.ml.models.hmm.HMM
 import tuktu.ml.models.hmm.HiddenMarkovModel
 import tuktu.ml.models.hmm.ViterbiAlgorithm
 
+/**
+ * Trains a hidden markov model
+ */
 class HiddenMarkovModelTrainer(resultName: String) extends BaseMLTrainProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var observationsField = ""
@@ -49,6 +51,9 @@ class HiddenMarkovModelTrainer(resultName: String) extends BaseMLTrainProcessor[
     }
 }
 
+/**
+ * Applies a hidden markov model
+ */
 class HiddenMarkovModelApply(resultName: String) extends BaseMLApplyProcessor[HiddenMarkovModel](resultName) {
     // From which field to we extract the observations
     var observationsField = ""

@@ -3,6 +3,11 @@ package tuktu.ml.models.hmm
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.Map
 
+/**
+ * Runs the viterbi algorithm for finding hidden state sequences
+ * 
+ * Implementation from https://github.com/balshor/shimm
+ */
 class ViterbiAlgorithm(val observations: Seq[Int])(implicit val model: HiddenMarkovModel) {
     import model._
     import scala.collection.mutable.{ Map, HashMap, ArrayBuffer }

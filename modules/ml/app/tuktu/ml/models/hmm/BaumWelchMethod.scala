@@ -1,5 +1,10 @@
 package tuktu.ml.models.hmm
 
+/**
+ * Runs the Baum-Welch algorithm for training
+ * 
+ * Implementation from https://github.com/balshor/shimm
+ */
 class BaumWelchMethod(val samples: Map[Seq[Int], Int]) {
 
   def apply(initial: HiddenMarkovModel): HiddenMarkovModel = {
