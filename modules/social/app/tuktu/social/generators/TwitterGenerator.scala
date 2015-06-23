@@ -74,11 +74,11 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 	        // Add the filters (otherwise we get the sample)
 	        val fq = new FilterQuery()
 	        if (keywords != null && !keywords.isEmpty)
-	        	fq.track(keywords)
+	        	fq.track(keywords: _*)
 	        if (userids != null && !userids.isEmpty)
-	            fq.follow(userids)
+	            fq.follow(userids: _*)
 	        if (geo != null && !geo.isEmpty)
-	            fq.locations(geo)
+	            fq.locations(geo: _*)
 	        	
 	        // Add the query
 	        twitterStream.filter(fq)
