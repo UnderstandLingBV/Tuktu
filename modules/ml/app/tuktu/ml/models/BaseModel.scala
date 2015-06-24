@@ -1,3 +1,6 @@
 package tuktu.ml.models
 
-class BaseModel() {}
+abstract class BaseModel() extends java.io.Serializable {
+    def serialize(filename: String): Unit = ???
+    def deserialize(filename: String): Unit = ???
+} 

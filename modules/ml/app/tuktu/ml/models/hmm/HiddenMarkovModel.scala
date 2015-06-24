@@ -3,6 +3,12 @@ package tuktu.ml.models.hmm
 import java.util.Random
 import scala.collection.mutable.ArrayBuffer
 import tuktu.ml.models.BaseModel
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
+import java.io.BufferedWriter
+import java.io.ObjectOutputStream
+import java.io.FileInputStream
+import java.io.ObjectInputStream
 
 /**
  * Implements a hidden markov model
@@ -72,6 +78,42 @@ class HiddenMarkovModel(
         print("Pi:  ")
         print(Pi.weights mkString ("[", " ", "]"))
         println
+    }
+    
+    override def serialize(filename: String) {
+        // Write out A, B, Pi
+        val oos = new ObjectOutputStream(new FileOutputStream(filename))
+        val output = Map(
+                "A" -> A.data,
+                "B" -> B.data,
+                "Pi" -> Pi.weights
+        )
+        oos.writeObject(output)
+        oos.close
+    }
+    
+    override def deserialize(filename: String) {
+        // Load A, B, Pi
+        val ois = new ObjectInputStream(new FileInputStream(filename))
+        val obj = ois.readObject.asInstanceOf[Map[String, Any]]
+        ois.close
+        
+        val loadedA = obj("A").asInstanceOf[Array[Array[Double]]]
+        val loadedB = obj("B").asInstanceOf[Array[Array[Double]]]
+        val loadedPi = obj("Pi").asInstanceOf[Array[Double]]
+        
+        // Set back
+        for {
+            i <- 0 to loadedA.size - 1
+            row = loadedA(i)
+            j <- 0 to row.size - 1
+        } A(i, j) = loadedA(i)(j)
+        for {
+            i <- 0 to loadedB.size - 1
+            row = loadedB(i)
+            j <- 0 to row.size - 1
+        } B(i, j) = loadedB(i)(j)
+        for (i <- 0 to loadedA.size - 1) Pi(i) = loadedPi(i)
     }
 }
 
