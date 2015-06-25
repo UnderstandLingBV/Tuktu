@@ -13,6 +13,7 @@ POST    /sync                               controllers.Synchronous.loadJsonPost
 
 # Monitoring
 GET     /terminate/:id/:force               controllers.Monitor.terminate(id, force: Boolean)
+POST    /showConfigs                        controllers.Monitor.showConfigs
 GET     /startJob                           controllers.Monitor.startJobView
 POST    /startJob                           controllers.Monitor.startJob
 

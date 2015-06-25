@@ -47,4 +47,11 @@
 	} else {
 	    <h2>Currently, no jobs are running on Tuktu</h2>
 	}
+	
+	<script type="text/javascript">
+	   window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 30000);
+	   @if(messages.size > 0) {
+	       window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 3000);
+	   }
+	</script>
 }

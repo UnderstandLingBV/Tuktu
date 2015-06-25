@@ -66,18 +66,38 @@ object Monitor extends Controller {
     }
     
     /**
+     * Shows the form for getting configs
+     */
+    def showConfigs() = Action { implicit request => {
+        val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
+        
+        // Get the path from the body
+        val path = body("path").head.split("/").filter(elem => !elem.isEmpty)
+        
+        // Load the files and folders from the config repository
+        val configRepo = {
+            val location = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
+            if (location.last != '/') location + "/"
+            else location
+        }
+        val files = new File(configRepo + path.mkString("/")).listFiles
+        
+        // Get configs
+        val configs = files.filter(!_.isDirectory).map(cfg => cfg.getName.take(cfg.getName.size - 5))
+        // Get subfolders
+        val subfolders = files.filter(_.isDirectory).map(fldr => fldr.getName)
+        
+        // Invoke view
+        Ok(views.html.monitor.showConfigs(
+                path, configs, subfolders
+        ))
+    }}
+    
+    /**
      * Shows the start-job view
      */
     def startJobView() = Action { implicit request => {
-            // Get the configs folder
-            val configRepo = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
-            // Get configs
-            val configs = new File(configRepo).listFiles.map(cfg => cfg.getName.take(cfg.getName.size - 5))
-            
-            Ok(views.html.monitor.startJob(
-                    configs,
-                    util.flashMessagesToMap(request)
-            ))
+            Ok(views.html.monitor.startJob(util.flashMessagesToMap(request)))
         }
     }
     
