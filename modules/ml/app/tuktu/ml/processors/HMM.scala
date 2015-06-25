@@ -178,3 +178,25 @@ class HMMApplyPredictProcessor(resultName: String) extends BaseMLApplyProcessor[
         }
     }
 }
+
+/**
+ * Deserializes a hidden markov model
+ */
+class HMMDeserializeProcessor(resultName: String) extends BaseMLDeserializeProcessor[HiddenMarkovModel](resultName) {
+    var numHidden = 0
+    var numObservable = 0
+    
+    override def initialize(config: JsObject) {
+        // Get number of hidden and observable states
+        numHidden = (config \ "num_hidden").as[Int]
+        numObservable = (config \ "num_observable").as[Int]
+
+        super.initialize(config)
+    }
+    
+    override def deserializeModel() = {
+        val model = new HiddenMarkovModel(numHidden, numObservable)
+        model.deserialize(fileName)
+        model
+    }
+}

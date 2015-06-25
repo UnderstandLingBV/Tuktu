@@ -3,3 +3,7 @@
 .settings
 project
 target
+/modules/api/.tmpBin/*.class
+/modules/nosql/.tmpBin/*.class
+/modules/social/.gitignore
+/modules/csv/*.gitignore
