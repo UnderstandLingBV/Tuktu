@@ -1,5 +1,4 @@
 @(path: Array[String], configs: Array[String], folders: Array[String])
-@if(configs.size > 0) {
     <div class="row" style="margin-bottom: 20px;">
        <div class="col-xs-12">
 		   <a href="#" onClick="navigateFolder('')">[root]</a>
@@ -9,44 +8,48 @@
 		</div>
     </div>
     
-    <div class="row">
-       <div class="col-xs-12">
-			<form method="post" action="@routes.Monitor.startJob" id="startJobForm">
-				<div class="form-group">
-				    <select name="name" class="form-control">
-				        @for(config <- configs) {
-				            <option value="@path.mkString("/")/@config">
-				               @config
-				            </option>
-				        }
-				    </select>
-				</div>
-				  
-				<div class="form-group">
-				    <input type="submit" class="btn" value="Start Job">
-				</div>
-				
-				@if(folders.size > 0) {
-				   <div class="row" style="margin-top: 10px;">
-	                   <div class="col-xs-12">
-	                       Subfolders
-	                   </div>
-	                   <div class="col-xs-12">
-	                        <ul class="list-unstyled" style="margin-left: 25px;">
-	                           @for(folder <- folders) {
-	                               <li>
-	                                   <a href="#" onClick="navigateFolder('@path.mkString("/")/@folder')">
-	                                       @folder
-	                                   </a>
-	                               </li>
-	                           }
-	                        </ul>
-	                   </div>
-	                </div>
-	            }
-			</form>
+    @if(configs.size > 0) {
+	    <div class="row">
+	       <div class="col-xs-12">
+				<form method="post" action="@routes.Monitor.startJob" id="startJobForm">
+					<div class="form-group">
+					    <select name="name" class="form-control">
+					        @for(config <- configs) {
+					            <option value="@path.mkString("/")/@config">
+					               @config
+					            </option>
+					        }
+					    </select>
+					</div>
+					  
+					<div class="form-group">
+					    <input type="submit" class="btn" value="Start Job">
+					</div>
+				</form>
+			</div>
 		</div>
-	</div>
+	} else {
+	   <h2>No configuration files were found in this folder.</h2>
+	}
+	
+	@if(folders.size > 0) {
+       <div class="row" style="margin-top: 10px;">
+           <div class="col-xs-12">
+               Subfolders
+           </div>
+           <div class="col-xs-12">
+                <ul class="list-unstyled" style="margin-left: 25px;">
+                   @for(folder <- folders) {
+                       <li>
+                           <a href="#" onClick="navigateFolder('@path.mkString("/")/@folder')">
+                               @folder
+                           </a>
+                       </li>
+                   }
+                </ul>
+           </div>
+        </div>
+    }
 	
 	<script type="text/javascript">
         function navigateFolder(folder) {
@@ -61,6 +64,3 @@
 		    });
 		}
 	</script>
-} else {
-    <h2>No configuration files were found in this folder!</h2>
-}
