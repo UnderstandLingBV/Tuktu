@@ -71,7 +71,7 @@ class LogisticRegression(lr: Double, nIterations: Int) extends BaseModel {
     }
     
     override def deserialize(filename: String) {
-        // Load A, B, Pi
+        // Load weights
         val ois = new ObjectInputStream(new FileInputStream(filename))
         val obj = ois.readObject.asInstanceOf[Array[Double]]
         ois.close

@@ -23,7 +23,7 @@ class LogisticRegressionTrainProcessor(resultName: String) extends BaseMLTrainPr
     var labelField = ""
     
     override def initialize(config: JsObject) {
-        // Get number of hidden and observable states
+        // Get parameters
         learnRate = (config \ "learn_rate").as[Int]
         nIterations = (config \ "num_iterations").as[Int]
         batchSize = (config \ "batch_size").asOpt[Int].getOrElse(10)
@@ -61,6 +61,9 @@ class LogisticRegressionTrainProcessor(resultName: String) extends BaseMLTrainPr
     }
 }
 
+/**
+ * Applies a logistic regression model to classify data
+ */
 class LogisticRegressionApplyProcessor(resultName: String) extends BaseMLApplyProcessor[LogisticRegression](resultName) {
     var dataField = ""
     
@@ -85,7 +88,7 @@ class LogisticRegressionDeserializeProcessor(resultName: String) extends BaseMLD
     var nIterations = 0
     
     override def initialize(config: JsObject) {
-        // Get number of hidden and observable states
+        // Get learn rate and iteration count
         learnRate = (config \ "learn_rate").as[Int]
         nIterations = (config \ "num_iterations").as[Int]
 
