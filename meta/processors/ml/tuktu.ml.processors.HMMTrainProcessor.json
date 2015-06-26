@@ -32,6 +32,13 @@
 					"default": true
 				},
 				{
+					"name": "wait_for_store",
+					"description": "Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
 					"name": "observations_field",
 					"description": "The field which contains the observations as a sequence of integers. The HMM is sequentially trained on all these sequences within a bucket.",
 					"type": "string",
