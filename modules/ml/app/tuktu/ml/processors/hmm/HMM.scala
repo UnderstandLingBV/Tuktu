@@ -1,10 +1,10 @@
-package tuktu.ml.processors
+package tuktu.ml.processors.hmm
 
 import play.api.libs.json.JsObject
-import tuktu.ml.models.hmm.BaumWelchMethod
-import tuktu.ml.models.hmm.HiddenMarkovModel
-import tuktu.ml.models.hmm.ViterbiAlgorithm
-import tuktu.ml.models.hmm.PredictAlgorithm
+import tuktu.ml.models.hmm._
+import tuktu.ml.processors.BaseMLTrainProcessor
+import tuktu.ml.processors.BaseMLApplyProcessor
+import tuktu.ml.processors.BaseMLDeserializeProcessor
 
 /**
  * Trains a hidden markov model

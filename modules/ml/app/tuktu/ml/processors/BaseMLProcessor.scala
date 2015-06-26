@@ -32,7 +32,7 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
         destroyOnEOF = (config \ "destroy_on_eof").asOpt[Boolean].getOrElse(true)
-        waitForStore = (config \ "wait_for_store").asOpt[Boolean].getOrelse(false)
+        waitForStore = (config \ "wait_for_store").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
