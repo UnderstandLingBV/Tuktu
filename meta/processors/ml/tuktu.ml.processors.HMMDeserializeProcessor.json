@@ -1,0 +1,55 @@
+{
+	"name": "HMM Deserialize Processor",
+	"description": "Deserializes a Hidden Markov Model from disk to the in-memory model repository.",
+	"class": "tuktu.ml.processors.HMMDeserializeProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the HMM model to be deserialized.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "file_name",
+					"description": "The file name to serialize to.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "only_once",
+					"description": "Whether or not to serialize only once. If set to true, the model will be serialized upon receival of the first DataPacket only, if set to false it will be overwritten for each new DataPacket.",
+					"type": "string",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "num_hidden",
+					"description": "The number of hidden states of this HMM.",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "num_observable",
+					"description": "The number of observable states of this HMM.",
+					"type": "int",
+					"required": true
+				}				
+			]
+		}
+	]
+}
