@@ -26,11 +26,13 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     var modelName = ""
+    var waitForStore = false
     var destroyOnEOF = true
 
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
         destroyOnEOF = (config \ "destroy_on_eof").asOpt[Boolean].getOrElse(true)
+        waitForStore = (config \ "wait_for_store").asOpt[Boolean].getOrelse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
@@ -53,7 +55,10 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
         val newModel = train(data.data, modelInstance)
 
         // Write back to our model repository
-        Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, newModel)
+        if (waitForStore) {
+            val fut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new UpsertModel(modelName, newModel)
+            Await.result(fut, timeout.duration)
+        } else Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, newModel)
 
         data
     }) compose Enumeratee.onEOF(() => destroyOnEOF match {
