@@ -7,12 +7,30 @@ import java.io.FileOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
+/**
+ * Implements a wrapper around apache common math regression
+ */
 class LinearRegression extends BaseModel {
     val regression = new OLSMultipleLinearRegression
     
-    def classify(x: Seq[Double]) = {
+    private var currentData: Array[Array[Double]] = _
+    private var currentLabels: Array[Double] = _
+    
+    /**
+     * Adds data to our linear regression model
+     */
+    def addData(data: Array[Array[Double]], labels: Array[Double]) {
+        currentData ++= data
+        currentLabels ++= labels
+        regression.newSampleData(currentLabels, currentData)
+    }
+    
+    /**
+     * Predicts a Y-value for X-values
+     */
+    def classify(data: Seq[Double]) = {
         val weights = regression.estimateRegressionParameters()
-        x.zip(weights.drop(0)).foldLeft(weights(0))((s, z) => s + z._1 * z._2)
+        data.zip(weights.drop(0)).foldLeft(weights(0))((s, z) => s + z._1 * z._2)
     }
     
     override def serialize(filename: String) = {

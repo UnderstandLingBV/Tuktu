@@ -6,6 +6,9 @@ import java.io.FileOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
+/**
+ * Implements logistic regression
+ */
 class LogisticRegression(lr: Double, nIterations: Int) extends BaseModel {
     var weights: Array[Double] = Array()
     

@@ -35,8 +35,7 @@ class LinearRegressionTrainProcessor(resultName: String) extends BaseMLTrainProc
         // Train the regression model
         val trainData = records.map(_._1).toArray
         val labels = records.map(_._2).toArray
-        // TODO: Add sample data rather than overwriting
-        model.regression.newSampleData(labels, trainData)
+        model.addData(trainData, labels)
 
         model
     }
