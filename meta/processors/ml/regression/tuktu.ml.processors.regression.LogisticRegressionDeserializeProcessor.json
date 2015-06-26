@@ -1,0 +1,55 @@
+{
+	"name": "Logistic Regression Deserialization Processor",
+	"description": "Deserializes a logistic regression model.",
+	"class": "tuktu.ml.processors.regression.LogisticRegressionDeserializeProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the HMM model to be deserialized.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "file_name",
+					"description": "The file name to serialize to.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "only_once",
+					"description": "Whether or not to serialize only once. If set to true, the model will be serialized upon receival of the first DataPacket only, if set to false it will be overwritten for each new DataPacket.",
+					"type": "string",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "learn_rate",
+					"type": "int",
+					"required": true,
+					"description": "The learning rate."
+				},
+				{
+					"name": "num_iterations",
+					"type": "int",
+					"required": true,
+					"description": "The number of iterations of going over the data."
+				}
+			]
+		}
+	]
+}

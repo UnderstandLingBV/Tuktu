@@ -1,7 +1,7 @@
 {
 	"name": "HMM Deserialize Processor",
 	"description": "Deserializes a Hidden Markov Model from disk to the in-memory model repository.",
-	"class": "tuktu.ml.processors.HMMDeserializeProcessor",
+	"class": "tuktu.ml.processors.hmm.HMMDeserializeProcessor",
 	"parameters": [
 		{
 			"name": "id",

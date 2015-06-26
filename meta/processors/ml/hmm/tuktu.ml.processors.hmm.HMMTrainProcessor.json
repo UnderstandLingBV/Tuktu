@@ -1,0 +1,62 @@
+{
+	"name": "Train HMM",
+	"description": "Trains a hidden markov model using observations.",
+	"class": "tuktu.ml.processors.hmm.HMMTrainProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be trained. If a model with that name is already available, that model will be used for additional training. Otherwise a new model with this name will be instantiated.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "wait_for_store",
+					"description": "Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "observations_field",
+					"description": "The field which contains the observations as a sequence of integers. The HMM is sequentially trained on all these sequences within a bucket.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "num_hidden",
+					"description": "The number of distinct hidden states.",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "num_observable",
+					"description": "The number of distinct observable states.",
+					"type": "int",
+					"required": true
+				}
+			]
+		}
+	]
+}

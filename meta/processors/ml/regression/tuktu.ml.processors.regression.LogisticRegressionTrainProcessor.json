@@ -1,7 +1,7 @@
 {
-	"name": "Train HMM",
-	"description": "Trains a hidden markov model using observations.",
-	"class": "tuktu.ml.processors.HMMTrainProcessor",
+	"name": "Logistic Regression Train Processor",
+	"description": "Trains a logistic regression model.",
+	"class": "tuktu.ml.processors.regression.LogisticRegressionTrainProcessor",
 	"parameters": [
 		{
 			"name": "id",
@@ -39,22 +39,35 @@
 					"default": false
 				},
 				{
-					"name": "observations_field",
-					"description": "The field which contains the observations as a sequence of integers. The HMM is sequentially trained on all these sequences within a bucket.",
+					"name": "learn_rate",
+					"type": "int",
+					"required": true,
+					"description": "The learning rate."
+				},
+				{
+					"name": "num_iterations",
+					"type": "int",
+					"required": true,
+					"description": "The number of iterations of going over the data."
+				},
+				{
+					"name": "batch_size",
+					"type": "int",
+					"required": false,
+					"description": "The batch size used to iteratively train the model, set to 0 to use all data.",
+					"default": 0
+				},
+				{
+					"name": "data_field",
 					"type": "string",
-					"required": true
+					"required": true,
+					"description": "The field the data resides in. Data must be of type Seq[Int]."
 				},
 				{
-					"name": "num_hidden",
-					"description": "The number of distinct hidden states.",
-					"type": "int",
-					"required": true
-				},
-				{
-					"name": "num_observable",
-					"description": "The number of distinct observable states.",
-					"type": "int",
-					"required": true
+					"name": "label_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the label is in. Value must be an integer."
 				}
 			]
 		}

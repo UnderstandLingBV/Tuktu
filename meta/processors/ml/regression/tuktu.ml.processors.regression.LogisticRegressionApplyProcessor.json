@@ -1,7 +1,7 @@
 {
-	"name": "Apply Decode HMM",
-	"description": "Applies a hidden markov model to find the most likely hidden state sequence given an observable state sequence.",
-	"class": "tuktu.ml.processors.HMMApplyDecodeProcessor",
+	"name": "Logistic Regression Apply Processor",
+	"description": "Applies a logistic regression model to data.",
+	"class": "tuktu.ml.processors.regression.LogisticRegressionApplyProcessor",
 	"parameters": [
 		{
 			"name": "id",
@@ -32,10 +32,10 @@
 					"default": true
 				},
 				{
-					"name": "observations_field",
-					"description": "The field which contains the observations as a sequence of integers. The Viterbi algorithm is used to find the most likely emission after each of these sequences of observations.",
+					"name": "data_field",
 					"type": "string",
-					"required": true
+					"required": true,
+					"description": "The field the data resides in. Data must be of type Seq[Int]."
 				}
 			]
 		}

@@ -1,7 +1,7 @@
 {
-	"name": "Apply Predict HMM",
-	"description": "Applies a hidden markov model to generate the most likely observable state sequence.",
-	"class": "tuktu.ml.processors.HMMApplyPredictProcessor",
+	"name": "Apply Decode HMM",
+	"description": "Applies a hidden markov model to find the most likely hidden state sequence given an observable state sequence.",
+	"class": "tuktu.ml.processors.hmm.HMMApplyDecodeProcessor",
 	"parameters": [
 		{
 			"name": "id",
@@ -32,9 +32,9 @@
 					"default": true
 				},
 				{
-					"name": "steps",
-					"description": "The number of observable states to produce.",
-					"type": "int",
+					"name": "observations_field",
+					"description": "The field which contains the observations as a sequence of integers. The Viterbi algorithm is used to find the most likely emission after each of these sequences of observations.",
+					"type": "string",
 					"required": true
 				}
 			]
