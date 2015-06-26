@@ -1,7 +1,7 @@
 {
-	"name": "Logistic Regression Deserialization Processor",
-	"description": "Deserializes a logistic regression model.",
-	"class": "tuktu.ml.processors.regression.LogisticRegressionDeserializeProcessor",
+	"name": "Linear Regression Deserialization Processor",
+	"description": "Deserializes a linear regression model.",
+	"class": "tuktu.ml.processors.regression.LinearRegressionDeserializeProcessor",
 	"parameters": [
 		{
 			"name": "id",
@@ -26,7 +26,7 @@
 				},
 				{
 					"name": "file_name",
-					"description": "The file name to serialize to.",
+					"description": "The file name to deserialize from.",
 					"type": "string",
 					"required": true
 				},
@@ -36,18 +36,6 @@
 					"type": "string",
 					"required": false,
 					"default": true
-				},
-				{
-					"name": "learn_rate",
-					"type": "int",
-					"required": true,
-					"description": "The learning rate."
-				},
-				{
-					"name": "num_iterations",
-					"type": "int",
-					"required": true,
-					"description": "The number of iterations of going over the data."
 				}
 			]
 		}
