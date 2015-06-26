@@ -1,5 +1,5 @@
-### tuktu.ml.processors.HMMApply
-Applies a hidden markov model to new sequences to find the most likely emission.
+### tuktu.ml.processors.hmm.HMMApplyPredictProcessor
+Applies a hidden markov model to generate the most likely observable state sequence.
 
   * **id** *(type: string)* `[Required]`
 
@@ -13,6 +13,6 @@ Applies a hidden markov model to new sequences to find the most likely emission.
     * **destroy_on_eof** *(type: boolean)* `[Optional, default = true]`
     - Will this model be cleaned up once EOF is reached.
 
-    * **observations_field** *(type: string)* `[Required]`
-    - The field which contains the observations as a sequence of integers. The Viterbi algorithm is used to find the most likely emission after each of these sequences of observations.
+    * **steps** *(type: int)* `[Required]`
+    - The number of observable states to produce.
 

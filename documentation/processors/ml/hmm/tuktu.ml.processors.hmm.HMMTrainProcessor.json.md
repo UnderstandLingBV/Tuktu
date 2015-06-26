@@ -1,4 +1,4 @@
-### tuktu.ml.processors.HMMTrainer
+### tuktu.ml.processors.hmm.HMMTrainProcessor
 Trains a hidden markov model using observations.
 
   * **id** *(type: string)* `[Required]`
@@ -13,11 +13,11 @@ Trains a hidden markov model using observations.
     * **destroy_on_eof** *(type: boolean)* `[Optional, default = true]`
     - Will this model be cleaned up once EOF is reached.
 
+    * **wait_for_store** *(type: boolean)* `[Optional, default = false]`
+    - Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.
+
     * **observations_field** *(type: string)* `[Required]`
     - The field which contains the observations as a sequence of integers. The HMM is sequentially trained on all these sequences within a bucket.
-
-    * **steps** *(type: int)* `[Optional, default = 5]`
-    - The number of steps to run the Baum-Welch algorithm on each sequence of integers within the bucket.
 
     * **num_hidden** *(type: int)* `[Required]`
     - The number of distinct hidden states.
