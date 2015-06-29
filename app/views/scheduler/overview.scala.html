@@ -1,0 +1,15 @@
+@(jobs: List[String], messages: Map[String, List[String]])
+
+@index("Scheduler", messages) {
+    @schedulerMenu()
+} {
+	@if(jobs.size == 0) {
+		No scheduled jobs found!
+	} else {
+		<ul>
+		@for(job <- jobs) {
+			<li>@job</li>
+		}
+		</ul>
+	}
+}

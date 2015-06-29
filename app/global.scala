@@ -22,6 +22,7 @@ import play.api.mvc.RequestHeader
 import play.api.libs.json.Json
 import org.reflections.Reflections
 import scala.collection.JavaConverters._
+import controllers.TuktuScheduler
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -63,6 +64,10 @@ object Global extends GlobalSettings {
                    .props(Props(classOf[Dispatcher], monActor)), name = "TuktuDispatcher")
         dispActor ! "init"
         
+        // Set up scheduling actor
+        val schedActor = Akka.system.actorOf(Props(classOf[TuktuScheduler], dispActor), name = "TuktuScheduler")
+        monActor ! "init"
+                
         // Load module globals
         LoadModuleGlobals(app)
         moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStart(app))
