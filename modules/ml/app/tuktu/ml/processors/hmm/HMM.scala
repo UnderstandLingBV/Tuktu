@@ -32,7 +32,7 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
 
     // Instantiates a Hidden Markov Model with a number of hidden states and a number of observable states
     override def instantiate(): HiddenMarkovModel = {
-        val model = new HiddenMarkovModel(numHidden, numObservable) {
+        new HiddenMarkovModel(numHidden, numObservable) {
             // Initialize A, B, Pi
             for {
                 i <- 0 to numHidden - 1
@@ -44,71 +44,6 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
             } B(i, j) = 1.0 / numObservable
             for (i <- 0 to numHidden - 1) Pi(i) = 1.0 / numHidden
         }
-        
-        // Use the results from the paper
-        model.A(0,0) = 0.083333
-        model.A(0, 1) = 0.083333
-        model.A(0, 2) = 0.583333
-        model.A(0, 3) = 0.083333
-        model.A(0, 4) = 0.083333
-        model.A(0, 5) = 0.083333
-        
-        model.A(1,0) = 0.083333
-        model.A(1, 1) = 0.083333
-        model.A(1, 2) = 0.333333
-        model.A(1, 3) = 0.333333
-        model.A(1, 4) = 0.083333
-        model.A(1, 5) = 0.083333
-        
-        model.A(2,0) = 0.083333
-        model.A(2, 1) = 0.154833
-        model.A(2, 2) = 0.154833
-        model.A(2, 3) = 0.083333
-        model.A(2, 4) = 0.368833
-        model.A(2, 5) = 0.154833
-        
-        model.A(3,0) = 0.333333
-        model.A(3, 1) = 0.083333
-        model.A(3, 2) = 0.333333
-        model.A(3, 3) = 0.083333
-        model.A(3, 4) = 0.083333
-        model.A(3, 5) = 0.083333
-        
-        model.A(4,0) = 0.208333
-        model.A(4, 1) = 0.208333
-        model.A(4, 2) = 0.333333
-        model.A(4, 3) = 0.083333
-        model.A(4, 4) = 0.083333
-        model.A(4, 5) = 0.083333
-        
-        model.A(5,0) = 0.083333
-        model.A(5, 1) = 0.083333
-        model.A(5, 2) = 0.083333
-        model.A(5, 3) = 0.333333
-        model.A(5, 4) = 0.083333
-        model.A(5, 5) = 0.333333
-        
-        model.B(0,1) = 0.02
-        model.B(0,0) = 0.98
-        model.B(1,1) = 0.5
-        model.B(1,0) = 0.5
-        model.B(2,1) = 0.71
-        model.B(2,0) = 0.29
-        model.B(3,1) = 0.02
-        model.B(3,0) = 0.98
-        model.B(4,1) = 0.02
-        model.B(4,0) = 0.98
-        model.B(5,1) = 0.98
-        model.B(5,0) = 0.02
-        
-        model.Pi(0) = 0.06
-        model.Pi(1) = 0.11
-        model.Pi(2) = 0.39
-        model.Pi(3) = 0.11
-        model.Pi(4) = 0.22
-        model.Pi(5) = 0.11
-        
-        model
     }
         
     // Trains the Hidden Markov Model using a sequence of observations for a number of steps

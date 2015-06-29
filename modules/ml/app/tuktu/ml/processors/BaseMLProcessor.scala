@@ -44,7 +44,7 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
             case None => {
                 // No model was found, create it and send it to our repository
                 val model = instantiate
-                Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, model)
+                Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, model, false)
 
                 model
             }
@@ -56,9 +56,9 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
 
         // Write back to our model repository
         if (waitForStore) {
-            val fut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new UpsertModel(modelName, newModel)
+            val fut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new UpsertModel(modelName, newModel, true)
             Await.result(fut, timeout.duration)
-        } else Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, newModel)
+        } else Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, newModel, false)
 
         data
     }) compose Enumeratee.onEOF(() => destroyOnEOF match {
@@ -176,11 +176,13 @@ abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) e
     var fileName = ""
     var onlyOnce = true
     var isDeserialized = false
+    var waitForLoad = false
     
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
         fileName = (config \ "file_name").as[String]
         onlyOnce = (config \ "only_once").asOpt[Boolean].getOrElse(true)
+        waitForLoad = (config \ "wait_for_load").asOpt[Boolean].getOrElse(false)
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -190,7 +192,10 @@ abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) e
             val model = deserializeModel()
             
             // Send it to the repository
-            Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, model)
+            if (waitForLoad)
+                Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new UpsertModel(modelName, model, true)
+            else
+                Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, model, false)
         }
         
         data

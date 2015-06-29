@@ -9,7 +9,8 @@ case class GetModel (
 )
 case class UpsertModel (
         name: String,
-        model: BaseModel
+        model: BaseModel,
+        reply: Boolean
 )
 case class DestroyModel (
         name: String
@@ -37,6 +38,8 @@ class ModelRepository() extends Actor with ActorLogging {
         case um: UpsertModel => {
             // Insert or overwrite the model
             modelRepository += um.name -> um.model
+            // See if we need to reply
+            if (um.reply) sender ! "ok"
         }
         case dm: DestroyModel => {
             // Simply remove it from the repository
