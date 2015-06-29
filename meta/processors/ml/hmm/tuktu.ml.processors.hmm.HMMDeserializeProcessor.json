@@ -48,7 +48,14 @@
 					"description": "The number of observable states of this HMM.",
 					"type": "int",
 					"required": true
-				}				
+				},
+				{
+					"name": "wait_for_load",
+					"description": "If set to true, processing only continues after the model has been loaded into memory (sync). If false, processing continues immediately, not knowing when the model has been materialized.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
 			]
 		}
 	]
