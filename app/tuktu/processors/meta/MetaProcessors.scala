@@ -186,7 +186,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         }
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Send the result to the generator
         val newData = sync match {
             case true => {
@@ -201,7 +201,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         }
 
         // We can still continue with out data
-        Future { newData }
+        newData
     }) compose Enumeratee.onEOF(() => {
         forwarder ! new StopPacket()
         forwarder ! PoisonPill
