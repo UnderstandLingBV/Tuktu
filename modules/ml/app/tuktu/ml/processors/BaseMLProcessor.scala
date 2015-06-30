@@ -187,9 +187,13 @@ abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) e
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Check if we actually need to deserialize
-        if (!onlyOnce || !isDeserialized) {
+        if ((!onlyOnce || !isDeserialized) && !data.data.isEmpty) {
+            // Get name of the model
+            val newFileName = utils.evaluateTuktuString(fileName, data.data.head)
+            val newModelName = utils.evaluateTuktuString(modelName, data.data.head)
+            
             // Deserialize the model
-            val model = deserializeModel()
+            val model = deserializeModel(newFileName)
             
             // Send it to the repository
             if (waitForLoad)
@@ -201,5 +205,5 @@ abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) e
         data
     })
     
-    def deserializeModel(): BM = ???
+    def deserializeModel(filename: String): BM = ???
 }

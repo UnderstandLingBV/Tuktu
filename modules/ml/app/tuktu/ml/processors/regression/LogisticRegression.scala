@@ -95,9 +95,9 @@ class LogisticRegressionDeserializeProcessor(resultName: String) extends BaseMLD
         super.initialize(config)
     }
     
-    override def deserializeModel() = {
+    override def deserializeModel(filename: String) = {
         val model = new LogisticRegression(learnRate, nIterations)
-        model.deserialize(fileName)
+        model.deserialize(filename)
         model
     }
 }

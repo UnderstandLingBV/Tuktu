@@ -68,9 +68,9 @@ class LinearRegressionDeserializeProcessor(resultName: String) extends BaseMLDes
         super.initialize(config)
     }
     
-    override def deserializeModel() = {
+    override def deserializeModel(filename: String) = {
         val model = new LinearRegression
-        model.deserialize(fileName)
+        model.deserialize(filename)
         model
     }
 }
