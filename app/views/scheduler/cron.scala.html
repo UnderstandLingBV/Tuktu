@@ -3,5 +3,37 @@
 @index("Scheduler", messages) {
     @schedulerMenu()
 } {
-	Cron
+	<form method="post" action="@routes.Scheduler.scheduleCronStart">
+	    <div class="row">
+	        <div class="col-xs-12">
+	            <div class="form-group">
+	                <label for="name">Name</label>
+	                <input type="text" class="form-control" id="name" name="name">	              
+	            </div>
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="col-xs-12">
+	            <div class="form-group">
+	                <label for="cronSchedule">Cron schedule</label>
+	                <input type="text" class="form-control" id="cronSchedule" name=cronSchedule>
+	            </div>
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="col-xs-12">
+	            <div class="form-group">
+	                <label for="id">Id (String input for now, needs to be selectable!)</label>
+	                <input type="text" class="form-control" id="id" name=id>
+	            </div>
+	        </div>
+	    </div>
+	    <div class="row">
+            <div class="col-xs-12">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-default">Start cron scheduler!</button>
+                </div>
+            </div>
+        </div>
+	</form>
 }

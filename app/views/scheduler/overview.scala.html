@@ -6,10 +6,32 @@
 	@if(jobs.size == 0) {
 		No scheduled jobs found!
 	} else {
-		<ul>
-		@for(job <- jobs) {
-			<li>@job</li>
-		}
-		</ul>
+		<table class="table table-striped">
+	        <thead>
+		        <tr>
+		            <th>
+		                Job name
+		            </th>
+		            <th>
+		                Actions
+		            </th>		            
+		        </tr>
+	        </thead>
+	        <tbody>
+				@for(job <- jobs) {
+				    <tr>
+				        <th style="margin-right: 25px;">
+				            @job
+				        </th>
+				        <td>
+				            <a href="@routes.Scheduler.terminate(job)">
+                                Stop
+                            </a>				            
+				        </td>				        
+				    </tr>
+			    }
+			</tbody>
+	    </table>
+
 	}
 }
