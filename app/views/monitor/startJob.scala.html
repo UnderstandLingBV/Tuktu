@@ -6,14 +6,7 @@
     <div id="formDiv"></div>
        
     <script type="text/javascript">
-        function toggleInstances() {
-            $('#instances').prop('disabled',
-                function(i, v) {
-                    return !v;
-            });
-        }
-
-        $.ajax({
+		$.ajax({
             method : "POST",
             url : "@routes.Monitor.showConfigs",
             data : {
