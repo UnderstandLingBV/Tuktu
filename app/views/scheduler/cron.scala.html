@@ -22,9 +22,8 @@
 	    </div>
 	    <div class="row">
 	        <div class="col-xs-12">
-	            <div class="form-group">
-	                <label for="id">Id (String input for now, needs to be selectable!)</label>
-	                <input type="text" class="form-control" id="id" name=id>
+	        	<div class="container" style="border: 1px solid black;">
+	            	<div id="jobDiv"></div>
 	            </div>
 	        </div>
 	    </div>
@@ -36,4 +35,22 @@
             </div>
         </div>
 	</form>
+	
+	<div id="formDiv"></div>
+       
+    <script type="text/javascript">
+        $.ajax({
+            method : "POST",
+            url : "@routes.Scheduler.showConfigs",
+            data : {
+                path : ""
+            }
+        }).done(function(html) {
+            updateFormDiv(html);
+        });
+        
+        function updateFormDiv(html) {
+            $('#jobDiv').html(html); 
+        }
+    </script>
 }

@@ -30,7 +30,8 @@ GET     /scheduleSimple						controllers.Scheduler.scheduleSimple
 GET     /scheduleCron						controllers.Scheduler.scheduleCron
 POST    /scheduleSimple						controllers.Scheduler.scheduleSimpleStart
 POST    /scheduleCron						controllers.Scheduler.scheduleCronStart
-GET		/terminateSchedule/:id				controllers.Scheduler.terminate(id)
+GET		/terminateScheduler/:id				controllers.Scheduler.terminate(id)
+POST    /showConfigsScheduler               controllers.Scheduler.showConfigs
 
 # Embedded modeller
 GET     /modeller                           controllers.Modeller.modeller

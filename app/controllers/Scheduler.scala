@@ -21,6 +21,7 @@ import play.api.mvc.Controller
 import tuktu.utils.util
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
+import java.io.File
 
 object Scheduler extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -119,5 +120,33 @@ object Scheduler extends Controller {
         scheduler ! new KillRequest(name)
         Redirect(routes.Scheduler.overview)
     }
+    
+    /**
+     * Shows the form for getting configs
+     */
+    def showConfigs() = Action { implicit request => {
+        val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
+        
+        // Get the path from the body
+        val path = body("path").head.split("/").filter(elem => !elem.isEmpty)
+        
+        // Load the files and folders from the config repository
+        val configRepo = {
+            val location = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
+            if (location.last != '/') location + "/"
+            else location
+        }
+        val files = new File(configRepo + path.mkString("/")).listFiles
+        
+        // Get configs
+        val configs = files.filter(!_.isDirectory).map(cfg => cfg.getName.take(cfg.getName.size - 5))
+        // Get subfolders
+        val subfolders = files.filter(_.isDirectory).map(fldr => fldr.getName)
+        
+        // Invoke view
+        Ok(views.html.scheduler.showConfigs(
+                path, configs, subfolders
+        ))
+    }}
     
 }
