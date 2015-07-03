@@ -1,0 +1,56 @@
+{
+	"name": "Replace Processor",
+	"description": "Replaces one top-level citizen's String representation for another String.",
+	"class": "tuktu.processors.ReplaceProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to replace.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "sources",
+					"description": "Replace all occurrences (case-sensitive) of this list of Strings, with the respective entries of targets.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "targets",
+					"description": "Replace all occurrences (case-sensitive) of sources, with the respective entries of this list of Strings.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}

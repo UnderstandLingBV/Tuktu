@@ -1,0 +1,30 @@
+{
+	"name": "Size Buffer Processor",
+	"class": "tuktu.processors.SizeBufferProcessor",
+	"description": "Buffers data packets until a specific amount has been reached, then releases the buffer",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "size",
+					"description": "The amount of data packets to buffer before continuing.",
+					"type": "int",
+					"required": true
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,37 @@
+{
+	"name": "Sort Processor",
+	"description": "Sorts elements in a bucket by a given field.",
+	"class": "tuktu.processors.bucket.SortProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to sort on.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "asc_desc",
+					"description": "Whether to sort ascending (asc) or descending (desc). Any value other than 'desc' will be assumed ascending.",
+					"type": "string",
+					"required": false,
+					"default": "asc"
+				}
+			]
+		}
+	]
+}

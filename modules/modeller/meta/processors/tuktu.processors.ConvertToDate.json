@@ -1,0 +1,42 @@
+{
+	"name": "Convert String to Date Processor",
+	"description": "Converts a String to a Java Date.",
+	"class": "tuktu.processors.ConvertToDate",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the date.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "format",
+					"description": "The string formatter.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "locale",
+					"description": "The locale for the string formatter.",
+					"type": "string",
+					"required": false
+				}
+			]
+		}
+	]
+}

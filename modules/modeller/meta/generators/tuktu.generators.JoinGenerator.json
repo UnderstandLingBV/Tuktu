@@ -1,0 +1,120 @@
+{
+	"name": "Join Generator",
+	"description": "Performs a join on two streams of data (two other generators with processing pipelines) in a distributed fashion.",
+	"class": "tuktu.generators.JoinGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "nodes",
+					"description": "The list of nodes to perform the join on, must all be Tuktu nodes.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": false,
+							"parameters": [
+								{
+									"name": "host",
+									"description": "Default is the Play configuration value of akka.remote.netty.tcp.hostname, or 127.0.0.1 if that is not set.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "port",
+									"description": "Default is the Play configuration value of akka.remote.netty.tcp.port, or 2552 if that is not set.",
+									"type": "int",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "sources",
+					"description": "The data streams to join.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "name",
+									"label": "Config name",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "key",
+									"description": "The keys to join on.",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"type": "string",
+											"required": true
+										}
+									]
+								},
+								{
+									"name": "result",
+									"description": "Key whose value determines the resultName, for both streams respectively.",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

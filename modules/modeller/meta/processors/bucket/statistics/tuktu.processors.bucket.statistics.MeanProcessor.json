@@ -1,0 +1,37 @@
+{
+	"name": "Mean Processor",
+	"description": "Individually computes the mean of a list of fields containing numerical values.",
+	"class": "tuktu.processors.bucket.statistics.MeanProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The mean over these fields will be individually computed and returned under the respective field names as a single datum.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}

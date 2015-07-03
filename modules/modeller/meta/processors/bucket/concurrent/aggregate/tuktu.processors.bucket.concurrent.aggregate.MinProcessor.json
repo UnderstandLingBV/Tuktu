@@ -1,0 +1,42 @@
+{
+	"name": "Concurrent Minimum Processor",
+	"class": "tuktu.processors.bucket.concurrent.aggregate.MinProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "nodes",
+					"description": "The nodes to use for the SingleNode handler type.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "field",
+					"description": "The field to sort by. This is also where the result is returned.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

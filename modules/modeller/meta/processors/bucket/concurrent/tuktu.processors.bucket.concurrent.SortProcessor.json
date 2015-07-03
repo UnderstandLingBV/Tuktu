@@ -1,0 +1,50 @@
+{
+	"name": "Concurrent Sort Processor",
+	"class": "tuktu.processors.bucket.concurrent.SortProcessor",
+	"description": "Sorts items in a bucket in a distributed fashion based on some field.",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "nodes",
+					"type": "array",
+					"required": true,
+					"description": "The (Tuktu) nodes to run the sorting on.",
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "field",
+					"type": "string",
+					"description": "The field (key) to sort items on.",
+					"required": true
+				},
+				{
+					"name": "asc_desc",
+					"type": "string",
+					"required": false,
+					"description": "Whether to sort ascending (asc) or descending (desc). Any value other than 'desc' will be assumed ascending.",
+					"default": "asc"
+				}
+			]
+		}
+	]
+}

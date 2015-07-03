@@ -1,0 +1,79 @@
+{
+	"name": "Line Generator",
+	"description": "Streams a file line by line.",
+	"class": "tuktu.generators.LineGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "filename",
+					"description": "The path to the file.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "encoding",
+					"description": "The encoding of the file.",
+					"type": "string",
+					"required": false,
+					"default": "utf-8"
+				},
+				{
+					"name": "start_line",
+					"description": "The start line to start streaming from.",
+					"type": "int",
+					"required": false,
+					"default": 0
+				},
+				{
+					"name": "end_line",
+					"description": "The end line to stop streaming on, inclusively. Streamed until end of file if omitted.",
+					"type": "int",
+					"required": false
+				}
+			]
+		}
+	]
+}

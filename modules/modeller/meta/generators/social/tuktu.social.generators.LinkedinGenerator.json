@@ -1,0 +1,106 @@
+{
+	"name": "Linkedin Generator",
+	"description": "This generator is not fully implemented yet.",
+	"class": "tuktu.social.generators.LinkedinGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "credentials",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "consumer_key",
+							"description": "The ID for the application.",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "consumer_secret",
+							"description": "The secret for the application.",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token",
+							"description": "The access token for the user.",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token_secret",
+							"description": "The access token secret for the user.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "url",
+					"label": "API end-point URL",
+					"description": "The URL of the end-point for the API.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "http_method",
+					"label": "HTTP request type",
+					"description": "Usually one of get, post, put, delete.",
+					"type": "string",
+					"required": false,
+					"default": "get"
+				},
+				{
+					"name": "field",
+					"label": "JSON field",
+					"description": "JSON field to extract from response.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

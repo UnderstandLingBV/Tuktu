@@ -1,0 +1,71 @@
+{
+	"name": "Dummy Generator",
+	"description": "Generates dummy strings every tick",
+	"class": "tuktu.generators.DummyGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						},
+						{
+							"name": "send_immediately",
+							"type": "boolean",
+							"required": false,
+							"description":"True if you want the initial message to be immediately send"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "interval",
+					"description": "Tick interval in which to send the messages, in milliseconds.",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "message",
+					"description": "The message to send every tick.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

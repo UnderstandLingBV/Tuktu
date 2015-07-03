@@ -1,0 +1,92 @@
+{
+	"name": "Kafka Generator",
+	"description": "Creates a Kafka consumer generating data packets from the feed of messages for a given topic.",
+	"class": "tuktu.nosql.generators.KafkaGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "kafka_properties",
+					"description": "Kafka properties given by a JSON object with key, value pairs containing strings only.",
+					"type": "JsObject",
+					"required": true
+				},
+				{
+					"name": "topic",
+					"description": "The topic that messages are to be fetched about.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "stop_message",
+					"description": "Stop as soon as this message is encountered. Ignored if to_string is false.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "to_string",
+					"description": "Convert the message to a string, or keep it as a byte array.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "charset",
+					"description": "The charset used to convert the message to a string. Ignored if to_string is false.",
+					"type": "string",
+					"required": false,
+					"default": "utf-8"
+				},
+				{
+					"name": "threads",
+					"description": "Number of threads to read partitions with.",
+					"type": "int",
+					"required": false,
+					"default": 1
+				}
+			]
+		}
+	]
+}

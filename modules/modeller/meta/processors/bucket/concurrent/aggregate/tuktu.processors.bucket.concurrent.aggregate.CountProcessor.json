@@ -1,0 +1,43 @@
+{
+	"name": "Concurrent Count Processor",
+	"description": "Counts the number of elements of a stream in a distributed fashion",
+	"class": "tuktu.processors.bucket.concurrent.aggregate.CountProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "nodes",
+					"description": "The nodes to use for the SingleNode handler type.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "field",
+					"description": "The field under which the result is returned.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

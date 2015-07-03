@@ -1,0 +1,30 @@
+{
+	"name": "Maximum Processor",
+	"description": "Returns the maximum of a bucket, sorted by a given field.",
+	"class": "tuktu.processors.bucket.aggregate.MaxProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to sort by. This is also where the result is returned.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

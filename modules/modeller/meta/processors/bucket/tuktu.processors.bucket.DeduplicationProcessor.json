@@ -1,0 +1,37 @@
+{
+	"name": "Deduplication Processor",
+	"description": "Deduplicates all elements in a bucketed data packet.",
+	"class": "tuktu.processors.bucket.DeduplicationProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The fields to deduplicate elements with same entries from.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,71 @@
+{
+	"name": "JSON Object Imploder Processor",
+	"description": "Implodes an array of JSON object-fields into an array of JSON strings found at a specified sub-path, which is then joined by a given separator, overwriting its top-level ancestor.",
+	"class": "tuktu.processors.JsObjectImploderProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The fields to implode.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "path",
+									"description": "The path to the JSON array of JSON objects. The result will overwrite its top-level ancestor.",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"type": "string",
+											"required": true
+										}
+									]
+								},
+								{
+									"name": "subpath",
+									"description": "The sub-path to a JSON string within each JSON object.",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"type": "string",
+											"required": true
+										}
+									]
+								},
+								{
+									"name": "separator",
+									"description": "The separator character used between two such JSON strings.",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

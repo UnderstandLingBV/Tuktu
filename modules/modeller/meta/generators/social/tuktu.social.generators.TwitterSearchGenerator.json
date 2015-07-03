@@ -1,0 +1,100 @@
+{
+	"name": "Twitter Search Generator",
+	"description": "Searches for public tweets given a list of keywords.",
+	"class": "tuktu.social.generators.TwitterSearchGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "credentials",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "consumer_key",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "consumer_secret",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token_secret",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "filters",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "keywords",
+							"description": "Keywords to search for in public tweets.",
+							"type": "array",
+							"required": true,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,55 @@
+{
+	"name": "Generator Config Stream Processor",
+	"description": "Invokes a new generator, which sends its data to a selected list of processors from a given config.",
+	"class": "tuktu.processors.meta.GeneratorConfigStreamProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "name",
+					"description": "The name of the config.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "node",
+					"description": "The Tuktu SingleNode to execute on.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "next",
+					"description": "The processors to send data into.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "flow_field",
+					"description" : "Field containing the name of the flow to load; can contain variables which will be resolved with data packets.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

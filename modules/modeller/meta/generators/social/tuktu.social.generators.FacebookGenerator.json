@@ -1,0 +1,128 @@
+{
+	"name": "Facebook Generator",
+	"description": "Gets posts containing keywords or from specific users from a given time interval.",
+	"class": "tuktu.social.generators.FacebookGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "credentials",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "access_token",
+							"description": "The token to access Facebook's API with.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "filters",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "keywords",
+							"description": "The keywords to search for in any posts.",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						},
+						{
+							"name": "users",
+							"description": "The users (given by their Facebook user id) from which to get everything from their feed, independently from keywords above.",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "",
+									"description": "Facebook user id.",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "update_time",
+					"label": "Update frequency",
+					"description": "Time in seconds between requests, if applicable.",
+					"type": "long",
+					"required": false,
+					"default": 5
+				},
+				{
+					"name": "interval",
+					"description": "Time interval to collect data for.",
+					"type": "object",
+					"required": false,
+					"parameters": [
+						{
+							"name": "start",
+							"description": "Timestamp of start time of time interval to collect data for. Can be left empty. If a start-time is given, everything from that time on will be fetched. If it is omitted the current time is assumed.",
+							"type": "long",
+							"required": false
+						},
+						{
+							"name": "end",
+							"description": "Timestamp of end time of time interval to collect data for. Can be left empty. If an end-time is given, everything until that time will be fetched. If it is omitted, no end time is assumed and everything will be fetched perpetually.",
+							"type": "long",
+							"required": false
+						}
+					]
+				}
+			]
+		}
+	]
+}

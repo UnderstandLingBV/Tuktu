@@ -1,0 +1,31 @@
+{
+	"name": "Console Writer Processor",
+	"description": "Prints out data packets to console.",
+	"class": "tuktu.processors.ConsoleWriterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "prettify",
+					"type": "boolean",
+					"description": "Try to prettify the result written to console.",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

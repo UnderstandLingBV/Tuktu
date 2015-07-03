@@ -1,0 +1,125 @@
+@(generators: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])], processors: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])])
+
+@main {
+	<nav class="navbar navbar-default">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="#">Tuktu</a>
+			</div>
+			<ul class="nav navbar-nav">
+				<li><a href="#AddGenerator">Add Generator</a></li>
+				<li><a href="#AddProcessor">Add Processor</a></li>
+				<li><a href="#ConfigImport">Import Config</a></li>
+				<li><a href="#GenerateConfig">Generate Config</a></li>
+			</ul>
+
+		</div>
+	</nav>
+
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-xs-8 text-center">
+				<h3>Flowchart</h3>
+			</div>
+			<div class="col-xs-4 text-center">
+				<h3>Preferences</h3>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-xs-8" id="flowchart"></div>
+			<div class="col-xs-4" id="preferences">
+				<form class="hidden form-horizontal" id="generatorSettings">
+					<div class="form-group">
+						<div class="col-xs-offset-3 col-xs-6">
+							<button name="deleteSelected" type="button" class="btn btn-danger">Delete Generator</button>
+						</div>
+					</div>
+					<div class="form-group">
+						<label for="generatorName" class="col-xs-3 control-label">Type</label>
+						<div class="col-xs-6">
+							<select name="name" id="generatorName" class="form-control">
+								<option value=""> -- </option>
+								@for((dirName, generatorDescriptors) <- generators) {
+									<optgroup label="@dirName">
+									@for(generator <- generatorDescriptors) {
+										<option value="@{(generator._2 \ "class").as[String]}">@generator._1</option>
+									}
+									</optgroup>
+								}
+							</select>
+						</div>
+					</div>
+					@for(
+						(dirName, generatorDescriptors) <- generators;
+						generator <- generatorDescriptors
+					) {
+						<div class="hidden" data-class="@{(generator._2 \ "class").as[String]}">
+							<span class="help-block">@{(generator._2 \ "description").asOpt[String].getOrElse("")}</span>
+							@for(param <- (generator._2 \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
+								@form(param, 0)
+							}
+						</div>
+					}
+				</form>
+				<form class="hidden form-horizontal" id="processorSettings">
+					<div class="form-group">
+						<div class="col-xs-offset-3 col-xs-6">
+							<button name="deleteSelected" type="button" class="btn btn-danger">Delete Processor</button>
+						</div>
+					</div>
+					<div class="form-group">
+						<label for="processorName" class="col-xs-3 control-label">Type</label>
+						<div class="col-xs-6">
+							<select name="name" id="processorName" class="form-control">
+								<option value=""> -- </option>
+								@for((dirName, processorDescriptors) <- processors) {
+									<optgroup label="@dirName">
+									@for(processor <- processorDescriptors) {
+										<option value="@{(processor._2 \ "class").as[String]}">@processor._1</option>
+									}
+									</optgroup>
+								}
+							</select>
+						</div>
+					</div>
+					@for(
+						(dirName, processorDescriptors) <- processors;
+						processor <- processorDescriptors
+					) {
+						<div class="hidden" data-class="@{(processor._2 \ "class").as[String]}">
+							<span class="help-block">@{(processor._2 \ "description").asOpt[String].getOrElse("")}</span>
+							@for(param <- (processor._2 \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
+								@form(param, 0)
+							}
+						</div>
+					}
+				</form>
+				<form class="hidden form-horizontal" id="connectionSettings">
+					<div class="form-group">
+						<div class="col-xs-offset-3 col-xs-6">
+							<button name="deleteSelected" type="button" class="btn btn-danger">Delete Connection</button>
+						</div>
+					</div>
+				</form>
+				<form class="hidden" id="importedConfig">
+					<div class="form-group">
+						<label for="importTextarea">Import Config</label>
+						<textarea id="importTextarea" class="form-control" rows="12"></textarea>
+					</div>
+					<div class="form-group">
+						<a href="#ImportConfig" class="btn btn-primary">Import Config</a>
+					</div>
+				</form>
+				<form class="hidden" id="generatedOutput">
+					<div class="form-group">
+						<label for="outputTextarea">Generated Config</label>
+						<textarea id="outputTextarea" class="form-control" rows="12"></textarea>
+					</div>
+					<div class="form-group">
+						<a href="#GenerateConfig" class="btn btn-primary">Generate Config</a>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+}

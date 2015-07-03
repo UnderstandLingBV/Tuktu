@@ -1,0 +1,68 @@
+{
+	"name": "HDFS Writer Processor",
+	"description": "Writes specific fields of the datapacket out to HDFS, by default as JSON.",
+	"class": "tuktu.nosql.processors.HDFSWriterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "uri",
+					"description" : "Location of HDFS; e.g. hdfs://localhost:51234.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "file_name",
+					"description" : "Path of the file to write to.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "fields",
+					"description" : "All the fields that will be written to HDFS.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "field_separator",
+					"description": "A separator for separating fields",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "datapacket_separator",
+					"description": "A separator for separating datapackets",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "replication",
+					"description": "Replication factor of the file on HDFS.",
+					"type": "int",
+					"required": false,
+					"default": 3
+				}
+			]
+		}
+	]
+}

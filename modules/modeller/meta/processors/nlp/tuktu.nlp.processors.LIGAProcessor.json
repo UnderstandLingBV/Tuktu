@@ -1,0 +1,30 @@
+{
+	"name": "LIGA Processor",
+	"description": "Performs language detection on a given field.",
+	"class": "tuktu.nlp.processors.LIGAProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to be performed language detection on. The field's content must be a String or a JsString.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

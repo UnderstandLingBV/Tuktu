@@ -1,0 +1,90 @@
+{
+	"name": "SQL Generator",
+	"description": "Executes a query on an SQL database.",
+	"class": "tuktu.nosql.generators.SQLGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": false
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"description": "A database url of the form jdbc:subprotocol:subname.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "user",
+					"description": "The database user on whose behalf the connection is being made.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "password",
+					"description": "The user's password.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "query",
+					"description": "SQL query to be executed.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "driver",
+					"description": "The driver to be used, for example org.h2.Driver.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "flatten",
+					"description": "Flatten the results, or return resultName -> results.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

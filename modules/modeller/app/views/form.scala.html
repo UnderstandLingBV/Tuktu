@@ -1,0 +1,80 @@
+@(json: play.api.libs.json.JsValue, depth: Int = 0, array: Boolean = false)
+
+@if((json \ "type").as[String] == "string") {
+	@form_group(json, array) {
+		<div class="col-xs-6">
+			<input data-key="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]){required="required"} data-type="string" data-depth="@depth" data-default="@{(json \ "default").asOpt[String].getOrElse("")}" value="@{(json \ "default").asOpt[String].getOrElse("")}">
+		</div>
+	}
+} else {
+
+@if((json \ "type").as[String] == "JsObject") {
+	@form_group(json, array) {
+		<div class="col-xs-6">
+			<textarea rows="3" data-key="@{(json \ "name").as[String]}" class="form-control" @if((json \ "required").as[Boolean]){required="required"} data-type="JsObject" data-depth="@depth" data-default="@{(json \ "default").asOpt[play.api.libs.json.JsObject].map(_.toString).getOrElse("")}">@{(json \ "default").asOpt[play.api.libs.json.JsObject].map(play.api.libs.json.Json.prettyPrint(_)).getOrElse("")}</textarea>
+		</div>
+	}
+} else {
+
+@if((json \ "type").as[String] == "any") {
+	@form_group(json, array) {
+		<div class="col-xs-6">
+			<textarea rows="2" data-key="@{(json \ "name").as[String]}" class="form-control" @if((json \ "required").as[Boolean]){required="required"} data-type="any" data-depth="@depth" data-default="@{(json \ "default").asOpt[play.api.libs.json.JsValue].map(_.toString).getOrElse("")}">@{(json \ "default").asOpt[play.api.libs.json.JsValue].map(play.api.libs.json.Json.prettyPrint(_)).getOrElse("")}</textarea>
+		</div>
+	}
+} else {
+
+@if((json \ "type").as[String] == "int" || (json \ "type").as[String] == "long") {
+	@form_group(json, array) {
+		<div class="col-xs-6">
+			<input data-key="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]){required="required"} data-type="int" data-depth="@depth" data-default="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}" value="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}">
+		</div>
+	}
+} else {
+
+@if((json \ "type").as[String] == "boolean") {
+	@form_group(json, array) {
+		<div class="col-xs-6">
+			<input data-key="@{(json \ "name").as[String]}" class="form-control" type="checkbox" @if((json \ "required").as[Boolean]){required="required"} data-type="boolean" data-depth="@depth" data-default="@{(json \ "default").asOpt[Boolean].getOrElse(false)}" @if((json \ "default").asOpt[Boolean].getOrElse(false) == true){checked="checked"}>
+		</div>
+	}
+} else {
+
+@if((json \ "type").as[String] == "object") {
+	<div data-depth="@depth" data-type="object" data-key="@{(json \ "name").as[String]}" data-required="@{(json \ "required").asOpt[Boolean].getOrElse(true)}">
+		@for(param <- (json \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
+			@this(param, depth + 1, array)
+		}
+	</div>
+} else {
+
+@if((json \ "type").as[String] == "array") {
+	<div data-depth="@depth" data-type="array" data-key="@{(json \ "name").as[String]}" data-required="@{(json \ "required").asOpt[Boolean].getOrElse(true)}">
+		@for(param <- (json \ "parameters").asOpt[play.api.libs.json.JsArray].getOrElse(new play.api.libs.json.JsArray()).value) {
+			@form_group(json, array) {
+				<div class="col-xs-3">
+					<p class="form-control-static">@{(param \ "label").asOpt[String].getOrElse((param \ "name").asOpt[String].getOrElse("")).capitalize}</p>
+				</div>
+				<div class="col-xs-3">
+					<button class="btn btn-success" name="AddArrayElement" type="button">+</button>
+				</div>
+			}
+			<div class="hidden" data-arrayType="prototype">
+				@this(param, depth + 1, true)
+			</div>
+		}
+	</div>
+} else {
+
+	<div class="form-group has-error">
+		<label class="col-xs-3 control-label">@{(json \ "label").asOpt[String].getOrElse((json \ "name").asOpt[String].getOrElse("")).capitalize}</label>
+		<div class="col-xs-6">
+			<p class="form-control-static">Type '@{(json \ "type").as[String]}' not supported.</p>
+		</div>
+		@if(array) {
+			<div class="col-xs-3">
+				<button class="btn btn-danger" name="DeleteArrayElement" type="button">-</button>
+			</div>
+		}
+	</div>
+}}}}}}}

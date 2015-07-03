@@ -1,0 +1,50 @@
+{
+	"name": "Concurrent Deduplication Processor",
+	"description": "Deduplicates elements in a bucketed data packet in a distributed fashion.",
+	"class": "tuktu.processors.bucket.concurrent.DeduplicationProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "nodes",
+					"description": "The (Tuktu) nodes to run the sorting on.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "fields",
+					"description": "The fields to deduplicate elements with same entries from.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,82 @@
+{
+	"name": "Files Generator",
+	"class": "tuktu.generators.FilesGenerator",
+	"description": "Generate a stream of Path objects from selected files and directories.",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "filesAndDirs",
+					"description": "Files and directories to generate Path objects from.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "fileOrDir",
+							"label": "File or Dir",
+							"description": "Path to file, or directory to generate Path objects from.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "pathMatcher",
+					"description": "The path matcher to match against the path of all encountered files: For example glob:**.json for all json files, glob:**.{json,txt} for all json and txt files, glob:**/folder/*.{json,txt} for all json and text files in a directory named 'folder'. Also supports regex:pattern.",
+					"type": "string",
+					"required": false,
+					"default": "glob:**"
+				},
+				{
+					"name": "recursive",
+					"description": "If true, the directories will be searched recursively.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

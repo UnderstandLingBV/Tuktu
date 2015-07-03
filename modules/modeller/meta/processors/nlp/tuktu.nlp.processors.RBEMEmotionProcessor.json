@@ -1,0 +1,44 @@
+{
+	"name": "RBEM Emotion Processor",
+	"description": "Performs emotion detection given a language, an Array of tokens and an Array of POS tags.",
+	"class": "tuktu.nlp.processors.RBEMEmotionProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "language",
+					"description": "The language to be used.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tokens",
+					"label": "Tokens field",
+					"description": "The field that contains an Array of tokens.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "pos",
+					"label": "POS tags field",
+					"description": "The field that contains an Array of POS tags.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

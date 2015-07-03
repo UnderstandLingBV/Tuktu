@@ -1,0 +1,64 @@
+{
+	"name": "JSON Fetcher Processor",
+	"description": "Fetches a single field to put it as top-level citizen of the data. Can traverse top-level JSON objects.",
+	"class": "tuktu.processors.JsonFetcherProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The fields to fetch.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "default",
+									"description": "The default value to be used if the path cannot be traversed until the end.",
+									"type": "any",
+									"required": false
+								},
+								{
+									"name": "path",
+									"description": "The path at which the value is located.",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"type": "string",
+											"required": true
+										}
+									]
+								},
+								{
+									"name": "result",
+									"description": "The new result name of the value at the end of the path (or the default).",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

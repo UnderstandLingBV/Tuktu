@@ -1,0 +1,22 @@
+{
+	"name": "EOF Buffer Processor",
+	"description": "Buffers until EOF (end of data stream) is found.",
+	"class": "tuktu.processors.EOFBufferProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true
+		}
+	]
+}

@@ -1,0 +1,78 @@
+{
+	"name": "CSV Reader Processor",
+	"class": "tuktu.csv.processors.CSVReaderProcessor",
+	"description": "Reads out values as CSV from a field.",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "string",
+					"description": "The field the CSV string resides in.",
+					"required": false
+				},
+				{
+					"name": "headers",
+					"type": "array",
+					"description": "The headers of the CSV string. These headers will form the names of the columns.",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "headers_from_first",
+					"type": "boolean",
+					"description": "If set to true, the first data packet will be used to extract headers from.",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "remove_original",
+					"type": "boolean",
+					"description": "Whether to remove the original field.",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "separator",
+					"type": "string",
+					"description": "The separator character.",
+					"required": false,
+					"default": ";"
+				},
+				{
+					"name": "quote",
+					"type": "string",
+					"description": "The quote character.",
+					"required": false,
+					"default": "\""
+				},
+				{
+					"name": "escape",
+					"type": "string",
+					"description": "The escape character.",
+					"required": false,
+					"default": "\\"
+				}
+			]
+		}
+	]
+}

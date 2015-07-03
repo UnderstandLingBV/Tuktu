@@ -1,0 +1,43 @@
+{
+	"name": "String Splitter Processor",
+	"description": "Splits a string up into a list of values based on a separator.",
+	"class": "tuktu.processors.StringSplitterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The name of the field that should be split.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "separator",
+					"description": "The separator used to split on.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "overwrite",
+					"type": "boolean",
+					"description": "Whether the original value in field should be overwritten (true) or whether the result should be appended as a separate field resultName (false).",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,37 @@
+{
+	"name": "Convert from JSON Processor",
+	"description": "Takes a JSON field and converts it into something usable.",
+	"class": "tuktu.processors.json.ConvertFromJson",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the JSON to be converted into a Map.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "overwrite",
+					"description": "Overwrite field, or append the data as resultName.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,101 @@
+{
+	"name": "Recursive Lookup Processor",
+	"description": "Fetches data recursively, provided an edge relation of a graph-like structure. (Without cycle detection.)",
+	"class": "tuktu.nosql.processors.sql.RecursiveLookupProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"description": "A database url of the form jdbc:subprotocol:subname.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "user",
+					"description": "The database user on whose behalf the connection is being made.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "password",
+					"description": "The user's password.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "driver",
+					"description": "The driver to be used, for example org.h2.Driver.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "columns",
+					"description": "The columns to fetch from DB (changing its key from the column name to var) to use in ancestors's FROM and WHERE clauses.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "name",
+									"description": "The column name.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "var",
+									"description": "Replace the column name key with this var to use in ancestors' FROM and WHERE clauses.",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "from",
+					"description": "The FROM clause of the SQL statement.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "where",
+					"description": "The WHERE clause of the SQL statement.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "include_original",
+					"description": "Include original data, or only return the data extended (potentially overwriting) by the found ancestors.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "n",
+					"label": "Max depth",
+					"description": "Number of iterations after which to stop. Leave empty to search exhaustively (beware: no cycle detection).",
+					"type": "int",
+					"required": false
+				}
+			]
+		}
+	]
+}

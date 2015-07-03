@@ -1,0 +1,43 @@
+{
+	"name": "Apply Predict HMM",
+	"description": "Applies a hidden markov model to generate the most likely observable state sequence.",
+	"class": "tuktu.ml.processors.hmm.HMMApplyPredictProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be applied. If a model with this name cannot be found, the data will go through unchanged.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "steps",
+					"description": "The number of observable states to produce.",
+					"type": "int",
+					"required": true
+				}
+			]
+		}
+	]
+}

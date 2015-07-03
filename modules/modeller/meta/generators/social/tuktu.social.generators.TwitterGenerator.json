@@ -1,0 +1,162 @@
+{
+	"name": "Twitter Stream Generator",
+	"description": "Given a list of keywords, users and a geo square, streams public tweets matching these filters.",
+	"class": "tuktu.social.generators.TwitterGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "credentials",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "consumer_key",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "consumer_secret",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token",
+							"type": "string",
+							"required": true
+						},
+						{
+							"name": "access_token_secret",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "filters",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "keywords",
+							"description": "Specifies the keywords to track.",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						},
+						{
+							"name": "userids",
+							"description": "Specifies the users, by ID, to receive public tweets from.",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						},
+						{
+							"name": "geo",
+							"type": "object",
+							"required": false,
+							"parameters": [
+								{
+									"name": "p1",
+									"type": "object",
+									"required": false,
+									"parameters": [
+										{
+											"name": "long",
+											"label": "P1 longitude",
+											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
+											"type": "string",
+											"required": false
+										},
+										{
+											"name": "lat",
+											"label": "P1 latitude",
+											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
+											"type": "string",
+											"required": false
+										}
+									]
+								},
+								{
+									"name": "p2",
+									"type": "object",
+									"required": false,
+									"parameters": [
+										{
+											"name": "long",
+											"label": "P2 longitude",
+											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
+											"type": "string",
+											"required": false
+										},
+										{
+											"name": "lat",
+											"label": "P2 latitude",
+											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
+											"type": "string",
+											"required": false
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

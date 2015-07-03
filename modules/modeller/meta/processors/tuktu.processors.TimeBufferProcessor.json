@@ -1,0 +1,30 @@
+{
+	"name": "Time Buffer Processor",
+	"description": "Buffers data packets for a specific amount of time.",
+	"class": "tuktu.processors.TimeBufferProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "interval",
+					"description": "The amount of milliseconds to buffer for.",
+					"type": "int",
+					"required": true
+				}
+			]
+		}
+	]
+}

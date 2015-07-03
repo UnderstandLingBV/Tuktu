@@ -1,0 +1,37 @@
+{
+	"name": "Field Constant Adder Processor",
+	"description": "Adds a field with a constant (static) value to the data packet.",
+	"class": "tuktu.processors.FieldConstantAdderProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "value",
+					"description": "A Tuktu String to evaluate and add.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "is_numeric",
+					"description": "Convert Tuktu String to Long, or not.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

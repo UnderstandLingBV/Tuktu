@@ -1,0 +1,30 @@
+{
+	"name": "Count Processor",
+	"description": "Counts the amount of values in a bucket.",
+	"class": "tuktu.processors.bucket.aggregate.CountProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field under which the result is returned.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

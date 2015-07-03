@@ -1,0 +1,61 @@
+{
+	"name": "MongoDB Find Processor",
+	"description": "Executes a query with a filter on a given list of nodes.",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBFindProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"description": "The database name.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"description": "The name of the collection to open.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "query",
+					"description": "Find the documents matching these given criteria.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "filter",
+					"description": "Filter results by this projection.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

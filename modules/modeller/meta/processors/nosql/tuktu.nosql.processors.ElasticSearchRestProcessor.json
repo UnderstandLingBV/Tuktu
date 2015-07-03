@@ -1,0 +1,49 @@
+{
+	"name": "Elastic Search Rest Processor",
+	"description": "Makes an HTTP request to Elastic Search, using the REST API.",
+	"class": "tuktu.nosql.processors.ESProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"description": "The HTTP address to make the request to.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "http_method",
+					"description": "Usually one of get, post, put, delete.",
+					"type": "string",
+					"required": false,
+					"default": "get"
+				},
+				{
+					"name": "body",
+					"description": "The body to be send with the request.",
+					"type": "any",
+					"required": false
+				},
+				{
+					"name": "field",
+					"description": "The JSON field to be extracted from the response JSON.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

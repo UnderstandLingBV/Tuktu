@@ -1,0 +1,68 @@
+{
+	"name": "Generator Stream Processor",
+	"description": "Invokes a new generator, which sends its data to a given list of processors.",
+	"class": "tuktu.processors.meta.GeneratorStreamProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "name",
+					"description": "The name of the config file.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "node",
+					"description": "A Tuktu SingleNode to execute on.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "next",
+					"description": "The processors to send data into.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "processors",
+					"description": "The actual config, being a list of processors.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "JsObject",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "sync",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

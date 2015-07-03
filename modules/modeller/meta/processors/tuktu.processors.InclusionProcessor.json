@@ -1,0 +1,43 @@
+{
+	"name": "Inclusion Processor",
+	"description": "Includes or excludes specific data packets which do not match a given expression.",
+	"class": "tuktu.processors.InclusionProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "expression",
+					"description": "A groovy expression if type is groovy, or a comma-separated list of field=value statements.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "type",
+					"description": "The type of the expression: 'normal', 'negate', or 'groovy'.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "and_or",
+					"description": "In case of normal or negate type, do all statements need to evaluate to true (and), or at least one (or).",
+					"type": "string",
+					"required": false,
+					"default": "and"
+				}
+			]
+		}
+	]
+}

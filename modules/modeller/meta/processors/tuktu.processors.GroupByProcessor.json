@@ -1,0 +1,37 @@
+{
+	"name": "GroupBy Processor",
+	"description": "Buffers and groups data by the value list of the provided fields.",
+	"class": "tuktu.processors.GroupByBuffer",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"type": "array",
+					"description": "The fields to group on. First field will be used as root-grouping, then the next field etc.",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}

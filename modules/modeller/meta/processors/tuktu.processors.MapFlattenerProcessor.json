@@ -1,0 +1,30 @@
+{
+	"name": "Map Flattener Processor",
+	"description": "Takes a Map[String, Any] and makes it a top-level citizen, overwriting other top-level fields with the same name.",
+	"class": "tuktu.processors.MapFlattenerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field which contains the map.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
