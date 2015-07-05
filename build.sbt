@@ -7,6 +7,15 @@ lazy val appResolvers = Seq(
     "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository"
 )
 
+lazy val modellerDependencies = Seq(
+    cache,
+    filters,
+    "org.webjars" % "jquery" % "1.11.3",
+    "org.webjars" % "bootstrap" % "3.3.4",
+    "org.webjars" % "raphaeljs" % "2.1.2-1",
+    "org.webjars" % "underscorejs" % "1.8.3"
+)
+
 lazy val apiDependencies = Seq(
     cache,
     "org.scalatest" %% "scalatest" % "2.2.1" % "test",
@@ -107,6 +116,15 @@ lazy val dfsDependencies = Seq(
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "com.typesafe.akka" %% "akka-remote" % "2.3.4"
 )
+
+lazy val modeller = (project in file("modules/modeller"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-Modeller")
+    .settings(version := "1.0")
+    .settings(scalaVersion := "2.11.7")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= modellerDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
 
 lazy val api = (project in file("modules/api"))
     .enablePlugins(PlayScala)
@@ -214,5 +232,5 @@ lazy val root = project
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= coreDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
-    .aggregate(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb)
-    .dependsOn(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb)
+    .aggregate(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb, modeller)
+    .dependsOn(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb, modeller)

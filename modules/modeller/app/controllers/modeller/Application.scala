@@ -1,4 +1,4 @@
-package controllers
+package controllers.modeller
 
 import play.api._
 import play.api.mvc._
@@ -12,7 +12,7 @@ object Application extends Controller {
         
         val generators = Cache.getAs[Iterable[(String, Iterable[(String, JsValue)])]]("generators").getOrElse(List())
         val processors = Cache.getAs[Iterable[(String, Iterable[(String, JsValue)])]]("processors").getOrElse(List())
-        
-        Ok(views.html.index(generators, processors))
+
+        Ok(views.html.modeller.index(generators, processors))
     }
 }

@@ -5,9 +5,13 @@
 GET     /                                   controllers.Monitor.fetchLocalInfo
 GET     /index                              controllers.Monitor.fetchLocalInfo
 
+# Modeller
+->      /modeller                           modeller.Routes
+
 # Dispatching
 GET     /dispatch/:id/:inst 		        controllers.Asynchronous.load(id, inst: Int)
 POST	/config						        controllers.Asynchronous.loadPost
+
 # Synchronous
 POST    /sync                               controllers.Synchronous.loadJsonPost
 
@@ -32,9 +36,6 @@ POST    /scheduleSimple						controllers.Scheduler.scheduleSimpleStart
 POST    /scheduleCron						controllers.Scheduler.scheduleCronStart
 GET		/terminateScheduler/:id				controllers.Scheduler.terminate(id)
 POST    /showConfigsScheduler               controllers.Scheduler.showConfigs
-
-# Embedded modeller
-GET     /modeller                           controllers.Modeller.modeller
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                       controllers.Assets.at(path="/public", file)

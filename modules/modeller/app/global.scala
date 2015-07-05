@@ -1,4 +1,11 @@
 import java.io.File
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
+
+import com.fasterxml.jackson.core.JsonParseException
+
 import akka.actor.Actor
 import akka.actor.Props
 import play.api.Application
@@ -7,22 +14,8 @@ import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.libs.json.Json
-import com.fasterxml.jackson.core.JsonParseException
 import play.api.libs.json.JsValue
-import scala.language.postfixOps
-
-import javax.inject.Inject
-
-import play.api.http.HttpFilters
-import play.filters.gzip.GzipFilter
-
-class Filters @Inject() (gzipFilter: GzipFilter) extends HttpFilters {
-    def filters = Seq(gzipFilter)
-}
-
+import play.api.libs.json.Json
 
 object Global extends GlobalSettings {
     def getDescriptors(files: List[File]) = {
