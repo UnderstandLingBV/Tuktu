@@ -1,3 +1,5 @@
+package globals
+
 import java.io.File
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -17,7 +19,7 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 
-object Global extends GlobalSettings {
+class ModellerGlobal extends GlobalSettings {
     def getDescriptors(files: List[File]) = {
         (for {
                 file <- files
