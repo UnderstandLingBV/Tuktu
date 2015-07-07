@@ -7,13 +7,12 @@ import play.api.cache.Cache
 import play.api.Play
 import play.api.Play.current
 import java.io.IOException
-import tuktu.api.DFSReadRequest
-import tuktu.api.DFSCreateRequest
-import tuktu.api.DFSCreateReply
-import tuktu.api.DFSReadReply
-import tuktu.api.DFSDeleteRequest
-import tuktu.api.DFSDeleteReply
+import tuktu.api._
 import scala.util.hashing.MurmurHash3
+import java.io.BufferedWriter
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
+import tuktu.dfs.util.util.getIndex
 
 /**
  * Central point of communication for the DFS
@@ -24,26 +23,8 @@ class DFSDaemon extends Actor with ActorLogging {
     // Get the prefix
     val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
     
-    /**
-     * Gets the DFS index for a filename
-     */
-    private def getIndex(filename: String) = {
-        // See what to split on
-        val index = {
-            if (filename.contains("\\")) filename.split("\\")
-            else filename.split("/")
-        } toList
-        
-        (index, index.dropRight(1))
-    }
-    
-    /**
-     * Hashes an idnex to a node
-     */
-    /*def packetToNodeHasher(index: List[String], keys: List[String], maxSize: Int) = {
-        val keyString = (for (key <- keys) yield packet(key)).mkString
-        Math.abs(MurmurHash3.stringHash(keyString) % maxSize)
-    }*/
+    // Open files
+    val openFiles = collection.mutable.Map[String, BufferedWriter]()
     
     /**
      * Resolves a file, gives a DFSReply
@@ -159,13 +140,42 @@ class DFSDaemon extends Actor with ActorLogging {
             // Fetch the file and send back
             sender ! new DFSReadReply(resolveFile(rr.filename))
         }
-        case wr: DFSCreateRequest => {
+        case cr: DFSCreateRequest => {
             // Create file and send back
-            sender ! new DFSCreateReply(createFile(wr.filename, wr.isDirectory))
+            sender ! new DFSCreateReply(createFile(cr.filename, cr.isDirectory))
         }
         case dr: DFSDeleteRequest => {
             // Delete the file and send back
             sender ! new DFSDeleteReply(deleteFile(dr.filename, dr.isDirectory))
         }
+        case or: DFSOpenRequest => {
+            val filename = prefix + "/" + or.filename
+            // Create first if needed
+            if (!openFiles.contains(filename)) createFile(or.filename, false)
+            
+            if (!openFiles.contains(filename)) {
+                // Open file
+                val file = new File(filename)
+                // Add to our list
+                openFiles += filename -> new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), or.encoding))
+            }
+        }
+        case cr: DFSCloseRequest => {
+            val filename = prefix + "/" + cr.filename
+            if (openFiles.contains(filename)) {
+                // Close writer
+                openFiles(filename).flush
+                openFiles(filename).close
+                // Remove from map
+                openFiles -= filename
+            }
+        }
+        case wr: DFSWriteRequest => {
+            val filename = prefix + "/" + wr.filename
+            // Write to our file
+            if (openFiles.contains(filename))
+                openFiles(filename).write(wr.content)
+        }
+        case _ => {}
     }
 }
