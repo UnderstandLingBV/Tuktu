@@ -14,6 +14,10 @@ import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import tuktu.dfs.util.util.getIndex
 
+case class DFSListRequest(
+        filename: String
+)
+
 /**
  * Central point of communication for the DFS
  */
@@ -194,7 +198,21 @@ class DFSDaemon extends Actor with ActorLogging {
                 openFiles(filename).write(wr.content)
         }
         case init: InitPacket => {
-            initialize(new File(prefix))
+            // Check if directory exists, if not, make it
+            val rootFolder = new File(prefix)
+            if (!rootFolder.exists)
+                rootFolder.mkdirs
+            
+            initialize(rootFolder)
+        }
+        case lr: DFSListRequest => {
+            // Send back the files in this folder, if any
+            val filename = prefix + "/" + lr.filename
+            val (index, dirIndex) = getIndex(filename)
+            
+            sender ! {
+                if (dfsTable.contains(index)) dfsTable(index) toList else List()
+            }
         }
         case _ => {}
     }
