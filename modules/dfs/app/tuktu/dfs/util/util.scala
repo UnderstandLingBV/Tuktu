@@ -35,7 +35,7 @@ object util {
     def getIndex(filename: String) = {
         // See what to split on
         val index = {
-            if (filename.contains("\\")) filename.split("\\")
+            if (filename.contains("\\")) filename.split("\\\\")
             else filename.split("/")
         } toList
         

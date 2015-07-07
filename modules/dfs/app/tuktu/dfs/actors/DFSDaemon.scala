@@ -135,6 +135,23 @@ class DFSDaemon extends Actor with ActorLogging {
         }
     }
     
+    /**
+     * On initialization, add all the current files to the in memory table store
+     */
+    private def initialize(directory: File): Unit = {     
+        val (index, dirIndex) = getIndex(directory.toString)
+        // initialize this directory
+        dfsTable += index -> collection.mutable.HashSet[String]()
+        // add files or add another directory
+        directory.listFiles.foreach { file => {
+                if(file.isDirectory) 
+                    initialize(file)
+                else
+                    dfsTable(index) += file.toString
+            }
+        }        
+    }
+    
     def receive() = {
         case rr: DFSReadRequest => {
             // Fetch the file and send back
@@ -175,6 +192,9 @@ class DFSDaemon extends Actor with ActorLogging {
             // Write to our file
             if (openFiles.contains(filename))
                 openFiles(filename).write(wr.content)
+        }
+        case init: InitPacket => {
+            initialize(new File(prefix))
         }
         case _ => {}
     }
