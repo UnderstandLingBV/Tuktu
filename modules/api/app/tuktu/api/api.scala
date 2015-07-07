@@ -135,3 +135,6 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
 abstract class DataMerger() {
     def merge(packets: List[DataPacket]): DataPacket = ???
 }
+
+abstract class DFSProcessor(resultName: String) extends BaseProcessor(resultName: String) {}
+abstract class DFSGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {}

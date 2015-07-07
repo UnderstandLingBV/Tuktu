@@ -6,59 +6,166 @@ import java.io.File
 import play.api.cache.Cache
 import play.api.Play
 import play.api.Play.current
-
-case class ReadRequest(
-        filename: String,
-        bufferSize: Int
-)
-case class ProbeRequest(
-        filename: String
-)
+import java.io.IOException
+import tuktu.api.DFSReadRequest
+import tuktu.api.DFSCreateRequest
+import tuktu.api.DFSCreateReply
+import tuktu.api.DFSReadReply
+import tuktu.api.DFSDeleteRequest
+import tuktu.api.DFSDeleteReply
+import scala.util.hashing.MurmurHash3
 
 /**
  * Central point of communication for the DFS
  */
 class DFSDaemon extends Actor with ActorLogging {
+    // File map to keep in-memory. A map from a list of (sub)directories to a hashset containing the files
+    val dfsTable = collection.mutable.Map[List[String], collection.mutable.HashSet[String]]()
+    // Get the prefix
+    val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+    
     /**
-     * Recursively builds a file table containing the files and folders present on the DFS
+     * Gets the DFS index for a filename
      */
-    def buildFileTable(directory: File): Unit = {
-        // Get files from directory
-        val files = directory.listFiles
+    private def getIndex(filename: String) = {
+        // See what to split on
+        val index = {
+            if (filename.contains("\\")) filename.split("\\")
+            else filename.split("/")
+        } toList
         
-        // Add all files and folder
-        files.map(file => {
-            if (!file.isDirectory)
-                // Just a file, add it
-                Cache.set(file.getPath, file)
+        (index, index.dropRight(1))
+    }
+    
+    /**
+     * Hashes an idnex to a node
+     */
+    /*def packetToNodeHasher(index: List[String], keys: List[String], maxSize: Int) = {
+        val keyString = (for (key <- keys) yield packet(key)).mkString
+        Math.abs(MurmurHash3.stringHash(keyString) % maxSize)
+    }*/
+    
+    /**
+     * Resolves a file, gives a DFSReply
+     */
+    private def resolveFile(filename: String): Option[File] = {
+        // Get indexes
+        val (index, dirIndex) = getIndex(filename)
+        
+        // See if it exists
+        if (!dfsTable.contains(index) && !dfsTable.contains(dirIndex)) None
+        else Some(new File(prefix + "/" + filename))
+    }
+    
+    /**
+     * Creates a directory on disk and adds it to the DFS
+     */
+    private def makeDir(index: List[String], filename: String) = {
+        val dirName = prefix + "/" + filename
+        if (!dfsTable.contains(index)) {
+            val file = new File(dirName)
+            val res = if (!file.exists) file.mkdirs else true
+                
+            // Add to our DFS Table
+            if (res)
+                dfsTable += index -> collection.mutable.HashSet[String]()
+            
+            // Return success or not
+            res
+        }
+        else true // Already existed
+    }
+    
+    /**
+     * Creates a file or directory and adds it to the DFS
+     */
+    private def createFile(filename: String, isDirectory: Boolean): Option[File] = {
+        // Get indexes
+        val (index, dirIndex) = getIndex(filename)
+        
+        // See if we need to make a directory or a file
+        if (isDirectory) {
+            val success = makeDir(index, filename)
+            if (success) Some(new File(prefix + "/" + filename))
+            else None
+        }
+        else {
+            // It's a file, first see if we need to/can make a dir
+            val dirSuccess = makeDir(dirIndex, filename)
+            if (!dirSuccess) None
             else {
-                // Recurse
-                Cache.set(file.getPath, file)
-                buildFileTable(file)
-            }
-        })
-    }
-    
-    /**
-     * Tries to locate a file on the DFS and returns it
-     */
-    def fetchFile(filename: String) = {
-        
-    }
-    
-    // Initial setup, build file table
-    buildFileTable(new File(Play.current.configuration.getString("tuktu.dfs.root").getOrElse("dfs")))
-    
-    def receive() = {
-        case pr: ProbeRequest => {
-            // Check if the file exists
-            Cache.get(pr.filename) match {
-                case None => sender ! false
-                case _ => sender ! true
+                // Make the file
+                val res = try {
+                    // Make file
+                    val file = new File(prefix + "/" + filename)
+                    file.createNewFile
+                    
+                    // Add to map
+                    dfsTable(dirIndex) += index.takeRight(1).head
+                    
+                    Some(file)
+                } catch {
+                    case e: IOException => {
+                        log.warning("Failed to create DFS file " + filename)
+                        None
+                    }
+                }
+                
+                res
             }
         }
-        case rr: ReadRequest => {
-            // Fetch the file
+    }
+    
+    /**
+     * Recursively deletes directories and files in it
+     */
+    private def deleteDirectory(directory: File): Boolean = {
+        // Get all files in this directory
+        val files = directory.listFiles
+        (for (file <- files) yield {
+            // Recurse or not?
+            if (file.isDirectory) deleteDirectory(file)
+            else file.delete
+        }).toList.foldLeft(true)(_ && _)
+    }
+    
+    /**
+     * Deletes a file or directory
+     */
+    private def deleteFile(filename: String, isDirectory: Boolean) = {
+        // Get indexes
+        val (index, dirIndex) = getIndex(filename)
+        
+        // See if it's a directory or a file
+        if (isDirectory) {
+            // Delete directory from our DFS Table and from disk
+            val res = deleteDirectory(new File(prefix + "/" + filename))
+            dfsTable -= index
+            
+            res
+        }
+        else {
+            // Remove the file from disk and DFS
+            val res = new File(prefix + "/" + filename).delete
+            if (dfsTable(dirIndex).size == 1) dfsTable -= dirIndex
+            else dfsTable(dirIndex) -= index.takeRight(1).head
+            
+            res
+        }
+    }
+    
+    def receive() = {
+        case rr: DFSReadRequest => {
+            // Fetch the file and send back
+            sender ! new DFSReadReply(resolveFile(rr.filename))
+        }
+        case wr: DFSCreateRequest => {
+            // Create file and send back
+            sender ! new DFSCreateReply(createFile(wr.filename, wr.isDirectory))
+        }
+        case dr: DFSDeleteRequest => {
+            // Delete the file and send back
+            sender ! new DFSDeleteReply(deleteFile(dr.filename, dr.isDirectory))
         }
     }
 }
