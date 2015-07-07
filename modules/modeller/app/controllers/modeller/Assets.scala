@@ -1,4 +1,3 @@
 package controllers.modeller
 
-object Assets extends controllers.AssetsBuilder{
-}
+object Assets extends controllers.AssetsBuilder {}

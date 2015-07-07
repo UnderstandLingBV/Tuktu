@@ -1,4 +1,4 @@
-@(generators: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])], processors: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])])
+@(generators: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])], processors: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])], config: String)(implicit request: RequestHeader)
 
 @main {
 	<nav class="navbar navbar-default">
@@ -9,7 +9,6 @@
 			<ul class="nav navbar-nav">
 				<li><a href="#AddGenerator">Add Generator</a></li>
 				<li><a href="#AddProcessor">Add Processor</a></li>
-				<li><a href="#ConfigImport">Import Config</a></li>
 				<li><a href="#GenerateConfig">Generate Config</a></li>
 			</ul>
 
@@ -101,25 +100,19 @@
 						</div>
 					</div>
 				</form>
-				<form class="hidden" id="importedConfig">
-					<div class="form-group">
-						<label for="importTextarea">Import Config</label>
-						<textarea id="importTextarea" class="form-control" rows="12"></textarea>
-					</div>
-					<div class="form-group">
-						<a href="#ImportConfig" class="btn btn-primary">Import Config</a>
-					</div>
-				</form>
 				<form class="hidden" id="generatedOutput">
 					<div class="form-group">
 						<label for="outputTextarea">Generated Config</label>
 						<textarea id="outputTextarea" class="form-control" rows="12"></textarea>
 					</div>
 					<div class="form-group">
-						<a href="#GenerateConfig" class="btn btn-primary">Generate Config</a>
+						<a href="#SaveConfig" class="btn btn-primary">Save Config</a>
 					</div>
 				</form>
 			</div>
 		</div>
 	</div>
+	<script type="text/javascript">
+		var loadedConfig = @Html(config);
+	</script>
 }

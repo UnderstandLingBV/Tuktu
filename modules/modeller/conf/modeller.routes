@@ -3,7 +3,11 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.modeller.Application.index
+GET    /                   controllers.modeller.Application.index(file: String)
+
+# JavaScript Routes
+GET    /javascriptRoutes   controllers.modeller.JavascriptRoute.javascriptRoutes
+POST   /saveConfig         controllers.modeller.Application.saveConfig
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.modeller.Assets.versioned(path="/public", file: Asset)
+GET    /assets/*file       controllers.modeller.Assets.versioned(path="/public", file: Asset)

@@ -475,9 +475,7 @@ class Processor extends Generator
 	getTargetPoint: ->
 		[@targetInner.attr('cx'), @targetInner.attr('cy')]
 
-generateConfig = (e) ->
-	e.preventDefault() if e?
-	selected.deselect() if selected?
+getConfig = ->
 	# Cycle through all nodes and add the array of successors to its config
 	gen = for g in allNodes.generators
 		conf = g.config
@@ -495,19 +493,25 @@ generateConfig = (e) ->
 	json =
 		generators:  gen
 		processors:  pro
+
+generateConfig = (e) ->
+	e.preventDefault() if e?
+	selected.deselect() if selected?
+	# Get actual config
+	json = getConfig()
+
 	$('#outputTextarea').val(JSON.stringify(json, null, '    ')).focus()
 	$('#preferences > *').addClass('hidden')
 	$('#generatedOutput').removeClass('hidden')
 
-importConfig = (e) ->
-	e.preventDefault()
+importConfig = (object) ->
 	try
 		for el in allNodes.generators.concat(allNodes.processors)
 			el.destructor()
 		globalId = 0
 
 		nodesPerRow = Math.floor(document.getElementById('flowchart').clientWidth / 200)
-		object = JSON.parse($('#importTextarea').val())
+
 		processorIds = {}
 		for processor in object.processors
 			processorIds[processor.id] = processor
@@ -543,19 +547,19 @@ importConfig = (e) ->
 			else
 				new Connection(pair[0], ids[pair[1]])
 
+# Load config
+importConfig(loadedConfig)
 
 # Bind click events
 $('a[href="#GenerateConfig"]').on('click', generateConfig)
 
-$('a[href="#ConfigImport"]').on('click', (e) ->
+$('a[href="#SaveConfig"]').on('click', (e) ->
 	e.preventDefault()
-	selected.deselect() if selected?
-	$('#preferences > *').addClass('hidden')
-	$('#importedConfig').removeClass('hidden')
-	$('#importTextarea').focus()
+	jsRoutes.controllers.modeller.Application.saveConfig().ajax(
+		contentType: "text/plain",
+		data: JSON.stringify(getConfig(), null, '    ')
+	)
 )
-
-$('a[href="#ImportConfig"]').on('click', importConfig)
 
 $('a[href="#AddGenerator"]').on('click', (e) ->
 	e.preventDefault()
