@@ -1,62 +1,56 @@
 @(path: Array[String], configs: Array[String], folders: Array[String])
     <div class="row" style="margin-bottom: 20px;">
        <div class="col-xs-12">
-		   <a href="#" onClick="navigateFolder('')">[root]</a>
-		   @if(path.size > 0) {
-		       @for((elem, index) <- path.zipWithIndex) { / <a href="#" onClick="navigateFolder('@path.take(index).mkString("/")/@elem')">@elem</a>}
-		   }
-		</div>
+           <a href="#" onClick="navigateFolder('')">[root]</a>
+           @if(path.size > 0) {
+               @for((elem, index) <- path.zipWithIndex) { / <a href="#" onClick="navigateFolder('@path.take(index).mkString("/")/@elem')">@elem</a>}
+           }
+        </div>
     </div>
+
+    @for(folder <- folders) {
+        <div class="row">
+            <div class="col-xs-12">
+                <a href="#" onClick="navigateFolder('@path.mkString("/")/@folder')">
+                    <span aria-hidden="true" class="glyphicon glyphicon-folder-open"></span>
+                    &nbsp;
+                    @folder
+                </a>
+            </div>
+        </div>
+    }
+
+    @if(!folders.isEmpty) { <hr> }
 
     @for(config <- configs) {
         <div class="row">
             <div class="col-xs-8">
+                <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
+                &nbsp;
                 @config
             </div>
             <div class="col-xs-2">
                 <form method="post" action="@routes.Monitor.startJob">
                     <input name="name" type="text" class="hidden" value="@path.mkString("/")/@config"/>
-                    <input type="submit" class="btn" value="Start Job">
+                    <input type="submit" class="btn btn-xs" value="Start Job">
                 </form>
             </div>
             <div class="col-xs-2">
-                <a href="@controllers.modeller.routes.Application.index((path :+ config + ".json").mkString("/"))" class="btn">Edit Config</a>
+                <a href="@controllers.modeller.routes.Application.index((path :+ config + ".json").mkString("/"))">Edit Config</a>
             </div>
         </div>
     }
-    @if(configs.isEmpty) {
-        <h2>No configuration files were found in this folder.</h2>
-    }
 
-	@if(folders.size > 0) {
-       <div class="row" style="margin-top: 10px;">
-           <div class="col-xs-12">
-               Subfolders
-           </div>
-           <div class="col-xs-12">
-                <ul class="list-unstyled" style="margin-left: 25px;">
-                   @for(folder <- folders) {
-                       <li>
-                           <a href="#" onClick="navigateFolder('@path.mkString("/")/@folder')">
-                               @folder
-                           </a>
-                       </li>
-                   }
-                </ul>
-           </div>
-        </div>
-    }
-	
-	<script type="text/javascript">
+    <script type="text/javascript">
         function navigateFolder(folder) {
-			$.ajax({
-		        method : "POST",
-		        url : "@routes.Monitor.showConfigs",
-		        data : {
-		            path : folder
-		        }
-		    }).done(function(html) {
-		        updateFormDiv(html);
-		    });
-		}
-	</script>
+            $.ajax({
+                method : "POST",
+                url : "@routes.Monitor.showConfigs",
+                data : {
+                    path : folder
+                }
+            }).done(function(html) {
+                updateFormDiv(html);
+            });
+        }
+    </script>
