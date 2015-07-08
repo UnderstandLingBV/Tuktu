@@ -8,6 +8,10 @@ GET     /index                              controllers.Monitor.fetchLocalInfo
 # Modeller
 ->      /modeller                           modeller.Routes
 
+# DFS
+GET     /filebrowser                        controllers.DFSWrapper.index
+->      /dfs                                dfs.Routes
+
 # Dispatching
 GET     /dispatch/:id/:inst 		        controllers.Asynchronous.load(id, inst: Int)
 POST	/config						        controllers.Asynchronous.loadPost

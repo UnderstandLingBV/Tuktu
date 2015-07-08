@@ -17,6 +17,10 @@ import tuktu.dfs.util.util.getIndex
 case class DFSListRequest(
         filename: String
 )
+case class DFSResponse(
+        files: List[String],
+        isDirectory: Boolean
+)
 
 /**
  * Central point of communication for the DFS
@@ -210,9 +214,23 @@ class DFSDaemon extends Actor with ActorLogging {
             val filename = prefix + "/" + lr.filename
             val (index, dirIndex) = getIndex(filename)
             
-            sender ! {
-                if (dfsTable.contains(index)) dfsTable(index) toList else List()
+            // Check if this is a directory or a file
+            val response = {
+                if (dfsTable.contains(index))
+                    // It's a directory
+                    new DFSResponse(dfsTable(index) toList, true)
+                else {
+                    if (dfsTable.contains(dirIndex))
+                        // It's a file
+                        new DFSResponse(List(lr.filename), false)
+                    else
+                        // Not found
+                        null
+                }
             }
+            
+            // Send back response
+            sender ! response
         }
         case _ => {}
     }

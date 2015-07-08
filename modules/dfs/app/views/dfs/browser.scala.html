@@ -1,2 +1,15 @@
 @()
-blaat
+
+<div id="fileList"></div>
+
+<script type="text/javascript">
+    $.ajax({
+        method : "POST",
+        url : "@controllers.dfs.routes.Browser.getFiles",
+        data : {
+            filename : ""
+        }
+    }).done(function(html) {
+        $('#fileList').html(html);
+    });
+</script>
