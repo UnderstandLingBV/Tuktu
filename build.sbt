@@ -117,15 +117,6 @@ lazy val dfsDependencies = Seq(
     "com.typesafe.akka" %% "akka-remote" % "2.3.4"
 )
 
-lazy val modeller = (project in file("modules/modeller"))
-    .enablePlugins(PlayScala)
-    .settings(name := "Tuktu-Modeller")
-    .settings(version := "1.0")
-    .settings(scalaVersion := "2.11.7")
-    .settings(resolvers ++= appResolvers)
-    .settings(libraryDependencies ++= modellerDependencies)
-    .settings(EclipseKeys.skipParents in ThisBuild := false)
-
 lazy val api = (project in file("modules/api"))
     .enablePlugins(PlayScala)
     .settings(name := "Tuktu-api")
@@ -134,6 +125,17 @@ lazy val api = (project in file("modules/api"))
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= apiDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
+ 
+lazy val modeller = (project in file("modules/modeller"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-Modeller")
+    .settings(version := "1.0")
+    .settings(scalaVersion := "2.11.7")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= modellerDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
+    .aggregate(api)
+    .dependsOn(api) 
     
 lazy val nlp = (project in file("modules/nlp"))
     .enablePlugins(PlayScala)

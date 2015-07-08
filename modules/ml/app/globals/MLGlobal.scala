@@ -1,6 +1,5 @@
 package globals
 
-import play.api.GlobalSettings
 import play.api.Application
 import akka.actor.Props
 import tuktu.ml.models.ModelRepository

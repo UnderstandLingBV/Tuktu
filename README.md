@@ -56,6 +56,10 @@ Tuktu jobs are essentially JSON configuration files that live in a pre-defined f
 
 Instead of writing configuration files yourself, you can make use of a graphical modeller that saves a lot of work and makes configuration creation dead simple. The modeller is included in Tuktu and is accessible from Tuktu's UI.
 
+The modeller lets you create data flows that can be run on Tuktu and looks a bit like this:
+
+![Modeller Example](modeller_example.png)
+
 # Examples
 
 Examples of Tuktu configuration files can be found on the [examples](examples.md) page.

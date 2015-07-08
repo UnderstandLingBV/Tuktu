@@ -18,8 +18,9 @@ import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
+import tuktu.api.TuktuGlobal
 
-class ModellerGlobal extends GlobalSettings {
+class ModellerGlobal() extends TuktuGlobal() {
     def getDescriptors(files: List[File]) = {
         (for {
                 file <- files
