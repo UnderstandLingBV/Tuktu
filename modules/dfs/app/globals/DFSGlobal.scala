@@ -7,12 +7,13 @@ import play.api.Application
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import tuktu.api.InitPacket
+import tuktu.api.TuktuGlobal
 
-class DFSGlobal extends GlobalSettings {
+class DFSGlobal() extends TuktuGlobal() {
     /**
      * Load this on startup. The application is given as parameter
      */
-    override def onStart(app: Application) {
+    override def onStart(app: Application) = {
         // Set up the DFS daemon
         val dfsActor = Akka.system.actorOf(Props[DFSDaemon], name = "tuktu.dfs.Daemon")
         dfsActor ! new InitPacket

@@ -21,6 +21,10 @@ case class DFSResponse(
         files: List[String],
         isDirectory: Boolean
 )
+case class DFSObject(
+        filename: String,
+        isDirectory: Boolean
+)
 
 /**
  * Central point of communication for the DFS
@@ -218,11 +222,11 @@ class DFSDaemon extends Actor with ActorLogging {
             val response = {
                 if (dfsTable.contains(index))
                     // It's a directory
-                    new DFSResponse(dfsTable(index) toList, true)
+                    new DFSResponse(dfsTable(index).toList.map(elem => elem.drop(prefix.size + 1)), true)
                 else {
                     if (dfsTable.contains(dirIndex))
                         // It's a file
-                        new DFSResponse(List(lr.filename), false)
+                        new DFSResponse(List(lr.filename.drop(prefix.size + 1)), false)
                     else
                         // Not found
                         null

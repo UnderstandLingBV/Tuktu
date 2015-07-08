@@ -19,6 +19,7 @@ import play.api.libs.json.JsValue
 import akka.actor.ActorRef
 import play.api.libs.json.JsObject
 import play.api.cache.Cache
+import play.api.Application
 
 case class DataPacket(
         data: List[Map[String, Any]]
@@ -130,8 +131,11 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     }
 }
 
-
-
 abstract class DataMerger() {
     def merge(packets: List[DataPacket]): DataPacket = ???
+}
+
+abstract class TuktuGlobal() {
+    def onStart(app: Application): Unit = {}
+    def onStop(app: Application): Unit = {}
 }

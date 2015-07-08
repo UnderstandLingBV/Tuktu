@@ -1,1 +1,11 @@
 @(files: List[String])
+
+@if(files == null) {
+    <h2>Failed to fetch files</h2>
+} else {
+	<ul>
+		@for(file <- files) {
+		    <li>@file</li>
+		}
+	</ul>
+}

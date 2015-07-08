@@ -1,13 +1,16 @@
 # Tuktu - Commodity Big Data Analytics
-Tuktu is a big data analytics platform that focuses on ease of use. The idea of the platform is that its users can focus on (business) logic rather than dealing with technical implementation details. As such, the core of Tuktu offers a number of focal points.
+Tuktu is a big data analytics platform that focuses on ease of use. The idea of the platform is that its users can focus on (business) logic rather than dealing with technical implementation details. Tuktu comes with a couple of key characteristics:
 
-- Easy setup and usage
-- Social analytics out-of-the-box 
-- Support for both synchronous and asynchronous processing
-- Native support for batch jobs as well as everlasting streaming jobs
-- Distributed computation
-- Easy integration with big data/NoSQL tooling
-- Easily extendable
+- Support for real-time and batch processing
+- Synchronous and asynchronous processing
+- A visual modeller that allows to create jobs using [drag-and-drop modelling](modules/modeller)
+- Tuktu has its own distributed file system that is very easy to use - alternatively, Tuktu integrates seamlessly with HDFS (and local files of course)
+- Periodic jobs can be scheduled natively from Tuktu
+- By default there is no master/slave architecture, so no single point of failure
+- Switch seamlessly between distributed and local (even transactional) computation paradigms
+- Modular setup, with a number of modules like [Machine Learning](modules/ml) and [Social](modules/social) already worked out
+- Automatic generation of documentation using the meta-files in the [modeller](modules/modeller)
+- Easy usage and setup: download the zip file and run the startup script (Windows, Mac and Linux supported)
 
 The name comes from the Inuït word *tuktu*, which freely translates to the English word *reindeer* (also known as *[caribou](http://en.wikipedia.org/wiki/Caribou)*).
 
@@ -19,7 +22,7 @@ Installing Tuktu can be done by either building from source as described below, 
 
 Note that Tuktu requires Java (JRE) to be present on the system it is run from. While Tuktu can be compiled against different java versions, this download was build against **java 1.8** and hence that version of java is required to run it.
 
-Note that in order to run Tuktu, you need to navigate a terminal or command prompt to the root folder and then execute the command `bin\tuktu(.bat)`.
+Note that in order to run Tuktu, you need to navigate a terminal or command prompt to the root folder and then execute the command `bin\tuktu(.bat)`. (Do not run Tuktu from the bin-folder itself)
 
 # Building from Source
 
@@ -51,10 +54,7 @@ Tuktu jobs are essentially JSON configuration files that live in a pre-defined f
 
 # Modeller
 
-Instead of writing configuration files yourself, you can make use of a graphical modeller that saves a lot of work and makes configuration creation dead simple. The modeller is a separate project that can be found [here](https://github.com/NTPape/tuktumodeller).
-
-The modeller can also be downloaded from the following URL [http://tuktu.et4it.nl/downloads/modeller-1.0.zip](http://tuktu.et4it.nl/downloads/modeller-1.0.zip). To run the modeller, you can do the same as for Tuktu, but when Tuktu is already running on port 9000, you might want to run the modeller on a different port as such: `bin\modeller(.bat) -Dhttp.port=9001`. The modeller is now available at [http://localhost:9001](http://localhost:9001).
-
+Instead of writing configuration files yourself, you can make use of a graphical modeller that saves a lot of work and makes configuration creation dead simple. The modeller is included in Tuktu and is accessible from Tuktu's UI.
 
 # Examples
 
@@ -183,8 +183,11 @@ Tuktu comes with a number of submodules by default. Read more about them here.
 
 - The [API](modules/api) submodule. This is actually part of Tuktu's core and used for extending the platform.
 - The [CSV](modules/csv) submodule. In Big Data, CSV files are often used to export legacy data into NoSQL systems. This package helps with that.
+- The [DFS](module/dfs) submodule contains the Distributed File System that comes with Tuktu. It also includes the File Browser that is accessible from the Tuktu UI. 
 - The [ML](modules/ml) submodule. This module contains some machine learning functionality.
+- The [Modeller](modules/modeller) contains the entire UI for the visual drag-and-drop modeller for Tuktu.
 - The [NLP](modules/nlp) submodule. This module contains some algorithms on Natural Language Processing.
 - The [NoSQL](modules/nosql) submodule. This module contains standard methods to read or write from and to some popular NoSQL systems.
 - The [Social](modules/social) submodule. This module contains generators for social media and some basic processors. 
+- The [DB](modules/tuktudb) submodule. This module contains Tuktu's distributed in-memory database.
 - The [Web](modules/web) submodule. This module will deal with HTTP traffic and has functionality for performing wb analytics.

@@ -23,6 +23,7 @@ import play.api.libs.json.Json
 import org.reflections.Reflections
 import scala.collection.JavaConverters._
 import controllers.TuktuScheduler
+import tuktu.api.TuktuGlobal
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -30,14 +31,14 @@ object Global extends GlobalSettings {
     /**
      * Load module globals
      */
-    private val moduleGlobals = collection.mutable.ListBuffer[GlobalSettings]()
+    private val moduleGlobals = collection.mutable.ListBuffer[TuktuGlobal]()
     private def LoadModuleGlobals(app: Application) = {
         // Fetch all globals
         val reflections = new Reflections("globals")
-        val moduleGlobalClasses = reflections.getSubTypesOf(classOf[GlobalSettings]).asScala
+        val moduleGlobalClasses = reflections.getSubTypesOf(classOf[TuktuGlobal]).asScala
 
         moduleGlobalClasses.foreach(moduleGlobal => try {
-                moduleGlobals += moduleGlobal.newInstance().asInstanceOf[GlobalSettings]
+                moduleGlobals += moduleGlobal.newInstance().asInstanceOf[TuktuGlobal]
             } catch {
                 case e: Exception => {
                     System.err.println("Failed loading Global of " + moduleGlobal.getName)
