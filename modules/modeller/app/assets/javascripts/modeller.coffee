@@ -557,7 +557,17 @@ $('a[href="#SaveConfig"]').on('click', (e) ->
 	e.preventDefault()
 	jsRoutes.controllers.modeller.Application.saveConfig().ajax(
 		contentType: "text/plain",
-		data: JSON.stringify(getConfig(), null, '    ')
+		data: JSON.stringify(getConfig(), null, '    '),
+		success: ->
+			resultSymbol = document.createElement('span')
+			resultSymbol.className = "glyphicon glyphicon-ok-circle"
+			e.target.parentNode.insertBefore(resultSymbol, e.target.nextSibling)
+			$(resultSymbol).fadeOut(5000, -> e.target.parentNode.removeChild(resultSymbol))
+		error: ->
+			resultSymbol = document.createElement('span')
+			resultSymbol.className = "glyphicon glyphicon-remove-circle"
+			e.target.parentNode.insertBefore(resultSymbol, e.target.nextSibling)
+			$(resultSymbol).fadeOut(5000, -> e.target.parentNode.removeChild(resultSymbol))
 	)
 )
 
