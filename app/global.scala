@@ -24,6 +24,7 @@ import org.reflections.Reflections
 import scala.collection.JavaConverters._
 import controllers.TuktuScheduler
 import tuktu.api.TuktuGlobal
+import controllers.AutoStart
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -72,6 +73,9 @@ object Global extends GlobalSettings {
         // Load module globals
         LoadModuleGlobals(app)
         moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStart(app))
+        
+        // Already start running jobs as defined in the autostart file
+        AutoStart
 	}
     
     /**
