@@ -56,7 +56,7 @@ class H2Caching (resultName: String) extends BaseProcessor(resultName) {
     })
     
     def createH2Client() = {
-        val url = s"jdbc:h2:mem:$dbName;MODE=MYSQL;DB_CLOSE_DELAY=-1"
+        val url = s"jdbc:h2:mem:$dbName;MODE=MYSQL;DB_CLOSE_DELAY=-1;IGNORECASE=TRUE"
         val user = "sa"
         val password = ""
         val driver = "org.h2.Driver"
