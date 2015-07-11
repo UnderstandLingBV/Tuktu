@@ -187,7 +187,7 @@ Tuktu comes with a number of submodules by default. Read more about them here.
 
 - The [API](modules/api) submodule. This is actually part of Tuktu's core and used for extending the platform.
 - The [CSV](modules/csv) submodule. In Big Data, CSV files are often used to export legacy data into NoSQL systems. This package helps with that.
-- The [DFS](module/dfs) submodule contains the Distributed File System that comes with Tuktu. It also includes the File Browser that is accessible from the Tuktu UI. 
+- The [DFS](modules/dfs) submodule contains the Distributed File System that comes with Tuktu. It also includes the File Browser that is accessible from the Tuktu UI. 
 - The [ML](modules/ml) submodule. This module contains some machine learning functionality.
 - The [Modeller](modules/modeller) contains the entire UI for the visual drag-and-drop modeller for Tuktu.
 - The [NLP](modules/nlp) submodule. This module contains some algorithms on Natural Language Processing.

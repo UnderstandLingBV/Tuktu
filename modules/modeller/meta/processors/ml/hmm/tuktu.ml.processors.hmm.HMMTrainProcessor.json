@@ -55,6 +55,84 @@
 					"description": "The number of distinct observable states.",
 					"type": "int",
 					"required": true
+				},
+				{
+					"name": "priors",
+					"type": "object",
+					"description": "The priors for the HMM matrices.",
+					"required": false,
+					"parameters": [
+						{
+							"name": "transitions",
+							"description": "The priors of the transition matrix A.",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "Rows",
+									"description": "The rows of the transition matrix.",
+									"type": "array",
+									"required": false,
+									"parameters": [
+										{
+											"name": "Column",
+											"description": "The actual value of the element.",
+											"type": "int",
+											"required": false
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "emissions",
+							"description": "The priors of the emission matrix B.",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "Rows",
+									"description": "The rows of the emissions matrix.",
+									"type": "array",
+									"required": false,
+									"parameters": [
+										{
+											"name": "Column",
+											"description": "The actual value of the element.",
+											"type": "int",
+											"required": false
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "start",
+							"description": "The priors of the start matrix Pi.",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "Rows",
+									"description": "The actual value of the element.",
+									"type": "int",
+									"required": false
+								}
+							]
+						},
+						{
+							"name": "emissions",
+							"description": "The priors of the emission matrix.",
+							"type": "array",
+							"required": false
+						},
+						{
+							"name": "start",
+							"description": "The priors of the start vector.",
+							"type": "array",
+							"required": false
+						}
+					]
 				}
 			]
 		}

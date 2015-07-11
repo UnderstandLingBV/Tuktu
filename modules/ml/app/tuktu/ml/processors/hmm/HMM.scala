@@ -19,6 +19,12 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
 
     // Keep track of how many packets we have seen
     var packetCount = 0
+    
+    // Used for setting priors
+    var priorA: List[List[Double]] = _
+    var priorB: List[List[Double]] = _
+    var priorPi: List[Double] = _
+    var priorsGiven = false
 
     override def initialize(config: JsObject) {
         observationsField = (config \ "observations_field").as[String]
@@ -26,6 +32,18 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
         // Get number of hidden and observable states
         numHidden = (config \ "num_hidden").as[Int]
         numObservable = (config \ "num_observable").as[Int]
+        
+        // Read out the priors, if any
+        val priorsObject = (config \ "priors").asOpt[JsObject]
+        priorsObject match {
+            case Some(priors) => {
+                priorA = (priors \ "transitions").as[List[List[Double]]]
+                priorB = (priors \ "emissions").as[List[List[Double]]]
+                priorPi = (priors \ "start").as[List[Double]]
+                priorsGiven = true
+            }
+            case None => {}
+        }
 
         super.initialize(config)
     }
@@ -33,16 +51,33 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
     // Instantiates a Hidden Markov Model with a number of hidden states and a number of observable states
     override def instantiate(): HiddenMarkovModel = {
         new HiddenMarkovModel(numHidden, numObservable) {
-            // Initialize A, B, Pi
-            for {
-                i <- 0 to numHidden - 1
-                j <- 0 to numHidden - 1
-            } A(i, j) = 1.0 / numHidden
-            for {
-                i <- 0 to numHidden - 1
-                j <- 0 to numObservable - 1
-            } B(i, j) = 1.0 / numObservable
-            for (i <- 0 to numHidden - 1) Pi(i) = 1.0 / numHidden
+            // Set priors if any
+            if (priorsGiven) {
+                // Loop and initialize the matrices
+                for {
+                    i <- 0 to numHidden - 1
+                    j <- 0 to numHidden - 1
+                } A(i, j) = priorA(i)(j)
+                for {
+                    i <- 0 to numHidden - 1
+                    j <- 0 to numObservable - 1
+                } B(i, j) = priorB(i)(j)
+                for (i <- 0 to numHidden - 1) Pi(i) = priorPi(i)
+                
+                this.normalize()
+            }
+            else {
+                // Initialize A, B, Pi
+                for {
+                    i <- 0 to numHidden - 1
+                    j <- 0 to numHidden - 1
+                } A(i, j) = 1.0 / numHidden
+                for {
+                    i <- 0 to numHidden - 1
+                    j <- 0 to numObservable - 1
+                } B(i, j) = 1.0 / numObservable
+                for (i <- 0 to numHidden - 1) Pi(i) = 1.0 / numHidden
+            }
         }
     }
         
