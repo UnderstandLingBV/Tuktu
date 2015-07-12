@@ -236,14 +236,14 @@ class DFSDaemon extends Actor with ActorLogging {
             val response = {
                 if (dfsTable.contains(index))
                     // It's a directory
-                    new DFSResponse(dfsTable(index).map(elem => elem._1.drop(prefix.size + 1) -> elem._2).toMap, true)
+                    Some(new DFSResponse(dfsTable(index).map(elem => elem._1.drop(prefix.size + 1) -> elem._2).toMap, true))
                 else {
                     if (dfsTable.contains(dirIndex))
                         // It's a file
-                        new DFSResponse(Map(lr.filename.drop(prefix.size + 1) -> new DFSElement(false)), false)
+                        Some(new DFSResponse(Map(lr.filename.drop(prefix.size + 1) -> new DFSElement(false)), false))
                     else
                         // Not found
-                        null
+                        None
                 }
             }
             

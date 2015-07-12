@@ -35,26 +35,27 @@ object Browser  extends Controller {
         val index = util.getIndex(filename)._1
         
         // Ask the DFS Daemon for the files
-        val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new DFSListRequest(filename)).asInstanceOf[Future[DFSResponse]]
+        val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new DFSListRequest(filename)).asInstanceOf[Future[Option[DFSResponse]]]
         
-        fut.map(response => {
+        fut.map(resp => {
             // Check what the response is
-            if (response == null)
-                Ok(views.html.dfs.files(index, null, null))
-            else {
-                // Check if it is a directory or not
-                if (response.isDirectory) {
-                    // We should list the files and folders
-                    val folders = response.files.collect {
-                            case el: (String, DFSElement) if el._2.isDirectory => el._1
+            resp match {
+                case None => Ok(views.html.dfs.files(index, null, null))
+                case Some(response) => {
+                    // Check if it is a directory or not
+                    if (response.isDirectory) {
+                        // We should list the files and folders
+                        val folders = response.files.collect {
+                                case el: (String, DFSElement) if el._2.isDirectory => el._1
+                        }
+                        val files = response.files.collect {
+                                case el: (String, DFSElement) if !el._2.isDirectory => el._1
+                        }
+                        
+                        Ok(views.html.dfs.files(index, folders toList, files toList))
                     }
-                    val files = response.files.collect {
-                            case el: (String, DFSElement) if !el._2.isDirectory => el._1
-                    }
-                    
-                    Ok(views.html.dfs.files(index, folders toList, files toList))
+                    else Ok("File")
                 }
-                else Ok("File")
             }
         })
     }

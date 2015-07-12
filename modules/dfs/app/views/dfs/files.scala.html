@@ -7,7 +7,7 @@
        <div class="col-xs-12">
            <a href="#" onClick="navigateFolder('')">[root]</a>
            @if(index.size > 1) {
-               @for((elem, ind) <- index.drop(1).zipWithIndex) { / <a href="#" onClick="navigateFolder('@index.take(ind).mkString("/")/@elem')">@elem</a>}
+               @for((elem, ind) <- index.drop(1).zipWithIndex) { / <a href="#" onClick="navigateFolder('@index.take(ind).mkString("/")@elem')">@elem</a>}
            }
         </div>
     </div>
@@ -15,7 +15,7 @@
     @for(folder <- folders) {
         <div class="row">
             <div class="col-xs-12">
-                <a href="#" onClick="navigateFolder('@index.mkString("/")/@folder')">
+                <a href="#" onClick="navigateFolder('@index.mkString("/")@folder')">
                     <span aria-hidden="true" class="glyphicon glyphicon-folder-open"></span>
                     &nbsp;
                     @folder
@@ -35,4 +35,18 @@
             </tr>
         }
     </table>
+    
+    <script type="text/javascript">
+        function navigateFolder(folder) {
+            $.ajax({
+                method : "POST",
+                url : "@controllers.dfs.routes.Browser.getFiles",
+                data : {
+                    filename : folder
+                }
+            }).done(function(html) {
+                updateFileList(html);
+            });
+        }
+    </script>
 }

@@ -10,6 +10,10 @@
             filename : ""
         }
     }).done(function(html) {
-        $('#fileList').html(html);
+        updateFileList(html);
     });
+    
+    function updateFileList(html) {
+        $('#fileList').html(html);
+    }
 </script>
