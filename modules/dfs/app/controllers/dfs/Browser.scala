@@ -3,7 +3,6 @@ package controllers.dfs
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play.current
@@ -13,6 +12,8 @@ import play.api.mvc.Action
 import play.api.mvc.Controller
 import tuktu.dfs.actors.DFSListRequest
 import tuktu.dfs.actors.DFSResponse
+import tuktu.dfs.util._
+import tuktu.dfs.actors.DFSElement
 
 object Browser  extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -31,6 +32,7 @@ object Browser  extends Controller {
         // Get filename
         val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
         val filename = body("filename").head
+        val index = util.getIndex(filename)._1
         
         // Ask the DFS Daemon for the files
         val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new DFSListRequest(filename)).asInstanceOf[Future[DFSResponse]]
@@ -38,11 +40,20 @@ object Browser  extends Controller {
         fut.map(response => {
             // Check what the response is
             if (response == null)
-                Ok(views.html.dfs.files(null))
+                Ok(views.html.dfs.files(index, null, null))
             else {
                 // Check if it is a directory or not
-                if (response.isDirectory)
-                    Ok(views.html.dfs.files(response.files))
+                if (response.isDirectory) {
+                    // We should list the files and folders
+                    val folders = response.files.collect {
+                            case el: (String, DFSElement) if el._2.isDirectory => el._1
+                    }
+                    val files = response.files.collect {
+                            case el: (String, DFSElement) if !el._2.isDirectory => el._1
+                    }
+                    
+                    Ok(views.html.dfs.files(index, folders toList, files toList))
+                }
                 else Ok("File")
             }
         })

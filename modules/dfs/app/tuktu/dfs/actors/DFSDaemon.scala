@@ -18,20 +18,18 @@ case class DFSListRequest(
         filename: String
 )
 case class DFSResponse(
-        files: List[String],
+        files: Map[String, DFSElement],
         isDirectory: Boolean
 )
-case class DFSObject(
-        filename: String,
-        isDirectory: Boolean
-)
+
+case class DFSElement(isDirectory: Boolean)
 
 /**
  * Central point of communication for the DFS
  */
 class DFSDaemon extends Actor with ActorLogging {
     // File map to keep in-memory. A map from a list of (sub)directories to a hashset containing the files
-    val dfsTable = collection.mutable.Map[List[String], collection.mutable.HashSet[String]]()
+    val dfsTable = collection.mutable.Map[List[String], collection.mutable.Map[String, DFSElement]]()
     // Get the prefix
     val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
     
@@ -54,14 +52,28 @@ class DFSDaemon extends Actor with ActorLogging {
      * Creates a directory on disk and adds it to the DFS
      */
     private def makeDir(index: List[String], filename: String) = {
+        def makeDirsHelper(partialIndex: List[String]): Unit = {
+            if (partialIndex.size < index.size) {
+                // Check if this partial index exists or not
+                if (!dfsTable(partialIndex).contains(index(partialIndex.size)))
+                    dfsTable(partialIndex) += index(partialIndex.size) -> new DFSElement(true)
+                
+                // Recurse if necessary
+                if (partialIndex.size < index.size - 1)
+                    makeDirsHelper(partialIndex ++ List(index(partialIndex.size)))
+            }
+        }
+        
         val dirName = prefix + "/" + filename
         if (!dfsTable.contains(index)) {
             val file = new File(dirName)
             val res = if (!file.exists) file.mkdirs else true
                 
             // Add to our DFS Table
-            if (res)
-                dfsTable += index -> collection.mutable.HashSet[String]()
+            if (res) {
+                makeDirsHelper(List())
+                dfsTable += index -> collection.mutable.Map[String, DFSElement]()
+            }
             
             // Return success or not
             res
@@ -94,7 +106,7 @@ class DFSDaemon extends Actor with ActorLogging {
                     file.createNewFile
                     
                     // Add to map
-                    dfsTable(dirIndex) += index.takeRight(1).head
+                    dfsTable(dirIndex) += index.takeRight(1).head -> new DFSElement(false)
                     
                     Some(file)
                 } catch {
@@ -153,13 +165,15 @@ class DFSDaemon extends Actor with ActorLogging {
     private def initialize(directory: File): Unit = {     
         val (index, dirIndex) = getIndex(directory.toString)
         // initialize this directory
-        dfsTable += index -> collection.mutable.HashSet[String]()
+        dfsTable += index -> collection.mutable.Map[String, DFSElement]()
         // add files or add another directory
         directory.listFiles.foreach { file => {
-                if(file.isDirectory) 
+                if(file.isDirectory) {
+                    dfsTable(index) += file.toString -> new DFSElement(true)
                     initialize(file)
+                }
                 else
-                    dfsTable(index) += file.toString
+                    dfsTable(index) += file.toString -> new DFSElement(false)
             }
         }        
     }
@@ -222,11 +236,11 @@ class DFSDaemon extends Actor with ActorLogging {
             val response = {
                 if (dfsTable.contains(index))
                     // It's a directory
-                    new DFSResponse(dfsTable(index).toList.map(elem => elem.drop(prefix.size + 1)), true)
+                    new DFSResponse(dfsTable(index).map(elem => elem._1.drop(prefix.size + 1) -> elem._2).toMap, true)
                 else {
                     if (dfsTable.contains(dirIndex))
                         // It's a file
-                        new DFSResponse(List(lr.filename.drop(prefix.size + 1)), false)
+                        new DFSResponse(Map(lr.filename.drop(prefix.size + 1) -> new DFSElement(false)), false)
                     else
                         // Not found
                         null

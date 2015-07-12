@@ -1,11 +1,38 @@
-@(files: List[String])
+@(index: List[String], folders: List[String], files: List[String])
 
 @if(files == null) {
     <h2>Failed to fetch files</h2>
 } else {
-	<ul>
-		@for(file <- files) {
-		    <li>@file</li>
-		}
-	</ul>
+    <div class="row" style="margin-bottom: 20px;">
+       <div class="col-xs-12">
+           <a href="#" onClick="navigateFolder('')">[root]</a>
+           @if(index.size > 1) {
+               @for((elem, ind) <- index.drop(1).zipWithIndex) { / <a href="#" onClick="navigateFolder('@index.take(ind).mkString("/")/@elem')">@elem</a>}
+           }
+        </div>
+    </div>
+    
+    @for(folder <- folders) {
+        <div class="row">
+            <div class="col-xs-12">
+                <a href="#" onClick="navigateFolder('@index.mkString("/")/@folder')">
+                    <span aria-hidden="true" class="glyphicon glyphicon-folder-open"></span>
+                    &nbsp;
+                    @folder
+                </a>
+            </div>
+        </div>
+    }
+
+	<table class="table table-hover">
+        @for(file <- files) {
+            <tr>
+                <td>
+                    <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
+                    &nbsp;
+                    @file
+                </td>
+            </tr>
+        }
+    </table>
 }
