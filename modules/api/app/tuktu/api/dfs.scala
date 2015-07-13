@@ -1,6 +1,14 @@
 package tuktu.api
 
+import java.io.BufferedReader
 import java.io.File
+import java.io.Reader
+
+import scala.io.Codec
+
+import akka.actor.ActorSelection.toScala
+import play.api.Play.current
+import play.api.libs.concurrent.Akka
 
 // Requests
 case class DFSReadRequest(
@@ -63,3 +71,14 @@ case class DFSOpenFileListResponse(
 )
 
 case class DFSElement(isDirectory: Boolean)
+
+class BufferedDFSReader(reader: Reader, filename: String)(implicit codec: Codec) extends BufferedReader(reader) {
+    // Notify DFS
+    Akka.system.actorSelection("user/tuktu.dfs.Daemon") ! new DFSOpenReadRequest(filename)
+    
+    override def close() = {
+        // Notify DFS
+        Akka.system.actorSelection("user/tuktu.dfs.Daemon") ! new DFSCloseReadRequest(filename)
+        super.close
+    }
+}

@@ -123,7 +123,9 @@ class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) 
             val encoding = utils.evaluateTuktuString(this.encoding, datum)
 
             val reader = tuktu.api.file.genericReader(fileName)(Codec.apply(encoding))
-            datum + (resultName -> Stream.continually(reader.readLine()).takeWhile(_ != null).mkString(lineSep))
+            val res = datum + (resultName -> Stream.continually(reader.readLine()).takeWhile(_ != null).mkString(lineSep))
+            reader.close
+            res
         })
     })
 }

@@ -3,19 +3,16 @@ package tuktu.api
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import com.netaporter.uri.Uri
-
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.URI
-
 import scala.io.Codec
 import scala.io.Source
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
-
 import com.netaporter.uri.Uri
+import java.io.FileInputStream
 
 object file {
     /**
@@ -25,6 +22,7 @@ object file {
         uri.getScheme match {
             case "file" | "" | null => fileReader(uri)
             case "hdfs" => hdfsReader(uri)
+            case "tdfs" => dfsReader(uri)
             case _ => throw new Exception ("Unknown file format")
         }
     }
@@ -53,5 +51,9 @@ object file {
         val fs = FileSystem.get(conf)
         val path = new Path(uri.getPath)
         new BufferedReader(new InputStreamReader(fs.open(path),codec.decoder))        
+    }
+    
+    def dfsReader(uri: URI)(implicit codec: Codec) = {
+        new BufferedDFSReader(new InputStreamReader(new FileInputStream(uri.getPath), codec.name), uri.getPath)
     }
 }
