@@ -13,6 +13,7 @@ import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
 import com.netaporter.uri.Uri
 import java.io.FileInputStream
+import play.api.Play.current
 
 object file {
     /**
@@ -54,6 +55,7 @@ object file {
     }
     
     def dfsReader(uri: URI)(implicit codec: Codec) = {
-        new BufferedDFSReader(new InputStreamReader(new FileInputStream(uri.getPath), codec.name), uri.getPath)
+		val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+        new BufferedDFSReader(new InputStreamReader(new FileInputStream(prefix + "/" + uri.getPath), codec.name), uri.getPath)
     }
 }
