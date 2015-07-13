@@ -359,7 +359,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                             // Build the processor pipeline for this generator
                             val processorEnumeratee = Dispatcher.buildEnums(next, processorMap, dr.configName + "/" + generatorName, dr.sourceActor)
                             
-                            // Set up the generator, we assume the class is loaded
+                            // Set up the generator
                             val clazz = Class.forName(generatorName)
                             
                             try {

@@ -6,8 +6,12 @@
     <div class="row" style="margin-bottom: 20px;">
        <div class="col-xs-12">
            <a href="#" onClick="navigateFolder('')">[root]</a>
-           @if(index.size > 1) {
-               @for((elem, ind) <- index.drop(1).zipWithIndex) { / <a href="#" onClick="navigateFolder('@index.take(ind).mkString("/")@elem')">@elem</a>}
+           @if(index.size > 0) {
+               @for((elem, ind) <- index.zipWithIndex) {
+                   / <a href="#" onClick="navigateFolder('@index.take(ind).mkString("/")@elem')">
+                       @elem
+                   </a>
+               }
            }
         </div>
     </div>
@@ -30,7 +34,7 @@
                 <td>
                     <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
                     &nbsp;
-                    @file
+                    @file.split("[/\\\\]").takeRight(1)
                 </td>
             </tr>
         }

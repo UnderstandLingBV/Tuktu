@@ -171,16 +171,6 @@ Let's examine this configuration file in a bit more detail. Notice that specifyi
 
 Using this configuration file, data is obtained from Twitter, written out for debugging, tokenized and has language identifcation applied to it. The result is finally written to a CSV file. Note that in this case, because we make use of the generator `tuktu.social.generators.TwitterGenerator`, the processing never ends, this is a perpetual process and hence the CSV file is never closed. There are specific generators however that can end their data ingestion, in which case the entire data processing pipeline is shut down and closed accordingly. In this case, the CSV file would be closed nicely.
 
-## Default Entry Points
-
-The Tuktu platform ignites a data processing flow as soon as the Dispatcher gets a request to do so. Besides using the web interface to initiate jobs, Tuktu has other ways of invoking the Dispatcher.
-
-The Play! nature of Tuktu made for usage of the Dispatcher using an HTTP request. By default, the URL `/dispatch/:configName` can be used to start data processing. The GET parameter `configName` is what the Dispatcher uses to find a JSON file stored on the same node Tuktu is running on, in a special configuration repository location, that will serve as the configuration file.
-
-Alternatively, a configuration file can be given to Tuktu. This can be done by simply invoking the Dispatcher actor or by making a POST request to `/config`, where the body should be no different from a regular configuration file, except for that an additional field named *id* should present in the configuration file.
-
-Lastly, since the Dispatcher is nothing more than an Akka actor, it can be invoked programmatically by sending it a `DispatchRequest` (defined in the Dispatcher itself).
-
 # Standard Submodules
 
 Tuktu comes with a number of submodules by default. Read more about them here.

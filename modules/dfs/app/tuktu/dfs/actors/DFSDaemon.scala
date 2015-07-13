@@ -13,16 +13,10 @@ import java.io.BufferedWriter
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import tuktu.dfs.util.util.getIndex
+import tuktu.api.DFSListRequest
+import tuktu.api.DFSResponse
+import tuktu.api.DFSElement
 
-case class DFSListRequest(
-        filename: String
-)
-case class DFSResponse(
-        files: Map[String, DFSElement],
-        isDirectory: Boolean
-)
-
-case class DFSElement(isDirectory: Boolean)
 
 /**
  * Central point of communication for the DFS
@@ -34,7 +28,10 @@ class DFSDaemon extends Actor with ActorLogging {
     val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
     
     // Open files
-    val openFiles = collection.mutable.Map[String, BufferedWriter]()
+    val openWriteFiles = collection.mutable.Map[String, BufferedWriter]()
+    val openReadFiles = collection.mutable.HashSet[String]()
+    // Local files, just for reference
+    val localOpenFiles = collection.mutable.HashSet[String]()
     
     /**
      * Resolves a file, gives a DFSReply
@@ -194,30 +191,37 @@ class DFSDaemon extends Actor with ActorLogging {
         case or: DFSOpenRequest => {
             val filename = prefix + "/" + or.filename
             // Create first if needed
-            if (!openFiles.contains(filename)) createFile(or.filename, false)
+            if (!openWriteFiles.contains(filename)) createFile(or.filename, false)
             
-            if (!openFiles.contains(filename)) {
+            if (!openWriteFiles.contains(filename)) {
                 // Open file
                 val file = new File(filename)
                 // Add to our list
-                openFiles += filename -> new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), or.encoding))
+                openWriteFiles += filename -> new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), or.encoding))
             }
+        }
+        case lor: DFSLocalOpenRequest => {
+            val filename = prefix + "/" + lor.filename
+            if (!localOpenFiles.contains(filename)) localOpenFiles += filename
         }
         case cr: DFSCloseRequest => {
             val filename = prefix + "/" + cr.filename
-            if (openFiles.contains(filename)) {
+            if (openWriteFiles.contains(filename)) {
                 // Close writer
-                openFiles(filename).flush
-                openFiles(filename).close
+                openWriteFiles(filename).flush
+                openWriteFiles(filename).close
                 // Remove from map
-                openFiles -= filename
+                openWriteFiles -= filename
             }
+        }
+        case lcr: DFSLocalCloseRequest => {
+            localOpenFiles -= lcr.filename
         }
         case wr: DFSWriteRequest => {
             val filename = prefix + "/" + wr.filename
             // Write to our file
-            if (openFiles.contains(filename))
-                openFiles(filename).write(wr.content)
+            if (openWriteFiles.contains(filename))
+                openWriteFiles(filename).write(wr.content)
         }
         case init: InitPacket => {
             // Check if directory exists, if not, make it
@@ -250,6 +254,16 @@ class DFSDaemon extends Actor with ActorLogging {
             // Send back response
             sender ! response
         }
+        case oflr: DFSOpenFileListRequest => {
+            // Combine remotely opened ones and local ones
+            sender ! new DFSOpenFileListResponse(
+                    localOpenFiles toList,
+                    openWriteFiles.keys toList,
+                    openReadFiles toList
+            )
+        }
+        case orr: DFSOpenReadRequest => openReadFiles += orr.filename
+        case crr: DFSCloseReadRequest => openReadFiles -= crr.filename
         case _ => {}
     }
 }

@@ -9,7 +9,8 @@ GET     /index                              controllers.Monitor.fetchLocalInfo
 ->      /modeller                           modeller.Routes
 
 # DFS
-GET     /filebrowser                        controllers.DFSWrapper.index
+GET     /dfsw/filebrowser                   controllers.DFSWrapper.index
+GET     /dfsw/openfiles                     controllers.DFSWrapper.openFiles
 ->      /dfs                                dfs.Routes
 
 # Dispatching

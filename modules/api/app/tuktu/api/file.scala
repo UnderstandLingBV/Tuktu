@@ -24,7 +24,7 @@ object file {
     def genericReader(uri: URI)(implicit codec: Codec): BufferedReader = {
         uri.getScheme match {
             case "file" | "" | null => fileReader(uri)
-            case "hdfs" => hdfsReader(uri)                        
+            case "hdfs" => hdfsReader(uri)
             case _ => throw new Exception ("Unknown file format")
         }
     }

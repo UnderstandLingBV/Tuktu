@@ -20,8 +20,7 @@ import tuktu.api.DFSCloseRequest
 
 /**
  * Wrapper around BufferedWriter that uses the DFS Daemons of other nodes to write the same content
- * to all files in paralllel
- * @TODO: Inform this localhost's DFS Daemon about opening and closing ,without actually letting it do something then
+ * to all files in parallel
  */
 class BufferedDFSWriter(writer: Writer, filename: String, encoding: String, otherNodes: List[String]) extends BufferedWriter(writer) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)

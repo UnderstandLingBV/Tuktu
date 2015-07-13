@@ -10,10 +10,12 @@ import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import play.api.mvc.Action
 import play.api.mvc.Controller
-import tuktu.dfs.actors.DFSListRequest
-import tuktu.dfs.actors.DFSResponse
-import tuktu.dfs.util._
-import tuktu.dfs.actors.DFSElement
+import tuktu.api.DFSElement
+import tuktu.api.DFSListRequest
+import tuktu.api.DFSResponse
+import tuktu.dfs.util.util
+import tuktu.api.DFSOpenFileListResponse
+import tuktu.api.DFSOpenFileListRequest
 
 object Browser  extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -26,13 +28,13 @@ object Browser  extends Controller {
     }
     
     /**
-     * Fetches files aasynchronously for a specifc folder
+     * Fetches files asynchronously for a specific folder
      */
     def getFiles() = Action.async { implicit request =>
         // Get filename
         val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
         val filename = body("filename").head
-        val index = util.getIndex(filename)._1
+        val index = util.getIndex(filename)._1.filter(!_.isEmpty)
         
         // Ask the DFS Daemon for the files
         val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new DFSListRequest(filename)).asInstanceOf[Future[Option[DFSResponse]]]
@@ -57,6 +59,17 @@ object Browser  extends Controller {
                     else Ok("File")
                 }
             }
+        })
+    }
+    
+    /**
+     * Fetches open files asynchronously
+     */
+    def getOpenFiles() = Action.async { implicit request =>
+        // Ask the DFS Daemon for the files
+        val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new DFSOpenFileListRequest()).asInstanceOf[Future[DFSOpenFileListResponse]]
+        fut.map(resp => {
+            Ok(views.html.dfs.listOpenFiles(resp.localFiles, resp.remoteFiles, resp.readFiles))
         })
     }
 }

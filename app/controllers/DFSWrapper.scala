@@ -7,4 +7,8 @@ object DFSWrapper extends Controller {
     def index() = Action {
         Ok(views.html.dfswrapper.dfsWrapper())
     }
+    
+    def openFiles() = Action {
+        Ok(views.html.dfswrapper.openFiles())
+    }
 }
