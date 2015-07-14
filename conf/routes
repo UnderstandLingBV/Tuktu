@@ -25,6 +25,7 @@ GET     /terminate/:id/:force               controllers.Monitor.terminate(id, fo
 POST    /showConfigs                        controllers.Monitor.showConfigs
 GET     /startJob                           controllers.Monitor.startJobView
 POST    /startJob                           controllers.Monitor.startJob
+POST    /newFile                            controllers.Monitor.newFile
 
 # Cluster management
 GET     /cluster                            controllers.Cluster.overview

@@ -18,6 +18,10 @@ import play.api.mvc.Controller
 import tuktu.api._
 import tuktu.utils.util
 import play.api.cache.Cache
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
+import java.io.BufferedWriter
+import play.api.libs.json.Json
 
 object Monitor extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -127,4 +131,37 @@ object Monitor extends Controller {
             )
         }
     }
+    
+    /**
+     * Creates a new JSON file
+     */
+    def newFile() = Action { implicit request => {
+        val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
+        
+        // Get the path and filename from the body
+        val path = body("path").head
+        val filename = {
+            val fname = body("file").head
+            if (fname.endsWith(".json")) fname
+            else fname + ".json"
+        }
+        
+        // Create the file
+        val configRepo = {
+            val location = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
+            if (location.last != '/') location + "/"
+            else location
+        }
+
+        // Wrte default output to file
+        val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(configRepo + path + "/" + filename), "utf-8"))
+        val output = Json.obj(
+                "generators" -> Json.arr(),
+                "processors" -> Json.arr()
+        )
+        writer.write(output.toString)
+        writer.close
+
+        Ok("")
+    }}
 }
