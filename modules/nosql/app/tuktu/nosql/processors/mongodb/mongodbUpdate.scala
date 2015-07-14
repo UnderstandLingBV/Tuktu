@@ -53,7 +53,7 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Update data into MongoDB
         val futures = data.data.map(datum => 
-          collection.update(Json.parse(stringHandler.evaluateString(query, datum,"\"","")), 
+          collection.update(Json.parse(stringHandler.evaluateString(update, datum,"\"","")), 
             Json.parse(stringHandler.evaluateString(query, datum,"\"","")), 
             upsert = upsert,
             multi = multi
