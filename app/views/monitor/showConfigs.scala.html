@@ -7,9 +7,14 @@
            }
         </div>
         <div class="col-xs-1 pull-right">
-            <a href="#" onClick="createNewFile()">
+            <a href="#" onClick="createNew(false)">
                 <span aria-hidden="true" class="glyphicon glyphicon-plus"></span>
                 New File
+            </a>
+            <br>
+            <a href="#" onClick="createNew(true)">
+                <span aria-hidden="true" class="glyphicon glyphicon-plus"></span>
+                New Folder
             </a>
         </div>
     </div>
@@ -67,14 +72,21 @@
             });
         }
         
-        function createNewFile() {
-            var filename = prompt("Please enter the name of the file.", "NewFile");
+        function createNew(isFolder) {
+            var filename = ""
+            if (isFolder) {
+                filename = prompt("Please enter the name of the folder.", "NewFile");
+            }
+            else {
+                filename = prompt("Please enter the name of the file.", "NewFile");
+            }
             
             $.ajax({
                 method : "POST",
                 url : "@routes.Monitor.newFile",
                 data : {
                     path: "@path.mkString("/")",
+                    folder: isFolder,
                     file: filename 
                 }
             }).done(function(html) {

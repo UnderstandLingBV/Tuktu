@@ -145,22 +145,30 @@ object Monitor extends Controller {
             if (fname.endsWith(".json")) fname
             else fname + ".json"
         }
+        // Folder or file?
+        val isFolder = body("folder").head.toBoolean
         
-        // Create the file
+        // Get prefix
         val configRepo = {
             val location = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
             if (location.last != '/') location + "/"
             else location
         }
 
-        // Wrte default output to file
-        val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(configRepo + path + "/" + filename), "utf-8"))
-        val output = Json.obj(
-                "generators" -> Json.arr(),
-                "processors" -> Json.arr()
-        )
-        writer.write(output.toString)
-        writer.close
+        if (isFolder) {
+            // Create folder
+            new File(configRepo + path + "/" + filename.dropRight(5)).mkdir
+        }
+        else {
+            // Wrte default output to file
+            val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(configRepo + path + "/" + filename), "utf-8"))
+            val output = Json.obj(
+                    "generators" -> Json.arr(),
+                    "processors" -> Json.arr()
+            )
+            writer.write(output.toString)
+            writer.close
+        }
 
         Ok("")
     }}
