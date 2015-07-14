@@ -164,4 +164,27 @@ object Monitor extends Controller {
 
         Ok("")
     }}
+    
+    /**
+     * Deletes a file from the config repository
+     */
+    def deleteFile() = Action { implicit request => {
+        val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
+        
+        // Get the filename from the body
+        val filename = {
+            val fname = body("file").head
+            val configRepo = {
+                val location = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
+                if (location.last != '/') location + "/"
+                else location
+            }
+            configRepo + fname
+        }
+        
+        // Remove it
+        new File(filename).delete
+        
+        Ok("")
+    }}
 }

@@ -37,14 +37,19 @@
 	                @config
 	            </td>
 	            <td width="20%">
+                    <a href="@controllers.modeller.routes.Application.index((path :+ config + ".json").mkString("/"))">Edit Config</a>
+                </td>
+	            <td width="10%">
 	                <form method="post" action="@routes.Monitor.startJob">
 	                    <input name="name" type="text" class="hidden" value="@path.mkString("/")/@config"/>
 	                    <input type="submit" class="btn btn-xs" value="Start Job">
 	                </form>
 	            </td>
-	            <td width="20%">
-	                <a href="@controllers.modeller.routes.Application.index((path :+ config + ".json").mkString("/"))">Edit Config</a>
-	            </td>
+	            <td width="10%">
+                    <a href="#" onClick="deleteFile('@{(path :+ config + ".json").mkString("/")}', '@config')">
+                        <span aria-hidden="true" class="glyphicon glyphicon-trash"></span>
+                    </a>
+                </td>
 	        </tr>
 	    }
     </table>
@@ -75,5 +80,20 @@
             }).done(function(html) {
                 navigateFolder("@path.mkString("/")");
             });
+        }
+        
+        function deleteFile(filename, shortname) {
+            var c = confirm("Are you sure you want to delete " + shortname + "?");
+            if (c == true) {
+                $.ajax({
+	                method : "POST",
+	                url : "@routes.Monitor.deleteFile",
+	                data : {
+	                    file: filename
+	                }
+	            }).done(function(html) {
+	                navigateFolder("@path.mkString("/")");
+	            });
+            }
         }
     </script>

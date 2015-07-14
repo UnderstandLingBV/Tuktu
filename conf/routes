@@ -26,6 +26,7 @@ POST    /showConfigs                        controllers.Monitor.showConfigs
 GET     /startJob                           controllers.Monitor.startJobView
 POST    /startJob                           controllers.Monitor.startJob
 POST    /newFile                            controllers.Monitor.newFile
+POST    /deleteFile                         controllers.Monitor.deleteFile
 
 # Cluster management
 GET     /cluster                            controllers.Cluster.overview
