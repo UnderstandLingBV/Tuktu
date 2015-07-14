@@ -14,6 +14,7 @@ import org.apache.hadoop.fs.Path
 import com.netaporter.uri.Uri
 import java.io.FileInputStream
 import play.api.Play.current
+import play.api.Play
 
 object file {
     /**
