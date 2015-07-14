@@ -33,6 +33,9 @@ case class ResponsePacket(
         json: JsValue
 )
 
+case class HealthCheck()
+case class HealthReply()
+
 /**
  * Monitor stuff
  */

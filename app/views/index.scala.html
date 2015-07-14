@@ -36,6 +36,11 @@
                                 Monitoring
                             </a>
                         </li>
+                        <li@if(section == "Scheduler"){ class="active"}>
+                            <a href="@routes.Scheduler.overview">
+                                Scheduling
+                            </a>
+                        </li>
                         <li@if(section == "Cluster Info"){ class="active"}>
                             <a href="@routes.Cluster.overview">
                                 Cluster Info

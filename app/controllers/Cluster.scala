@@ -8,6 +8,8 @@ import play.api.Play.current
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.data.Form
+import play.api.Play
+import scala.collection.JavaConverters.asScalaBufferConverter
 
 object Cluster extends Controller {
     /**
@@ -20,10 +22,24 @@ object Cluster extends Controller {
         val logLevel = Cache.getAs[String]("logLevel").getOrElse(null)
         val timeout = Cache.getAs[Int]("timeout").getOrElse(5)
         val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(null)
+        
+        // Get the proper ports
+        val cNodes = Play.current.configuration.getConfigList("tuktu.cluster.nodes") match {
+            case Some(nodeList) => {
+                // Get all the nodes in the list and put them in a map
+                (for (node <- nodeList.asScala) yield {
+                    node.getString("host").getOrElse("") -> node.getString("uiport").getOrElse("")
+                }).toMap
+            }
+            case None => Map[String, String]()
+        }
+        val uiClusterNodes = clusterNodes.map(elem => {
+            elem._1 -> (elem._2, cNodes(elem._1))
+        })
 
         Ok(views.html.cluster.overview(
                 util.flashMessagesToMap(request),
-                configRepo, homeAddress, logLevel, timeout, clusterNodes
+                configRepo, homeAddress, logLevel, timeout, uiClusterNodes
         ))
     }
     

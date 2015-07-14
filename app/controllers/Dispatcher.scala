@@ -286,6 +286,10 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
      * Receive function that does all the magic
      */
     def receive() = {
+        case hc: HealthCheck => {
+            // We are requested a health check, send back the reply
+            sender ! new HealthReply()
+        }
         case dr: DispatchRequest => {
             // Get config
             val config = dr.config match {
