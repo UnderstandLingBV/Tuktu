@@ -1,14 +1,13 @@
 package tuktu.social.generators
 
-import tuktu.api._
-import play.api.libs.iteratee.Enumerator
+import akka.actor.ActorRef
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json._
-import twitter4j.conf.ConfigurationBuilder
+import tuktu.api._
 import twitter4j._
+import twitter4j.conf.ConfigurationBuilder
 import twitter4j.json.DataObjectFactory
-import akka.actor.PoisonPill
-import akka.actor.ActorRef
+import play.api.Logger
 
 class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var twitterStream: TwitterStream = _
@@ -46,15 +45,15 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 	            @Override
 	            def onScrubGeo(l: Long, l1: Long): Unit = {}
 	
-	            @Override
-	            def onException(e: Exception): Unit = {
-                 e.printStackTrace() 
-              }
-	            
-	            @Override
-	            def onStallWarning(warning: StallWarning): Unit = {
-                 println(warning) 
-              }
+                @Override
+                def onException(e: Exception): Unit = {
+                    Logger.error("Exception while creating Twitter steam.",e)                 
+                }
+                
+                @Override
+                def onStallWarning(warning: StallWarning): Unit = {
+                    Logger.warn(warning.toString)                 
+                }  
 	        }
 	         
 	        //System.setProperty ("twitter4j.loggerFactory", "twitter4j.internal.logging.NullLoggerFactory")
