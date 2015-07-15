@@ -16,6 +16,7 @@ import tuktu.api.DFSResponse
 import tuktu.dfs.util.util
 import tuktu.api.DFSOpenFileListResponse
 import tuktu.api.DFSOpenFileListRequest
+import play.api.Play
 
 object Browser  extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -44,22 +45,32 @@ object Browser  extends Controller {
             resp match {
                 case None => Ok(views.html.dfs.files(index, null, null))
                 case Some(response) => {
-                    // Check if it is a directory or not
-                    if (response.isDirectory) {
-                        // We should list the files and folders
-                        val folders = response.files.collect {
-                                case el: (String, DFSElement) if el._2.isDirectory => el._1
-                        }
-                        val files = response.files.collect {
-                                case el: (String, DFSElement) if !el._2.isDirectory => el._1
-                        }
-                        
-                        Ok(views.html.dfs.files(index, folders toList, files toList))
+                    // We should list the files and folders
+                    val folders = response.files.collect {
+                            case el: (String, DFSElement) if el._2.isDirectory => el._1
                     }
-                    else Ok("File")
+                    val files = response.files.collect {
+                            case el: (String, DFSElement) if !el._2.isDirectory => el._1
+                    }
+                    
+                    Ok(views.html.dfs.files(index, folders toList, files toList))
                 }
             }
         })
+    }
+    
+    /**
+     * Serves out a file
+     */
+    def serveFile(filename: String) = Action {
+        val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+        val index = util.getIndex(filename)._1.filter(!_.isEmpty)
+        
+        // Send file to user
+        Ok.sendFile(
+            content = new java.io.File(prefix + "/" + filename),
+            fileName = _ => index.takeRight(1).head
+        )
     }
     
     /**

@@ -34,7 +34,11 @@
                 <td>
                     <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
                     &nbsp;
-                    @file.split("[/\\\\]").takeRight(1)
+	                <a href="@controllers.dfs.routes.Browser.serveFile(file)">
+	                   <span aria-hidden="true" class="glyphicon glyphicon-download-alt"> </span>
+	                </a>
+	                &nbsp;
+	                @file.split("[/\\\\]").takeRight(1)
                 </td>
             </tr>
         }
