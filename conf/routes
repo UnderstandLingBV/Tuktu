@@ -30,6 +30,7 @@ GET     /startJob                           controllers.Monitor.startJobView
 POST    /startJob                           controllers.Monitor.startJob
 POST    /newFile                            controllers.Monitor.newFile
 POST    /deleteFile                         controllers.Monitor.deleteFile
+POST    /batchStarter                       controllers.Monitor.batchStarter
 
 # Cluster management
 GET     /cluster                            controllers.Cluster.overview

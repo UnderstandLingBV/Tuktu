@@ -58,7 +58,8 @@ class ConcurrentStreamForwarder(parentActor: ActorRef) extends Actor with ActorL
  * Takes take of distributing computation over several nodes
  */
 class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], processorTypes: List[String],
-        configs: List[JsValue], resultName: String, mergeHandler: List[List[Map[String, Any]]] => DataPacket) extends Actor with ActorLogging {
+        configs: List[JsValue], resultName: String, mergeHandler: List[List[Map[String, Any]]] => DataPacket,
+        isLocallyTransitive: Boolean) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     var nodes = collection.mutable.Map[String, ActorRef]()
@@ -167,7 +168,11 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                     // Now invoke the process function
                     val processMethod = procClazz.getMethods.filter(m => m.getName == "doProcess").head
                     try {
-                        processMethod.invoke(iClazz, combinedResult.map(elem => elem(index))).asInstanceOf[List[Map[String, Any]]]
+                        // See if this computation is locally transitive or not
+                        if (isLocallyTransitive)
+                            processMethod.invoke(iClazz, combinedResult.map(elem => elem(index))).asInstanceOf[List[Map[String, Any]]]
+                        else
+                            processMethod.invoke(iClazz, combinedResult(index)).asInstanceOf[List[Map[String, Any]]]
                     } catch {
                         case e: Exception => {
                             e.printStackTrace()
@@ -214,13 +219,21 @@ abstract class BaseConcurrentProcessor(genActor: ActorRef, resultName: String) e
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     var concurrentHandler: ActorRef = null
 
-    def initializeNodes(nodeList: List[String], processorType: String, config: JsValue, mergeHandler: List[List[Map[String, Any]]] => DataPacket): Unit = {
-        this.initializeNodes(nodeList, List(processorType), List(config), mergeHandler)
+    def initializeNodes(nodeList: List[String],
+            processorType: String,
+            config: JsValue,
+            mergeHandler: List[List[Map[String, Any]]] => DataPacket,
+            isLocallyTransitive: Boolean): Unit = {
+        this.initializeNodes(nodeList, List(processorType), List(config), mergeHandler, isLocallyTransitive)
     }
     
-    def initializeNodes(nodeList: List[String], processorTypes: List[String], configs: List[JsValue], mergeHandler: List[List[Map[String, Any]]] => DataPacket): Unit = {
+    def initializeNodes(nodeList: List[String],
+            processorTypes: List[String],
+            configs: List[JsValue],
+            mergeHandler: List[List[Map[String, Any]]] => DataPacket,
+            isLocallyTransitive: Boolean): Unit = {
         // Set up concurrent handler
-        concurrentHandler = Akka.system.actorOf(Props(classOf[ConcurrentHandlerActor], genActor, nodeList, processorTypes, configs, resultName, mergeHandler))
+        concurrentHandler = Akka.system.actorOf(Props(classOf[ConcurrentHandlerActor], genActor, nodeList, processorTypes, configs, resultName, mergeHandler, isLocallyTransitive))
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {

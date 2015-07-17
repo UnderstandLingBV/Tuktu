@@ -18,7 +18,8 @@ class SortProcessor(genActor: ActorRef, resultName: String) extends BaseConcurre
                 (config \ "nodes").as[List[String]],
                 "tuktu.processors.bucket.SortProcessor",
                 config,
-                null
+                null,
+                false
         )
     }
 }

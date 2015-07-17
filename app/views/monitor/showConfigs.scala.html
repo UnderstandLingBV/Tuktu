@@ -33,31 +33,44 @@
 
     @if(!folders.isEmpty) { <hr> }
 
-    <table class="table table-hover">
-	    @for(config <- configs) {
-	        <tr>
-	            <td width="60%">
-	                <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
-	                &nbsp;
-	                @config
-	            </td>
-	            <td width="20%">
-                    <a href="@controllers.modeller.routes.Application.index((path :+ config + ".json").mkString("/"))">Edit Config</a>
-                </td>
-	            <td width="10%">
-	                <form method="post" action="@routes.Monitor.startJob">
-	                    <input name="name" type="text" class="hidden" value="@path.mkString("/")/@config"/>
-	                    <input type="submit" class="btn btn-xs" value="Start Job">
-	                </form>
-	            </td>
-	            <td width="10%">
-                    <a href="#" onClick="deleteFile('@{(path :+ config + ".json").mkString("/")}', '@config')" class="pull-right">
-                        <span aria-hidden="true" class="glyphicon glyphicon-trash"></span>
-                    </a>
-                </td>
-	        </tr>
-	    }
-    </table>
+    @if(!configs.isEmpty) {
+        <div class="row" style="margin-bottom: 20px;">
+            <input type="submit" class="btn btn-xs btn-info" value="Start Selected" onClick="batchStarter()">
+        </div>
+        
+	    <table class="table table-hover" id="configTable">
+		    @for(config <- configs) {
+		        <tr>
+		           <td width="20px">
+		               <input type="checkbox" value="@path.mkString("/")/@config">
+		           </td>
+		            <td>
+		                <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
+		                &nbsp;
+		                @config
+		            </td>
+		            <td width="10%">
+		                <form method="post" action="@routes.Monitor.startJob">
+		                    <input name="name" type="text" class="hidden" value="@path.mkString("/")/@config"/>
+		                    <input type="submit" class="btn btn-xs" value="Start Job">
+		                </form>
+		            </td>
+		            <td width="10%">
+	                    <a href="@controllers.modeller.routes.Application.index((path :+ config + ".json").mkString("/"))">Edit Config</a>
+	                </td>
+		            <td width="10%">
+	                    <a href="#" onClick="deleteFile('@{(path :+ config + ".json").mkString("/")}', '@config')" class="pull-right">
+	                        <span aria-hidden="true" class="glyphicon glyphicon-trash"></span>
+	                    </a>
+	                </td>
+		        </tr>
+		    }
+	    </table>
+	    
+	    <div class="row">
+	       <input type="submit" class="btn btn-xs btn-info" value="Start Selected" onClick="batchStarter()">
+	    </div>
+	}
 
     <script type="text/javascript">
         function navigateFolder(folder) {
@@ -107,5 +120,21 @@
 	                navigateFolder("@path.mkString("/")");
 	            });
             }
+        }
+        
+        function batchStarter() {
+            var configs = $("#configTable input:checkbox:checked").map(function(){
+		        return $(this).val();
+		    }).get();
+		    
+		    $.ajax({
+                method : "POST",
+                url : "@routes.Monitor.batchStarter",
+                data : {
+                    jobs: configs.join(",")
+                }
+            }).done(function(html) {
+                window.location = '@routes.Monitor.fetchLocalInfo';
+            });
         }
     </script>

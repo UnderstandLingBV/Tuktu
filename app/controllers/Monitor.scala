@@ -195,4 +195,18 @@ object Monitor extends Controller {
         
         Ok("")
     }}
+    
+    /**
+     * Starts multiple jobs at the same time
+     */
+    def batchStarter() = Action { implicit request => {
+        val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
+        val jobs = body("jobs").head.split(",")
+        
+        // Go over them and start them
+        val dispatcher = Akka.system.actorSelection("user/TuktuDispatcher")
+        jobs.foreach(job => dispatcher ! new DispatchRequest(job, None, false, false, false, None))
+        
+        Ok("")
+    }}
 }

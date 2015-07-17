@@ -35,7 +35,8 @@ class MeanProcessor(genActor: ActorRef, resultName: String) extends BaseConcurre
                         "tuktu.processors.bucket.aggregate.CountProcessor"
                 ),
                 List(config, config),
-                mergeProcess
+                mergeProcess,
+                true
         )
     }
 

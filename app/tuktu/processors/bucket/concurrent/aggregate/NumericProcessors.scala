@@ -16,7 +16,8 @@ class MinProcessor(genActor: ActorRef, resultName: String) extends BaseConcurren
                 (config \ "nodes").as[List[String]],
                 "tuktu.processors.bucket.aggregate.MinProcessor",
                 config,
-                null
+                null,
+                true
         )
     }
 }
@@ -31,7 +32,8 @@ class MaxProcessor(genActor: ActorRef, resultName: String) extends BaseConcurren
                 (config \ "nodes").as[List[String]],
                 "tuktu.processors.bucket.aggregate.MaxProcessor",
                 config,
-                null
+                null,
+                true
         )
     }
 }
@@ -46,7 +48,8 @@ class SumProcessor(genActor: ActorRef, resultName: String) extends BaseConcurren
                 (config \ "nodes").as[List[String]],
                 "tuktu.processors.bucket.aggregate.SumProcessor",
                 config,
-                null
+                null,
+                true
         )
     }
 }
@@ -61,7 +64,8 @@ class CountProcessor(genActor: ActorRef, resultName: String) extends BaseConcurr
                 (config \ "nodes").as[List[String]],
                 "tuktu.processors.bucket.aggregate.CountProcessor",
                 config,
-                null
+                null,
+                true
         )
     }
 }

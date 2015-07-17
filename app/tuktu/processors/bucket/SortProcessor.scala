@@ -24,7 +24,7 @@ class SortProcessor(resultName: String) extends BaseBucketProcessor(resultName) 
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Sort data
-        data.sortWith((m1, m2) => {
+        val res = data.sortWith((m1, m2) => {
             val f1 = m1(field)
             val f2 = m2(field)
 
@@ -41,5 +41,6 @@ class SortProcessor(resultName: String) extends BaseBucketProcessor(resultName) 
                 case _                        => throw new Exception
             }
         })
+        res
     }
 }
