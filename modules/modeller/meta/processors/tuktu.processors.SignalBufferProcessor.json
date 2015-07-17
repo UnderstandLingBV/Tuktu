@@ -1,0 +1,43 @@
+{
+	"name": "Signal Buffer Processor",
+	"description": "Hybrid processor that either buffers data until a signal is received, or sends the signal. This means that you MUST always have 2 instances of this processor active, in separate branches. WARNING: IMPROPER USE OF THIS PROCESSOR WILL LEAD TO DEADLOCK!",
+	"class": "tuktu.processors.SignalBufferProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "signal_name",
+					"type": "string",
+					"description": "The unique name of the signal. This should match for signaller and signalee.",
+					"required": true
+				},
+				{
+					"name": "is_signaller",
+					"type": "boolean",
+					"description": "Whether or not this instance is a signaller. WARNING: There must always be a signaller AND a signalee!",
+					"required": true
+				},
+				{
+					"name": "node",
+					"type": "string",
+					"description": "The name of the node the signallee lives on. If set, the signal can be sent to a remote note from the signaller to the signalee.",
+					"required": false,
+					"default": ""
+				}
+			]
+		}
+	]
+}

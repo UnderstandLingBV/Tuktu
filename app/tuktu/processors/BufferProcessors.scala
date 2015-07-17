@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
 class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
-    var buffer = collection.mutable.ListBuffer[Map[String, Any]]()
+    val buffer = collection.mutable.ListBuffer[Map[String, Any]]()
     
     def receive() = {
         case "release" => {
@@ -209,5 +209,92 @@ class GroupByBuffer(genActor: ActorRef, resultName: String) extends BufferProces
         Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
         bufferActor ! new StopPacket
     })
+}
+
+/**
+ * Hybrid processor that either buffers data until a signal is received, or sends the signal.
+ * This means that you MUST always have 2 instances of this processor active, in separate
+ * branches.
+ */
+class SignalBufferProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    // Set up the buffering actor
+    var bufferActor: ActorRef = _
+    var signaller = false
+    
+    override def initialize(config: JsObject) {
+        // Get name of bufferer
+        val bufferName = (config \ "signal_name").as[String]
+        // Remote or not?
+        val node = (config \ "node").asOpt[String]
+        // Signaller or signalee?
+        signaller = (config \ "is_signaller").as[Boolean]
         
+        if (signaller) {
+            // This is the signaller, we need to fetch the remote actor
+            node match {
+                case Some(n) => {
+                    // Get it from a remote location
+                    val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
+                    val fut = Akka.system.actorSelection("akka.tcp://application@" + n  + ":" + clusterNodes(n) + "/user/SignalBufferActor_" + bufferName) ? Identify(None)
+                    bufferActor = Await.result(fut.mapTo[ActorIdentity], timeout.duration).getRef
+                }
+                case None => {
+                    // It has be alive locally
+                    val fut = Akka.system.actorSelection("user/SignalBufferActor_" + bufferName) ? Identify(None)
+                    bufferActor = Await.result(fut.mapTo[ActorIdentity], timeout.duration).getRef
+                }
+            }
+        }
+        else {
+            // This is not the signaller, we need to keep track of the data
+            bufferActor = Akka.system.actorOf(Props(classOf[SignalBufferActor], genActor), name = "SignalBufferActor_" + bufferName)
+        }
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        // Send this packet as-is to our bufferer if we are not the signaller
+        if (!signaller) {
+            val future = bufferActor ? data
+            future.map { 
+                case _ => data
+            }
+        }
+        else Future { data }
+    }) compose Enumeratee.onEOF(() => {
+        // See if we are the signaller or not
+        if (signaller) {
+            Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+            bufferActor ! new StopPacket
+        }
+    })
+}
+
+/**
+ * Buffer actor to go with the signal buffer processor
+ */
+class SignalBufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    val buffer = collection.mutable.ListBuffer[DataPacket]()
+    
+    def receive() = {
+        case "release" => {
+            // Send data packets to remote generator one by one
+            buffer.foreach(dp => remoteGenerator ! dp)
+            
+            // Clear buffer
+            buffer.clear
+            sender ! "ok"
+        }
+        case sp: StopPacket => {
+            remoteGenerator ! sp
+            self ! PoisonPill
+        }
+        case dp: DataPacket => {
+            buffer += dp
+            sender ! "ok"
+        }
+    }
 }
