@@ -19,6 +19,19 @@
 			"required": true,
 			"parameters": [
 				{
+					"name": "nodes",
+					"description": "The nodes to use for the SingleNode handler type.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
 					"name": "field",
 					"description": "The mean over this field will be computed and returned under the field name.",
 					"type": "string",

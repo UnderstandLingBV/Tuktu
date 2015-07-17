@@ -172,7 +172,7 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                         if (isLocallyTransitive)
                             processMethod.invoke(iClazz, combinedResult.map(elem => elem(index))).asInstanceOf[List[Map[String, Any]]]
                         else
-                            processMethod.invoke(iClazz, combinedResult(index)).asInstanceOf[List[Map[String, Any]]]
+                            processMethod.invoke(iClazz, combinedResult.flatten.toList).asInstanceOf[List[Map[String, Any]]]
                     } catch {
                         case e: Exception => {
                             e.printStackTrace()
