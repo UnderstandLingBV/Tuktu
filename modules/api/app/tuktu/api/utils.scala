@@ -10,21 +10,46 @@ object utils {
 
     /**
      * Evaluates a Tuktu string to resolve variables in the actual string
-     */
+     */    
     def evaluateTuktuString(str: String, vars: Map[String, Any]) = {
-        // Set up matcher and string buffer
-        val matcher = pattern.matcher(str)
-        val buff = new StringBuffer(str.length)
-
-        // Replace with vars
-        while (matcher.find)
-            matcher.appendReplacement(buff, vars(matcher.group(1)).toString)
-        matcher.appendTail(buff)
-
-        // Return buffer
-        buff.toString
+        // determine max length for performance reasons
+        val maxVariableLength = vars.keySet.reduceLeft((a,b) => if(a.length>b.length) a else b).length
+        val result: StringBuffer = new StringBuffer
+        // a temporary buffer to determine if we need to replace this
+        var buffer = new StringBuffer
+        // The prefix length of TuktuStrings "${".length = 2
+        val prefixSize = 2
+        str.foreach { currentChar =>
+            if (buffer.length == 0) {
+                if (currentChar.equals('$')) {
+                    buffer.append('$')
+                } else {
+                    result.append(currentChar)
+                }                
+            } else if(buffer.length == 1) {
+                buffer.append(currentChar)
+                if(!currentChar.equals('{')) {                    
+                    result.append(buffer)
+                    buffer = new StringBuffer
+                }
+            } else if(buffer.length > maxVariableLength + prefixSize) {
+                result.append(buffer).append(currentChar)
+                buffer = new StringBuffer
+            } else {
+                if (currentChar.equals('}')) { 
+                    // apply with variable in vars, or leave it be if it cannot be found
+                    result.append(vars.getOrElse(buffer.substring(2),buffer+"}").toString)
+                    buffer = new StringBuffer
+                } else {
+                    buffer.append(currentChar)
+                }
+            }             
+        }  
+        // add any left overs
+        result.append(buffer)
+        result.toString
     }
-
+    
     /**
      * Checks if a string contains variables that can be populated using evaluateTuktuString
      */
