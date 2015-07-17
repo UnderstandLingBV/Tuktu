@@ -57,11 +57,11 @@
 					]
 				},
 				{
-					"name": "sync",
-					"description": "Insert data in an (a)synchronous fashion.",
-					"type": "boolean",
+					"name": "timeout",
+					"description": "Overwrite the Tuktu default timeout.",
+					"type": "int",
 					"required": false,
-					"default": false
+					"default": 5
 				}
 			]
 		}
