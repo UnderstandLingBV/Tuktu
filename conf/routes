@@ -20,6 +20,9 @@ POST	/config						        controllers.Asynchronous.loadPost
 # Synchronous
 POST    /sync                               controllers.Synchronous.loadJsonPost
 
+# Web
+GET     /Tuktu.js                           controllers.web.Application.TuktuJs
+
 # Monitoring
 GET     /terminate/:id/:force               controllers.Monitor.terminate(id, force: Boolean)
 POST    /showConfigs                        controllers.Monitor.showConfigs
