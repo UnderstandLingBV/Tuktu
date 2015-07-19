@@ -7,20 +7,24 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.Play.current
 import play.api.cache.Cache
+import play.api.libs.concurrent.Akka
 
+/**
+ * Deletes a data packet from the in-memory DB
+ */
 class DeleteProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var keyField = ""
-    var namespace = ""
+    var keyFields: List[String] = _
     
     override def initialize(config: JsObject) {
-        keyField = (config \ "key_field").as[String]
-        namespace = (config \ "namespace").as[String]
+        keyFields = (config \ "keys").as[List[String]]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        val fields = data.data.map(datum => datum(keyField))
-        // Simply invalidate the cache
-        Cache.set(namespace, Cache.getAs[Map[Any, Map[String, Any]]](namespace).getOrElse(Map()).filterNot(elem => fields.contains(elem._1)))
+        // Parse keys
+        val keys = keyFields.map(key => data.data.head(key))
+        
+        // Send request to daemon
+        val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ! new DeleteRequest(keys)
         
         data
     })

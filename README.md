@@ -185,3 +185,14 @@ Tuktu comes with a number of submodules by default. Read more about them here.
 - The [Social](modules/social) submodule. This module contains generators for social media and some basic processors. 
 - The [DB](modules/tuktudb) submodule. This module contains Tuktu's distributed in-memory database.
 - The [Web](modules/web) submodule. This module will deal with HTTP traffic and has functionality for performing wb analytics.
+
+# Users and Partners
+The following companies or organizations use or actively contribute to Tuktu.
+
+![BDC Logo](https://www.bigdata.company/wp-content/uploads/2014/12/Screen-Shot-2014-12-08-at-14.45.08-e1418079507919.png)
+
+[BigData.Company](http://bigdata.company/) is the largest contributor to Tuktu and actively uses it as its core platform.
+
+![AnyPinion Logo](http://anypinion.com/assets/images/logo_grey.png)
+
+[AnyPinion](http://anypinion.com/) uses Tuktu for its API and real-time analytics module. AnyPinion has been an adopter of Tuktu from the very beginning.

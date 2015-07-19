@@ -1,9 +1,15 @@
 package tuktu.api
 
-import java.util.regex.Pattern
-import play.api.libs.json._
 import java.util.Date
+import java.util.regex.Pattern
+
+import scala.util.hashing.MurmurHash3
+
 import org.joda.time.DateTime
+
+import play.api.Play.current
+import play.api.cache.Cache
+import play.api.libs.json._
 
 object utils {
     val pattern = Pattern.compile("\\$\\{(.*?)\\}")
@@ -198,4 +204,33 @@ object utils {
      */
     def JsObjectToMap(json: JsObject): Map[String, Any] =
         json.value.mapValues(jsValue => JsValueToAny(jsValue)).toMap
+    
+    def indexToNodeHasher(keys: List[Any], replicationCount: Option[Int], includeSelf: Boolean): List[String] =
+        indexToNodeHasher(keys.map(_.toString), replicationCount, includeSelf)
+    /**
+     * Hashes an index to a (number of) node(s)
+     */
+    def indexToNodeHasher(keyString: String, replicationCount: Option[Int], includeSelf: Boolean): List[String] = {
+        def indexToNodeHasherHelper(nodes: List[String], replCount: Int): List[String] = {
+            // Get a node
+            val node = nodes(Math.abs(MurmurHash3.stringHash(keyString) % nodes.size))
+            
+            // Return more if required
+            node::{if (replCount > 1) {
+                indexToNodeHasherHelper(nodes diff List(node), replCount - 1)
+            } else List()}
+        }
+        
+        val clusterNodes = {
+            if (includeSelf)
+                Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]()).keys.toList
+            else
+                Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]()).keys.toList diff
+                    List(Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
+        }
+        replicationCount match {
+            case Some(cnt) => indexToNodeHasherHelper(clusterNodes, cnt - 1)
+            case None => clusterNodes
+        }
+    }
 }

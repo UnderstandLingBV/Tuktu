@@ -1,14 +1,16 @@
 package tuktu.dfs.processors
 
-import tuktu.api._
-import play.api.libs.json.JsObject
-import play.api.libs.iteratee.Enumeratee
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import tuktu.dfs.file.BufferedDFSWriter
-import tuktu.dfs.util.util
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsObject
+import tuktu.api._
+import tuktu.api.utils
+import tuktu.dfs.file.BufferedDFSWriter
 
 class WriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var writer: BufferedDFSWriter = _
@@ -27,7 +29,7 @@ class WriterProcessor(resultName: String) extends BaseProcessor(resultName) {
         val replicationFactor = (config \ "replication").asOpt[Int]
         
         // Get the nodes to use
-        val otherNodes = util.indexToNodeHasher(filename, replicationFactor)
+        val otherNodes = utils.indexToNodeHasher(filename, replicationFactor, false)
         
         // Initialize writer
         writer = new BufferedDFSWriter(
