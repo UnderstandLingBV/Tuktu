@@ -52,6 +52,8 @@ class DFSDaemon extends Actor with ActorLogging {
         def makeDirsHelper(partialIndex: List[String]): Unit = {
             if (partialIndex.size < index.size) {
                 // Check if this partial index exists or not
+                if (!dfsTable.contains(partialIndex))
+                    dfsTable += partialIndex -> collection.mutable.Map[String, DFSElement]()
                 if (!dfsTable(partialIndex).contains(index(partialIndex.size)))
                     dfsTable(partialIndex) += index(partialIndex.size) -> new DFSElement(true)
                 
@@ -93,7 +95,7 @@ class DFSDaemon extends Actor with ActorLogging {
         }
         else {
             // It's a file, first see if we need to/can make a dir
-            val dirSuccess = makeDir(dirIndex, filename)
+            val dirSuccess = makeDir(dirIndex, dirIndex.mkString("/"))
             if (!dirSuccess) None
             else {
                 // Make the file

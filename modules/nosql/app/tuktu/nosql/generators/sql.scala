@@ -42,6 +42,7 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             cleanup
             sh.client.close
         }
+        case sp: StopPacket => cleanup
         case ip: InitPacket => setup
     }
 }

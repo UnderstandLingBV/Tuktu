@@ -30,15 +30,15 @@
 							"required": false
 						}
 					]
+				},
+				{
+					"name": "sync",
+					"type": "boolean",
+					"description": "Whether or not to wait for the deletion to have occured before continuing.",
+					"required": false,
+					"default": false
 				}
-			],
-			{
-				"name": "sync",
-				"type": "boolean",
-				"description": "Whether or not to wait for the deletion to have occured before continuing.",
-				"required": false,
-				"default": false
-			}
+			]
 		}
 	]
 }
