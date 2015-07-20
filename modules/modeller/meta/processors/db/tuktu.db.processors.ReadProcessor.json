@@ -1,0 +1,37 @@
+{
+	"name": "DB Read Processor",
+	"description": "Reads an enitre bucket from the Tuktu DB",
+	"class": "tuktu.db.processors.ReadProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "keys",
+					"description": "The fields that need to be read out from the DataPacket to construct the bucket to fetch.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": false
+						}
+					]
+				}
+			]
+		}
+	]
+}

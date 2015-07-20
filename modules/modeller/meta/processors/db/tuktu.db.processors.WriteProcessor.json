@@ -1,0 +1,44 @@
+{
+	"name": "DB Write Processor",
+	"description": "Writes elements in a DataPacket into buckets in the Tuktu DB",
+	"class": "tuktu.db.processors.WriteProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "keys",
+					"description": "The fields that need to be read out from the DataPacket to construct the bucket to write to.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": false
+						}
+					]
+				}
+			],
+			{
+				"name": "sync",
+				"type": "boolean",
+				"description": "Whether or not to wait for the writing to have occured before continuing.",
+				"required": false,
+				"default": false
+			}
+		}
+	]
+}

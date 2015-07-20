@@ -84,15 +84,24 @@ class DBDaemon extends Actor with ActorLogging {
             }).groupBy(_._1)
             
             // Send replicate request to all
-            elementsPerNode.foreach(elemWithNode => {
-                dbDaemons(elemWithNode._1) ! new ReplicateRequest(
-                        elemWithNode._2.map(_._2)
-                )
-            })
+            if (sr.needReply) {
+                val futs = for (elemWithNode <- elementsPerNode) yield dbDaemons(elemWithNode._1) ? new ReplicateRequest(elemWithNode._2.map(_._2), true)
+                Future.sequence(futs).map(_ => sender ! "ok")
+            }
+            else {
+                elementsPerNode.foreach(elemWithNode => {
+                    dbDaemons(elemWithNode._1) ! new ReplicateRequest(
+                            elemWithNode._2.map(_._2),
+                            false
+                    )
+                })
+            }
         }
         case rr: ReplicateRequest => {
             // Add the data packet to our in-memory store
             rr.elements.foreach(elem => tuktudb(elem.key) += elem.value)
+            
+            if (rr.needReply) sender ! "ok"
         }
         case rr: ReadRequest => {
             // Probe first
@@ -112,10 +121,16 @@ class DBDaemon extends Actor with ActorLogging {
         case dr: DeleteRequest => {
             // Remove the data packet
             val nodes = hash(dr.key)
-            nodes.foreach(node => dbDaemons(node) ! new DeleteActionRequest(dr.key))
+            
+            // Need reply or not?
+            if (dr.needReply) {
+                val futs = for (node <- nodes) yield dbDaemons(node) ? new DeleteActionRequest(dr.key, true)
+                Future.sequence(futs).map(_ => sender ! "ok")
+            } else nodes.foreach(node => dbDaemons(node) ! new DeleteActionRequest(dr.key, false))
         }
         case dar: DeleteActionRequest => {
             tuktudb -= dar.key
+            if (dar.needReply) sender ! "ok"
         }
         case pp: PersistRequest => {
             // @TODO: Persist to disk
