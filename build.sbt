@@ -87,6 +87,13 @@ lazy val webDependencies = Seq(
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
+lazy val vizDependencies = Seq(
+    ws,
+    cache,
+    "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test"
+)
+
 lazy val coreDependencies = Seq(
     jdbc,
     anorm,
@@ -203,6 +210,17 @@ lazy val web = (project in file("modules/web"))
     .aggregate(api)
     .dependsOn(api)
     
+lazy val viz = (project in file("modules/viz"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-viz")
+    .settings(version := "0.1")
+    .settings(scalaVersion := "2.11.7")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= vizDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
+    .aggregate(api)
+    .dependsOn(api)
+    
 lazy val tuktudb = (project in file("modules/tuktudb"))
     .enablePlugins(PlayScala)
     .settings(name := "Tuktu-DB")
@@ -234,5 +252,5 @@ lazy val root = project
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= coreDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
-    .aggregate(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb, modeller)
-    .dependsOn(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb, modeller)
+    .aggregate(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb, modeller, viz)
+    .dependsOn(api, nlp, csv, dfs, social, nosql, ml, web, tuktudb, modeller, viz)

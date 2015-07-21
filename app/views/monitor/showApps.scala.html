@@ -1,4 +1,4 @@
-@(apps: List[(String, tuktu.api.AppMonitorObject)], messages: Map[String, List[String]])
+@(apps: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, (Long, Long))], messages: Map[String, List[String]])
 
 @index("Monitoring", messages) {
     @monitorMenu()
@@ -46,6 +46,53 @@
 	    </table>
 	} else {
 	    <h2>Currently, no jobs are running on Tuktu</h2>
+	}
+	
+	<hr>
+	
+	@if(finished.size > 0) {
+        <h2>
+           The following jobs are finished
+        </h2>
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>
+                        Job name
+                    </th>
+                    <th>
+                        Start Time
+                    </th>
+                    <th>
+                        End Time
+                    </th>
+                    <th style="text-align: right;">
+                        Duration
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @for((appName, appProps) <- finished) {
+                    <tr>
+                        <th style="margin-right: 25px;">
+                            @appName
+                        </th>
+                        <td>
+                            @{new java.util.Date(appProps._1 * 1000).toString}
+                        </td>
+                        <td>
+                            @{new java.util.Date(appProps._2 * 1000).toString}
+                        </td>
+                        <td style="text-align: right;">
+                            @{(appProps._2 - appProps._1)} seconds
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+	} else {
+	   <h2>No finished jobs were found.</h2>
 	}
 	
 	<script type="text/javascript">

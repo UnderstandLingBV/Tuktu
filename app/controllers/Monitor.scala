@@ -30,10 +30,11 @@ object Monitor extends Controller {
      */
     def fetchLocalInfo() = Action.async { implicit request =>
         // Get the monitor
-        val fut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorOverviewPacket()).asInstanceOf[Future[Map[String, AppMonitorObject]]]
-        fut.map(res =>
+        val fut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorOverviewPacket()).asInstanceOf[Future[MonitorOverviewResult]]
+        fut.map(res => 
             Ok(views.html.monitor.showApps(
-                    res.toList.sortBy(elem => elem._2.getStartTime),
+                    res.runningJobs.toList.sortBy(elem => elem._2.getStartTime),
+                    res.finishedJobs.toList.sortBy(elem => elem._2._1),
                     util.flashMessagesToMap(request)
             ))
         )

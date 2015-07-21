@@ -1,20 +1,28 @@
 package monitor
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import akka.actor.Actor
 import akka.actor.ActorLogging
+import akka.actor.ActorRef
 import akka.util.Timeout
 import play.api.Play.current
 import play.api.cache.Cache
 import tuktu.api._
-import scala.concurrent.ExecutionContext.Implicits.global
-import akka.actor.ActorRef
+import tuktu.api.types.ExpirationMap
+import java.util.Date
+import play.api.Play
 
 class DataMonitor() extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
-    var monitorData = new java.util.HashMap[String, java.util.HashMap[MPType, java.util.HashMap[String, Int]]]()
-    var appMonitor = collection.mutable.Map[String, AppMonitorObject]()
+    val monitorData = new java.util.HashMap[String, java.util.HashMap[MPType, java.util.HashMap[String, Int]]]()
+    val appMonitor = collection.mutable.Map[String, AppMonitorObject]()
+    
+    // Keep track of finished jobs that can expire
+    var finishedJobs = ExpirationMap[String, (Long, Long)](
+            Play.current.configuration.getInt("tuktu.monitor.finish_expiration").getOrElse(30) * 60 * 1000
+    )
 
     def receive() = {
         case "init" => {
@@ -22,7 +30,10 @@ class DataMonitor() extends Actor with ActorLogging {
         }
         case amp: AppMonitorPacket => amp.status match {
             case "done" => {
+                // Remove from current apps, add to finished jobs
                 appMonitor -= amp.name
+                implicit def currentTime = new Date().getTime
+                finishedJobs = finishedJobs + (amp.name, (amp.timestamp, currentTime / 1000L))
             }
             case "start" => {
                 if (!appMonitor.contains(amp.name)) appMonitor += amp.name -> new AppMonitorObject(amp.name, amp.timestamp)
@@ -47,7 +58,12 @@ class DataMonitor() extends Actor with ActorLogging {
             monitorData.get(mp.actorName).get(mp.typeOf).put(mp.branch,
                 monitorData.get(mp.actorName).get(mp.typeOf).get(mp.branch) + mp.amount)
         }
-        case mop: MonitorOverviewPacket => sender ! appMonitor.toMap
+        case mop: MonitorOverviewPacket => {
+            implicit def currentTime = new Date().getTime
+            sender ! new MonitorOverviewResult(
+                appMonitor.toMap, finishedJobs.toMap
+            )
+        }
         case m => println("Monitor received unknown message: " + m)
     }
 }

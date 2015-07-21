@@ -53,6 +53,10 @@ case class MonitorPacket(
 )
 
 case class MonitorOverviewPacket()
+case class MonitorOverviewResult(
+        runningJobs: Map[String, AppMonitorObject],
+        finishedJobs: Map[String, (Long, Long)]
+)
 
 class AppMonitorObject(name: String, startTime: Long) {
     def getName = name
