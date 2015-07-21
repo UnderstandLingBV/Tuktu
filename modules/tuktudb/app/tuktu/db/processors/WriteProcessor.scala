@@ -11,6 +11,9 @@ import play.api.cache.Cache
 import akka.util.Timeout
 import akka.pattern.ask
 import scala.concurrent.duration.DurationInt
+import akka.actor.Identify
+import akka.actor.ActorIdentity
+import scala.concurrent.Await
 
 /**
  * Writes a data packet to the in-memory DB

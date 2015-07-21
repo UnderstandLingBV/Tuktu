@@ -30,12 +30,11 @@ import tuktu.api.DeleteActionRequest
 /**
  * Daemon for Tuktu's DB operations
  */
-class DBDaemon extends Actor with ActorLogging {
+class DBDaemon() extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Local in-memory database
     private val tuktudb = collection.mutable.Map[List[Any], collection.mutable.ListBuffer[Map[String, Any]]]()
-        .withDefaultValue(collection.mutable.ListBuffer[Map[String, Any]]())
     
     // Get replication factor
     Cache.set("tuktu.db.replication", Play.current.configuration.getInt("tuktu.db.replication"))
@@ -63,7 +62,7 @@ class DBDaemon extends Actor with ActorLogging {
     private def hash(keys: List[Any]) =
         utils.indexToNodeHasher(
                 keys,
-                Cache.get("tuktu.db.replication").asInstanceOf[Option[Int]],
+                Cache.getAs[Int]("tuktu.db.replication"),
                 true
         )
     
@@ -99,7 +98,12 @@ class DBDaemon extends Actor with ActorLogging {
         }
         case rr: ReplicateRequest => {
             // Add the data packet to our in-memory store
-            rr.elements.foreach(elem => tuktudb(elem.key) += elem.value)
+            rr.elements.foreach(elem => {
+                val realKey =elem.key.map(key => elem.value(key))
+                if (!tuktudb.contains(realKey))
+                    tuktudb += realKey -> collection.mutable.ListBuffer[Map[String, Any]]()
+                tuktudb(realKey) += elem.value
+            })
             
             if (rr.needReply) sender ! "ok"
         }

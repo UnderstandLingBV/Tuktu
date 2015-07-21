@@ -206,7 +206,7 @@ object utils {
         json.value.mapValues(jsValue => JsValueToAny(jsValue)).toMap
     
     def indexToNodeHasher(keys: List[Any], replicationCount: Option[Int], includeSelf: Boolean): List[String] =
-        indexToNodeHasher(keys.map(_.toString), replicationCount, includeSelf)
+        indexToNodeHasher(keys.map(_.toString).mkString(""), replicationCount, includeSelf)
     /**
      * Hashes an index to a (number of) node(s)
      */
@@ -229,7 +229,9 @@ object utils {
                     List(Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
         }
         replicationCount match {
-            case Some(cnt) => indexToNodeHasherHelper(clusterNodes, cnt - 1)
+            case Some(cnt) => indexToNodeHasherHelper(clusterNodes, cnt - {
+                if (includeSelf) 1 else 0
+            })
             case None => clusterNodes
         }
     }

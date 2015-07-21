@@ -29,11 +29,14 @@ class ReadGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                         channel.push(new DataPacket(rr.value))
                     else
                         for (value <- rr.value) channel.push(new DataPacket(List(value)))
+                        
+                    // Terminate
+                    self ! new StopPacket
                 }
                 case _ => self ! new StopPacket
             }
             fut.onFailure {
-                case _ => self ! new StopPacket
+                case a => self ! new StopPacket
             }
         }
         case sp: StopPacket => cleanup
