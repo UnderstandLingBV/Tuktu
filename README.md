@@ -5,6 +5,8 @@ Tuktu is a big data analytics platform that focuses on ease of use. The idea of 
 - Synchronous and asynchronous processing
 - A visual modeller that allows to create jobs using [drag-and-drop modelling](modules/modeller)
 - Tuktu has its own distributed file system that is very easy to use - alternatively, Tuktu integrates seamlessly with HDFS (and local files of course)
+- Tuktu also has its own in-memory distributed ke-value store for quickly storing and retrieving data. Conceptually, this is close to [Spark](http://spark.apache.org/)'s RDD
+- Tuktu has built-in real-time visualization capabilities for a number of pre-defined visuals
 - Periodic jobs can be scheduled natively from Tuktu
 - By default there is no master/slave architecture, so no single point of failure
 - Switch seamlessly between distributed and local (even transactional) computation paradigms
@@ -177,13 +179,14 @@ Tuktu comes with a number of submodules by default. Read more about them here.
 
 - The [API](modules/api) submodule. This is actually part of Tuktu's core and used for extending the platform.
 - The [CSV](modules/csv) submodule. In Big Data, CSV files are often used to export legacy data into NoSQL systems. This package helps with that.
+- The [DB](modules/tuktudb) submodule. This module contains Tuktu's distributed in-memory database.
 - The [DFS](modules/dfs) submodule contains the Distributed File System that comes with Tuktu. It also includes the File Browser that is accessible from the Tuktu UI. 
 - The [ML](modules/ml) submodule. This module contains some machine learning functionality.
 - The [Modeller](modules/modeller) contains the entire UI for the visual drag-and-drop modeller for Tuktu.
 - The [NLP](modules/nlp) submodule. This module contains some algorithms on Natural Language Processing.
 - The [NoSQL](modules/nosql) submodule. This module contains standard methods to read or write from and to some popular NoSQL systems.
 - The [Social](modules/social) submodule. This module contains generators for social media and some basic processors. 
-- The [DB](modules/tuktudb) submodule. This module contains Tuktu's distributed in-memory database.
+- The [Visualization](modules/viz) submodule. This module contains some default real-time visualization processors and endpoints to request graphs from them. 
 - The [Web](modules/web) submodule. This module will deal with HTTP traffic and has functionality for performing wb analytics.
 
 # Users and Partners
