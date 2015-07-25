@@ -7,6 +7,11 @@ Computes the mean of a field of numerical values in a concurrent way.
 
   * **config** *(type: object)* `[Required]`
 
+    * **nodes** *(type: array)* `[Required]`
+    - The nodes to use for the SingleNode handler type.
+
+      * **[UNNAMED]** *(type: string)* `[Required]`
+
     * **field** *(type: string)* `[Required]`
     - The mean over this field will be computed and returned under the field name.
 

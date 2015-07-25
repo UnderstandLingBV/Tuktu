@@ -5,23 +5,12 @@
 GET     /                                   controllers.Monitor.fetchLocalInfo
 GET     /index                              controllers.Monitor.fetchLocalInfo
 
-# Modeller
-->      /modeller                           modeller.Routes
-
-# DFS
-GET     /dfsw/filebrowser                   controllers.DFSWrapper.index
-GET     /dfsw/openfiles                     controllers.DFSWrapper.openFiles
-->      /dfs                                dfs.Routes
-
 # Dispatching
 GET     /dispatch/:id/:inst 		        controllers.Asynchronous.load(id, inst: Int)
 POST	/config						        controllers.Asynchronous.loadPost
 
 # Synchronous
 POST    /sync                               controllers.Synchronous.loadJsonPost
-
-# Web
-GET     /Tuktu.js                           controllers.web.Application.TuktuJs
 
 # Monitoring
 GET     /terminate/:id/:force               controllers.Monitor.terminate(id, force: Boolean)
@@ -47,6 +36,20 @@ POST    /scheduleSimple						controllers.Scheduler.scheduleSimpleStart
 POST    /scheduleCron						controllers.Scheduler.scheduleCronStart
 GET		/terminateScheduler/:id				controllers.Scheduler.terminate(id)
 POST    /showConfigsScheduler               controllers.Scheduler.showConfigs
+
+# Visualization
+->      /viz                                viz.Routes
+
+# Modeller
+->      /modeller                           modeller.Routes
+
+# DFS
+GET     /dfsw/filebrowser                   controllers.DFSWrapper.index
+GET     /dfsw/openfiles                     controllers.DFSWrapper.openFiles
+->      /dfs                                dfs.Routes
+
+# Web
+GET     /Tuktu.js                           controllers.web.Application.TuktuJs
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                       controllers.Assets.versioned(path="/public", file)

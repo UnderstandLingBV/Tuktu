@@ -25,3 +25,36 @@ Trains a hidden markov model using observations.
     * **num_observable** *(type: int)* `[Required]`
     - The number of distinct observable states.
 
+    * **priors** *(type: object)* `[Optional]`
+    - The priors for the HMM matrices.
+
+      * **transitions** *(type: array)* `[Optional]`
+      - The priors of the transition matrix A.
+
+        * **Rows** *(type: array)* `[Optional]`
+        - The rows of the transition matrix.
+
+          * **Column** *(type: int)* `[Optional]`
+          - The actual value of the element.
+
+      * **emissions** *(type: array)* `[Optional]`
+      - The priors of the emission matrix B.
+
+        * **Rows** *(type: array)* `[Optional]`
+        - The rows of the emissions matrix.
+
+          * **Column** *(type: int)* `[Optional]`
+          - The actual value of the element.
+
+      * **start** *(type: array)* `[Optional]`
+      - The priors of the start matrix Pi.
+
+        * **Rows** *(type: int)* `[Optional]`
+        - The actual value of the element.
+
+      * **emissions** *(type: array)* `[Optional]`
+      - The priors of the emission matrix.
+
+      * **start** *(type: array)* `[Optional]`
+      - The priors of the start vector.
+

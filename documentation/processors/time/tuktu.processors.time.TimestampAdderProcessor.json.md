@@ -1,4 +1,4 @@
-### tuktu.processors.TimestampAdderProcessor
+### tuktu.processors.time.TimestampAdderProcessor
 Adds a simple timestamp to the data packet.
 
   * **id** *(type: string)* `[Required]`

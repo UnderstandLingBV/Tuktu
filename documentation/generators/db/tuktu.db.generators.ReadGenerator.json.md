@@ -1,5 +1,5 @@
-### tuktu.generators.DummyGenerator
-Generates dummy strings every tick
+### tuktu.db.generators.ReadGenerator
+Reads data from a Tuktu DB bucket.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -19,15 +19,11 @@ Generates dummy strings every tick
 
   * **config** *(type: object)* `[Required]`
 
-    * **interval** *(type: int)* `[Required]`
-    - Tick interval in which to send the messages, in milliseconds.
+    * **keys** *(type: array)* `[Required]`
+    - The keys that together from the keystring of the bucket.
 
-    * **message** *(type: string)* `[Required]`
-    - The message to send every tick.
+      * **[UNNAMED]** *(type: string)* `[Required]`
 
-    * **send_immediately** *(type: boolean)* `[Optional]`
-    - True if you want the initial message to be immediately send
-
-    * **max_amount** *(type: int)* `[Optional]`
-    - The maximum amount of messages to be sent.
+    * **as_block** *(type: boolean)* `[Optional, default = false]`
+    - If set to true, outputs the entire bucket in one DataPacket, if set to false, each element in the bucket is emitted separately.
 

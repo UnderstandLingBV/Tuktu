@@ -7,6 +7,3 @@ GET     /                           controllers.dfs.Browser.index
 POST    /files                      controllers.dfs.Browser.getFiles
 POST    /openFiles                  controllers.dfs.Browser.getOpenFiles
 GET     /serveFile/:filename        controllers.dfs.Browser.serveFile(filename)
-
-# Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.dfs.Assets.versioned(path="/public", file: Asset)

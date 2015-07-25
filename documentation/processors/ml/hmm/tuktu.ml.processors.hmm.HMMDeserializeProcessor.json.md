@@ -22,3 +22,6 @@ Deserializes a Hidden Markov Model from disk to the in-memory model repository.
     * **num_observable** *(type: int)* `[Required]`
     - The number of observable states of this HMM.
 
+    * **wait_for_load** *(type: boolean)* `[Optional, default = false]`
+    - If set to true, processing only continues after the model has been loaded into memory (sync). If false, processing continues immediately, not knowing when the model has been materialized.
+

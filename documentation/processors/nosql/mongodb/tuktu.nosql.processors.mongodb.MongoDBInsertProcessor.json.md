@@ -23,6 +23,6 @@ Inserts data into MongoDB.
 
       * **[UNNAMED]** *(type: string)* `[Required]`
 
-    * **sync** *(type: boolean)* `[Optional, default = false]`
-    - Insert data in an (a)synchronous fashion.
+    * **timeout** *(type: int)* `[Optional, default = 5]`
+    - Overwrite the Tuktu default timeout.
 
