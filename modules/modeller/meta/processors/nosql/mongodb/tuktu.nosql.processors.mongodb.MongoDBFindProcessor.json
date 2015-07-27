@@ -53,7 +53,19 @@
 					"name": "filter",
 					"description": "Filter results by this projection.",
 					"type": "string",
-					"required": true
+					"required": false
+				},
+				{
+					"name": "sort",
+					"description": "Sort results by this projection.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "limit",
+					"description": "Limit results by this number.",
+					"type": "int",
+					"required": false
 				}
 			]
 		}

@@ -27,6 +27,8 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     var collection: JSONCollection = _
     var query: String = _
     var filter: String = _
+    var sort: String = _
+    var limit: Option[Int] = _
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
@@ -40,7 +42,9 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 
         // Get query and filter
         query = (config \ "query").as[String]
-        filter = (config \ "filter").as[String]
+        filter = (config \ "filter").asOpt[String].getOrElse("{}")
+        sort = (config \ "sort").asOpt[String].getOrElse("{}")
+        limit = (config \ "limit").asOpt[Int]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
@@ -49,9 +53,13 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
             // Evaluate the query en filter strings and convert to JSON
             val queryJson = Json.parse(stringHandler.evaluateString(query, datum,"\"",""))
             val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum))
+            val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
             // Get data based on query and filter
-            val resultData = collection.find(queryJson, filterJson).cursor[JsObject].collect[List]()
-                
+            val resultData = limit match {
+                case Some(s) => collection.find(queryJson,filterJson).sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject].collect[List](s)
+                case None => collection.find(queryJson,filterJson).sort(sortJson).cursor[JsObject].collect[List]()
+            }   
+            
             resultData.map { resultList => {
                 for (resultRow <- resultList) yield {
                     tuktu.api.utils.JsObjectToMap(resultRow)
