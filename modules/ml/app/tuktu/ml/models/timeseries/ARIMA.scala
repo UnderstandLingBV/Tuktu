@@ -28,6 +28,10 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.BOBYQAOptimizer
 import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression
 import org.apache.commons.math3.random.MersenneTwister
 import tuktu.ml.models.BaseModel
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
 
 object ARIMA {
     /**
@@ -71,7 +75,7 @@ object ARIMA {
      * @param initParams initial parameter guesses
      * @return
      */
-    private def fitWithCSS(
+    def fitWithCSS(
         diffedY: Array[Double],
         order: (Int, Int, Int),
         includeIntercept: Boolean,
@@ -201,9 +205,9 @@ object ARIMA {
 }
 
 class ARIMAModel(
-        val order: (Int, Int, Int), // order of autoregression, differencing, and moving average
-        val coefficients: Array[Double], // coefficients: intercept, AR coeffs, ma coeffs
-        val hasIntercept: Boolean = true,
+        var order: (Int, Int, Int), // order of autoregression, differencing, and moving average
+        var coefficients: Array[Double], // coefficients: intercept, AR coeffs, ma coeffs
+        var hasIntercept: Boolean = true,
         val seed: Long = 10L // seed for random number generation
         ) extends BaseModel {
 
@@ -432,5 +436,28 @@ class ARIMAModel(
         results(nDiffed + d to -1) := forward(maxLag to -1)
         // add up if there was any differencing
         ARIMA.invDifferences(results, d)
+    }
+    
+    override def serialize(filename: String) = {
+        // Write out model
+        val oos = new ObjectOutputStream(new FileOutputStream(filename))
+        oos.writeObject(Map(
+                "p" -> order._1,
+                "d" -> order._2,
+                "q" -> order._3,
+                "coeffs"-> coefficients,
+                "interc" -> hasIntercept
+        ))
+        oos.close
+    }
+    
+    override def deserialize(filename: String) = {
+        val ois = new ObjectInputStream(new FileInputStream(filename))
+        val obj = ois.readObject.asInstanceOf[Map[String, Any]]
+        ois.close
+        
+        order = (obj("p").asInstanceOf[Int], obj("d").asInstanceOf[Int], obj("q").asInstanceOf[Int])
+        coefficients = obj("coeffs").asInstanceOf[Array[Double]]
+        hasIntercept = obj("interc").asInstanceOf[Boolean]
     }
 }

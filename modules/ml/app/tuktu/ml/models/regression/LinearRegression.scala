@@ -11,7 +11,7 @@ import java.io.ObjectOutputStream
  * Implements a wrapper around apache common math regression
  */
 class LinearRegression extends BaseModel {
-    val regression = new OLSMultipleLinearRegression
+    var regression = new OLSMultipleLinearRegression
     
     private var currentData: Array[Array[Double]] = _
     private var currentLabels: Array[Double] = _
@@ -42,7 +42,7 @@ class LinearRegression extends BaseModel {
     
     override def deserialize(filename: String) = {
         val ois = new ObjectInputStream(new FileInputStream(filename))
-        val obj = ois.readObject.asInstanceOf[OLSMultipleLinearRegression]
+        regression = ois.readObject.asInstanceOf[OLSMultipleLinearRegression]
         ois.close
     }
 }
