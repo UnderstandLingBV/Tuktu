@@ -19,7 +19,7 @@ import tuktu.viz.actor.GetEnumerator
 object Charting extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
-    def graphingEndPoint = WebSocket.tryAccept[String] { request =>
+    def websocket = WebSocket.tryAccept[String] { request =>
         // Ignore input sent back
         val in = Iteratee.ignore[String]
         
@@ -30,7 +30,7 @@ object Charting extends Controller {
         }
     }
     
-    def websocketJs = Action { implicit request =>
+    def graphingEndPoint = Action { implicit request =>
         Ok(views.html.viz.charts())
     }
 }

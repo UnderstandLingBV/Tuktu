@@ -1,0 +1,36 @@
+{
+	"name": "Time Line Processor",
+	"description": "Takes data and produces a time line chart end point.",
+	"class": "tuktu.viz.processors.TimeLineProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "time_field",
+					"type": "string",
+					"required": false,
+					"description": "The name of the field containing the time indicators, for populating the horizontal axis. Must be a unix timestamp. If left out, uses the time the packet arrived."
+				},
+				{
+					"name": "data_field",
+					"type": "string",
+					"required": true,
+					"description": "The name of the field containing the data (values), for populating the vertical axis."
+				}
+			]
+		}
+	]
+}

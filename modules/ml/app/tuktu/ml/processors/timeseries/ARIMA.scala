@@ -36,7 +36,9 @@ class ARIMATrainProcessor(resultName: String) extends BaseMLTrainProcessor[ARIMA
         super.initialize(config)
     }
     
-    override def instantiate(): ARIMAModel = ARIMA.fitModel((p, d, q), breeze.linalg.Vector(), includeIntercept)
+    override def instantiate(): ARIMAModel = ARIMA.fitModel((p, d, q), breeze.linalg.Vector(
+            (for (i <- 0 to math.max(p, q) * 2) yield 0.0).toArray
+    ), includeIntercept)
         
     // Trains the ARIMA model
     override def train(data: List[Map[String, Any]], model: ARIMAModel): ARIMAModel = {

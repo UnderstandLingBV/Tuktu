@@ -17,7 +17,7 @@ class ChartingActor() extends Actor with ActorLogging {
         case ge: GetEnumerator => 
             sender ! enumerator
         case packet: JsObject =>
-            channel.push(Json.obj().toString)
+            channel.push(packet.toString)
         case _ => {}
     }
 }
