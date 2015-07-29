@@ -32,8 +32,9 @@ class DataMonitor() extends Actor with ActorLogging {
             case "done" => {
                 // Remove from current apps, add to finished jobs
                 appMonitor -= amp.name
+                
                 implicit def currentTime = new Date().getTime
-                finishedJobs = finishedJobs + (amp.name, (amp.timestamp, currentTime / 1000L))
+                finishedJobs = finishedJobs + (amp.name + "_at_" + currentTime.toString, (amp.timestamp, currentTime / 1000L))
             }
             case "start" => {
                 if (!appMonitor.contains(amp.name)) appMonitor += amp.name -> new AppMonitorObject(amp.name, amp.timestamp)

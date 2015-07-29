@@ -284,7 +284,7 @@ class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultNam
 /**
  * Implodes an array of strings into a string
  */
-class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
+class StringImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldList = List[JsObject]()
     override def initialize(config: JsObject) {
         fieldList = (config \ "fields").as[List[JsObject]]
@@ -309,6 +309,24 @@ class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
 	            fields.head -> value.mkString(sep)
 	        })
         })}
+    })
+}
+
+/**
+ * Implodes elements of a DataPacket into one element with a sequence
+ */
+class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var fields: List[String] = _
+    override def initialize(config: JsObject) {
+        fields = (config \ "fields").as[List[String]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(List((for (field <- fields) yield {
+            field -> {
+                for (datum <- data.data) yield datum(field)
+            }
+        }).toMap))
     })
 }
 

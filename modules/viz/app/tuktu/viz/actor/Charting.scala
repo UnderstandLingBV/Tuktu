@@ -6,6 +6,7 @@ import akka.actor.actorRef2Scala
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
+import java.nio.channels.ClosedChannelException
 
 case class GetEnumerator()
 
@@ -16,8 +17,14 @@ class ChartingActor() extends Actor with ActorLogging {
     def receive = {
         case ge: GetEnumerator => 
             sender ! enumerator
-        case packet: JsObject =>
-            channel.push(packet.toString)
+        case packet: JsObject => {
+            try {
+                channel.push(packet.toString)
+            }
+            catch {
+                case e: ClosedChannelException => {}
+            }
+        }
         case _ => {}
     }
 }
