@@ -13,7 +13,7 @@
     </head>
     
     <body>
-        <div id="chart" style="width: 100%; height: 80%;"></div>
+        <div id="chart" style="width: 900px; height: 300px;"></div>
 
 		<script type="text/javascript">
 		$(document).ready(function() {
@@ -31,9 +31,8 @@
 		    var wsSocket = new WS("@controllers.viz.routes.Charting.websocket().webSocketURL()");
 		
 		    wsSocket.onmessage = function(event) {
-		        console.log(event);
 		        var data = JSON.parse(event.data);
-		        $(chart).push();
+		        chart.push([data]);
 		    }
 		
 		});
