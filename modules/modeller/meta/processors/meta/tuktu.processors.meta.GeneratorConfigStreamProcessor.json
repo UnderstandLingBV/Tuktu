@@ -48,6 +48,12 @@
 					"description" : "Field containing the name of the flow to load; can contain variables which will be resolved with data packets.",
 					"type": "string",
 					"required": true
+				},
+				{
+					"name": "send_whole",
+					"description" : "True sends the whole DataPacket, false sends each data object inside the DataPacket separately.",
+					"type": "boolean",
+					"required": false
 				}
 			]
 		}

@@ -219,6 +219,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     var next: List[String] = _
     var flowPresent = true
     var flowField: String = _
+    var sendWhole = false
 
     override def initialize(config: JsObject) {
         // Get the name of the config file
@@ -239,41 +240,52 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
 
         // The field of the JSON to load
         flowField = (config \ "flow_field").as[String]
+        
+        // Send the whole datapacket or in pieces
+        sendWhole = (config \ "send_whole").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        for (datum <- data.data) {
-            val processors = {
-                val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
-                    "/" + utils.evaluateTuktuString(flowField, datum) + ".json", "utf-8")
-                val cfg = Json.parse(configFile.mkString).as[JsObject]
-                configFile.close
-                (cfg \ "processors").as[List[JsObject]]
-            }
-            // Manipulate config and set up the remote actor
-            val customConfig = Json.obj(
-                "generators" -> List((Json.obj(
-                    "name" -> "tuktu.generators.AsyncStreamGenerator",
-                    "result" -> "",
-                    "config" -> Json.obj(),
-                    "next" -> next) ++ nodes)),
-                "processors" -> processors)
-
-            // Send a message to our Dispatcher to create the (remote) actor and return us the actorref
-            val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(name, Some(customConfig), false, true, false, None)
-            // Make sure we get actorref set before sending data
-            fut onSuccess {
-                case generatorActor: ActorRef => {
-                    //send the data forward
-                    generatorActor ! new DataPacket(List(datum))
-                    // Directly send stop packet
-                    generatorActor ! new StopPacket
-                }
-            }
+        if(!sendWhole) {
+            data.data.foreach(datum => 
+                forwardData(List(datum),utils.evaluateTuktuString(flowField, datum))
+            )            
+        } else {
+            forwardData(data.data, flowField)
         }
 
         data
     })
+
+    def forwardData(data: List[Map[String, Any]], flowName: String) {
+        val processors = {
+            val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
+                "/" + flowName + ".json", "utf-8")
+            val cfg = Json.parse(configFile.mkString).as[JsObject]
+            configFile.close
+            (cfg \ "processors").as[List[JsObject]]
+        }
+        // Manipulate config and set up the remote actor
+        val customConfig = Json.obj(
+            "generators" -> List((Json.obj(
+                "name" -> "tuktu.generators.AsyncStreamGenerator",
+                "result" -> "",
+                "config" -> Json.obj(),
+                "next" -> next) ++ nodes)),
+            "processors" -> processors)
+
+        // Send a message to our Dispatcher to create the (remote) actor and return us the actorref
+        val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(name, Some(customConfig), false, true, false, None)
+        // Make sure we get actorref set before sending data
+        fut onSuccess {
+            case generatorActor: ActorRef => {
+                //send the data forward
+                generatorActor ! new DataPacket(data)
+                // Directly send stop packet
+                generatorActor ! new StopPacket
+            }
+        }
+    }
 }
 
 /**
