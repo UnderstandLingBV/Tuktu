@@ -17,6 +17,7 @@ class TimeLineProcessor(resultName: String) extends BaseVizProcessor(resultName)
     var dataField: String = _ 
     
     override def initialize(config: JsObject) = {
+        super.initialize(config)
         timeField = (config \ "time_field").asOpt[String]
         dataField = (config \ "data_field").as[String]
     }
@@ -27,12 +28,9 @@ class TimeLineProcessor(resultName: String) extends BaseVizProcessor(resultName)
             case None => System.currentTimeMillis / 1000L
         }
         
-        // Get actor once
-        val actorSel = Akka.system.actorSelection("user/tuktu.viz.ChartingActor")
-        
         // Go over all data and send to the actor
         data.data.foreach(datum =>
-            actorSel ! Json.obj(
+            chartActor ! Json.obj(
                     "time" -> {
                         timeField match {
                             case Some(time) => datum(time).asInstanceOf[Long]

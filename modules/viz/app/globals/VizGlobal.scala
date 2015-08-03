@@ -10,7 +10,7 @@ import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import tuktu.api.InitPacket
 import tuktu.api.TuktuGlobal
-import tuktu.viz.actor.ChartingActor
+import tuktu.viz.actor.ChartingActorSupervisor
 
 /**
  * Starts up the DB Daemon
@@ -22,7 +22,7 @@ class VizGlobal() extends TuktuGlobal() {
      */
     override def onStart(app: Application) = {
         // Set up the DFS daemon
-        val vizActor = Akka.system.actorOf(Props[ChartingActor], name = "tuktu.viz.ChartingActor")
+        val vizActor = Akka.system.actorOf(Props[ChartingActorSupervisor], name = "tuktu.viz.ChartingActor")
         vizActor ! new InitPacket
     }
 }

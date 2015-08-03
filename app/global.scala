@@ -74,7 +74,7 @@ object Global extends GlobalSettings {
         // Set up health checker
         val healthChecker = Akka.system.actorOf(Props(classOf[HealthMonitor]), name = "TuktuHealthChecker")
         healthChecker ! "init"
-                
+
         // Load module globals
         LoadModuleGlobals(app)
         moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStart(app))

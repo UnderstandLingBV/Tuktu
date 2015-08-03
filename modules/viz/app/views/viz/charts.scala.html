@@ -1,4 +1,4 @@
-@()(implicit r: RequestHeader)
+@(name: String)(implicit r: RequestHeader)
 <!DOCTYPE html>
 
 <html>
@@ -17,22 +17,28 @@
 
 		<script type="text/javascript">
 		$(document).ready(function() {
-		    var lineChartData = [{
-                label: "Data Series",
-                values: []
-            }];
-		
-            var chart = $("#chart").epoch({
-                type: 'time.line',
-                data: lineChartData
-            });
+		    var chart = null;
 		
             var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket;
-		    var wsSocket = new WS("@controllers.viz.routes.Charting.websocket().webSocketURL()");
+		    var wsSocket = new WS("@controllers.viz.routes.Charting.websocket(name).webSocketURL()");
 		
 		    wsSocket.onmessage = function(event) {
 		        var data = JSON.parse(event.data);
-		        chart.push([data]);
+		        
+		        if (!chart) {
+		            var lineChartData = [{
+		                label: "Data Series",
+		                values: [data]
+		            }];
+		            
+		            chart = $("#chart").epoch({
+		                type: 'time.line',
+		                data: lineChartData
+		            });
+		        }
+		        else {
+		            chart.push([data]);
+		        }
 		    }
 		
 		});
