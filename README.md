@@ -16,6 +16,21 @@ Tuktu is a big data analytics platform that focuses on ease of use. The idea of 
 
 The name comes from the Inuït word *tuktu*, which freely translates to the English word *reindeer* (also known as *[caribou](http://en.wikipedia.org/wiki/Caribou)*).
 
+# Users and Partners
+The following companies or organizations use or actively contribute to Tuktu.
+
+![BDC Logo](https://www.bigdata.company/wp-content/uploads/2014/12/Screen-Shot-2014-12-08-at-14.45.08-e1418079507919.png)
+
+[BigData.Company](http://bigdata.company/) is the largest contributor to Tuktu and actively uses it as its core platform.
+
+![AnyPinion Logo](http://anypinion.com/assets/images/logo_grey.png)
+
+[AnyPinion](http://anypinion.com/) uses Tuktu for its API and real-time analytics module. AnyPinion has been an adopter of Tuktu from the very beginning.
+
+[University of Maastricht](http://www.maastrichtuniversity.nl/) The University of Maastricht has been using Tuktu as the core platform for performing analytics on open source data on. The University of Maastricht has been using Tuktu from the very beginning.
+
+Are you using Tuktu too and want to be on this list? [Contact us](mailto:info@et4it.nl) and send a small logo, a URL and a small explanation of what you are doing with Tuktu.
+
 # Installing
 
 Installing Tuktu can be done by either building from source as described below, or by downloading a fully packaged (including all the submodules mentioned here) release from the following URL:
@@ -188,14 +203,3 @@ Tuktu comes with a number of submodules by default. Read more about them here.
 - The [Social](modules/social) submodule. This module contains generators for social media and some basic processors. 
 - The [Visualization](modules/viz) submodule. This module contains some default real-time visualization processors and endpoints to request graphs from them. 
 - The [Web](modules/web) submodule. This module will deal with HTTP traffic and has functionality for performing wb analytics.
-
-# Users and Partners
-The following companies or organizations use or actively contribute to Tuktu.
-
-![BDC Logo](https://www.bigdata.company/wp-content/uploads/2014/12/Screen-Shot-2014-12-08-at-14.45.08-e1418079507919.png)
-
-[BigData.Company](http://bigdata.company/) is the largest contributor to Tuktu and actively uses it as its core platform.
-
-![AnyPinion Logo](http://anypinion.com/assets/images/logo_grey.png)
-
-[AnyPinion](http://anypinion.com/) uses Tuktu for its API and real-time analytics module. AnyPinion has been an adopter of Tuktu from the very beginning.
