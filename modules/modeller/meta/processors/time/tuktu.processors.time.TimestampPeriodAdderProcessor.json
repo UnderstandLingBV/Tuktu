@@ -1,0 +1,84 @@
+{
+    "name":"Timestamp Period Adder Processor",
+    "description":"Adds (or substracts) a certain amount of time to a timefield.",
+    "class":"tuktu.processors.time.TimestampPeriodAdderProcessor",
+    "parameters":[
+        {
+            "name":"id",
+            "type":"string",
+            "required":true
+        },
+        {
+            "name":"result",
+            "type":"string",
+            "required":true
+        },
+        {
+            "name":"config",
+            "type":"object",
+            "required":true,
+            "parameters":[
+                {
+                    "name":"time_field",
+                    "description":"The field containing the timestamp to be modified.",
+                    "type":"string",
+                    "required":true
+                },
+                {
+                    "name":"format",
+                    "description":"If the timefield is a String, the formatting for this String.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"locale",
+                    "description":"If the timefield is a String, the locale for this String.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"years",
+                    "description":"Adds this amount of years to the timestamp.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"months",
+                    "description":"Adds this amount of months to the timestamp.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"weeks",
+                    "description":"Adds this amount of weeks to the timestamp.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"days",
+                    "description":"Adds this amount of days to the timestamp.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"hours",
+                    "description":"Adds this amount of hours to the timestamp.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"minutes",
+                    "description":"Adds this amount of minutes to the timestamp.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"seconds",
+                    "description":"Adds this amount of seconds to the timestamp.",
+                    "type":"string",
+                    "required":false
+                }
+            ]
+        }
+    ]
+}
