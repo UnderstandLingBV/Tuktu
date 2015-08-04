@@ -35,16 +35,10 @@ class PaddingMerger() extends DataMerger() {
                 packets.map(packet => packet.data).fold(Nil)((x, y) => {
                     // Check size difference
                     if (y.size < maxSize) {
-                        // Is size 1 or more?
-                        if (y.size == 1)
-                            // Repeat y's only value
-                            x.zipAll(y, Map(), y.head).map(z => z._1 ++ z._2)
-                        else {
-                            // Repeat the values of y
-                            x.zip({
-                                for (i <- 1 to maxSize) yield y(i % y.size)
-                            }).map(z => z._1 ++ z._2)
-                        }
+                        // Repeat the values of y
+                        x.zipAll({
+                            for (i <- 1 to maxSize) yield y(i % y.size)
+                        }, Map(), Map()).map(z => z._1 ++ z._2)
                     }
                     else
                         // Similar to simple merger
