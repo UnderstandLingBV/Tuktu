@@ -15,5 +15,5 @@ Special sync generator that processes a tuple and returns the actual result.
       * **instances** *(type: int)* `[Optional, default = 1]`
       - The amount of instances per node of this handler type
 
-  * **result** *(type: string)* `[Optional]`
+  * **result** *(type: string)* `[Required]`
 

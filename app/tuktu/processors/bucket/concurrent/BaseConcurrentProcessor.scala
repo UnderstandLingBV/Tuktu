@@ -116,7 +116,7 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
         // Set up forwarder
         val forwarder = Akka.system.actorOf(Props(classOf[ConcurrentStreamForwarder], self))
         // Submit config to the dispatcher
-        val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(
+        val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(
             "BaseConcurrentProcessor_" + index + "_" + java.util.UUID.randomUUID.toString,
             Some(customConfig),
             false,

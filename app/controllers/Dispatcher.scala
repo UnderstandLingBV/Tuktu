@@ -23,14 +23,6 @@ import tuktu.generators._
 import tuktu.processors.EOFBufferProcessor
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
 
-case class DispatchRequest(
-        configName: String,
-        config: Option[JsValue],
-        isRemote: Boolean,
-        returnRef: Boolean,
-        sync: Boolean,
-        sourceActor: Option[ActorRef]
-)
 case class treeNode(
         name: String,
         parents: List[Class[_]],

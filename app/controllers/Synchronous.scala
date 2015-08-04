@@ -11,7 +11,7 @@ import play.api.cache.Cache
 import play.api.libs.json.JsObject
 import play.api.mvc.Action
 import play.api.mvc.Controller
-import tuktu.api.DataPacket
+import tuktu.api.{ DataPacket, DispatchRequest }
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import play.api.libs.concurrent.Akka

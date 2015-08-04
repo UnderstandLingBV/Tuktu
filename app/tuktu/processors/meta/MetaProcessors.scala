@@ -80,7 +80,7 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
 
                     // Invoke the new generator with custom config
                     Akka.system.actorSelection("user/TuktuDispatcher") ! {
-                        new controllers.DispatchRequest(nextName, Some(newConfig), false, false, false, None)
+                        new DispatchRequest(nextName, Some(newConfig), false, false, false, None)
                     }
                 })
             }
@@ -90,10 +90,10 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
                     // Name contains a variable, so we must populate it for each datum
                     data.data.foreach(datum => {
                         Akka.system.actorSelection("user/TuktuDispatcher") !
-                            new controllers.DispatchRequest(utils.evaluateTuktuString(name, datum), None, false, false, false, None)
+                            new DispatchRequest(utils.evaluateTuktuString(name, datum), None, false, false, false, None)
                     })
                 } else {
-                    Akka.system.actorSelection("user/TuktuDispatcher") ! new controllers.DispatchRequest(name, None, false, false, false, None)
+                    Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(name, None, false, false, false, None)
                 }
             }
         }
@@ -175,7 +175,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         // Send a message to our Dispatcher to create the (remote) actor and return us the ActorRef
         try {
             val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? {
-                new controllers.DispatchRequest(nextName, Some(customConfig), false, true, sync, None)
+                new DispatchRequest(nextName, Some(customConfig), false, true, sync, None)
             }
             fut.onSuccess {
                 case ar: ActorRef => forwarder ! (ar, sync)
@@ -275,7 +275,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
             "processors" -> processors)
 
         // Send a message to our Dispatcher to create the (remote) actor and return us the actorref
-        val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new controllers.DispatchRequest(name, Some(customConfig), false, true, false, None)
+        val fut = Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(name, Some(customConfig), false, true, false, None)
         // Make sure we get actorref set before sending data
         fut onSuccess {
             case generatorActor: ActorRef => {

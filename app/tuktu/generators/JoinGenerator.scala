@@ -11,10 +11,7 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
-import tuktu.api.BaseGenerator
-import tuktu.api.DataPacket
-import tuktu.api.StopPacket
-import tuktu.api.InitPacket
+import tuktu.api._
 
 case class JoinPacket(
     data: Map[String, Any],
@@ -110,7 +107,7 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                 val index = el._2
                 
                 // We need to setup and start the two dataflows in a synchronous way
-                val fut = sender ? new controllers.DispatchRequest(source._1, None, false, true, true, Some(self))
+                val fut = sender ? new DispatchRequest(source._1, None, false, true, true, Some(self))
                 fut.onSuccess {
                     case ar: ActorRef => sourceActors += ar -> index
                 }

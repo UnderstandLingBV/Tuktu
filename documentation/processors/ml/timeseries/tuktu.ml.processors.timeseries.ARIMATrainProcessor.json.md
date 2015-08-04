@@ -1,5 +1,5 @@
-### tuktu.ml.processors.regression.LinearRegressionTrainProcessor
-Trains a linear regression model.
+### tuktu.ml.processors.timeseries.ARIMATrainProcessor
+Trains a model using ARIMA (Autoregressive Integrated Moving Average) using Conditional Sum of Squares
 
   * **id** *(type: string)* `[Required]`
 
@@ -16,9 +16,18 @@ Trains a linear regression model.
     * **wait_for_store** *(type: boolean)* `[Optional, default = false]`
     - Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.
 
-    * **data_field** *(type: string)* `[Required]`
-    - The field the data resides in. Data must be of type Seq[Int].
+    * **p** *(type: int)* `[Required]`
+    - p-parameter, the order of the autoregressive model.
 
-    * **label_field** *(type: string)* `[Required]`
-    - The field the label is in. Value must be an integer.
+    * **d** *(type: int)* `[Required]`
+    - d-parameter, the degree of differencing.
+
+    * **q** *(type: int)* `[Required]`
+    - q-parameter, the order of the moving-average model.
+
+    * **data_field** *(type: string)* `[Required]`
+    - The field the data resides in. Data must be of type Seq[Double].
+
+    * **include_intercept** *(type: boolean)* `[Optional, default = true]`
+    - Whether or not to include the intercept.
 

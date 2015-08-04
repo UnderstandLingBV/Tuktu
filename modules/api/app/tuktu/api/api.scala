@@ -25,6 +25,15 @@ case class DataPacket(
         data: List[Map[String, Any]]
 ) extends java.io.Serializable
 
+case class DispatchRequest(
+        configName: String,
+        config: Option[JsValue],
+        isRemote: Boolean,
+        returnRef: Boolean,
+        sync: Boolean,
+        sourceActor: Option[ActorRef]
+)
+
 case class InitPacket()
 
 case class StopPacket()

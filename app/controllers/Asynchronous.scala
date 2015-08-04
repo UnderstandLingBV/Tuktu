@@ -12,6 +12,7 @@ import play.api.libs.concurrent.Akka
 import play.api.mvc.Action
 import play.api.mvc.Controller
 import play.api.cache.Cache
+import tuktu.api.DispatchRequest
 
 object Asynchronous extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)

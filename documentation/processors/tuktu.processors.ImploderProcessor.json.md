@@ -1,5 +1,5 @@
 ### tuktu.processors.ImploderProcessor
-Implodes arrays into a string, overwriting its top-level ancestor.
+Implodes all elements in a DataPacket into a single element of a DataPacket
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,15 +8,7 @@ Implodes arrays into a string, overwriting its top-level ancestor.
   * **config** *(type: object)* `[Required]`
 
     * **fields** *(type: array)* `[Required]`
-    - The arrays to be imploded.
+    - The fields to be imploded.
 
-      * **[UNNAMED]** *(type: object)* `[Required]`
-
-        * **path** *(type: array)* `[Required]`
-        - The path to the array. The result will overwrite its top-level ancestor.
-
-          * **[UNNAMED]** *(type: string)* `[Required]`
-
-        * **separator** *(type: string)* `[Required]`
-        - The separator character used between elements.
+      * **[UNNAMED]** *(type: string)* `[Required]`
 

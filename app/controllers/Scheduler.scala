@@ -18,6 +18,7 @@ import play.api.data.validation.Constraints._
 import play.api.libs.concurrent.Akka
 import play.api.mvc.Action
 import play.api.mvc.Controller
+import tuktu.api.DispatchRequest
 import tuktu.utils.util
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration

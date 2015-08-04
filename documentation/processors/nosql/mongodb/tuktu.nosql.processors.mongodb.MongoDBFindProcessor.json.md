@@ -21,6 +21,12 @@ Executes a query with a filter on a given list of nodes.
     * **query** *(type: string)* `[Required]`
     - Find the documents matching these given criteria.
 
-    * **filter** *(type: string)* `[Required]`
+    * **filter** *(type: string)* `[Optional]`
     - Filter results by this projection.
+
+    * **sort** *(type: string)* `[Optional]`
+    - Sort results by this projection.
+
+    * **limit** *(type: int)* `[Optional]`
+    - Limit results by this number.
 

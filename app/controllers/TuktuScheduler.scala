@@ -20,6 +20,8 @@ import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 
+import tuktu.api.DispatchRequest
+
 case class SimpleScheduler(
         name: String,
         initialDelay: FiniteDuration,

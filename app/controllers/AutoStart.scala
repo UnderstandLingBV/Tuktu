@@ -8,6 +8,8 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.json._
 
+import tuktu.api.DispatchRequest
+
 /**
  * Load flows from an autostart file and either immediately start running them or
  * schedule them based on the cron settings.
