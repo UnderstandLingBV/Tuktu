@@ -21,3 +21,6 @@ Invokes a new generator, which sends its data to a selected list of processors f
     * **flow_field** *(type: string)* `[Required]`
     - Field containing the name of the flow to load; can contain variables which will be resolved with data packets.
 
+    * **send_whole** *(type: boolean)* `[Optional]`
+    - True sends the whole DataPacket, false sends each data object inside the DataPacket separately.
+

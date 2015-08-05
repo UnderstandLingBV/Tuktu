@@ -49,11 +49,11 @@ object Application extends Controller {
                             val actorRef = Await.result(fut, timeout.duration).asInstanceOf[ActorRef]
 
                             // Send the Actor a DataPacket containing the referrer
-                            val resultFut = actorRef ? new DataPacket(List(Map("referrer" -> referrer)))
-                            val result = Await.result(resultFut, timeout.duration).asInstanceOf[DataPacket]
+                            val resultFut = actorRef ? referrer
+                            val js = Await.result(resultFut, timeout.duration).asInstanceOf[String]
 
                             // Take js from result
-                            Ok(result.data(0)("js").asInstanceOf[String]).as("text/javascript")
+                            Ok(js).as("text/javascript")
                         }
                     }
                 }
@@ -66,11 +66,15 @@ object Application extends Controller {
      */
     def web = Action { implicit request =>
         {
-            val result = request.body.asText match {
-                case None      => new DataPacket(Nil)
-                case Some(str) => new DataPacket(List(tuktu.api.utils.JsObjectToMap(Json.parse(str).as[JsObject])))
+            request.body.asText match {
+                case Some(str) => {
+                    // Parse JSON, get path, and send data to respective actor
+                    val map = tuktu.api.utils.JsObjectToMap(Json.parse(str).as[JsObject])
+                    Akka.system.actorSelection(map("path").asInstanceOf[String]) ! new DataPacket(List(map - "path"))
+                    Ok
+                }
+                case None => BadRequest
             }
-            Ok
         }
     }
 }
