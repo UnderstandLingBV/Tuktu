@@ -52,7 +52,7 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         // create one big remove query
         val queries = (for(datum <- data.data) yield {
             Json.parse(stringHandler.evaluateString(query, datum,"\"","")).toString()
-        }).mkString(",")
+        }).distinct.mkString(",")
 
         // execute and wait for completion
         val result = collection.remove(Json.parse("{ \"$or\": [ "+queries+" ] }"))
