@@ -1,0 +1,68 @@
+{
+	"name": "MongoDB Remove Processor",
+	"description": "Removes data from MongoDB.",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBRemoveProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"description": "The database name.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"description": "The name of the collection to open.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "query",
+					"description": "The deletion query.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "just_one",
+					"description": "Delete only one item?",
+					"type": "boolean",
+					"required": false
+				},
+				{
+					"name": "timeout",
+					"description": "Overwrite the Tuktu default timeout.",
+					"type": "int",
+					"required": false,
+					"default": 5
+				}
+			]
+		}
+	]
+}
