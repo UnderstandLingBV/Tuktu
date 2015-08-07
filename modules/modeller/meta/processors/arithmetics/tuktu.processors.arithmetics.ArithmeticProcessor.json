@@ -19,10 +19,23 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "calculation",
+					"name": "calculate",
 					"description": "The formula which is calculated.",
 					"type": "string",
 					"required": true
+				},
+				{
+					"name": "doRounding",
+					"description": "Round the result",
+					"type": "boolean",
+					"required": false
+				},
+				{
+					"name": "calculate",
+					"description": "How many figures to round to.",
+					"type": "int",
+					"default": 0
+					"required": false
 				}
 			]
 		}
