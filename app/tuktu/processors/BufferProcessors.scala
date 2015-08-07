@@ -167,13 +167,14 @@ class EOFBufferProcessor(genActor: ActorRef, resultName: String) extends BufferP
     // Set up the buffering actor
     val bufferActor = Akka.system.actorOf(Props(classOf[BufferActor], genActor))
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Iterate over our data and add to the buffer
         val fut = Future.sequence(for (datum <- data.data) yield bufferActor ? datum)
         
         // Wait for all of them to finish
-        Await.result(fut, Cache.getAs[Int]("timeout").getOrElse(5) * 2 seconds)
-        data
+        fut.map {
+            case _ => data
+        }
     }) compose Enumeratee.onEOF(() => {
         Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
         bufferActor ! new StopPacket
@@ -294,6 +295,41 @@ class SignalBufferActor(remoteGenerator: ActorRef) extends Actor with ActorLoggi
         }
         case dp: DataPacket => {
             buffer += dp
+            sender ! "ok"
+        }
+    }
+}
+
+/**
+ * Splits the elements of a single data packet into separate data packets (one per element)
+ */
+class DataPacketSplitterProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    // Set up the splitting actor
+    val splitActor = Akka.system.actorOf(Props(classOf[SplitterActor], genActor))
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        val futures = Future.sequence(for (datum <- data.data) yield splitActor ? datum)
+        
+        futures.map {
+            case _ => data
+        }
+    }) compose Enumeratee.onEOF(() => splitActor ! new StopPacket)
+}
+
+/**
+ * Actor for forwarding the split data packets
+ */
+class SplitterActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
+    def receive() = {
+        case sp: StopPacket => {
+            remoteGenerator ! sp
+            self ! PoisonPill
+        }
+        case item: Map[String, Any] => {
+            // Directly forward
+            remoteGenerator ! new DataPacket(List(item))
             sender ! "ok"
         }
     }

@@ -1,0 +1,22 @@
+{
+	"name": "DataPacket Splitter Processor",
+	"class": "tuktu.processors.DataPacketSplitterProcessor",
+	"description": "Splits the elements of a DataPacket into separate DataPackets with one element per DataPacket.",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true
+		}
+	]
+}

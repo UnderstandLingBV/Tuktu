@@ -84,6 +84,7 @@ lazy val mlDependencies = Seq(
 lazy val dlDependencies = Seq(
     cache,
     "org.scalanlp" %% "breeze" % "0.10",
+    "org.deeplearning4j" % "deeplearning4j-core" % "0.0.3.3.4.alpha2",
     "org.scalatest" %% "scalatest" % "2.2.1" % "test",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
@@ -93,6 +94,18 @@ lazy val webDependencies = Seq(
     cache,
     "org.scalatest" %% "scalatest" % "2.2.1" % "test",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
+)
+lazy val crawlerDependencies = Seq(
+    ws,
+    cache,
+	"net.sourceforge.htmlunit" % "htmlunit" % "2.16",
+    "org.scalaj" %% "scalaj-http" % "1.1.4"
+)
+
+lazy val crawlerDependencies = Seq(
+    ws,
+    cache,
+    "net.sourceforge.htmlunit" % "htmlunit" % "2.16"
 )
 
 lazy val vizDependencies = Seq(
@@ -116,7 +129,9 @@ lazy val coreDependencies = Seq(
     "joda-time" % "joda-time" % "2.7",
     "org.apache.commons" % "commons-math3" % "3.5",
     "org.reflections" % "reflections" % "0.9.10",
-    "com.enragedginger" %% "akka-quartz-scheduler" % "1.3.0-akka-2.3.x"
+    "com.enragedginger" %% "akka-quartz-scheduler" % "1.3.0-akka-2.3.x",
+    "com.github.lucarosellini.rJava" % "JRIEngine" % "0.9-7",
+    "com.github.lucarosellini.rJava" % "JRI" % "0.9-7"
 )
 
 lazy val tuktuDBDependencies = Seq(
@@ -228,6 +243,28 @@ lazy val web = (project in file("modules/web"))
     .settings(EclipseKeys.skipParents in ThisBuild := false)
     .aggregate(api)
     .dependsOn(api)
+	
+lazy val crawler = (project in file("modules/crawler"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-crawler")
+    .settings(version := "0.1")
+    .settings(scalaVersion := "2.11.6")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= crawlerDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
+    .aggregate(api)
+    .dependsOn(api)
+    
+lazy val crawler = (project in file("modules/crawler"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-crawler")
+    .settings(version := "0.1")
+    .settings(scalaVersion := "2.11.6")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= crawlerDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
+    .aggregate(api)
+    .dependsOn(api)
     
 lazy val viz = (project in file("modules/viz"))
     .enablePlugins(PlayScala)
@@ -271,5 +308,5 @@ lazy val root = project
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= coreDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
-    .aggregate(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, modeller, viz)
-    .dependsOn(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, modeller, viz)
+    .aggregate(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz)
+    .dependsOn(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz)

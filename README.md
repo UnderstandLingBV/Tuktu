@@ -7,6 +7,7 @@ Tuktu is a big data analytics platform that focuses on ease of use. The idea of 
 - Tuktu has its own distributed file system that is very easy to use - alternatively, Tuktu integrates seamlessly with HDFS (and local files of course)
 - Tuktu also has its own in-memory distributed ke-value store for quickly storing and retrieving data. Conceptually, this is close to [Spark](http://spark.apache.org/)'s RDD
 - Tuktu has built-in real-time visualization capabilities for a number of pre-defined visuals
+- Native support for web-analytics
 - Periodic jobs can be scheduled natively from Tuktu
 - By default there is no master/slave architecture, so no single point of failure
 - Switch seamlessly between distributed and local (even transactional) computation paradigms
