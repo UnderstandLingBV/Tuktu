@@ -18,8 +18,8 @@ class ArithmeticProcessor(resultName: String) extends BaseProcessor(resultName) 
 
     override def initialize(config: JsObject) {
         calculate = (config \ "calculate").as[String]
-        numberOfDecimals = (config \ "numberOfDecimals").asOpt[Int].getOrElse(0)
-        doRounding = (config \ "doRounding").asOpt[Boolean].getOrElse(false)
+        numberOfDecimals = (config \ "number_of_decimals").asOpt[Int].getOrElse(0)
+        doRounding = (config \ "do_rounding").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {

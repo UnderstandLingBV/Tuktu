@@ -25,16 +25,16 @@
 					"required": true
 				},
 				{
-					"name": "doRounding",
+					"name": "do_rounding",
 					"description": "Round the result",
 					"type": "boolean",
 					"required": false
 				},
 				{
-					"name": "calculate",
+					"name": "number_of_decimals",
 					"description": "How many figures to round to.",
 					"type": "int",
-					"default": 0
+					"default": 0,
 					"required": false
 				}
 			]
