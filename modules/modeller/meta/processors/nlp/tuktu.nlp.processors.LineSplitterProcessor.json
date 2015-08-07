@@ -1,0 +1,44 @@
+{
+	"name": "Line Splitter Processor",
+	"description": "Splits a text up in lines (of minimum size)",
+	"class": "tuktu.nlp.processors.LineSplitterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the text to split.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "min_size",
+					"description": "The minimum character count per line that should be kept.",
+					"type": "int",
+					"required": false,
+					"default": 1
+				},
+				{
+					"name": "separate",
+					"description": "Whether or not to separate lines into elements of the DataPacket. If set to false, a single piece of text will be kept.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				}
+			]
+		}
+	]
+}

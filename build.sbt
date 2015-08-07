@@ -95,12 +95,6 @@ lazy val webDependencies = Seq(
     "org.scalatest" %% "scalatest" % "2.2.1" % "test",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
-lazy val crawlerDependencies = Seq(
-    ws,
-    cache,
-	"net.sourceforge.htmlunit" % "htmlunit" % "2.16",
-    "org.scalaj" %% "scalaj-http" % "1.1.4"
-)
 
 lazy val crawlerDependencies = Seq(
     ws,
