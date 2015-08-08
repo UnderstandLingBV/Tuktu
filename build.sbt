@@ -99,7 +99,7 @@ lazy val webDependencies = Seq(
 lazy val crawlerDependencies = Seq(
     ws,
     cache,
-    "net.sourceforge.htmlunit" % "htmlunit" % "2.16"
+    "net.sourceforge.htmlunit" % "htmlunit" % "2.18"
 )
 
 lazy val vizDependencies = Seq(

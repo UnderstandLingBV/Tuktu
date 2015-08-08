@@ -1,4 +1,4 @@
-package tuktu.nlp.generators
+package tuktu.crawler.generators
 
 import tuktu.api.BaseGenerator
 import play.api.libs.iteratee.Enumeratee
@@ -18,6 +18,7 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import akka.actor.PoisonPill
 import scala.collection.JavaConverters._
+import scala.util.Random
 
 case class ScrapedPacket(
         text: String,
@@ -28,9 +29,11 @@ case class ScrapedPacket(
 /**
  * Actor that gets content and links from a wikipedia page
  */
-class ScraperActor(parent: ActorRef, language: String) extends Actor with ActorLogging {
+class ScraperActor(parent: ActorRef, language: String, maxLinks: Int) extends Actor with ActorLogging {
     // Private web client
     val webClient = new WebClient
+    org.apache.log4j.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(org.apache.log4j.Level.OFF);
+    java.util.logging.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(java.util.logging.Level.OFF);
     
     def receive() = {
         case word: String => {
@@ -42,6 +45,7 @@ class ScraperActor(parent: ActorRef, language: String) extends Actor with ActorL
             val text = content.getByXPath("//*[@id='bodyContent']").asInstanceOf[java.util.ArrayList[HtmlDivision]].asScala.head.asText
             // Get all links
             val links = content.getByXPath("//*[@id='bodyContent']//a").asInstanceOf[java.util.ArrayList[HtmlAnchor]].asScala
+            
             // Filter out only wikipedia links
             val filteredLinks = links.map(link => {
                 link.getHrefAttribute.replaceAll("#.*", "")
@@ -56,7 +60,10 @@ class ScraperActor(parent: ActorRef, language: String) extends Actor with ActorL
             }).toList
             
             // Send to parent
-            parent ! new ScrapedPacket(text, word.drop("/wiki/".size), filteredLinks)
+            parent ! new ScrapedPacket(text, word.drop("/wiki/".size), {
+                if (maxLinks > 0) Random.shuffle(filteredLinks).take(maxLinks)
+                else filteredLinks
+            })
         }
         case sp: StopPacket => {
             webClient.close()
@@ -84,10 +91,12 @@ class WikipediaContentGenerator(resultName: String, processors: List[Enumeratee[
              seedWords.foreach(word => scrapedWords += word)
              // Should we include the word or not?
              includeWord = (config \ "include_word").asOpt[Boolean].getOrElse(false)
+             // Max links per page to fetch
+             val maxLinks = (config \ "max_links").asOpt[Int].getOrElse(0)
              
              // Set up scraping actors and start
              (0 to seedWords.size - 1).foreach(i => {
-                 val actor = Akka.system.actorOf(Props(classOf[ScraperActor], self, language))
+                 val actor = Akka.system.actorOf(Props(classOf[ScraperActor], self, language, maxLinks))
                  actor ! seedWords(i)
                  scrapers += actor
              })
