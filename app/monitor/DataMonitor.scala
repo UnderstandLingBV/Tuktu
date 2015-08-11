@@ -19,6 +19,9 @@ class DataMonitor() extends Actor with ActorLogging {
     val monitorData = new java.util.HashMap[String, java.util.HashMap[MPType, java.util.HashMap[String, Int]]]()
     val appMonitor = collection.mutable.Map[String, AppMonitorObject]()
     
+    // Keep track of a list of actors we need to notify on push base about events happening
+    val eventListeners = collection.mutable.HashSet.empty[ActorRef]
+    
     // Keep track of finished jobs that can expire
     var finishedJobs = ExpirationMap[String, (Long, Long)](
             Play.current.configuration.getInt("tuktu.monitor.finish_expiration").getOrElse(30) * 60 * 1000
@@ -28,18 +31,25 @@ class DataMonitor() extends Actor with ActorLogging {
         case "init" => {
             // Initialize monitor
         }
-        case amp: AppMonitorPacket => amp.status match {
-            case "done" => {
-                // Remove from current apps, add to finished jobs
-                appMonitor -= amp.name
-                
-                implicit def currentTime = new Date().getTime
-                finishedJobs = finishedJobs + (amp.name + "_at_" + currentTime.toString, (amp.timestamp, currentTime / 1000L))
+        case amel: AddMonitorEventListener => eventListeners += sender
+        case rmel: RemoveMonitorEventListener => eventListeners -= sender
+        case amp: AppMonitorPacket => {
+            amp.status match {
+                case "done" => {
+                    // Remove from current apps, add to finished jobs
+                    appMonitor -= amp.name
+                    
+                    implicit def currentTime = new Date().getTime
+                    finishedJobs = finishedJobs + (amp.name + "_at_" + currentTime.toString, (amp.timestamp, currentTime / 1000L))
+                }
+                case "start" => {
+                    if (!appMonitor.contains(amp.name)) appMonitor += amp.name -> new AppMonitorObject(amp.name, amp.timestamp)
+                }
+                case _ => {println("Unknown status")}
             }
-            case "start" => {
-                if (!appMonitor.contains(amp.name)) appMonitor += amp.name -> new AppMonitorObject(amp.name, amp.timestamp)
-            }
-            case _ => {println("Unknown status")}
+            
+            // Forward packet to all listeners
+            eventListeners.foreach(listener => listener ! amp)
         }
         case mp: MonitorPacket => {
             // Initialize if we have to

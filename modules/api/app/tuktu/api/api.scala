@@ -77,6 +77,9 @@ case class AppMonitorPacket(
         timestamp: Long,
         status: String
 )
+
+case class AddMonitorEventListener()
+case class RemoveMonitorEventListener()
 /**
  * End monitoring stuff
  */
