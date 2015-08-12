@@ -1,6 +1,7 @@
 package globals
 
 import java.io.File
+import java.nio.file.{Paths, Files}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -56,10 +57,13 @@ class ModellerGlobal() extends TuktuGlobal() {
             case "" => dir.getName
             case _ => nameSoFar + "." + dir.getName
         }
-        
+        // Rudimentary check to see if meta directory is available
+        if(!Files.exists(dir.toPath))
+          System.err.println("meta directory not available!")
+          
         // Get all files and dirs separately
         val (files, dirs) = dir.listFiles.toList.partition(!_.isDirectory)
-        
+                
         // Add all files, recurse over dirs
         Map(dirName -> getDescriptors(files)) ++ dirs.map(dir => buildRecursiveMap(dirName, dir)).flatten
     }
