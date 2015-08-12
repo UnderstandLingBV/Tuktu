@@ -1,0 +1,36 @@
+{
+	"name": "Generator Wrapper Processor",
+	"description": "Wraps a generator and returns its result after EOF.",
+	"class": "tuktu.processors.meta.GeneratorWrapperProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "generator_name",
+					"description": "The name of the config generator.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "generator_config",
+					"description": "The configuration for the generator.",
+					"type": "string",
+					"required": false
+				}
+			]
+		}
+	]
+}
