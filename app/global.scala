@@ -26,6 +26,7 @@ import controllers.TuktuScheduler
 import tuktu.api.TuktuGlobal
 import controllers.AutoStart
 import monitor.HealthMonitor
+import controllers.FlowManagerActor
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -74,6 +75,10 @@ object Global extends GlobalSettings {
         // Set up health checker
         val healthChecker = Akka.system.actorOf(Props(classOf[HealthMonitor]), name = "TuktuHealthChecker")
         healthChecker ! "init"
+                
+        // Set up FlowManager
+        val flowManagerActor = Akka.system.actorOf(Props(classOf[FlowManagerActor], dispActor), name = "FlowManager")
+        flowManagerActor ! "init"
 
         // Load module globals
         LoadModuleGlobals(app)
@@ -114,8 +119,10 @@ object Global extends GlobalSettings {
 	    // Terminate our dispatchers and monitor
         Akka.system.actorSelection("user/TuktuMonitor") ! PoisonPill
         Akka.system.actorSelection("user/TuktuScheduler") ! PoisonPill
-        Akka.system.actorSelection("user/TuktuHealthChecker") ! PoisonPill
+        Akka.system.actorSelection("user/FlowManager") ! PoisonPill
+        Akka.system.actorSelection("user/TuktuHealthChecker") ! PoisonPill        
         Akka.system.actorSelection("user/TuktuDispatcher") ! Broadcast(PoisonPill)
+        
         
         // Call onStop for module globals too
         moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStop(app))

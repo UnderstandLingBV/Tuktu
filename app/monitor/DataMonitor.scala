@@ -36,14 +36,16 @@ class DataMonitor() extends Actor with ActorLogging {
         case amp: AppMonitorPacket => {
             amp.status match {
                 case "done" => {
-                    // Remove from current apps, add to finished jobs
-                    appMonitor -= amp.name
+                    // get app from appMonitor
+                    val app = appMonitor(amp.getName) 
+                    // Remove from current apps, add to finished jobs                    
+                    appMonitor -= amp.getName
                     
                     implicit def currentTime = new Date().getTime
-                    finishedJobs = finishedJobs + (amp.name + "_at_" + currentTime.toString, (amp.timestamp, currentTime / 1000L))
+                    finishedJobs = finishedJobs + (amp.getName + "_at_" + currentTime.toString, (app.getStartTime, currentTime / 1000L))
                 }
                 case "start" => {
-                    if (!appMonitor.contains(amp.name)) appMonitor += amp.name -> new AppMonitorObject(amp.name, amp.timestamp)
+                    if (!appMonitor.contains(amp.getName)) appMonitor += amp.getName -> new AppMonitorObject(amp.actor, amp.timestamp)
                 }
                 case _ => {println("Unknown status")}
             }

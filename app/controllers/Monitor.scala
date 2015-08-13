@@ -55,8 +55,7 @@ object Monitor extends Controller {
         generatorName.onSuccess {
             case generator: ActorRef => {
                 Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                        generator.path.toStringWithoutAddress,
-                        System.currentTimeMillis / 1000L,
+                        generator,
                         "done"
                 )
             } 

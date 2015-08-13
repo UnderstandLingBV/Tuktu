@@ -1,0 +1,26 @@
+@(messages: Map[String, List[String]])
+
+@index("Flow Manager", messages) {
+    @flowMenu()
+} {
+	<form method="post" action="@routes.FlowManager.start">
+		<div class="row">
+            <div class="col-xs-12">
+                <div class="form-group">
+                    <label for="name">Flow Config</label>
+                    <textarea class="form-control" rows="3" id="config" name="config"></textarea>                                      
+                </div>
+            </div>
+        </div>
+	    <div class="row">
+            <div class="col-xs-12">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-default">Start flow manager!</button>
+                </div>
+            </div>
+        </div>
+	</form>
+	
+	<div id="formDiv"></div>
+
+	}

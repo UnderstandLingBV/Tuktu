@@ -90,8 +90,7 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         case ip: InitPacket => {
             // Send the monitoring actor notification of start
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self.path.toStringWithoutAddress,
-                    System.currentTimeMillis() / 1000L,
+                    self,
                     "start"
             )
         }
@@ -110,8 +109,7 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         case sp: StopPacket => {
             // Send message to the monitor actor
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self.path.toStringWithoutAddress,
-                    System.currentTimeMillis / 1000L,
+                    self,
                     "done"
             )
             
@@ -172,8 +170,7 @@ class ConcurrentStreamGenerator(resultName: String, processors: List[Enumeratee[
         case ip: InitPacket => {
             // Send the monitoring actor notification of start
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self.path.toStringWithoutAddress,
-                    System.currentTimeMillis() / 1000L,
+                    self,
                     "start"
             )
         }
@@ -181,8 +178,7 @@ class ConcurrentStreamGenerator(resultName: String, processors: List[Enumeratee[
         case sp: StopPacket => {
             // Send message to the monitor actor
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self.path.toStringWithoutAddress,
-                    System.currentTimeMillis / 1000L,
+                    self,
                     "done"
             )
             
@@ -251,8 +247,7 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
         case ip: InitPacket => {
             // Send the monitoring actor notification of start
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self.path.toStringWithoutAddress,
-                    System.currentTimeMillis() / 1000L,
+                    self,
                     "start"
             )
         }
@@ -260,8 +255,7 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
         case sp: StopPacket => {
             // Send message to the monitor actor
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self.path.toStringWithoutAddress,
-                    System.currentTimeMillis / 1000L,
+                    self,
                     "done"
             )
             

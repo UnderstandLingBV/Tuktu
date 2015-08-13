@@ -57,3 +57,7 @@ GET     /assets/*file                       controllers.Assets.versioned(path="/
 
 # Monitor Overview
 GET     /                                   controllers.Monitor.fetchLocalInfo
+
+# Flow Manager
+GET 	/flowManager						controllers.FlowManager.overview
+POST	/flowManager						controllers.FlowManager.start

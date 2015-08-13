@@ -67,16 +67,20 @@ case class MonitorOverviewResult(
         finishedJobs: Map[String, (Long, Long)]
 )
 
-class AppMonitorObject(name: String, startTime: Long) {
-    def getName = name
+class AppMonitorObject(actor: ActorRef, startTime: Long) {
+    def getActor = actor
     def getStartTime = startTime
+    def getName = actor.path.toStringWithoutAddress
 }
 
-case class AppMonitorPacket(
-        name: String,
-        timestamp: Long,
-        status: String
-)
+class AppMonitorPacket(
+        val actor: ActorRef,
+        val status: String,
+        val timestamp: Long = System.currentTimeMillis / 1000L
+) {
+    def getName = actor.path.toStringWithoutAddress
+    def getParentName = actor.path.parent.toStringWithoutAddress 
+}
 
 case class AddMonitorEventListener()
 case class RemoveMonitorEventListener()
@@ -123,8 +127,7 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     def cleanup() = {
         // Send message to the monitor actor
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                self.path.toStringWithoutAddress,
-                System.currentTimeMillis / 1000L,
+                self,                
                 "done"
         )
         
@@ -136,8 +139,7 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     def setup() = {
         // Send the monitoring actor notification of start
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                self.path.toStringWithoutAddress,
-                System.currentTimeMillis() / 1000L,
+                self,
                 "start"
         )
     }
