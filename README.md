@@ -68,7 +68,7 @@ You can now navigate to [http://localhost:9000](http://localhost:9000) to access
 
 Tuktu offers a web interface that allows to access its core functionalities like submitting jobs and monitoring running jobs. Navigate to [http://localhost:9000](http://localhost:9000) to access the web interface.
 
-Tuktu jobs are essentially JSON configuration files that live in a pre-defined folder (the *configs* folder by default). Configuration files should adhere to standards. To learn how to create configuration files, the best way to start is by looking at some [examples](examples.md).
+Tuktu jobs are essentially JSON configuration files that live in a pre-defined folder (the *configs* folder by default). Configuration files should adhere to standards. To learn how to create configuration files, the best way to start is by looking at some [examples](examples_modeller.md) (if you want to see these examples from a configuration file perspective, [check here](examples.md)).
 
 # Modeller
 
@@ -76,7 +76,7 @@ Instead of writing configuration files yourself, you can make use of a graphical
 
 The modeller lets you create data flows that can be run on Tuktu and looks a bit like this:
 
-![Modeller Example](modeller_example.png)
+![Modeller Example](images/modeller_example.png)
 
 # Examples
 
