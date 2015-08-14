@@ -5,7 +5,7 @@ All example configuration files given below require Tuktu be running on a server
 
 Note that for demonstration purposes, most examples make use of trivial, batch-oriented dummy generators. Examples are shown in code-blocks inside running articles that explain functionality.
 
-Not all generators and processors of Tuktu are presented in the examples. Each module has its own readme file that outlines all the generators and processors that it contains.
+Not all generators and processors of Tuktu are presented in the examples. For a full overview of all generators and processors, check out the [documentation](documentation).
 
 # A First Example 
 Let's start of by creating some simple example configuration files that do not serve any practical purpose, but merely give a minimal working example to start using Tuktu with.
