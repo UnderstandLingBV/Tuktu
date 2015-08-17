@@ -22,8 +22,9 @@ class TFIDFTrainProcessor(resultName: String) extends BaseMLTrainProcessor[TFIDF
     // Adds a document to the word count vector
     override def train(data: List[Map[String, Any]], model: TFIDF): TFIDF = {
         data.foreach(datum => {
+            val value = datum(field)
             // Check field type
-            datum match {
+            value match {
                 case dtm: Seq[String] => model.addDocument(dtm.toList)
                 case dtm: Any => model.addDocument(dtm.toString)
             }

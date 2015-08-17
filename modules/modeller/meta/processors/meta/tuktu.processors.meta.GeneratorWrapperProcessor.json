@@ -27,7 +27,7 @@
 				{
 					"name": "generator_config",
 					"description": "The configuration for the generator.",
-					"type": "string",
+					"type": "JsObject",
 					"required": false
 				}
 			]
