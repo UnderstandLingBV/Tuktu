@@ -225,7 +225,7 @@ class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
                         val evals = (for (m <- matches) yield {
                             val split = m.split("=").map(s => s.trim)
                             // Get field and value and see if they match
-                            evaluateTuktuString(split(0),datum) == evaluateTuktuString(split(1),datum)
+                            datum(evaluateTuktuString(split(0),datum)) == evaluateTuktuString(split(1),datum)
                         }).toList
                         // See if its and/or
                         if (andOr == "or") evals.exists(elem => elem)
