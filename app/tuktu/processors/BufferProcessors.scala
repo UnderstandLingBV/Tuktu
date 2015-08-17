@@ -24,6 +24,9 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
     
     val buffer = collection.mutable.ListBuffer[Map[String, Any]]()
     
+    // Send init packet to the remote generator
+    remoteGenerator ! new InitPacket
+    
     def receive() = {
         case "release" => {
             // Create datapacket and clear buffer
@@ -53,6 +56,8 @@ class GroupedBufferActor(remoteGenerator: ActorRef, fields: List[String]) extend
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     val buffer = collection.mutable.Map[List[Any], ListBuffer[Map[String, Any]]]()
+    
+    remoteGenerator ! new InitPacket
             
     def receive() = {
         case "release" => {
@@ -280,6 +285,8 @@ class SignalBufferActor(remoteGenerator: ActorRef) extends Actor with ActorLoggi
     
     val buffer = collection.mutable.ListBuffer[DataPacket]()
     
+    remoteGenerator ! new InitPacket
+    
     def receive() = {
         case "release" => {
             // Send data packets to remote generator one by one
@@ -322,6 +329,8 @@ class DataPacketSplitterProcessor(genActor: ActorRef, resultName: String) extend
  * Actor for forwarding the split data packets
  */
 class SplitterActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
+    remoteGenerator ! new InitPacket
+    
     def receive() = {
         case sp: StopPacket => {
             remoteGenerator ! sp

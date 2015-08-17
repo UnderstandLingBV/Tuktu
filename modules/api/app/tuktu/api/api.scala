@@ -73,7 +73,7 @@ class AppMonitorObject(actor: ActorRef, startTime: Long) {
     def getName = actor.path.toStringWithoutAddress
 }
 
-class AppMonitorPacket(
+case class AppMonitorPacket(
         val actor: ActorRef,
         val status: String,
         val timestamp: Long = System.currentTimeMillis / 1000L
