@@ -40,7 +40,7 @@ Installing Tuktu can be done by either building from source as described below, 
 
 Note that Tuktu requires Java (JRE) to be present on the system it is run from. While Tuktu can be compiled against different java versions, this download was build against **java 1.8** and hence that version of java is required to run it.
 
-Note that in order to run Tuktu, you need to navigate a terminal or command prompt to the root folder and then execute the command `bin\tuktu(.bat)`. (Do not run Tuktu from the bin-folder itself)
+Note that in order to run Tuktu, you need to navigate a terminal or command prompt to the root folder and then execute the command `bin\tuktu(.bat)`. **(Do not run Tuktu from the bin-folder itself but always from the root-folder of Tuktu)**
 
 # Building from Source
 
