@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import nl.et4it.Tokenizer
 
-class Summarize(resultName: String) extends BaseProcessor(resultName) {
+class SummarizeProcessor(resultName: String) extends BaseProcessor(resultName) {
     var textField: String = _
     var tfIdfField: String = _
     var numLines: Int = _
@@ -37,9 +37,11 @@ class Summarize(resultName: String) extends BaseProcessor(resultName) {
             // Go over the lines and compute average TF-IDF score per line, sort by highest
             val sortedLines = (for (line <- lines) yield {
                 val tokens = Tokenizer.tokenize(line)
-                (line ,tokens.foldLeft(0.0)((a, b) => a + {
-                    if (tfIdfScores.contains(b)) tfIdfScores(b) else 0.0
-                }))
+                (line, {
+                    tokens.foldLeft(0.0)((a, b) => a + {
+                        if (tfIdfScores.contains(b)) tfIdfScores(b) else 0.0
+                    }) / line.size.toDouble
+                })
             }).toList.sortBy(lineScore => lineScore._2).take(numLines).map(lineScore => lineScore._1)
             
             datum + (resultName -> {

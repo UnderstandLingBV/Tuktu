@@ -1,0 +1,49 @@
+{
+	"name": "Summarize Processor",
+	"description": "Summarizes a piece of text based on TF-IDF scores.",
+	"class": "tuktu.nlp.processors.SummarizeProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "text_field",
+					"description": "The field containing the text to summarize.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tfidf_field",
+					"description": "The field containing the TF-IDF scores. Use the TF-IDF processor to compute.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "num_lines",
+					"description": "The number of lines the summarization text should contain.",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "return_plain_text",
+					"description": "Whether or not to return a plain text or a list of all sentences of the summary.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				}
+			]
+		}
+	]
+}
