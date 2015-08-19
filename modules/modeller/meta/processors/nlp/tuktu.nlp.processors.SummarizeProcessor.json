@@ -42,6 +42,13 @@
 					"type": "boolean",
 					"required": false,
 					"default": true
+				},
+				{
+					"name": "optimal_sentence_length",
+					"description": "The optimal length of sentence to include in the memory. The summarize processor will try to find sentence of length closest to this value.",
+					"type": "int",
+					"required": false,
+					"default": 11
 				}
 			]
 		}

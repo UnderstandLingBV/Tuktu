@@ -33,7 +33,7 @@
 				{
 					"name": "only_once",
 					"description": "Whether or not to serialize only once. If set to true, the model will be serialized upon receival of the first DataPacket only, if set to false it will be overwritten for each new DataPacket.",
-					"type": "string",
+					"type": "boolean",
 					"required": false,
 					"default": true
 				},

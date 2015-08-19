@@ -1,0 +1,44 @@
+{
+	"name": "Document Processor",
+	"description": "Creates a document from multiple sentences in a DataPacket.",
+	"class": "tuktu.nlp.processors.DocumentProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "Containing the strings that are the lines/sentences.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "separator",
+					"description": "What to use as glue to merge all lines/sentences together.",
+					"type": "string",
+					"required": false,
+					"default": " "
+				},
+				{
+					"name": "remove_empty_lines",
+					"description": "Whether or not to remove lines that contain no characters.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				}
+			]
+		}
+	]
+}
