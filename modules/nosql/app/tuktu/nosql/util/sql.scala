@@ -23,7 +23,10 @@ object sql {
     /**
      * Turns an SQL row into a Map[String, Any]
      */
-    def rowToMap(row: Row) = row.asMap
+    def rowToMap(row: Row) = row.asMap.map(elem => elem._2 match {
+        case e: Option[_] => elem._1 -> e.getOrElse("NULL")
+        case e: Any => elem
+    })
     
 
 }
