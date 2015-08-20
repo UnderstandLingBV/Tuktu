@@ -93,7 +93,7 @@
 							]
 						},
 						{
-							"name": "userids",
+							"name": "users",
 							"description": "Specifies the users, by ID, to receive public tweets from.",
 							"type": "array",
 							"required": false,
