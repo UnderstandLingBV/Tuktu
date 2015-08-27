@@ -1,7 +1,9 @@
+# Point of origin, keep track where we are on the canvas
 paperx = 0
 papery = 0
 paperdx = 0
 paperdy = 0
+
 # Unfortunately the svg element doesn't have clientWidth, clientHeight
 # So we have to take it from its parent and deduct div-padding and svg-border
 # This means the following values have to be changed if the layout changes!
@@ -550,19 +552,24 @@ importConfig = (object) ->
 # Load config
 importConfig(loadedConfig)
 
+# Saved config, keep track to remind user if he really wants to leave
+savedConfig = loadedConfig
+
 # Bind click events
 $('a[href="#GenerateConfig"]').on('click', generateConfig)
 
 $('a[href="#SaveConfig"]').on('click', (e) ->
 	e.preventDefault()
+	config = getConfig()
 	jsRoutes.controllers.modeller.Application.saveConfig().ajax(
 		contentType: "text/plain",
-		data: JSON.stringify(getConfig(), null, '    '),
+		data: JSON.stringify(config, null, '    '),
 		success: ->
 			resultSymbol = document.createElement('span')
 			resultSymbol.className = "glyphicon glyphicon-ok-circle"
 			e.target.parentNode.insertBefore(resultSymbol, e.target.nextSibling)
 			$(resultSymbol).fadeOut(5000, -> e.target.parentNode.removeChild(resultSymbol))
+			savedConfig = config
 		error: ->
 			resultSymbol = document.createElement('span')
 			resultSymbol.className = "glyphicon glyphicon-remove-circle"
@@ -659,3 +666,8 @@ document.addEventListener('keydown', (e) ->
 	if e.keyCode is 46 and document.activeElement.nodeName is 'BODY'
 		selected.destructor()
 )
+
+# Ask user if he really wants to leave
+window.onbeforeunload = (e) ->
+	if not _.isEqual(savedConfig, getConfig())
+		'It was detected that you may have unsaved changes. Please confirm that you want to leave - data you have entered may not be saved.'
