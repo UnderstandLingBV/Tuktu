@@ -44,7 +44,10 @@ object Charting extends Controller {
         }
     }
     
-    def graphingEndPoint(name: String) = Action { implicit request =>
-        Ok(views.html.viz.charts(name))
+    def graphingEndPoint(name: String, chartType: String) = Action { implicit request =>
+        if (chartType == "area") {
+            Ok(views.html.viz.timeline(name))
+        }
+        else Ok(views.html.viz.timeline(name))
     }
 }

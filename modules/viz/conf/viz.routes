@@ -2,7 +2,7 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-GET     /websocket/:name                        controllers.viz.Charting.graphingEndPoint(name)
+GET     /websocket/:name/:type                  controllers.viz.Charting.graphingEndPoint(name, type)
 GET     /assets/javascripts/websocket.js        controllers.viz.Charting.websocket(name)
 
 # Map static resources from the /public folder to the /assets URL path
