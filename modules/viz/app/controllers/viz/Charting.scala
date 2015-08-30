@@ -23,6 +23,9 @@ import tuktu.viz.actor.GetEnumerator
 object Charting extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
+    /**
+     * Controller for the actual websocket that will stream the data
+     */
     def websocket(name: String) = WebSocket.tryAccept[String] { request =>
         // Ignore input sent back
         val in = Iteratee.ignore[String]
@@ -44,10 +47,15 @@ object Charting extends Controller {
         }
     }
     
+    /**
+     * Invokes the right graph to present
+     */
     def graphingEndPoint(name: String, chartType: String) = Action { implicit request =>
-        if (chartType == "area") {
-            Ok(views.html.viz.timeline(name))
+        chartType match {
+            case "area" => Ok(views.html.viz.epoch_chart(name, "area"))
+            case "bar" => Ok(views.html.viz.epoch_chart(name, "bar"))
+            case "line" => Ok(views.html.viz.epoch_chart(name, "line"))
+            case _ => Ok(views.html.viz.epoch_chart(name, "time.line"))
         }
-        else Ok(views.html.viz.timeline(name))
     }
 }

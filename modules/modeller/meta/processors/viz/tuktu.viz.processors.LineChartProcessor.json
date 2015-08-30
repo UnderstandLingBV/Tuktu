@@ -1,0 +1,56 @@
+{
+	"name": "Line Chart Processor",
+	"description": "Takes data and produces a line chart end point.",
+	"class": "tuktu.viz.processors.LineChartProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "name",
+					"type": "string",
+					"required": true,
+					"description": "The name of the chart. If this is an existing name, data from multiple flows will be combined."
+				},
+				{
+					"name": "historical",
+					"type": "boolean",
+					"required": false,
+					"description": "If set to false, only streaming data will be shown. Set to true, all data received so far will be loaded on rendering of the graph.",
+					"default": false
+				},
+				{
+					"name": "expiration",
+					"type": "int",
+					"required": false,
+					"description": "Will clean up a chart's data if nothing was received within this time period.",
+					"default": false
+				},
+				{
+					"name": "x_field",
+					"type": "string",
+					"required": true,
+					"description": "The name of the field containing the x-axis indicators."
+				},
+				{
+					"name": "y_field",
+					"type": "string",
+					"required": true,
+					"description": "The name of the field containing the y-axis indicators."
+				}
+			]
+		}
+	]
+}

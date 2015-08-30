@@ -1,4 +1,4 @@
-@(name: String)(implicit r: RequestHeader)
+@(name: String, chartType: String)(implicit r: RequestHeader)
 <!DOCTYPE html>
 
 <html>
@@ -26,14 +26,14 @@
 		        var data = JSON.parse(event.data);
 		        
 		        if (!chart) {
-		            var lineChartData = [{
+		            var chartData = [{
 		                label: "Data Series",
 		                values: [data]
 		            }];
 		            
 		            chart = $("#chart").epoch({
-		                type: 'time.line',
-		                data: lineChartData
+		                type: '@chartType',
+		                data: chartData
 		            });
 		        }
 		        else {
