@@ -194,9 +194,11 @@ class VarProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
  */
 class CorrelationProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
+    var pValuesField: Option[String] = _
 
     override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
+        pValuesField = (config \ "p_values").asOpt[String]
     }
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
@@ -206,10 +208,21 @@ class CorrelationProcessor(resultName: String) extends BaseBucketProcessor(resul
         }).toArray
 
         // Compute correlations
-        val correlations = new PearsonsCorrelation().computeCorrelationMatrix(values)
+        val pc = new PearsonsCorrelation()
+        val correlations = pc.computeCorrelationMatrix(values)
 
-        // Return the matrix
-        List(Map(resultName -> correlations.getData))
+        // Compute P-values if request and return the matrix
+        pValuesField match {
+            case Some(field) => {
+                // Get the P-values
+                val pValues = pc.getCorrelationPValues()
+                List(Map(
+                        resultName -> correlations.getData,
+                        field -> pValues.getData
+                ))
+            }
+            case None => List(Map(resultName -> correlations.getData))
+        }
     }
 }
 
