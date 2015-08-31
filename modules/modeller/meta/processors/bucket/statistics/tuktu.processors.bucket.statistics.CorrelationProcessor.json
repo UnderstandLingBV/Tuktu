@@ -30,6 +30,12 @@
 							"required": true
 						}
 					]
+				},
+				{
+					"name": "p_values",
+					"type": "string",
+					"description": "If this field is filled out, the P-values will be added to the result of the datapacket. If not, P-values will not be added.",
+					"required": false
 				}
 			]
 		}
