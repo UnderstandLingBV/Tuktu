@@ -38,7 +38,7 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
                     fieldItem <- fieldList
                     default = (fieldItem \ "default").asOpt[JsValue]
                     fields = (fieldItem \ "path").as[List[String]]
-                    fieldName = (fieldItem \ "result").as[String]
+                    fieldName = evaluateTuktuString((fieldItem \ "result").as[String],datum)
                     field = fields.head
                     if (fields.size > 0 && datum.contains(field))
             } yield {

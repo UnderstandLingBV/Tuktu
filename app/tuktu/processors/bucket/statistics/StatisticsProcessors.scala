@@ -255,15 +255,28 @@ class CovarianceProcessor(resultName: String) extends BaseBucketProcessor(result
  */
 class CorrelationMatrixProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
+    var pValuesField: Option[String] = _
 
     override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
+        pValuesField = (config \ "p_values").asOpt[String]
     }
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         // Collect all data
         val values = (for (field <- fields) yield {
-            (for (datum <- data) yield StatHelper.anyToDouble(datum(field))).toArray
+            (for (datum <- data) yield {
+                if (datum.contains(field)) { 
+                    // check if it's a Sequence of a single value, convert everything to seq
+                    datum(field) match {
+                        case seq: Seq[Any] => seq.map(StatHelper.anyToDouble(_))
+                        case _ => Seq(StatHelper.anyToDouble(datum(field))) 
+                    }                
+                } else {
+                    Seq[Double]()
+                }
+                // combine all sequences into 1 sequence and convert to Array
+            }).foldLeft(Seq[Double]())((b,a) => a ++ b).toArray            
         }).toArray
 
         // Compute correlations
@@ -271,6 +284,10 @@ class CorrelationMatrixProcessor(resultName: String) extends BaseBucketProcessor
         // Compute all the correlations between each value
         val correlationMatrix = values.map(x => values.map(y => pc.correlation(x, y)).toSeq).toSeq
         
-        List(Map(resultName -> correlationMatrix))        
+        // Compute P-values if requested and return the matrix
+        List(pValuesField match {
+            case Some(field) => Map(resultName -> correlationMatrix,field -> new PearsonsCorrelation(values).getCorrelationPValues.getData.toSeq.map(_.toSeq))
+            case None => Map(resultName -> correlationMatrix)
+        })   
     }
 }
