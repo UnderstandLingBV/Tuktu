@@ -1,7 +1,7 @@
 {
-	"name": "Correlation Processor",
-	"description": "Computes the correlation coefficient matrix of a list of fields containing numerical values.",
-	"class": "tuktu.processors.bucket.statistics.CorrelationProcessor",
+	"name": "Correlation Matrix Processor",
+	"description": "Computes the correlation matrix of a list of fields containing numerical values.",
+	"class": "tuktu.processors.bucket.statistics.CorrelationMatrixProcessor",
 	"parameters": [
 		{
 			"name": "id",
@@ -30,12 +30,6 @@
 							"required": true
 						}
 					]
-				},
-				{
-					"name": "p_values",
-					"type": "string",
-					"description": "If this field is filled out, the P-values will be added to the result of the datapacket. If not, P-values will not be added.",
-					"required": false
 				}
 			]
 		}
