@@ -190,7 +190,7 @@ class VarProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
 }
 
 /**
- * Computes correlation between a number of fields of numerical values
+ * Computes correlation coefficient between a number of fields of numerical values
  */
 class CorrelationProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     var fields: List[String] = _
@@ -247,5 +247,30 @@ class CovarianceProcessor(resultName: String) extends BaseBucketProcessor(result
 
         // Return the matrix
         List(Map(resultName -> covariances.getData))
+    }
+}
+
+/**
+ * Computes correlation between a number of fields of numerical values
+ */
+class CorrelationMatrixProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
+    var fields: List[String] = _
+
+    override def initialize(config: JsObject) {
+        fields = (config \ "fields").as[List[String]]
+    }
+
+    override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
+        // Collect all data
+        val values = (for (field <- fields) yield {
+            (for (datum <- data) yield StatHelper.anyToDouble(datum(field))).toArray
+        }).toArray
+
+        // Compute correlations
+        val pc = new PearsonsCorrelation()
+        // Compute all the correlations between each value
+        val correlationMatrix = values.map(x => values.map(y => pc.correlation(x, y)).toSeq).toSeq
+        
+        List(Map(resultName -> correlationMatrix))        
     }
 }
