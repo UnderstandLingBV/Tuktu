@@ -1,0 +1,59 @@
+{
+	"name": "DataPacket Filter Processor",
+	"description": "Filters data packets satisfying a number of expressions.",
+	"class": "tuktu.processors.PacketFilterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "expressions",
+					"description": "The list of expressions.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "expression",
+							"type": "object",
+							"required": true,
+							"description": "The actual expression.",
+							"parameters": [
+								{
+									"name": "type",
+									"description": "The type of the expression: 'groovy', 'negate' or 'simple'.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "and_or",
+									"description": "In case of normal or negate type, do all statements need to evaluate to true (and), or at least one (or).",
+									"type": "string",
+									"required": false,
+									"default": "and"
+								},
+								{
+									"name": "expression",
+									"description": "The expression itself. This can be a string that needs to be evaluated, or it can be a nested array of new expressions that follow the same structure as any top-level expression.",
+									"type": "any",
+									"required": true
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

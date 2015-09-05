@@ -173,69 +173,77 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 /**
- * Includes or excludes specific datapackets
+ * Filters out data packets that satisfy a certain condition
  */
-class InclusionProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var expression: String = null
-    var expressionType: String = null
-    var andOr: String = null
-    
-    override def initialize(config: JsObject) {
-        // Get the groovy expression that determines whether to include or exclude
-        expression = (config \ "expression").as[String]
-        // See if this is a simple or groovy expression
-        expressionType = (config \ "type").as[String]
-        // Set and/or
-        andOr = (config \ "and_or").asOpt[String] match {
-            case Some("or") => "or"
-            case _ => "and"
-        }
-    }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        Future {new DataPacket(for {
-                datum <- data.data
-                // See if we need to include this
-                include = expressionType match {
-                    case "groovy" => {
-                        // Replace expression with values
-                    	val replacedExpression = evaluateTuktuString(expression, datum)
-                    	
-	                    try {
-	                        Eval.me(replacedExpression).asInstanceOf[Boolean]
-	                    } catch {
-	                        case _: Throwable => true
-	                    }
-                    }
-                    case "negate" => {
-                        // This is a comma-separated list of field=val statements
-                        val matches = expression.split(",").map(m => m.trim)
-                        val evals = for (m <- matches) yield {
-                            val split = m.split("=").map(s => s.trim)
-                            // Get field and value and see if they match
-                            datum(split(0)) == split(1)
+class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
+    /**
+     * Evaluates a number of expressions
+     */
+    private def evaluateExpressions(datum: Map[String, Any], expressions: List[JsObject]): Boolean = {
+        def evaluateExpression(expression: JsObject): Boolean = {
+            // Get type, and/or and sub expressions, if any
+            val exprType = (expression \ "type").as[String]
+            val andOr = (expression \ "and_or").asOpt[String].getOrElse("and")
+            val evalExpr = (expression \ "expression").as[JsValue]
+            
+            // See what the actual expression looks like
+            evalExpr match {
+                case e: JsString => {
+                    // A real expression that we need to evaluate, based on the type of evaluation
+                    exprType match {
+                        case "groovy" => {
+                            // Replace expression with values
+                            val replacedExpression = evaluateTuktuString(e.value, datum)
+                            
+                            try {
+                                Eval.me(replacedExpression).asInstanceOf[Boolean]
+                            } catch {
+                                case _: Throwable => true
+                            }
                         }
-                        // See if its and/or
-                        if (andOr == "or") !evals.exists(elem => elem)
-                        else evals.exists(elem => !elem)
-                    }
-                    case _ => {
-                        // This is a comma-separated list of field=val statements
-                        val matches = expression.split(",").map(m => m.trim)
-                        val evals = (for (m <- matches) yield {
-                            val split = m.split("=").map(s => s.trim)
-                            // Get field and value and see if they match
-                            datum(evaluateTuktuString(split(0),datum)) == evaluateTuktuString(split(1),datum)
-                        }).toList
-                        // See if its and/or
-                        if (andOr == "or") evals.exists(elem => elem)
-                        else !evals.exists{elem => !elem}
+                        case _ => {
+                            // Replace expression with values
+                            val replacedExpression = evaluateTuktuString(e.value, datum)
+                            // Evaluate
+                            // @TODO: Expand later using Scala parser combinators
+                            val result = {
+                                val split = replacedExpression.split("=").map(s => s.trim)
+                                split(0) == split(1)
+                            }
+                            
+                            // Negate or not?
+                            if (exprType == "negate") !result else result
+                        }
                     }
                 }
-                if (include)
-        } yield {
-            datum
-        })}
+                case e: JsArray => {
+                    // We have sub elements, process all of them
+                    if (andOr == "or") e.as[List[JsObject]].exists(expr => evaluateExpression(expr))
+                    else e.as[List[JsObject]].forall(expr => evaluateExpression(expr))
+                }
+                case _ => true
+            }
+        }
+        
+        // Go over all expressions and evaluate them
+        expressions.exists(expr => evaluateExpression(expr))
+    }
+    
+    var expressions: List[JsObject] = _
+    override def initialize(config: JsObject) {
+        expressions = (config \ "expressions").as[List[JsObject]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(
+            // Go over data
+            for {
+                datum <- data.data
+
+                // Evaluate expressions
+                if (evaluateExpressions(datum, expressions))
+            } yield datum
+        )
     }) compose Enumeratee.filter((data: DataPacket) => {
         data.data.size > 0
     })
