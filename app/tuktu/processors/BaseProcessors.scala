@@ -604,3 +604,20 @@ class MapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName
         })
     })
 }
+
+/**
+ * Sends a DataPacket's content to an Akka actor given by an actor path
+ */
+class AkkaSenderProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var actor_path = ""
+
+    override def initialize(config: JsObject) {
+        actor_path = (config \ "actor_path").as[String]
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        val selection = Akka.system.actorSelection(actor_path)
+        selection ! data.data
+        data
+    })
+}

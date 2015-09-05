@@ -1,0 +1,30 @@
+{
+	"name": "Akka Sender Processor",
+	"description": "Sends a DataPacket's content to an Akka actor given by an actor path.",
+	"class": "tuktu.processors.AkkaSenderProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "actor_path",
+					"description": "The path of the actor to send the DataPacket's contents to.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
