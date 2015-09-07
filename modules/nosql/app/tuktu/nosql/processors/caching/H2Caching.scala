@@ -38,11 +38,15 @@ class H2Caching (resultName: String) extends BaseProcessor(resultName) {
         
         //clean Database
         h2Client.query("DROP ALL OBJECTS")
-         
+
         //for each table, request table structure and copy over all data
         for (table <- tables) {
             // request table info and recreate
-            h2Client.query(sqlClient.queryResult(s"SHOW CREATE TABLE $dbName.$table").head[String]("Create Table"))
+            val createTable = sqlClient.queryResult(s"SHOW CREATE TABLE $dbName.$table").head[String]("Create Table")
+            // clean up character encodings
+            val createTableCleanedUp = createTable.replaceAll("(?i)character set [^ ]*", "").replaceAll("(?i)default charset=[^ ]*","")
+            // execute
+            h2Client.query(createTableCleanedUp)
 
             //copy over each row to h2 db
             for (row <- sqlClient.queryResult(s"SELECT * FROM $dbName.$table")) { 
