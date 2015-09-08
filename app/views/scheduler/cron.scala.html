@@ -16,21 +16,24 @@
 	        <div class="col-xs-12">
 	            <div class="form-group">
 	                <label for="cronSchedule">Cron schedule</label>
-	                <input type="text" class="form-control" id="cronSchedule" name=cronSchedule>
+	                <input type="text" class="form-control" id="cronSchedule" name="cronSchedule" placeholder="See http://www.quartz-scheduler.org/documentation/quartz-1.x/tutorials/crontrigger">
 	            </div>
 	        </div>
 	    </div>
 	    <div class="row">
 	        <div class="col-xs-12">
-	        	<div class="container" style="border: 1px solid black;">
-	            	<div id="jobDiv"></div>
-	            </div>
+	           <div class="form-group">
+                    <label>Select jobs</label>
+		        	<div class="container" style="border: 1px solid black; height: 400px; overflow-x: hidden; overflow-y: scroll;">
+                        <div id="jobDiv"></div>
+		            </div>
+		        </div>
 	        </div>
 	    </div>
 	    <div class="row">
             <div class="col-xs-12">
                 <div class="form-group">
-                    <button type="submit" class="btn btn-default">Start cron scheduler!</button>
+                    <button type="submit" class="btn btn-default" onClick="batchStarter()">Start cron scheduler!</button>
                 </div>
             </div>
         </div>

@@ -56,7 +56,7 @@ object Scheduler extends Controller {
         name: String,
         initialDelay: String,
         interval: String,
-        id: String
+        jobs: List[String]
     )
     
     val simpleScheduleForm = Form(
@@ -64,7 +64,7 @@ object Scheduler extends Controller {
             "name" -> text.verifying(nonEmpty, minLength(1)),
             "initialDelay" -> text.verifying(nonEmpty, minLength(5)),
             "interval" -> text.verifying(nonEmpty, minLength(5)),
-            "id" -> text.verifying(nonEmpty, minLength(1))
+            "jobs" -> list(text)
         ) (simpleSchedule.apply)(simpleSchedule.unapply)
     )
     
@@ -75,13 +75,14 @@ object Scheduler extends Controller {
             formWithErrors => {
                 Redirect(routes.Cluster.overview).flashing("error" -> "Some values were found incorrect.")
             },
-            job => {                
-                val initialDelay = Duration(job.initialDelay).asInstanceOf[FiniteDuration]
-                val interval = Duration(job.interval).asInstanceOf[FiniteDuration]
-                val dispatchRequest = new DispatchRequest(job.id, None, false, false, false, None)     
-                
-                scheduler ! new SimpleScheduler(job.name, initialDelay, interval, dispatchRequest)
-                
+            jobsForm => {
+                jobsForm.jobs.foreach(job => {
+                    val initialDelay = Duration(jobsForm.initialDelay).asInstanceOf[FiniteDuration]
+                    val interval = Duration(jobsForm.interval).asInstanceOf[FiniteDuration]
+                    val dispatchRequest = new DispatchRequest(job, None, false, false, false, None)     
+                    
+                    scheduler ! new SimpleScheduler(jobsForm.name, initialDelay, interval, dispatchRequest)
+                })
             } )
         Redirect(routes.Scheduler.overview)
     }
@@ -89,14 +90,14 @@ object Scheduler extends Controller {
     case class cronSchedule(
         name: String,
         cronSchedule: String,        
-        id: String
+        jobs: List[String]
     )
     
     val cronScheduleForm = Form(
         mapping(
             "name" -> text.verifying(nonEmpty, minLength(1)),
             "cronSchedule" -> text.verifying(nonEmpty, minLength(5)),
-            "id" -> text.verifying(nonEmpty, minLength(1))
+            "jobs" -> list(text)
         ) (cronSchedule.apply)(cronSchedule.unapply)
     )
     
@@ -107,11 +108,11 @@ object Scheduler extends Controller {
             formWithErrors => {
                 Redirect(routes.Cluster.overview).flashing("error" -> "Some values were found incorrect.")
             },
-            job => {                               
-                val dispatchRequest = new DispatchRequest(job.id, None, false, false, false, None)     
-                
-                scheduler ! new CronScheduler(job.name, job.cronSchedule, dispatchRequest)
-                
+            jobsForm => {
+                jobsForm.jobs.foreach(job => {
+                    val dispatchRequest = new DispatchRequest(job, None, false, false, false, None)     
+                    scheduler ! new CronScheduler(jobsForm.name, jobsForm.cronSchedule, dispatchRequest)
+                })
             } )
         Redirect(routes.Scheduler.overview)
     }    

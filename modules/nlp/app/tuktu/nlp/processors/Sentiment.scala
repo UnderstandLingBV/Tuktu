@@ -93,7 +93,7 @@ class RBEMEmotionProcessor(resultName: String) extends BaseProcessor(resultName)
             }
             
             // Apply emotion detection, normalize
-            val emotions = models(language).classify(tkns, posTags, true).asScala
+            val emotions = models(language).classify(tkns, posTags, true).asScala.toMap
             
             // Add the actual score
             datum + (resultName -> emotions)
