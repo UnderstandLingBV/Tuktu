@@ -1,0 +1,24 @@
+{
+    "generators": [
+        {
+            "result": "test",
+            "config": {
+                "api_endpoint": "test",
+                "includes": []
+            },
+            "name": "tuktu.http.generators.TuktuJSGenerator",
+            "next": [
+                "debug"
+            ]
+        }
+    ],
+    "processors": [
+        {
+            "id": "debug",
+            "result": "",
+            "config": {},
+            "name": "tuktu.processors.ConsoleWriterProcessor",
+            "next": []
+        }
+    ]
+}
