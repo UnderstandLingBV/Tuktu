@@ -60,7 +60,10 @@ class CachingProcessor(resultName: String) extends BaseProcessor(resultName) {
         }).toMap
 
         // Build the processor pipeline for this generator
-        val proc = controllers.Dispatcher.buildEnums(List(startProcessor), processorMap, "TuktuMonitor", None).head
+        val (idString, proc) = {
+            val pipeline = controllers.Dispatcher.buildEnums(List(startProcessor), processorMap, "TuktuMonitor", None)
+            (pipeline._1, pipeline._2.head)
+        }
 
         // Set up the single actor that will execute this processor
         actor = Akka.system.actorOf(Props(classOf[ParallelProcessorActor], processor))

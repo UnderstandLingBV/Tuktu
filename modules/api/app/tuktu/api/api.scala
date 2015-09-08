@@ -84,6 +84,14 @@ case class AppMonitorPacket(
 
 case class AddMonitorEventListener()
 case class RemoveMonitorEventListener()
+
+case class ErrorIdentifierPacket(
+        logId: String,
+        generator: ActorRef
+)
+case class ErorNotificationPacket(
+        logId: String
+)
 /**
  * End monitoring stuff
  */

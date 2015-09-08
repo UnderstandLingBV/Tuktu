@@ -16,8 +16,12 @@ import play.api.Play
 class DataMonitor() extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
+    // Monitoring maps
     val monitorData = new java.util.HashMap[String, java.util.HashMap[MPType, java.util.HashMap[String, Int]]]()
     val appMonitor = collection.mutable.Map[String, AppMonitorObject]()
+    
+    // Map for error recovery
+    val errorLoggingMap = collection.mutable.Map[String, ActorRef]()
     
     // Keep track of a list of actors we need to notify on push base about events happening
     val eventListeners = collection.mutable.HashSet.empty[ActorRef]
@@ -30,6 +34,18 @@ class DataMonitor() extends Actor with ActorLogging {
     def receive() = {
         case "init" => {
             // Initialize monitor
+        }
+        case eip: ErrorIdentifierPacket => {
+            // Add the ID and actor ref to our map
+            errorLoggingMap += eip.logId -> eip.generator
+        }
+        case enp: ErorNotificationPacket => {
+            // Get the generator and kill it
+            if (errorLoggingMap.contains(enp.logId)) {
+                val generator = errorLoggingMap(enp.logId)
+                generator ! new StopPacket
+                errorLoggingMap -= enp.logId
+            }
         }
         case amel: AddMonitorEventListener => eventListeners += sender
         case rmel: RemoveMonitorEventListener => eventListeners -= sender

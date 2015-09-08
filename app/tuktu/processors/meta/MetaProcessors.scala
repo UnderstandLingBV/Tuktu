@@ -307,7 +307,7 @@ class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) exte
             dp
         })
 
-        def runProcessor() = Enumerator(dp) |>> (processor compose sendBackEnum compose controllers.Dispatcher.logEnumeratee) &>> sinkIteratee
+        def runProcessor() = Enumerator(dp) |>> (processor compose sendBackEnum compose controllers.Dispatcher.logEnumeratee("")) &>> sinkIteratee
     }
 
     def receive() = {
@@ -369,7 +369,10 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
             }).toMap
 
             // Build the processor pipeline for this generator
-            val processor = controllers.Dispatcher.buildEnums(List(start), processorMap, "ParalllelProcessor", None).head
+            val (idString, processor) = {
+                val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, "ParalllelProcessor", None)
+                (pipeline._1, pipeline._2.head)
+            }
             // Set up the actor that will execute this processor
             Akka.system.actorOf(Props(classOf[ParallelProcessorActor], processor))
         }
