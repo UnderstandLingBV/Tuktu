@@ -41,7 +41,7 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
         excludeOnNone = (config \ "exclude_on_none").asOpt[Boolean].getOrElse(false)
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         Future {new DataPacket(for {
             datum <- data.data
             
@@ -101,6 +101,8 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
             // Append the tags
             datum + (resultName -> tags)
         })}
+    }) compose Enumeratee.filter((data: DataPacket) => {
+        data.data.size > 0
     })
 }
 
@@ -126,7 +128,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
         excludeOnNone = (config \ "exclude_on_none").as[Boolean]
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         Future {new DataPacket(for {
             datum <- data.data
             
@@ -174,6 +176,8 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
         } yield {
 	        datum + (resultName -> tags)
         })}
+    }) compose Enumeratee.filter((data: DataPacket) => {
+        data.data.size > 0
     })
 }
 
