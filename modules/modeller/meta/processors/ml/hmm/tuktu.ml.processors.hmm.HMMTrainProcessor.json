@@ -77,7 +77,7 @@
 										{
 											"name": "Column",
 											"description": "The actual value of the element.",
-											"type": "int",
+											"type": "float",
 											"required": false
 										}
 									]
@@ -99,7 +99,7 @@
 										{
 											"name": "Column",
 											"description": "The actual value of the element.",
-											"type": "int",
+											"type": "float",
 											"required": false
 										}
 									]
@@ -115,22 +115,10 @@
 								{
 									"name": "Rows",
 									"description": "The actual value of the element.",
-									"type": "int",
+									"type": "float",
 									"required": false
 								}
 							]
-						},
-						{
-							"name": "emissions",
-							"description": "The priors of the emission matrix.",
-							"type": "array",
-							"required": false
-						},
-						{
-							"name": "start",
-							"description": "The priors of the start vector.",
-							"type": "array",
-							"required": false
 						}
 					]
 				}

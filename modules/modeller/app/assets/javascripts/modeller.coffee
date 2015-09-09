@@ -275,7 +275,7 @@ class Generator
 	# Get config and populate inputs recursively
 	getConfig: (config, elem, depth, array = false) ->
 		switch elem.dataset.type
-			when 'string', 'int'
+			when 'string', 'number'
 				if array and config?
 					$(elem).val(config)
 				else if config[elem.dataset.key]?
@@ -310,17 +310,17 @@ class Generator
 					for child in $(elem).find('*[data-depth="' + (depth + 1) + '"]')
 						@getConfig({}, child, depth + 1)
 			when 'array'
+				# Remove old values
 				$(elem).find('> div[data-arraytype="value"]').remove()
-				if config[elem.dataset.key]?
-					for data in config[elem.dataset.key]
-						type = switch typeof(data)
-							when 'number' then 'int'
-							else typeof(data)
-						newElem = $(elem).find('> div[data-arraytype="prototype"] *[data-depth="' + (depth + 1) + '"][data-type="' + type + '"]').first().closest('div[data-arraytype="prototype"]').clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo($(elem))
-						newElem.find('*[data-depth="' + (depth + 1) + '"]').each((i, el) => @getConfig(data, el, depth + 1, true))
-						newElem.find('*[data-toggle="tooltip"]').each( (i, el) ->
-							$(el).tooltip() if $(el).closest('div[data-arraytype="prototype"]').length is 0
-						)
+				# Add new elems
+				newElems = if array then config else if config[elem.dataset.key]? then config[elem.dataset.key] else []
+				for data in newElems
+					type = if _.isArray(data) then 'array' else typeof(data)
+					newElem = $(elem).find('> div[data-arraytype="prototype"] *[data-depth="' + (depth + 1) + '"][data-type="' + type + '"]').first().closest('div[data-arraytype="prototype"]').clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo($(elem))
+					newElem.find('*[data-depth="' + (depth + 1) + '"]').each((i, el) => @getConfig(data, el, depth + 1, true))
+					newElem.find('*[data-toggle="tooltip"]').each( (i, el) ->
+						$(el).tooltip() if $(el).closest('div[data-arraytype="prototype"]').length is 0
+					)
 		return
 
 	# Set config recursively
@@ -346,8 +346,9 @@ class Generator
 						try
 							JSON.parse($(data).val()) if $(data).prop('required') is true or ($(data).val() isnt '' and not _.isEqual(JSON.parse($(data).val()), myDefault))
 
-					when 'int'
-						parseInt($(data).val(), 10) if /^\s*[+-]?\d+\s*$/.test($(data).val()) and ($(data).prop('required') is true or ($(data).val() isnt data.dataset.default and $(data).val() isnt ''))
+					when 'number'
+						try
+							parseFloat($(data).val()) if data.validity.valid is true
 
 					when 'boolean'
 						$(data).prop('checked') if $(data).prop('required') is true or $(data).prop('checked').toString() isnt data.dataset.default
@@ -609,16 +610,15 @@ $('#preferences button[name="DeleteArrayElement"]').hover(
 
 # Takes a DOM element and handles validity of its input using has-error and has-warning css classes
 checkValidity = (elem) ->
-	type = elem.dataset.type
-	switch type
+	switch elem.dataset.type
 
 		when 'string'
-			if $(elem).prop('required') is true and $(elem).val() is ''
+			if elem.validity.valid is false
 				$(elem).closest('.form-group').addClass('has-warning')
 			else
 				$(elem).closest('.form-group').removeClass('has-warning')
 
-		when 'int'
+		when 'number'
 			if elem.validity.valid is false
 				$(elem).closest('.form-group').addClass('has-error')
 			else
