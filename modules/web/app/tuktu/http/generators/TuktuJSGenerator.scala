@@ -13,9 +13,19 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
  * Gets a webpage's content based on REST request
  */
-class TuktuJSGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+class TuktuJSGenerator(
+        referer: String,
+        resultName: String,
+        processors: List[Enumeratee[DataPacket, DataPacket]],
+        senderActor: Option[ActorRef]
+) extends TuktuBaseJSGenerator(referer, resultName, processors, senderActor) {
     var api_endpoint: String = _
     var includes: List[JsObject] = _
+    
+    // Add ourselves to the cache
+    Cache.set("web.hostmap",
+        Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) +
+        (referer -> self))
 
     override def receive() = {
         case ip: InitPacket => setup

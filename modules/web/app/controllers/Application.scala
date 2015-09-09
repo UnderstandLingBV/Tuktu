@@ -15,45 +15,58 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
 import tuktu.api.{ DataPacket, DispatchRequest }
+import scala.concurrent.Future
+import tuktu.api.WebJsObject
 
 object Application extends Controller {
     /**
      * Loads a JavaScript analytics script depending on referrer
      */
-    def TuktuJs = Action { implicit request =>
+    def TuktuJs = Action.async { implicit request =>
         request.headers.get("referer") match {
-            case None => BadRequest("// No referrer found in HTTP headers.")
+            case None => Future { BadRequest("// No referrer found in HTTP headers.") }
             case Some(referrer) => {
                 Play.current.configuration.getString("tuktu.webrepo") match {
-                    case None => BadRequest("// No repository for JavaScripts and Tuktu flows set in Tuktu configuration.")
+                    case None => Future { BadRequest("// No repository for JavaScripts and Tuktu flows set in Tuktu configuration.") }
                     case Some(webRepo) => {
                         // Convert referrer to URL to get its host
                         val url = new URL(referrer)
+                        // Get actual actor
+                        val actorRefMap = Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]())
 
                         // Check if host has folder and JavaScript file in web repo
                         if (!Files.exists(Paths.get(webRepo, url.getHost)))
-                            BadRequest("// The referrer has no entry in the repository yet.")
+                            Future { BadRequest("// The referrer has no entry in the repository yet.") }
                         else if (!Files.exists(Paths.get(webRepo, url.getHost, "Tuktu.json")))
-                            BadRequest("// The referrer has no analytics script defined yet.")
+                            Future { BadRequest("// The referrer has no analytics script defined yet.") }
+                        else if (!actorRefMap.contains(url.getHost))
+                            Future { BadRequest("// The analytics script is not enabled.") }
                         else {
-                            implicit var timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-
-                            // Open file and parse Json
-                            val configFile = scala.io.Source.fromFile(Paths.get(webRepo, url.getHost, "Tuktu.json").toFile, "utf-8")
-                            val cfg = Json.parse(configFile.mkString).as[JsObject]
-                            configFile.close
-
-                            // Dispatch new config
-                            val fut = Akka.system.actorSelection("user/TuktuDispatcher") ?
-                                new DispatchRequest("", Some(cfg), false, true, true, None)
-                            val actorRef = Await.result(fut, timeout.duration).asInstanceOf[ActorRef]
+                            implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
                             // Send the Actor a DataPacket containing the referrer
+                            val actorRef = actorRefMap(url.getHost)
                             val resultFut = actorRef ? referrer
-                            val js = Await.result(resultFut, timeout.duration).asInstanceOf[String]
-
-                            // Take js from result
-                            Ok(js).as("text/javascript")
+                            resultFut.map {
+                                case dp: DataPacket => {
+                                    // Get all the JS elements and output them one after the other
+                                    Ok(
+                                        (for {
+                                            datum <- dp.data
+                                            (dKey, dValue) <- datum
+                                            
+                                            if (dValue match {
+                                                case a: WebJsObject => true
+                                                case _ => false
+                                            })
+                                        } yield dValue.asInstanceOf[WebJsObject]).toList.mkString(" ")
+                                    ).as("text/javascript")
+                                }
+                                case _ => {
+                                    // Return blank
+                                    Ok("").as("text/javascript")
+                                }
+                            }
                         }
                     }
                 }

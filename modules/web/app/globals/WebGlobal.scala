@@ -7,11 +7,22 @@ import java.io.File
 import tuktu.api.DispatchRequest
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
+import akka.pattern.ask
+import scala.concurrent.Future
+import akka.actor.ActorRef
+import play.api.cache.Cache
+import akka.util.Timeout
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Loops through the web analytics configs and boots up instances of the flows present there
  */
 class WebGlobal() extends TuktuGlobal() {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    // Initialize host map
+    Cache.set("web.hostmap", Map[String, ActorRef]())
+    
     /**
      * Load this on startup. The application is given as parameter
      */
@@ -30,10 +41,18 @@ class WebGlobal() extends TuktuGlobal() {
                     val tuktuJsFile = new File(tuktuJsName)
                     if (tuktuJsFile.exists) {
                         // Boot up the generator
-                        Akka.system.actorSelection("user/TuktuDispatcher") !
+                        val generator = Akka.system.actorSelection("user/TuktuDispatcher") ?
                             new DispatchRequest(
                                     webRepo.drop(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs").size) + "/" + fldr.getName + "/Tuktu",
-                                    None, false, false, true, None)
+                                    None, false, true, true, None)
+                        generator.asInstanceOf[Future[ActorRef]].onSuccess {
+                            case ar: ActorRef => {
+                                // Add the actor ref to cache for this host
+                                Cache.set("web.hostmap",
+                                        Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) +
+                                        (fldr.getName -> ar))
+                            }
+                        }
                     }
                 } catch {
                     case e: Exception => {}

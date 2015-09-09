@@ -5,7 +5,6 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import akka.actor._
 import akka.pattern.ask
 import akka.routing.SmallestMailboxPool
@@ -22,6 +21,7 @@ import tuktu.api._
 import tuktu.generators._
 import tuktu.processors.EOFBufferProcessor
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
+import tuktu.http.generators.TuktuJSGenerator
 
 case class treeNode(
         name: String,
@@ -370,12 +370,23 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                             
                             try {
                                 // Make the amount of actors we require
-                                val actorRef = Akka.system.actorOf(
-                                        SmallestMailboxPool(instanceCount).props(
-                                            Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
-                                        ),
-                                        name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + index
-                                )
+                                val actorRef = {
+                                    // See if this is the JS generator or not
+                                    if (classOf[TuktuJSGenerator].isAssignableFrom(clazz))
+                                        Akka.system.actorOf(
+                                            SmallestMailboxPool(instanceCount).props(
+                                                Props(clazz, dr.configName.split("/").takeRight(1).head, resultName, processorEnumeratee, dr.sourceActor)
+                                            ),
+                                            name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + index
+                                        )
+                                    else
+                                        Akka.system.actorOf(
+                                            SmallestMailboxPool(instanceCount).props(
+                                                Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
+                                            ),
+                                            name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + index
+                                        )
+                                }
                                 
                                 // Notify the monitor so we can recover from errors
                                 Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorIdentifierPacket(idString, actorRef)
@@ -388,12 +399,23 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                             }
                             catch {
                                 case e: akka.actor.InvalidActorNameException => {
-                                    val actorRef = Akka.system.actorOf(
-                                            SmallestMailboxPool(instanceCount).props(
-                                                Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
-                                            ),
-                                            name = dr.configName.replaceAll("/", "_") + "_" + clazz.getName +  "_" + java.util.UUID.randomUUID.toString
-                                    )
+                                    val actorRef = {
+                                        // See if this is the JS generator or not
+                                        if (classOf[TuktuJSGenerator].isAssignableFrom(clazz))
+                                            Akka.system.actorOf(
+                                                SmallestMailboxPool(instanceCount).props(
+                                                    Props(clazz, dr.configName.split("/").takeRight(1).head, resultName, processorEnumeratee, dr.sourceActor)
+                                                ),
+                                                name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + index
+                                            )
+                                        else
+                                            Akka.system.actorOf(
+                                                SmallestMailboxPool(instanceCount).props(
+                                                    Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
+                                                ),
+                                                name = dr.configName.replaceAll("/", "_") + "_" + clazz.getName +  "_" + java.util.UUID.randomUUID.toString
+                                            )
+                                    }
                                     
                                     // Notify the monitor so we can recover from errors
                                     Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorIdentifierPacket(idString, actorRef)
