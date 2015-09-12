@@ -2,17 +2,33 @@ package tuktu.api
 
 import java.util.Date
 import java.util.regex.Pattern
-
 import scala.util.hashing.MurmurHash3
-
 import org.joda.time.DateTime
-
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.json._
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.concurrent.Akka
+import play.api.Logger
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object utils {
     val pattern = Pattern.compile("\\$\\{(.*?)\\}")
+    
+    /**
+     * Enumeratee for error-logging and handling
+     * @param idString A string used to identify the flow this logEnumeratee is part of. A mapping exists
+     * within the monitor that maps this ID to a generator name.
+     */
+    def logEnumeratee[T](idString: String) = Enumeratee.recover[T] {
+        case (e, input) => {
+            // Notify the monitor so it can kill our flow
+            Akka.system.actorSelection("user/TuktuMonitor") ! new ErorNotificationPacket(idString)
+            
+            // Log the error
+            Logger.error("Error happened on: " + input, e)
+        }
+    }
 
     /**
      * Evaluates a Tuktu string to resolve variables in the actual string

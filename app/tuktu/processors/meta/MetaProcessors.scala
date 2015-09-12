@@ -307,7 +307,7 @@ class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) exte
             dp
         })
 
-        def runProcessor() = Enumerator(dp) |>> (processor compose sendBackEnum compose controllers.Dispatcher.logEnumeratee("")) &>> sinkIteratee
+        def runProcessor() = Enumerator(dp) |>> (processor compose sendBackEnum compose utils.logEnumeratee("")) &>> sinkIteratee
     }
 
     def receive() = {

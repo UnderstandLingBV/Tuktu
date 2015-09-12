@@ -47,7 +47,7 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
     
     // Every processor but the first gets treated as asynchronous
     for (processor <- processors.drop(1))
-        processors.foreach(processor => enumerator |>> (processor compose controllers.Dispatcher.logEnumeratee(idString)) &>> sinkIteratee)
+        processors.foreach(processor => enumerator |>> (processor compose utils.logEnumeratee(idString)) &>> sinkIteratee)
         
     /**
      * We must somehow keep track of the sending actor of each data packet. This state is kept within this helper class that
@@ -71,7 +71,7 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         })
         
         def runProcessor() = {
-            Enumerator(dp) |>> (processors.head compose sendBackEnum compose controllers.Dispatcher.logEnumeratee(idString)) &>> sinkIteratee
+            Enumerator(dp) |>> (processors.head compose sendBackEnum compose utils.logEnumeratee(idString)) &>> sinkIteratee
         }
     }
     
@@ -106,7 +106,7 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
             )
             
             val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
-            enum |>> (processors.head compose controllers.Dispatcher.logEnumeratee(idString)) &>> sinkIteratee
+            enum |>> (processors.head compose utils.logEnumeratee(idString)) &>> sinkIteratee
 
             channel.eofAndEnd           
             self ! PoisonPill

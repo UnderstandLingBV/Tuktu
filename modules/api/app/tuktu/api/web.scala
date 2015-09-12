@@ -2,9 +2,11 @@ package tuktu.api
 
 import play.api.libs.iteratee.Enumeratee
 import akka.actor.ActorRef
+import akka.actor.ActorLogging
+import akka.actor.Actor
 
-class WebJsObject(
-        js: String
+case class WebJsObject(
+        js: Any
 ) extends java.io.Serializable
 
 abstract class TuktuBaseJSGenerator(
@@ -12,4 +14,4 @@ abstract class TuktuBaseJSGenerator(
         resultName: String,
         processors: List[Enumeratee[DataPacket, DataPacket]],
         senderActor: Option[ActorRef]
-) extends BaseGenerator(resultName, processors, senderActor)
+) extends Actor with ActorLogging

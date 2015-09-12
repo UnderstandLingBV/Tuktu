@@ -31,21 +31,6 @@ case class treeNode(
 
 object Dispatcher {
     /**
-     * Enumeratee for error-logging and handling
-     * @param idString A string used to identify the flow this logEnumeratee is part of. A mapping exists
-     * within the monitor that maps this ID to a generator name.
-     */
-    def logEnumeratee[T](idString: String) = Enumeratee.recover[T] {
-        case (e, input) => {
-            // Notify the monitor so it can kill our flow
-            Akka.system.actorSelection("user/TuktuMonitor") ! new ErorNotificationPacket(idString)
-            
-            // Log the error
-            Logger.error("Error happened on: " + input, e)
-        }
-    }
-    
-    /**
      * Monitoring enumeratee
      */
     def monitorEnumeratee(generatorName: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
@@ -107,7 +92,7 @@ object Dispatcher {
                             Akka.system.actorOf(Props(classOf[tuktu.generators.EOFSyncStreamGenerator], "",
                                 pd.next.map(processorName => {
                                     // Create the new lines of processors
-                                    buildSequential(processorName, logEnumeratee(idString), iterationCount + 1)
+                                    buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1)
                                 }),
                                 genActor
                             ))
@@ -115,7 +100,7 @@ object Dispatcher {
                             Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
                                 pd.next.map(processorName => {
                                     // Create the new lines of processors
-                                    buildSequential(processorName, logEnumeratee(idString), iterationCount + 1)
+                                    buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1)
                                 }),
                                 {
                                     if (classOf[BufferProcessor].isAssignableFrom(procClazz)) genActor
@@ -128,7 +113,7 @@ object Dispatcher {
                         Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
                             pd.next.map(processorName => {
                                 // Create the new lines of processors
-                                buildSequential(processorName, logEnumeratee(idString), iterationCount + 1)
+                                buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1)
                             }),
                             None
                         ))
@@ -152,7 +137,7 @@ object Dispatcher {
                 val method = procClazz.getMethods.filter(m => m.getName == "processor").head
                 // Log enumeratee or not?
                 if (logLevel == "all")
-                    accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]] compose logEnumeratee(idString)
+                    accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]] compose utils.logEnumeratee(idString)
                 else
                     accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
             }
@@ -171,17 +156,17 @@ object Dispatcher {
                 pd.next match {
                     case List() => {
                         // No processors left, return accum
-                        accum compose procEnum compose logEnumeratee(idString)
+                        accum compose procEnum compose utils.logEnumeratee(idString)
                     }
                     case n::List() => {
                         // No branching, just recurse
-                        buildSequential(n, accum compose procEnum compose logEnumeratee(idString), iterationCount + 1)
+                        buildSequential(n, accum compose procEnum compose utils.logEnumeratee(idString), iterationCount + 1)
                     }
                     case _ => {
                         // We need to branch, use the broadcasting enumeratee
                         accum compose procEnum compose buildBranch(
                                 pd.next.map(nextProcessorName => {
-                                    buildSequential(nextProcessorName, logEnumeratee(idString), iterationCount + 1)
+                                    buildSequential(nextProcessorName, utils.logEnumeratee(idString), iterationCount + 1)
                                 })
                         )
                     }
@@ -209,7 +194,7 @@ object Dispatcher {
                 // Broadcast data
                 channel.push(data)
                 data
-            }) compose Enumeratee.onEOF(() => channel.eofAndEnd) compose logEnumeratee(idString)
+            }) compose Enumeratee.onEOF(() => channel.eofAndEnd) compose utils.logEnumeratee(idString)
         }
         
         // Determine logging strategy and build the enumeratee
@@ -222,11 +207,11 @@ object Dispatcher {
                     
                     // Prepend a start packet for the monitor and append a stop packet
                     monitorEnumeratee(monitorName, index.toString, BeginType) compose
-                    buildSequential(nextId, logEnumeratee[DataPacket](idString), 0) compose
+                    buildSequential(nextId, utils.logEnumeratee[DataPacket](idString), 0) compose
                     monitorEnumeratee(monitorName, index.toString, EndType)
                 }))
             }
-            case "none" => (idString, nextIds.map(nextId => buildSequential(nextId, logEnumeratee[DataPacket](idString), 0)))
+            case "none" => (idString, nextIds.map(nextId => buildSequential(nextId, utils.logEnumeratee[DataPacket](idString), 0)))
         }
     }
 }
