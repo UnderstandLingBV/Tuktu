@@ -50,7 +50,7 @@ GET     /dfsw/openfiles                     controllers.DFSWrapper.openFiles
 
 # Web
 GET     /Tuktu.js                           controllers.web.Application.TuktuJs
-POST    /web                                controllers.web.Application.web
+POST    /Tuktu.js                           controllers.web.Application.web
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                       controllers.Assets.versioned(path="/public", file)

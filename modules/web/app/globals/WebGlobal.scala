@@ -14,6 +14,7 @@ import play.api.cache.Cache
 import akka.util.Timeout
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
 
 /**
  * Loops through the web analytics configs and boots up instances of the flows present there
@@ -32,7 +33,7 @@ class WebGlobal() extends TuktuGlobal() {
             .getOrElse("configs/analytics")
         val hostFolders = new File(webRepo).listFiles
         // These should all be folders that in turn contain a Tuktu.js file in them
-        hostFolders.foreach(fldr => {
+        val futures = for (fldr <- hostFolders) yield {
             val tuktuJsName = fldr.getAbsolutePath + "/Tuktu.json"
             // Sanity checks
             if (fldr.isDirectory) {
@@ -41,22 +42,27 @@ class WebGlobal() extends TuktuGlobal() {
                     val tuktuJsFile = new File(tuktuJsName)
                     if (tuktuJsFile.exists) {
                         // Boot up the generator
-                        val generator = Akka.system.actorSelection("user/TuktuDispatcher") ?
+                        (fldr.getName, Akka.system.actorSelection("user/TuktuDispatcher") ?
                             new DispatchRequest(
                                     webRepo.drop(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs").size) + "/" + fldr.getName + "/Tuktu",
-                                    None, false, true, true, None)
-                        generator.asInstanceOf[Future[ActorRef]].onSuccess {
-                            case ar: ActorRef => {
-                                // Add the actor ref to cache for this host
-                                Cache.set("web.hostmap",
-                                        Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) +
-                                        (fldr.getName -> ar))
-                            }
-                        }
-                    }
+                                    None, false, true, true, None))
+                        
+                    } else ("", Future { }) 
                 } catch {
-                    case e: Exception => {}
+                    case e: Exception => { ("", Future { }) }
                 }
+            } else ("", Future { })
+        }
+        
+        // We must await, otherwise map will not be populated properly
+        val result = Await.result(Future.sequence(futures.map(elem => elem._2).toList), timeout.duration)
+        result.zipWithIndex.foreach(res => {
+            res._1 match {
+                case ar: ActorRef =>
+                    // Add the actor ref to cache for this host
+                    Cache.set("web.hostmap",
+                            Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) +
+                            (futures(res._2)._1 -> ar))
             }
         })
     }

@@ -9,6 +9,10 @@ case class WebJsObject(
         js: Any
 ) extends java.io.Serializable
 
+case class WebJsNextFlow(
+        flowName: String
+) extends java.io.Serializable
+
 abstract class TuktuBaseJSGenerator(
         referer: String,
         resultName: String,
