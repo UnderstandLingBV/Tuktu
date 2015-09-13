@@ -1,4 +1,4 @@
-package tuktu.http.generators
+package tuktu.web.generators
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -27,11 +27,8 @@ class TuktuJSGenerator(
         senderActor: Option[ActorRef]
 ) extends TuktuBaseJSGenerator(referer, resultName, processors, senderActor) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    // Add ourselves to the cache
-    Cache.set("web.hostmap",
-        Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) +
-        (referer -> self))
-
+    
+    // Channeling
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     val idString = java.util.UUID.randomUUID.toString
@@ -69,6 +66,11 @@ class TuktuJSGenerator(
     
     def receive() = {
         case ip: InitPacket => {
+            // Add ourselves to the cache
+            Cache.set("web.hostmap",
+                Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) +
+                (referer -> self))
+                
             // Send the monitoring actor notification of start
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
                     self,
@@ -77,6 +79,10 @@ class TuktuJSGenerator(
         }
         case config: JsValue => {}
         case sp: StopPacket => {
+            // Remove ourselves from the cache
+            Cache.set("web.hostmap",
+                Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) - referer)
+            
             // Send message to the monitor actor
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
                     self,

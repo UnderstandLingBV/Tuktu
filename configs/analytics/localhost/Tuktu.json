@@ -1,0 +1,35 @@
+{
+    "generators": [
+        {
+            "result": "test",
+            "config": {
+                "api_endpoint": "test",
+                "includes": []
+            },
+            "name": "tuktu.web.generators.TuktuJSGenerator",
+            "next": [
+                "collect"
+            ]
+        }
+    ],
+    "processors": [
+        {
+            "id": "debug",
+            "result": "",
+            "config": {},
+            "name": "tuktu.processors.ConsoleWriterProcessor",
+            "next": []
+        },
+        {
+            "id": "collect",
+            "result": "collect",
+            "config": {
+                "flow_name": "CollectionTest"
+            },
+            "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
+            "next": [
+                "debug"
+            ]
+        }
+    ]
+}

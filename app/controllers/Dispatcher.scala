@@ -5,23 +5,27 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+
 import akka.actor._
 import akka.pattern.ask
 import akka.routing.SmallestMailboxPool
 import akka.util.Timeout
 import controllers.nodehandler.nodeHandler
-import play.api.Logger
 import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
-import play.api.libs.iteratee._
-import play.api.libs.json._
+import play.api.libs.iteratee.Concurrent
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.iteratee.Iteratee
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import tuktu.api._
-import tuktu.generators._
+import tuktu.generators.AsyncStreamGenerator
+import tuktu.generators.EOFSyncStreamGenerator
+import tuktu.generators.SyncStreamGenerator
 import tuktu.processors.EOFBufferProcessor
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
-import tuktu.http.generators.TuktuJSGenerator
 
 case class treeNode(
         name: String,
@@ -357,7 +361,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                 // Make the amount of actors we require
                                 val actorRef = {
                                     // See if this is the JS generator or not
-                                    if (classOf[TuktuJSGenerator].isAssignableFrom(clazz))
+                                    if (classOf[TuktuBaseJSGenerator].isAssignableFrom(clazz))
                                         Akka.system.actorOf(
                                             SmallestMailboxPool(instanceCount).props(
                                                 Props(clazz, dr.configName.split("/").takeRight(1).head, resultName, processorEnumeratee, dr.sourceActor)
@@ -386,7 +390,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                 case e: akka.actor.InvalidActorNameException => {
                                     val actorRef = {
                                         // See if this is the JS generator or not
-                                        if (classOf[TuktuJSGenerator].isAssignableFrom(clazz))
+                                        if (classOf[TuktuBaseJSGenerator].isAssignableFrom(clazz))
                                             Akka.system.actorOf(
                                                 SmallestMailboxPool(instanceCount).props(
                                                     Props(clazz, dr.configName.split("/").takeRight(1).head, resultName, processorEnumeratee, dr.sourceActor)

@@ -1,4 +1,4 @@
-package tuktu.http.generators
+package tuktu.web.generators
 
 import tuktu.api._
 import play.api.libs.json.JsValue
@@ -17,7 +17,7 @@ class RESTGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
         case config: JsValue => {
             // Get required config params to make request
             val url = (config \ "url").as[String]
-            val port = (config \ "port").as[Int]
+            val port = (config \ "port").asOpt[Int].getOrElse(80)
             val httpMethod = (config \ "http_method").asOpt[String].getOrElse("GET")
             val requestBody = (config \ "body").asOpt[JsValue]
             // To add status code or not? and in what field?

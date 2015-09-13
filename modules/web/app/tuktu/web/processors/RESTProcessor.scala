@@ -1,4 +1,4 @@
-package tuktu.http.processors
+package tuktu.web.processors
 
 import play.api.libs.iteratee.Enumeratee
 import tuktu.api._
@@ -7,10 +7,8 @@ import tuktu.api.BaseProcessor
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.JsValue
-import play.api.libs.json.Json
 import play.api.libs.ws.WS
 import play.api.Play.current
-import play.api.libs.ws.WSResponse
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import akka.util.Timeout
@@ -30,8 +28,8 @@ class RESTProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def initialize(config: JsObject) {
         // Get URL, port and REST options        
         url = (config \ "url").as[String]
-        port = (config \ "port").as[Int]
-        httpMethod = (config \ "http_method").asOpt[String].getOrElse("GET")
+        port = (config \ "port").asOpt[Int].getOrElse(80)
+        httpMethod = (config \ "http_method").asOpt[String].getOrElse("get")
         requestBody = (config \ "body").asOpt[JsValue]
     }
 

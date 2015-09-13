@@ -1,0 +1,30 @@
+{
+	"name": "JS Data Flow Collector",
+	"description": "Defines the name of a flow to execute to collect JS data generated in this flow.",
+	"class": "tuktu.web.processors.analytics.CollectionFlowProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "flow_name",
+					"description": "The name of the flow to execute for collecting and processing the data collected in this flow.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

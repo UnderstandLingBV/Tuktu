@@ -1,0 +1,50 @@
+{
+	"name": "REST Request Processor",
+	"description": "Makes a REST request to a specific URL.",
+	"class": "tuktu.web.processors.RESTProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"description": "The URL to make a request to.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "port",
+					"description": "The port number.",
+					"type": "int",
+					"required": false,
+					"default": 80
+				},
+				{
+					"name": "http_method",
+					"description": "The HTTP method to use (post/put/delete/get).",
+					"type": "string",
+					"required": false,
+					"default": "get"
+				},
+				{
+					"name": "body",
+					"description": "The body to post (if applicable).",
+					"type": "any",
+					"required": false
+				}
+			]
+		}
+	]
+}

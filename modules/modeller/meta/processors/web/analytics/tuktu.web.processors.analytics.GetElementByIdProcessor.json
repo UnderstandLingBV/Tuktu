@@ -1,0 +1,30 @@
+{
+	"name": "Element By ID Processor",
+	"description": "Gets a DOM element by ID.",
+	"class": "tuktu.web.processors.analytics.GetElementByIdProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "element_name",
+					"description": "The ID of the DOM element.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

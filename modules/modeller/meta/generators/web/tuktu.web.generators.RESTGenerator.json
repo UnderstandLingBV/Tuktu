@@ -1,0 +1,100 @@
+{
+	"name": "REST Request Generator",
+	"description": "Makes a REST request and fetches the reply.",
+	"class": "tuktu.web.generators.RESTGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"description": "The URL to make a request to.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "port",
+					"description": "The port number.",
+					"type": "int",
+					"required": false,
+					"default": 80
+				},
+				{
+					"name": "http_method",
+					"description": "The HTTP method to use (post/put/delete/get).",
+					"type": "string",
+					"required": false,
+					"default": "get"
+				},
+				{
+					"name": "body",
+					"description": "The body to post (if applicable).",
+					"type": "any",
+					"required": false
+				},
+				{
+					"name": "add_code",
+					"description": "Whether or not to add the HTTP status code obtained from the reply of the HTTP request to the DataPacket.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "code_field",
+					"description": "If the HTTP status code is to be added, this is the result name of it.",
+					"type": "string",
+					"required": false,
+					"default": ""
+				},
+				{
+					"name": "parse_as",
+					"description": "How to parse the result (JSON, XML, text).",
+					"type": "string",
+					"required": false,
+					"default": "text"
+				}				
+			]
+		}
+	]
+}

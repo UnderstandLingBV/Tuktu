@@ -1,4 +1,4 @@
-package tuktu.http.processors.analytics
+package tuktu.web.processors.analytics
 
 import play.api.libs.iteratee.Enumeratee
 import tuktu.api.DataPacket
