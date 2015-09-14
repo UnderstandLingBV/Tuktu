@@ -1,0 +1,30 @@
+{
+	"name": "Drop Processor",
+	"description": "Drops some data packets before sending through.",
+	"class": "tuktu.processors.sample.DropProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "amount",
+					"description": "The amount of data packets to drop.",
+					"type": "int",
+					"required": true
+				}
+			]
+		}
+	]
+}

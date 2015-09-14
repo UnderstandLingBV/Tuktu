@@ -1,0 +1,30 @@
+{
+	"name": "Take Processor",
+	"description": "Takes a number of data packets and then terminates.",
+	"class": "tuktu.processors.sample.TakeProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "amount",
+					"description": "The amount of data packets to take.",
+					"type": "int",
+					"required": true
+				}
+			]
+		}
+	]
+}
