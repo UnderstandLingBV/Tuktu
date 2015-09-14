@@ -13,7 +13,7 @@ Deserializes a TF-IDF model.
     * **file_name** *(type: string)* `[Required]`
     - The file name to deserialize from.
 
-    * **only_once** *(type: string)* `[Optional, default = true]`
+    * **only_once** *(type: boolean)* `[Optional, default = true]`
     - Whether or not to serialize only once. If set to true, the model will be serialized upon receival of the first DataPacket only, if set to false it will be overwritten for each new DataPacket.
 
     * **wait_for_load** *(type: boolean)* `[Optional, default = false]`

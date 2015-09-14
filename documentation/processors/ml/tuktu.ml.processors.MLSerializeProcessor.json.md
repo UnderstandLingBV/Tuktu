@@ -16,6 +16,6 @@ Serializes a Machine Learning model to a file.
     * **destroy_on_eof** *(type: boolean)* `[Optional, default = true]`
     - Will this model be cleaned up once EOF is reached.
 
-    * **only_once** *(type: string)* `[Optional, default = true]`
+    * **only_once** *(type: boolean)* `[Optional, default = true]`
     - Whether or not to serialize only once. If set to true, the model will be serialized upon receival of the first DataPacket only, if set to false it will be overwritten for each new DataPacket.
 

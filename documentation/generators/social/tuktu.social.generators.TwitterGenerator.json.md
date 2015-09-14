@@ -36,7 +36,7 @@ Given a list of keywords, users and a geo square, streams public tweets matching
 
         * **[UNNAMED]** *(type: string)* `[Required]`
 
-      * **userids** *(type: array)* `[Optional]`
+      * **users** *(type: array)* `[Optional]`
       - Specifies the users, by ID, to receive public tweets from.
 
         * **[UNNAMED]** *(type: string)* `[Required]`

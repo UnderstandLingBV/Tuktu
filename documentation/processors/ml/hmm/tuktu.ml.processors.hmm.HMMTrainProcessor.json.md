@@ -34,7 +34,7 @@ Trains a hidden markov model using observations.
         * **Rows** *(type: array)* `[Optional]`
         - The rows of the transition matrix.
 
-          * **Column** *(type: int)* `[Optional]`
+          * **Column** *(type: float)* `[Optional]`
           - The actual value of the element.
 
       * **emissions** *(type: array)* `[Optional]`
@@ -43,18 +43,12 @@ Trains a hidden markov model using observations.
         * **Rows** *(type: array)* `[Optional]`
         - The rows of the emissions matrix.
 
-          * **Column** *(type: int)* `[Optional]`
+          * **Column** *(type: float)* `[Optional]`
           - The actual value of the element.
 
       * **start** *(type: array)* `[Optional]`
       - The priors of the start matrix Pi.
 
-        * **Rows** *(type: int)* `[Optional]`
+        * **Rows** *(type: float)* `[Optional]`
         - The actual value of the element.
-
-      * **emissions** *(type: array)* `[Optional]`
-      - The priors of the emission matrix.
-
-      * **start** *(type: array)* `[Optional]`
-      - The priors of the start vector.
 

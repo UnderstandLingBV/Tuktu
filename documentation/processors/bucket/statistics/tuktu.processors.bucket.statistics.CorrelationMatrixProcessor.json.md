@@ -1,5 +1,5 @@
-### tuktu.processors.bucket.statistics.CorrelationProcessor
-Computes the correlation coefficient matrix of a list of fields containing numerical values.
+### tuktu.processors.bucket.statistics.CorrelationMatrixProcessor
+Computes the correlation matrix of a list of fields containing numerical values.
 
   * **id** *(type: string)* `[Required]`
 

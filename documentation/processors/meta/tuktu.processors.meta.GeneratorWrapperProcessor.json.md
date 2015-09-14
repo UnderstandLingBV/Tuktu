@@ -10,6 +10,6 @@ Wraps a generator and returns its result after EOF.
     * **generator_name** *(type: string)* `[Required]`
     - The name of the config generator.
 
-    * **generator_config** *(type: string)* `[Optional]`
+    * **generator_config** *(type: JsObject)* `[Optional]`
     - The configuration for the generator.
 
