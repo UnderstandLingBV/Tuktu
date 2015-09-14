@@ -48,13 +48,13 @@ class HealthMonitor() extends Actor with ActorLogging {
     def receive() = {
         case hr: HealthRound => {
             // Send out health checks to all nodes
-            val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]()) - homeAddress
-            val futures = for ((hostname, port) <- clusterNodes) yield {
+            val clusterNodes = cNodes - homeAddress
+            val futures = for ((hostname, node) <- clusterNodes) yield {
                 // Add to health checks
                 healthChecks += hostname -> 0
                 
                 // Return future
-                val location = "akka.tcp://application@" + hostname  + ":" + port + "/user/TuktuDispatcher"
+                val location = "akka.tcp://application@" + hostname  + ":" + node.akkaPort + "/user/TuktuDispatcher"
                 (hostname, (Akka.system.actorSelection(location) ? new HealthCheck).asInstanceOf[Future[HealthReply]])
             }
             
