@@ -1,4 +1,5 @@
-@(messages: Map[String, List[String]], configRepo: String, homeAddress: String, logLevel: String, timeout: Int, clusterNodes: Map[String, (String, String)])
+@import tuktu.api.ClusterNode
+@(messages: Map[String, List[String]], configRepo: String, homeAddress: String, logLevel: String, timeout: Int, clusterNodes: scala.collection.mutable.Map[String, ClusterNode])
 
 @index("Cluster Info", messages) {
     @clusterMenu()
@@ -57,19 +58,19 @@
 	                       </tr>
 	                   </thead>
 	                   <tbody>
-		                    @for((node, ports) <- clusterNodes) {
+		                    @for((host, node) <- clusterNodes) {
 		                        <tr>
 		                           <td>
-		                              @if(node != homeAddress) {
-		                                  <a href="http://@node:@ports._2">@node</a>
+		                              @if(host != homeAddress) {
+		                                  <a href="http://@host:@node.UIPort">@host</a>
 		                              } else {
-		                                  @node
+		                                  @host
 		                              }
 		                           </td>
-		                           <td>@ports._1</td>
+		                           <td>@node.akkaPort</td>
 		                           <td>
-		                              @if(node != homeAddress) {
-			                              <a href="@routes.Cluster.removeNode(node)">
+		                              @if(host != homeAddress) {
+			                              <a href="@routes.Cluster.removeNode(host)">
 			                                  <span class="glyphicon glyphicon-remove-sign" aria-hidden="true"></span>
 			                              </a>
 			                          }

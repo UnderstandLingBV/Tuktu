@@ -11,18 +11,24 @@
         Enter the node's (Akka) address and port number below.
     </p>
     
-    <form method="post" action="@routes.Cluster.addNode">
+    <form method="post" action="@routes.Cluster.addNodePost">
         <div class="form-group">
-            <label for="address">
-                Address
+            <label for="host">
+                Host
             </label>
-            <input type="text" class="form-control" id="address" name="address" placeholder="192.168.1.12">
+            <input type="text" required="required" class="form-control" id="host" name="host" placeholder="192.168.1.12">
 	  </div>
 	  <div class="form-group">
-	      <label for="port">
+	      <label for="akkaPort">
 	          Port
           </label>
-	      <input type="test" class="form-control" id="port" name="port" placeholder="2552">
+	      <input type="number" step="1" required="required" class="form-control" id="akkaPort" name="akkaPort" placeholder="2552">
+	  </div>
+	  <div class="form-group">
+	      <label for="UIPort">
+	          UI Port
+          </label>
+	      <input type="number" step="1" required="required" class="form-control" id="UIPort" name="UIPort" placeholder="9000">
 	  </div>
 	  <button type="submit" class="btn btn-default">Submit</button>
 	</form>

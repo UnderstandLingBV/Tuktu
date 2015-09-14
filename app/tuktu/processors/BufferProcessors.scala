@@ -242,8 +242,8 @@ class SignalBufferProcessor(genActor: ActorRef, resultName: String) extends Buff
             node match {
                 case Some(n) => {
                     // Get it from a remote location
-                    val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
-                    val fut = Akka.system.actorSelection("akka.tcp://application@" + n  + ":" + clusterNodes(n) + "/user/SignalBufferActor_" + bufferName) ? Identify(None)
+                    val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+                    val fut = Akka.system.actorSelection("akka.tcp://application@" + n  + ":" + clusterNodes(n).akkaPort + "/user/SignalBufferActor_" + bufferName) ? Identify(None)
                     bufferActor = Await.result(fut.mapTo[ActorIdentity], timeout.duration).getRef
                 }
                 case None => {

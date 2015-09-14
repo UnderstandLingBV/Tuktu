@@ -10,6 +10,7 @@ import akka.util.Timeout
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
+import tuktu.api.ClusterNode
 import tuktu.api.HealthCheck
 import tuktu.api.HealthReply
 import play.api.Play
@@ -25,7 +26,7 @@ class HealthMonitor() extends Actor with ActorLogging {
     
     // Keep track of how many times we sent a failed message to each node
     val healthChecks = collection.mutable.Map[String, Int]()
-    val cNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
+    val cNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
     val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
     cNodes.foreach(node => {
         if (node._1 != homeAddress)
@@ -68,10 +69,7 @@ class HealthMonitor() extends Actor with ActorLogging {
                         healthChecks(future._1) += 1
                         if (healthChecks(future._1) >= maxFails) {
                             // Remove this node from our cluster
-                            Cache.set("clusterNodes", {
-                                Cache.getAs[Map[String, String]]("clusterNodes")
-                                    .getOrElse(Map[String, String]()) - future._1
-                            })
+                            cNodes -= future._1
                             // Remove from health checks
                             healthChecks -= future._1
                         }

@@ -15,6 +15,7 @@ import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
+import tuktu.api.ClusterNode
 import tuktu.api.DataPacket
 import tuktu.api.DeleteRequest
 import tuktu.api.InitPacket
@@ -41,7 +42,7 @@ class DBDaemon() extends Actor with ActorLogging {
     // Get this local node
     val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
     // Get cluster nodes
-    val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
+    val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
     
     // Get all daemons
     val dbDaemons = {
@@ -49,7 +50,7 @@ class DBDaemon() extends Actor with ActorLogging {
         val otherNodes = clusterNodes.keys.toList diff List(Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
         
         val futures = for (hostname <- otherNodes) yield {
-            val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname) + "/user/tuktu.db.Daemon"
+            val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname).akkaPort + "/user/tuktu.db.Daemon"
             // Get the identity
             (Akka.system.actorSelection(location) ? Identify(None)).asInstanceOf[Future[ActorIdentity]]
         }

@@ -2,13 +2,14 @@ package controllers
 
 import play.api.mvc.Controller
 import play.api.mvc.Action
-import tuktu.utils.util
 import play.api.cache.Cache
 import play.api.Play.current
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.data.Form
 import play.api.Play
+import tuktu.api.ClusterNode
+import tuktu.utils.util
 import scala.collection.JavaConverters.asScalaBufferConverter
 
 object Cluster extends Controller {
@@ -21,25 +22,11 @@ object Cluster extends Controller {
         val homeAddress = Cache.getAs[String]("homeAddress").getOrElse(null)
         val logLevel = Cache.getAs[String]("logLevel").getOrElse(null)
         val timeout = Cache.getAs[Int]("timeout").getOrElse(5)
-        val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(null)
-        
-        // Get the proper ports
-        val cNodes = Play.current.configuration.getConfigList("tuktu.cluster.nodes") match {
-            case Some(nodeList) => {
-                // Get all the nodes in the list and put them in a map
-                (for (node <- nodeList.asScala) yield {
-                    node.getString("host").getOrElse("") -> node.getString("uiport").getOrElse("")
-                }).toMap
-            }
-            case None => Map[String, String]()
-        }
-        val uiClusterNodes = clusterNodes.map(elem => {
-            elem._1 -> (elem._2, cNodes(elem._1))
-        })
+        val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
 
         Ok(views.html.cluster.overview(
                 util.flashMessagesToMap(request),
-                configRepo, homeAddress, logLevel, timeout, uiClusterNodes
+                configRepo, homeAddress, logLevel, timeout, clusterNodes
         ))
     }
     
@@ -81,12 +68,19 @@ object Cluster extends Controller {
      */
     def removeNode(address: String) = Action { implicit request =>
         // Get the node and remove it from cache
-        val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
-        val port = clusterNodes(address)
-        Cache.set("clusterNodes", clusterNodes - address)
-        
-        // Redirect back to overview
-        Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully removed node " + address + ":" + port + " from the cluster."))
+        val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+
+        clusterNodes.get(address) match {
+            case None =>
+                // Redirect back to overview
+                Redirect(routes.Cluster.overview).flashing("error" -> ("No node at address " + address + " registered in cluster."))
+            case Some(node) => {
+                clusterNodes -= address
+
+                // Redirect back to overview
+                Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully removed node " + address + ":" + node.akkaPort + " from the cluster."))                
+            }
+        }
     }
     
     /**
@@ -97,16 +91,13 @@ object Cluster extends Controller {
                 util.flashMessagesToMap(request)
         ))
     }
-    
-    case class addNodeClass(
-        address: String, port: Int
-    )
-    
+
     val addNodeForm = Form(
         mapping(
-            "address" -> text.verifying(nonEmpty, minLength(1)),
-            "port" -> number
-        ) (addNodeClass.apply)(addNodeClass.unapply)
+            "host" -> text.verifying(nonEmpty, minLength(1)),
+            "akkaPort" -> number,
+            "UIPort" -> number
+        ) (ClusterNode.apply)(ClusterNode.unapply)
     )
     def addNodePost() = Action { implicit request => {
         addNodeForm.bindFromRequest.fold(
@@ -115,13 +106,11 @@ object Cluster extends Controller {
             },
             node => {
                 // Update cache
-                Cache.set("clusterNodes", {
-                    Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]()) +
-                        (node.address -> node.port.toString)
-                })
-                
+                val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+                clusterNodes += node.host -> node
+
                 // Redirect back to overview
-                Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully added node " + node.address + ":" + node.port + " to the cluster."))
+                Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully added node " + node.host + ":" + node.akkaPort + " to the cluster."))
             }
         )
     }}

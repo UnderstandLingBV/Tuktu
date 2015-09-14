@@ -14,6 +14,7 @@ import akka.util.Timeout
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import tuktu.api.ClusterNode
 import tuktu.api.DFSOpenRequest
 import tuktu.api.DFSWriteRequest
 import tuktu.api.DFSCloseRequest
@@ -24,12 +25,12 @@ import tuktu.api.DFSCloseRequest
  */
 class BufferedDFSWriter(writer: Writer, filename: String, encoding: String, otherNodes: List[String]) extends BufferedWriter(writer) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
+    val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
     
     // Get the remote DFS actors once
     val remoteDfsActors = {
         val futures = for (hostname <- otherNodes) yield {
-            val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname) + "/user/tuktu.dfs.Daemon"
+            val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname).akkaPort + "/user/tuktu.dfs.Daemon"
             // Get the identity
             (Akka.system.actorSelection(location) ? Identify(None)).asInstanceOf[Future[ActorIdentity]]
         }

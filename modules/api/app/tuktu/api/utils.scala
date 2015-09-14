@@ -239,9 +239,9 @@ object utils {
         
         val clusterNodes = {
             if (includeSelf)
-                Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]()).keys.toList
+                Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map()).keys.toList
             else
-                Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]()).keys.toList diff
+                Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map()).keys.toList diff
                     List(Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
         }
         replicationCount match {

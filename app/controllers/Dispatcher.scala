@@ -235,15 +235,16 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
     Cache.set("logLevel", Play.current.configuration.getString("tuktu.monitor.level").getOrElse("all"))
     // Get the cluster setup, which nodes are present
     Cache.set("clusterNodes", {
-        Play.current.configuration.getConfigList("tuktu.cluster.nodes") match {
-            case Some(nodeList) => {
-                // Get all the nodes in the list and put them in a map
-                (for (node <- nodeList.asScala) yield {
-                    node.getString("host").getOrElse("") -> node.getString("port").getOrElse("")
-                }).toMap
-            }
-            case None => Map[String, String]()
-        }
+        val clusterNodes = scala.collection.mutable.Map[String, ClusterNode]()
+        Play.current.configuration.getConfigList("tuktu.cluster.nodes").foreach(nodeList =>
+            nodeList.asScala.foreach(node => {
+                val host = node.getString("host").getOrElse("127.0.0.1")
+                val akkaPort = node.getString("port").getOrElse("2552").toInt
+                val UIPort = node.getString("uiport").getOrElse("9000").toInt
+                clusterNodes += host -> new ClusterNode(host, akkaPort, UIPort)
+            })
+        )
+        clusterNodes
     })
     
     /**
@@ -331,10 +332,10 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                         else true
                     }
                             
-                    val clusterNodes = Cache.getAs[Map[String, String]]("clusterNodes").getOrElse(Map[String, String]())
+                    val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
                     if (startRemotely && !dr.isRemote && hostname != "" && clusterNodes.contains(hostname)) {
                         // We need to start an actor on a remote location
-                        val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname) + "/user/TuktuDispatcher"
+                        val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname).akkaPort + "/user/TuktuDispatcher"
                         
                         // Get the identity
                         val fut = Akka.system.actorSelection(location) ? Identify(None)

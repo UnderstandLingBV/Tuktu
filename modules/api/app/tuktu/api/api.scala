@@ -45,6 +45,12 @@ case class ResponsePacket(
 case class HealthCheck()
 case class HealthReply()
 
+case class ClusterNode(
+        host: String,
+        akkaPort: Int,
+        UIPort: Int
+)
+
 /**
  * Monitor stuff
  */
