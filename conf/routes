@@ -15,7 +15,7 @@ POST    /sync                               controllers.Synchronous.loadJsonPost
 # Monitoring
 GET     /terminate/:id/:force               controllers.Monitor.terminate(id, force: Boolean)
 POST    /showConfigs                        controllers.Monitor.showConfigs
-GET     /startJob                           controllers.Monitor.startJobView
+GET     /browseConfigs                      controllers.Monitor.browseConfigs
 POST    /startJob                           controllers.Monitor.startJob
 POST    /newFile                            controllers.Monitor.newFile
 POST    /deleteFile                         controllers.Monitor.deleteFile

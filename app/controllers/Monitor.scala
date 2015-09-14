@@ -100,8 +100,8 @@ object Monitor extends Controller {
     /**
      * Shows the start-job view
      */
-    def startJobView() = Action { implicit request => {
-            Ok(views.html.monitor.startJob(util.flashMessagesToMap(request)))
+    def browseConfigs() = Action { implicit request => {
+            Ok(views.html.monitor.browseConfigs(util.flashMessagesToMap(request)))
         }
     }
     
@@ -122,7 +122,7 @@ object Monitor extends Controller {
             // Bind
             jobForm.bindFromRequest.fold(
                 formWithErrors => {
-                    Redirect(routes.Monitor.startJobView).flashing("error" -> "Invalid job name or instances")
+                    Redirect(routes.Monitor.browseConfigs).flashing("error" -> "Invalid job name or instances")
                 },
                 job => {
                     Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(job.name, None, false, false, false, None)
