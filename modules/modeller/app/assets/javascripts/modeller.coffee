@@ -671,3 +671,32 @@ document.addEventListener('keydown', (e) ->
 window.onbeforeunload = (e) ->
 	if not _.isEqual(savedConfig, getConfig())
 		'It was detected that you may have unsaved changes. Please confirm that you want to leave - data you have entered may not be saved.'
+
+# Activate processor and generator filters
+$('#filterGenerators,#filterProcessors').each( (i, el) ->
+	$(el).on('change', (e) ->
+		$(el).closest('form').find('select').first().find('option').each( (i, option) ->
+			value = $(option).val()
+			title = $(option).text()
+			toBeHidden_value = false
+			toBeHidden_title = false
+			keywords = $(el).val().split(' ')
+			for str in keywords
+				if str.trim() isnt ''
+					re = new RegExp(str.trim().replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&'), 'i')
+					if not re.test(value)
+						toBeHidden_value = true
+					if not re.test(title)
+						toBeHidden_title = true
+				if toBeHidden_value and toBeHidden_title
+					break
+			if toBeHidden_value and toBeHidden_title
+				$(option).addClass('hidden')
+			else
+				$(option).removeClass('hidden')
+			return
+		)
+		return
+	)
+	return
+)
