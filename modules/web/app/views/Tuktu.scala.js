@@ -12,11 +12,19 @@ var tuktu = function() {
      
      @nextFlow match {
     	 case Some(nf) => {
-    		 S = document.createElement("script");
+    		 s = document.createElement("script");
     	     s.setAttribute("type", "text/javascript");
     	     s.innerHTML = "var xhr = new XMLHttpRequest();" +
     	    		 "xhr.open('POST', '@jsUrl', true);" +
-    	    		 "xhr.send(JSON.stringify({f: '@nextFlow', d: tuktuvars}));";
+    	    		 "xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');" +
+    	    		 "xhr.send(JSON.stringify({f: '@nextFlow', d: tuktuvars}));" +
+    	    		 "xhr.onreadystatechange = function() {" +
+    	    			    "if (xhr.readyState == 4) {" +
+    	    			        "s = document.createElement('script');" +
+    	    			        "s.setAttribute('type', 'text/javascript');" +
+    	    			        "s.innerHTML = xhr.responseText;" +
+    	    			        "document.getElementsByTagName('head')[0].appendChild(s);" +
+    	    			    "}}";
     	     h.appendChild(s);
     	 }
     	 case None => {}

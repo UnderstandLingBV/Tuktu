@@ -29,11 +29,11 @@ case class ScrapedPacket(
 /**
  * Actor that gets content and links from a wikipedia page
  */
-class ScraperActor(parent: ActorRef, language: String, maxLinks: Int) extends Actor with ActorLogging {
+class WikipediaScraperActor(parent: ActorRef, language: String, maxLinks: Int) extends Actor with ActorLogging {
     // Private web client
     val webClient = new WebClient
-    org.apache.log4j.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(org.apache.log4j.Level.OFF);
-    java.util.logging.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(java.util.logging.Level.OFF);
+    org.apache.log4j.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(org.apache.log4j.Level.OFF)
+    java.util.logging.Logger.getLogger("com.gargoylesoftware.htmlunit").setLevel(java.util.logging.Level.OFF)
     
     def receive() = {
         case word: String => {
@@ -96,7 +96,7 @@ class WikipediaContentGenerator(resultName: String, processors: List[Enumeratee[
              
              // Set up scraping actors and start
              (0 to seedWords.size - 1).foreach(i => {
-                 val actor = Akka.system.actorOf(Props(classOf[ScraperActor], self, language, maxLinks))
+                 val actor = Akka.system.actorOf(Props(classOf[WikipediaScraperActor], self, language, maxLinks))
                  actor ! seedWords(i)
                  scrapers += actor
              })

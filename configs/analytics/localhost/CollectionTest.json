@@ -2,13 +2,10 @@
     "generators": [
         {
             "result": "gen",
-            "config": {
-                "api_endpoint": "gen",
-                "includes": []
-            },
+            "config": {},
             "name": "tuktu.web.generators.TuktuJSGenerator",
             "next": [
-                "debug"
+                "col"
             ]
         }
     ],
@@ -16,11 +13,20 @@
         {
             "id": "debug",
             "result": "debug",
-            "config": {
-                "prettify": true
-            },
+            "config": {},
             "name": "tuktu.processors.ConsoleWriterProcessor",
             "next": []
+        },
+        {
+            "id": "col",
+            "result": "col",
+            "config": {
+                "flow_name": "CollectionTest2"
+            },
+            "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
+            "next": [
+                "debug"
+            ]
         }
     ]
 }

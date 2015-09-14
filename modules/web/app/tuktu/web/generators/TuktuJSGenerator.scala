@@ -67,9 +67,9 @@ class TuktuJSGenerator(
     def receive() = {
         case ip: InitPacket => {
             // Add ourselves to the cache
-            Cache.set("web.hostmap",
-                Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) +
-                (referer -> self))
+            Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
+                .getOrElse(collection.mutable.Map[String, ActorRef]()) +=
+                (referer -> self)
                 
             // Send the monitoring actor notification of start
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
@@ -80,8 +80,8 @@ class TuktuJSGenerator(
         case config: JsValue => {}
         case sp: StopPacket => {
             // Remove ourselves from the cache
-            Cache.set("web.hostmap",
-                Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) - referer)
+            Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
+                .getOrElse(collection.mutable.Map[String, ActorRef]()) -= referer
             
             // Send message to the monitor actor
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(

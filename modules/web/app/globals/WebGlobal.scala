@@ -22,7 +22,7 @@ import scala.concurrent.Await
 class WebGlobal() extends TuktuGlobal() {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     // Initialize host map
-    Cache.set("web.hostmap", Map[String, ActorRef]())
+    Cache.set("web.hostmap", collection.mutable.Map[String, ActorRef]())
     
     /**
      * Load this on startup. The application is given as parameter
@@ -61,9 +61,9 @@ class WebGlobal() extends TuktuGlobal() {
                 res._1 match {
                     case ar: ActorRef =>
                         // Add the actor ref to cache for this host
-                        Cache.set("web.hostmap",
-                                Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) +
-                                (futures(res._2)._1 -> ar))
+                        Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
+                            .getOrElse(collection.mutable.Map[String, ActorRef]()) +=
+                                (futures(res._2)._1 -> ar)
                 }
             })
         }

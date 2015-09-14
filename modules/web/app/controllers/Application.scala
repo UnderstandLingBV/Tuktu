@@ -64,9 +64,11 @@ object Application extends Controller {
                         // Convert referrer to URL to get its host
                         val url = new URL(referrer)
                         // Get actual actor
-                        val actorRefMap = Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]())
+                        val actorRefMap = Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
+                            .getOrElse(collection.mutable.Map[String, ActorRef]())
 
                         // Check if JS actor is running
+                        println("Actor Ref Map: " + actorRefMap)
                         if (!actorRefMap.contains(url.getHost))
                             Future { BadRequest("// The analytics script is not enabled.") }
                         else {
@@ -123,9 +125,9 @@ object Application extends Controller {
                                             // We must wait here
                                             val actorRef = Await.result(fut, timeout.duration).asInstanceOf[ActorRef]
                                             // Add to our map
-                                            Cache.set("web.hostmap",
-                                                Cache.getAs[Map[String, ActorRef]]("web.hostmap").getOrElse(Map[String, ActorRef]()) +
-                                                (url.getHost + "." + fn -> actorRef))
+                                            Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
+                                                .getOrElse(collection.mutable.Map[String, ActorRef]()) +=
+                                                (url.getHost + "." + fn -> actorRef)
                                         }
                                         
                                         // Send the Actor a DataPacket containing the referrer
