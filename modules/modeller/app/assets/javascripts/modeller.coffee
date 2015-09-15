@@ -562,7 +562,7 @@ $('a[href="#GenerateConfig"]').on('click', generateConfig)
 $('a[href="#SaveConfig"]').on('click', (e) ->
 	e.preventDefault()
 	config = getConfig()
-	jsRoutes.controllers.modeller.Application.saveConfig().ajax(
+	jsRoutes.controllers.modeller.Application.saveConfig(file).ajax(
 		contentType: "text/plain",
 		data: JSON.stringify(config, null, '    '),
 		success: ->

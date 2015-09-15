@@ -1,4 +1,4 @@
-@(generators: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])], processors: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])], config: String)(implicit request: RequestHeader)
+@(generators: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])], processors: Iterable[(String, Iterable[(String, play.api.libs.json.JsValue)])], config: String, file: String)(implicit request: RequestHeader)
 
 @main {
 	<nav class="navbar navbar-default">
@@ -134,5 +134,6 @@
 	</div>
 	<script type="text/javascript">
 		var loadedConfig = @Html(config);
+		var file = '@Html(file.replaceAll("'", "\\\\'"))';
 	</script>
 }

@@ -13,11 +13,11 @@ object Application extends Controller {
         val processors = Cache.getAs[Iterable[(String, Iterable[(String, JsValue)])]]("processors").getOrElse(Nil)
 
         // Get and normalize path
-        val path = Paths.get("configs", file).normalize
+        val path = Paths.get("configs", file).toAbsolutePath.normalize
 
         (try {
             // Check if it starts with the configs folder (symlinks and hardlinks are not handled)
-            if (path.startsWith(Paths.get("configs")))
+            if (path.startsWith(Paths.get("configs").toAbsolutePath.normalize))
                 // Try to parse
                 Json.parse(Files.readAllBytes(path)).asOpt[JsObject]
             else
@@ -25,24 +25,30 @@ object Application extends Controller {
         } catch {
             case _: Throwable => None
         }) match {
-            case Some(json) => Ok(views.html.modeller.index(generators, processors, Json.stringify(json))).withSession("path" -> path.toString)
+            case Some(json) => Ok(views.html.modeller.index(generators, processors, Json.stringify(json), file))
             case None       => BadRequest
         }
     }
 
-    def saveConfig = Action { implicit request =>
-        request.session.get("path") match {
-            case None => BadRequest
-            case Some(p) => {
-                val path = Paths.get(p)
-                request.body.asText match {
-                    case None => BadRequest
-                    case Some(c) => {
-                        Files.write(path, c.getBytes("utf-8"), StandardOpenOption.TRUNCATE_EXISTING)
+    def saveConfig(file: String) = Action { implicit request =>
+        val path = Paths.get("configs", file).toAbsolutePath.normalize
+        if (path.startsWith(Paths.get("configs").toAbsolutePath.normalize)) {
+            request.body.asText match {
+                case None => BadRequest
+                case Some(str) => {
+                    try {
+                        Files.write(path, str.getBytes("utf-8"), StandardOpenOption.TRUNCATE_EXISTING)
                         Ok
+                    } catch {
+                        case e: Throwable => {
+                            e.printStackTrace
+                            InternalServerError
+                        }
                     }
                 }
             }
+        } else {
+            BadRequest
         }
     }
 }
