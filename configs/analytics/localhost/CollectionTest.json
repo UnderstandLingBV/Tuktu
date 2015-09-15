@@ -5,7 +5,7 @@
             "config": {},
             "name": "tuktu.web.generators.TuktuJSGenerator",
             "next": [
-                "col"
+                "debug"
             ]
         }
     ],
@@ -16,17 +16,6 @@
             "config": {},
             "name": "tuktu.processors.ConsoleWriterProcessor",
             "next": []
-        },
-        {
-            "id": "col",
-            "result": "col",
-            "config": {
-                "flow_name": "CollectionTest2"
-            },
-            "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
-            "next": [
-                "debug"
-            ]
         }
     ]
 }

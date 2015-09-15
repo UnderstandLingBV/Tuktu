@@ -68,7 +68,6 @@ object Application extends Controller {
                             .getOrElse(collection.mutable.Map[String, ActorRef]())
 
                         // Check if JS actor is running
-                        println("Actor Ref Map: " + actorRefMap)
                         if (!actorRefMap.contains(url.getHost))
                             Future { BadRequest("// The analytics script is not enabled.") }
                         else {

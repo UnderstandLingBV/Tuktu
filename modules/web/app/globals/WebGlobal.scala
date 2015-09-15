@@ -57,15 +57,6 @@ class WebGlobal() extends TuktuGlobal() {
         
             // We must await, otherwise map will not be populated properly
             val result = Await.result(Future.sequence(futures.map(elem => elem._2).toList), timeout.duration)
-            result.zipWithIndex.foreach(res => {
-                res._1 match {
-                    case ar: ActorRef =>
-                        // Add the actor ref to cache for this host
-                        Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
-                            .getOrElse(collection.mutable.Map[String, ActorRef]()) +=
-                                (futures(res._2)._1 -> ar)
-                }
-            })
         }
     }
 }

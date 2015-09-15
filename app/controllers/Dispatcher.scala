@@ -362,13 +362,21 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                 // Make the amount of actors we require
                                 val actorRef = {
                                     // See if this is the JS generator or not
-                                    if (classOf[TuktuBaseJSGenerator].isAssignableFrom(clazz))
+                                    if (classOf[TuktuBaseJSGenerator].isAssignableFrom(clazz)) {
+                                        // Define name based on config location
+                                        val refererName = {
+                                            val split = dr.configName.split("/").takeRight(2)
+                                            if (split(1) == "Tuktu") split(0)
+                                            else split.mkString(".")
+                                        }
+                                        
                                         Akka.system.actorOf(
                                             SmallestMailboxPool(instanceCount).props(
-                                                Props(clazz, dr.configName.split("/").takeRight(1).head, resultName, processorEnumeratee, dr.sourceActor)
+                                                Props(clazz, refererName, resultName, processorEnumeratee, dr.sourceActor)
                                             ),
                                             name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + index
                                         )
+                                    }
                                     else
                                         Akka.system.actorOf(
                                             SmallestMailboxPool(instanceCount).props(
