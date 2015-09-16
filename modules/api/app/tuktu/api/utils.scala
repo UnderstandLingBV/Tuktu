@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object utils {
     val pattern = Pattern.compile("\\$\\{(.*?)\\}")
-    
+
     /**
      * Enumeratee for error-logging and handling
      * @param idString A string used to identify the flow this logEnumeratee is part of. A mapping exists
@@ -24,60 +24,125 @@ object utils {
         case (e, input) => {
             // Notify the monitor so it can kill our flow
             Akka.system.actorSelection("user/TuktuMonitor") ! new ErorNotificationPacket(idString)
-            
+
             // Log the error
             Logger.error("Error happened on: " + input, e)
         }
     }
 
     /**
-     * Evaluates a Tuktu string to resolve variables in the actual string
-     */    
-    def evaluateTuktuString(str: String, vars: Map[String, Any]) = {
-        // determine max length for performance reasons
-        val maxVariableLength = vars.keySet.reduceLeft((a,b) => if(a.length>b.length) a else b).length
-        val result: StringBuffer = new StringBuffer
-        // a temporary buffer to determine if we need to replace this
-        var buffer = new StringBuffer
-        // The prefix length of TuktuStrings "${".length = 2
-        val prefixSize = 2
-        str.foreach { currentChar =>
-            if (buffer.length == 0) {
-                if (currentChar.equals('$')) {
-                    buffer.append('$')
-                } else {
-                    result.append(currentChar)
-                }                
-            } else if(buffer.length == 1) {
-                buffer.append(currentChar)
-                if(!currentChar.equals('{')) {                    
-                    result.append(buffer)
-                    buffer = new StringBuffer
-                }
-            } else if(buffer.length > maxVariableLength + prefixSize) {
-                result.append(buffer).append(currentChar)
-                buffer = new StringBuffer
-            } else {
-                if (currentChar.equals('}')) { 
-                    // apply with variable in vars, or leave it be if it cannot be found
-                    result.append(vars.getOrElse(buffer.substring(2),buffer+"}").toString)
-                    buffer = new StringBuffer
-                } else {
-                    buffer.append(currentChar)
-                }
-            }             
-        }  
-        // add any left overs
-        result.append(buffer)
-        result.toString
-    }
-    
-    /**
      * Checks if a string contains variables that can be populated using evaluateTuktuString
      */
     def containsTuktuStringVariable(str: String) = {
         val matcher = pattern.matcher(str)
         matcher.find()
+    }
+
+    /**
+     * Evaluates a Tuktu string to resolve variables in the actual string
+     */
+    def evaluateTuktuString(str: String, vars: Map[String, Any]) = {
+        // determine max length for performance reasons
+        val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
+        val result: StringBuffer = new StringBuffer
+        // a temporary buffer to determine if we need to replace this
+        var buffer = new StringBuffer
+        // The prefix length of TuktuStrings "${".length = 2
+        val prefixSize = "${".length
+        str.foreach { currentChar =>
+            if (buffer.length == 0) {
+                if (currentChar.equals('$')) {
+                    buffer.append(currentChar)
+                } else {
+                    result.append(currentChar)
+                }
+            } else if (buffer.length == 1) {
+                buffer.append(currentChar)
+                if (!currentChar.equals('{')) {
+                    result.append(buffer)
+                    buffer = new StringBuffer
+                }
+            } else if (buffer.length > maxKeyLength + prefixSize) {
+                result.append(buffer).append(currentChar)
+                buffer = new StringBuffer
+            } else {
+                if (currentChar.equals('}')) {
+                    // apply with variable in vars, or leave it be if it cannot be found
+                    result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
+                    buffer = new StringBuffer
+                } else {
+                    buffer.append(currentChar)
+                }
+            }
+        }
+        // add any left overs
+        result.append(buffer)
+        result.toString
+    }
+
+    /**
+     * Evaluates a Tuktu config to resolve variables in it
+     */
+    def evaluateTuktuConfig(str: String, vars: Map[String, Any]): String = {
+        // determine max length for performance reasons
+        val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
+        val result: StringBuffer = new StringBuffer
+        // a temporary buffer to determine if we need to replace this
+        var buffer = new StringBuffer
+        // The prefix length of TuktuStrings "#{".length = 2
+        val prefixSize = "#{".length
+        str.foreach { currentChar =>
+            if (buffer.length == 0) {
+                if (currentChar.equals('#')) {
+                    buffer.append(currentChar)
+                } else {
+                    result.append(currentChar)
+                }
+            } else if (buffer.length == 1) {
+                buffer.append(currentChar)
+                if (!currentChar.equals('{')) {
+                    result.append(buffer)
+                    buffer = new StringBuffer
+                }
+            } else if (buffer.length > maxKeyLength + prefixSize) {
+                result.append(buffer).append(currentChar)
+                buffer = new StringBuffer
+            } else {
+                if (currentChar.equals('}')) {
+                    // apply with variable in vars, or leave it be if it cannot be found
+                    result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
+                    buffer = new StringBuffer
+                } else {
+                    buffer.append(currentChar)
+                }
+            }
+        }
+        // add any left overs
+        result.append(buffer)
+        result.toString
+    }
+
+    /**
+     * Recursively evaluates a Tuktu config to resolve variables in it
+     * Overloaded to get the correct return type for every possible use case
+     */
+    def evaluateTuktuConfig(json: JsValue, vars: Map[String, Any]): JsValue = json match {
+        case obj: JsObject  => evaluateTuktuConfig(obj, vars)
+        case arr: JsArray   => evaluateTuktuConfig(arr, vars)
+        case str: JsString  => evaluateTuktuConfig(str, vars)
+        case value: JsValue => value // Nothing to do for any other JsTypes
+    }
+
+    def evaluateTuktuConfig(obj: JsObject, vars: Map[String, Any]): JsObject = {
+        new JsObject(obj.value.mapValues(value => evaluateTuktuConfig(value, vars)).toSeq)
+    }
+
+    def evaluateTuktuConfig(arr: JsArray, vars: Map[String, Any]): JsArray = {
+        new JsArray(arr.value.map(value => evaluateTuktuConfig(value, vars)))
+    }
+
+    def evaluateTuktuConfig(str: JsString, vars: Map[String, Any]): JsString = {
+        new JsString(evaluateTuktuConfig(str.value, vars))
     }
 
     /**
@@ -220,7 +285,7 @@ object utils {
      */
     def JsObjectToMap(json: JsObject): Map[String, Any] =
         json.value.mapValues(jsValue => JsValueToAny(jsValue)).toMap
-    
+
     def indexToNodeHasher(keys: List[Any], replicationCount: Option[Int], includeSelf: Boolean): List[String] =
         indexToNodeHasher(keys.map(_.toString).mkString(""), replicationCount, includeSelf)
     /**
@@ -230,13 +295,15 @@ object utils {
         def indexToNodeHasherHelper(nodes: List[String], replCount: Int): List[String] = {
             // Get a node
             val node = nodes(Math.abs(MurmurHash3.stringHash(keyString) % nodes.size))
-            
+
             // Return more if required
-            node::{if (replCount > 1) {
-                indexToNodeHasherHelper(nodes diff List(node), replCount - 1)
-            } else List()}
+            node :: {
+                if (replCount > 1) {
+                    indexToNodeHasherHelper(nodes diff List(node), replCount - 1)
+                } else List()
+            }
         }
-        
+
         val clusterNodes = {
             if (includeSelf)
                 Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map()).keys.toList
