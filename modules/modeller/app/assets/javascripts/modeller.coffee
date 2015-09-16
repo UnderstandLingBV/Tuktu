@@ -316,7 +316,13 @@ class Generator
 				newElems = if array then config else if config[elem.dataset.key]? then config[elem.dataset.key] else []
 				for data in newElems
 					type = if _.isArray(data) then 'array' else typeof(data)
-					newElem = $(elem).find('> div[data-arraytype="prototype"] *[data-depth="' + (depth + 1) + '"][data-type="' + type + '"]').first().closest('div[data-arraytype="prototype"]').clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo($(elem))
+					prototype = $(elem).find('> div[data-arraytype="prototype"] *[data-depth="' + (depth + 1) + '"][data-type="' + type + '"]').first()
+					# Try to find best match where applicable
+					if prototype.length is 0 and type is 'object'
+						prototype = $(elem).find('> div[data-arraytype="prototype"] *[data-depth="' + (depth + 1) + '"][data-type="JsObject"]').first()
+					if prototype.length is 0
+						prototype = $(elem).find('> div[data-arraytype="prototype"] *[data-depth="' + (depth + 1) + '"][data-type="any"]').first()
+					newElem = prototype.closest('div[data-arraytype="prototype"]').clone(true).removeClass('hidden').attr('data-arraytype', 'value').appendTo($(elem))
 					newElem.find('*[data-depth="' + (depth + 1) + '"]').each((i, el) => @getConfig(data, el, depth + 1, true))
 					newElem.find('*[data-toggle="tooltip"]').each( (i, el) ->
 						$(el).tooltip() if $(el).closest('div[data-arraytype="prototype"]').length is 0
