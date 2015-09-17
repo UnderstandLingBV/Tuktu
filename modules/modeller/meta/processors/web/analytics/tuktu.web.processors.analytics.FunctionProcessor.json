@@ -1,0 +1,50 @@
+{
+	"name": "JS Function Processor",
+	"description": "Adds a JS function definition.",
+	"class": "tuktu.web.processors.analytics.FunctionProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "name",
+					"description": "The name of the JS function.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "params",
+					"description": "The parameters of the JS function.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "param",
+							"description": "Parameter name.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "body",
+					"description": "The body/code of the JS function.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

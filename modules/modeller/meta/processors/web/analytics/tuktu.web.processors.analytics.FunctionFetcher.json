@@ -1,0 +1,30 @@
+{
+	"name": "Function Fetcher Processor",
+	"description": "Fetches the result of a JS function.",
+	"class": "tuktu.web.processors.analytics.FunctionFetcherProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "body",
+					"description": "The function code to execute.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

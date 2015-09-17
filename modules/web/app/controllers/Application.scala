@@ -19,38 +19,9 @@ import scala.concurrent.Future
 import tuktu.api.WebJsObject
 import tuktu.api.utils
 import tuktu.api.WebJsNextFlow
+import tuktu.web.js.JSGeneration
 
 object Application extends Controller {
-    /**
-     * Turns a data packet into javascript that can be executed and returned by Tuktu
-     */
-    def PacketToJsBuilder(dp: DataPacket): (String, Option[String]) = {
-        var nextFlow: Option[String] = None
-        
-        val res = (for {
-            datum <- dp.data
-            (dKey, dValue) <- datum
-            
-            if (dValue match {
-                case a: WebJsObject => true
-                case a: WebJsNextFlow => {
-                    // Ugly, but we have to do a side-effect here :)
-                    nextFlow = Some(a.flowName)
-                    false
-                }
-                case _ => false
-            })
-        } yield {
-            // Get the value to obtain and place it in a key with a proper name that we will collect
-            "tuktuvars." + dKey + " = " + (dValue.asInstanceOf[WebJsObject].js match {
-                case v: String => "'" + v + "'"
-                case v: Int => v.toString
-            })
-        }).toList.mkString(";")
-        
-        (res, nextFlow)
-    }
-    
     /**
      * Handles a polymorphic JS-request
      */
@@ -139,7 +110,7 @@ object Application extends Controller {
                             resultFut.map {
                                 case dp: DataPacket =>
                                     // Get all the JS elements and output them one after the other
-                                    val jsResult = PacketToJsBuilder(dp)
+                                    val jsResult = JSGeneration.PacketToJsBuilder(dp)
                                     Ok(views.js.Tuktu(jsResult._2, jsResult._1,
                                             Play.current.configuration.getString("tuktu.jsurl").getOrElse("/Tuktu.js")))
                                 case _ =>

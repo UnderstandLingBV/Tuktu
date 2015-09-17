@@ -20,15 +20,10 @@ Performs a join on two streams of data (two other generators with processing pip
   * **config** *(type: object)* `[Required]`
 
     * **nodes** *(type: array)* `[Optional]`
-    - The list of nodes to perform the join on, must all be Tuktu nodes.
+    - The list of nodes to perform the join on. If nothing is entered, all nodes are used.
 
-      * **[UNNAMED]** *(type: object)* `[Optional]`
-
-        * **host** *(type: string)* `[Required]`
-        - Default is the Play configuration value of akka.remote.netty.tcp.hostname, or 127.0.0.1 if that is not set.
-
-        * **port** *(type: int)* `[Required]`
-        - Default is the Play configuration value of akka.remote.netty.tcp.port, or 2552 if that is not set.
+      * **[UNNAMED]** *(type: string)* `[Required]`
+      - The address (hostname or IP) of the node.
 
     * **sources** *(type: array)* `[Required]`
     - The data streams to join.

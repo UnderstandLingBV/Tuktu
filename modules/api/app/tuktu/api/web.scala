@@ -5,13 +5,31 @@ import akka.actor.ActorRef
 import akka.actor.ActorLogging
 import akka.actor.Actor
 
+abstract class BaseJsObject() extends java.io.Serializable
+
 case class WebJsObject(
         js: Any
-) extends java.io.Serializable
+) extends BaseJsObject()
 
 case class WebJsNextFlow(
         flowName: String
-) extends java.io.Serializable
+) extends BaseJsObject()
+
+case class WebJsCodeObject(
+        code: String
+) extends BaseJsObject()
+
+case class WebJsFunctionObject(
+        name: String,
+        functionParams: List[String],
+        functionBody: String
+) extends BaseJsObject()
+
+case class WebJsEventObject(
+        elementId: String,
+        event: String,
+        callback: String
+) extends BaseJsObject()
 
 abstract class TuktuBaseJSGenerator(
         referer: String,

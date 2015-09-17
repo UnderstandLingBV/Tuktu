@@ -30,9 +30,21 @@ Executes a query on a given list of nodes.
     * **collection** *(type: string)* `[Required]`
     - The name of the collection to open.
 
-    * **query** *(type: JsObject)* `[Required]`
+    * **query** *(type: string)* `[Required]`
     - Find the documents matching these given criteria.
+
+    * **filter** *(type: string)* `[Optional]`
+    - Filter results by this projection.
+
+    * **sort** *(type: string)* `[Optional]`
+    - Sort results by this projection.
+
+    * **limit** *(type: int)* `[Optional]`
+    - Limit results by this number.
 
     * **batch** *(type: boolean)* `[Optional, default = false]`
     - Are all results to be batched before pushing it on the channel.
+
+    * **batch_size** *(type: int)* `[Optional, default = 50]`
+    - The size of the batches to get from mongo.
 

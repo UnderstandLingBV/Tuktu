@@ -1,0 +1,30 @@
+{
+	"name": "JS Free Processor",
+	"description": "Adds a free-form piece of javascript to be executed",
+	"class": "tuktu.web.processors.analytics.JSFreeProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "js_code",
+					"description": "The JS code to execute.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

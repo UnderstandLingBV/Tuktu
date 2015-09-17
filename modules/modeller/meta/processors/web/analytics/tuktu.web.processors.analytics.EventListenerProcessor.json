@@ -1,0 +1,42 @@
+{
+	"name": "Event Listener Processor",
+	"description": "Adds an event listener to the JS.",
+	"class": "tuktu.web.processors.analytics.EventListenenerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "element_id",
+					"description": "The ID of the DOM element.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "event_name",
+					"description": "The event name that should be listened to.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "callback",
+					"description": "The actual code to execute. If nothing is entered, a boolean value of true will be added to the collection.",
+					"type": "string",
+					"required": false
+				}
+			]
+		}
+	]
+}
