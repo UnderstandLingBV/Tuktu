@@ -75,8 +75,26 @@
 				{
 					"name": "query",
 					"description": "Find the documents matching these given criteria.",
-					"type": "JsObject",
+					"type": "string",
 					"required": true
+				},
+				{
+					"name": "filter",
+					"description": "Filter results by this projection.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "sort",
+					"description": "Sort results by this projection.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "limit",
+					"description": "Limit results by this number.",
+					"type": "int",
+					"required": false
 				},
 				{
 					"name": "batch",
@@ -84,6 +102,13 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "batch_size",
+					"description": "The size of the batches to get from mongo.",
+					"type": "int",
+					"required": false,
+					"default": 50
 				}
 			]
 		}

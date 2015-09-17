@@ -38,13 +38,13 @@ Installing Tuktu can be done by either building from source as described below, 
 
 [http://tuktu.et4it.nl/downloads/tuktu-0.1.zip](http://tuktu.et4it.nl/downloads/tuktu-0.1.zip) 
 
-Note that Tuktu requires Java (JRE) to be present on the system it is run from. While Tuktu can be compiled against different java versions, this download was build against **java 1.8** and hence that version of java is required to run it.
+Note that Tuktu requires Java (JRE) to be present on the system it is run from. Tuktu requires **Java 8** to run or compile.
 
 Note that in order to run Tuktu, you need to navigate a terminal or command prompt to the root folder and then execute the command `bin\tuktu(.bat)`. **(Do not run Tuktu from the bin-folder itself but always from the root-folder of Tuktu)**
 
 # Building from Source
 
-To build Tuktu from source, clone the repository. Tuktu was built against Play! version 2.3.x so you need that version of Play.
+To build Tuktu from source, clone the repository. Tuktu was built against Play! version 2.3.x so you need that version of Play. Also, you need **Java 8**.
 
 **Important note:** If you want to build Tuktu as-is from cloning the git repository - including the NLP module - you will need to have the following NLP libraries installed to your local Maven or otherwise present on the classpath:
 

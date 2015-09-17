@@ -12,6 +12,7 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import tuktu.api._
+import play.api.cache.Cache
 
 case class JoinPacket(
     data: Map[String, Any],
@@ -70,6 +71,9 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
         Math.abs(MurmurHash3.stringHash(keyString) % maxSize)
     }
     
+    // Get cluster nodes
+    val clusterNodes = Cache.getAs[collection.mutable.Map[String, ClusterNode]]("clusterNodes").getOrElse(collection.mutable.Map[String, ClusterNode]())
+    
     var joinActors = collection.mutable.ListBuffer[ActorRef]()
     var sourceActors = collection.mutable.Map[ActorRef, Int]()
     var sources = collection.mutable.ListBuffer[(String, List[String], String)]()
@@ -78,17 +82,13 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
         case config: JsValue => {
             // Get the list of nodes to perform the join on, must all be Tuktu nodes
             val nodeList = {
-                val nodes = (config \ "nodes").asOpt[List[JsObject]]
+                val nodes = (config \ "nodes").asOpt[List[String]]
                 
                 nodes match {
-                    case None => List((
-                            Play.current.configuration.getString("akka.remote.netty.tcp.hostname").getOrElse("127.0.0.1"),
-                            Play.current.configuration.getInt("akka.remote.netty.tcp.port").getOrElse(2552)
-                    ))
-                    case Some(ns) => {
+                    case None => clusterNodes.map(cn => (cn._2.host, cn._2.akkaPort))
+                    case Some(ns) =>
                         // Get host and portnumber
-                        (for (n <- ns) yield ((n \ "host").as[String], (n \ "port").as[Int])).toList
-                    } 
+                        ns.map(n => (clusterNodes(n).host, clusterNodes(n).akkaPort))
                 }
             }
             

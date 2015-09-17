@@ -49,28 +49,15 @@
 			"parameters": [
 				{
 					"name": "nodes",
-					"description": "The list of nodes to perform the join on, must all be Tuktu nodes.",
+					"description": "The list of nodes to perform the join on. If nothing is entered, all nodes are used.",
 					"type": "array",
 					"required": false,
 					"parameters": [
 						{
 							"name": "",
-							"type": "object",
-							"required": false,
-							"parameters": [
-								{
-									"name": "host",
-									"description": "Default is the Play configuration value of akka.remote.netty.tcp.hostname, or 127.0.0.1 if that is not set.",
-									"type": "string",
-									"required": true
-								},
-								{
-									"name": "port",
-									"description": "Default is the Play configuration value of akka.remote.netty.tcp.port, or 2552 if that is not set.",
-									"type": "int",
-									"required": true
-								}
-							]
+							"type": "string",
+							"required": true,
+							"description": "The address (hostname or IP) of the node."
 						}
 					]
 				},

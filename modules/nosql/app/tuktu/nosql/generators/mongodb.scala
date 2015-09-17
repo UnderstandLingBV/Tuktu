@@ -18,6 +18,9 @@ import scala.util.Failure
 import tuktu.api.InitPacket
 import tuktu.nosql.util.MongoCollectionPool
 import tuktu.nosql.util.MongoSettings
+import reactivemongo.api.QueryOpts
+import play.api.libs.json.Json
+import scala.concurrent.Future
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -31,49 +34,49 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val settings = MongoSettings(hosts, database, coll)
             val collection = MongoCollectionPool.getCollection(settings)
 
-            // Get query
-            val query = (config \ "query")     
+            // Get query and filter
+            val query = Json.parse((config \ "query").as[String])
+            val filter = Json.parse((config \ "filter").asOpt[String].getOrElse("{}"))
+            val sort = Json.parse((config \ "sort").asOpt[String].getOrElse("{}")).asInstanceOf[JsObject]
+            val limit = (config \ "limit").asOpt[Int]
+            val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(50)
             
             // Batch all the results before pushing it on the channel
             val batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
+            
+            val resultFuture = {
+                // Get data based on query and filter
+                val resultData = limit match {
+                    case Some(s) => collection.find(query, filter)
+                        .sort(sort).options(QueryOpts().batchSize(s))
+                        .cursor[JsObject]
+                        .collect[List](s)
+                    case None => collection.find(query, filter).sort(sort)
+                        .options(QueryOpts().batchSize(batchSize)).cursor[JsObject].collect[List]()
+                }
+                // Get futures into JSON
+                resultData.map { resultList => {
+                    for (resultRow <- resultList) yield {
+                        tuktu.api.utils.JsObjectToMap(resultRow)
+                    }
+                }}  
+            }
 
-            if (batch) {
-                val fut = collection.find(query).cursor[JsObject].collect[List]().map {
-                    list =>
-                        list.map {
-                            obj => tuktu.api.utils.JsObjectToMap(obj)
-                        }
+            // Handle results
+            resultFuture.onSuccess {
+                case res: List[Map[String, Any]] => {
+                    // Determine what to do based on batch or non batch
+                    if (batch)
+                        channel.push(new DataPacket(res))
+                    else
+                        res.foreach(row => channel.push(new DataPacket(List(row))))
                 }
-                
-                // Determine what to do and clean up connection
-                fut onSuccess {
-                    case list: List[Map[String, Any]] => {
-                        channel.push(new DataPacket(list))
-                        self ! new StopPacket
-                    }
-                }
-                fut onFailure {
-                    case e: Throwable => {
-                        e.printStackTrace
-                        self ! new StopPacket
-                    }
-                }
-            } else {
-                val fut = collection.
-                    find(query).
-                    cursor[JsObject].
-                    enumerate().apply({
-                        Iteratee.foreach { doc =>
-                        // Pipe the document into channel
-                        channel.push(new DataPacket(List(
-                            tuktu.api.utils.JsObjectToMap(doc))))
-                        }
-                    })
-                                    
-                fut onComplete {
-                    case _ => {
-                        self ! new StopPacket
-                    }
+                case _ => self ! new StopPacket()
+            }
+            resultFuture.onFailure {
+                case e: Throwable => {
+                    e.printStackTrace
+                    self ! new StopPacket
                 }
             }
         }
