@@ -1,32 +1,37 @@
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.asScalaSetConverter
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+
+import org.reflections.Reflections
+
+import akka.actor.ActorSelection.toScala
 import akka.actor.PoisonPill
 import akka.actor.Props
-import akka.routing.SmallestMailboxPool
+import akka.actor.actorRef2Scala
 import akka.routing.Broadcast
+import akka.routing.SmallestMailboxPool
 import akka.util.Timeout
+import controllers.AutoStart
 import controllers.Dispatcher
+import controllers.FlowManagerActor
+import controllers.TuktuScheduler
 import monitor.DataMonitor
+import monitor.HealthMonitor
 import play.api.Application
 import play.api.GlobalSettings
 import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
+import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.mvc.RequestHeader
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.Results.InternalServerError
 import play.api.mvc.Results.NotFound
-import scala.concurrent.Future
-import play.api.mvc.RequestHeader
-import play.api.libs.json.Json
-import org.reflections.Reflections
-import scala.collection.JavaConverters._
-import controllers.TuktuScheduler
+import tuktu.api.ClusterNode
 import tuktu.api.TuktuGlobal
-import controllers.AutoStart
-import monitor.HealthMonitor
-import controllers.FlowManagerActor
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -57,6 +62,25 @@ object Global extends GlobalSettings {
 	override def onStart(app: Application) {
         // Set timeout
         Cache.set("timeout", Play.current.configuration.getInt("tuktu.timeout").getOrElse(5))
+        // Set location where config files are and store in cache
+        Cache.set("configRepo", Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs"))
+        // Set location of this node
+        Cache.set("homeAddress", Play.current.configuration.getString("akka.remote.netty.tcp.hostname").getOrElse("127.0.0.1"))
+        // Set log level
+        Cache.set("logLevel", Play.current.configuration.getString("tuktu.monitor.level").getOrElse("all"))
+        // Get the cluster setup, which nodes are present
+        Cache.set("clusterNodes", {
+            val clusterNodes = scala.collection.mutable.Map[String, ClusterNode]()
+            Play.current.configuration.getConfigList("tuktu.cluster.nodes").foreach(nodeList =>
+                nodeList.asScala.foreach(node => {
+                    val host = node.getString("host").getOrElse("127.0.0.1")
+                    val akkaPort = node.getString("port").getOrElse("2552").toInt
+                    val UIPort = node.getString("uiport").getOrElse("9000").toInt
+                    clusterNodes += host -> new ClusterNode(host, akkaPort, UIPort)
+                })
+            )
+            clusterNodes
+        })
         
         // Set up monitoring actor
         val monActor = Akka.system.actorOf(Props[DataMonitor], name = "TuktuMonitor")

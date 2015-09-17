@@ -31,7 +31,7 @@ object nodeHandler {
                 // Get the amount of instances
                 instances = (node \ "instances").asOpt[Int].getOrElse(1)
 
-                if (handlerType != "" && nodeList != "")
+                if (handlerType != "" && (nodeList != "" || handlerType == "AllNodes"))
             } yield {
                 // See what node handler we need to use
                 handlerType match {

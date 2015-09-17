@@ -1,11 +1,15 @@
 {
     "generators": [
         {
+            "nodes": [
+                {
+                    "type": "AllNodes",
+                    "nodes": "",
+                    "instances": 5
+                }
+            ],
             "result": "test",
-            "config": {
-                "api_endpoint": "test",
-                "includes": []
-            },
+            "config": {},
             "name": "tuktu.web.generators.TuktuJSGenerator",
             "next": [
                 "collect"

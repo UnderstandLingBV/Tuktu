@@ -227,26 +227,6 @@ object Dispatcher {
 class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
-    // Get location where config files are and store in cache
-    Cache.set("configRepo", Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs"))
-    // Set location of this node
-    Cache.set("homeAddress", Play.current.configuration.getString("akka.remote.netty.tcp.hostname").getOrElse("127.0.0.1"))
-    // Set log level
-    Cache.set("logLevel", Play.current.configuration.getString("tuktu.monitor.level").getOrElse("all"))
-    // Get the cluster setup, which nodes are present
-    Cache.set("clusterNodes", {
-        val clusterNodes = scala.collection.mutable.Map[String, ClusterNode]()
-        Play.current.configuration.getConfigList("tuktu.cluster.nodes").foreach(nodeList =>
-            nodeList.asScala.foreach(node => {
-                val host = node.getString("host").getOrElse("127.0.0.1")
-                val akkaPort = node.getString("port").getOrElse("2552").toInt
-                val UIPort = node.getString("uiport").getOrElse("9000").toInt
-                clusterNodes += host -> new ClusterNode(host, akkaPort, UIPort)
-            })
-        )
-        clusterNodes
-    })
-    
     /**
      * Builds the processor map
      */
