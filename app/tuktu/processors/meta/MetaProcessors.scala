@@ -212,6 +212,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     var flowPresent = true
     var flowField: String = _
     var sendWhole = false
+    var replacements: Map[String, String] = _
 
     override def initialize(config: JsObject) {
         // Get the name of the config file
@@ -235,24 +236,30 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
 
         // Send the whole datapacket or in pieces
         sendWhole = (config \ "send_whole").asOpt[Boolean].getOrElse(false)
+
+        // Get meta replacements
+        replacements = (config \ "replacements").asOpt[List[Map[String, String]]].getOrElse(Nil).map(map => map("source") -> map("target")).toMap
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         if (!sendWhole) {
-            data.data.foreach(datum =>
-                forwardData(List(datum), utils.evaluateTuktuString(flowField, datum)))
+            for (datum <- data.data)
+                forwardData(List(datum))
         } else {
-            forwardData(data.data, flowField)
+            forwardData(data.data)
         }
 
         data
     })
 
-    def forwardData(data: List[Map[String, Any]], flowName: String) {
+    def forwardData(data: List[Map[String, Any]]) {
+        val datum = data.headOption.getOrElse(Map())
+        val path = utils.evaluateTuktuString(flowField, datum)
         val processors = {
             val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
-                "/" + flowName + ".json", "utf-8")
-            val cfg = utils.evaluateTuktuConfig(Json.parse(configFile.mkString).as[JsObject], data.headOption.getOrElse(Map()))
+                "/" + path + ".json", "utf-8")
+            val cfg = utils.evaluateTuktuConfig(Json.parse(configFile.mkString).as[JsObject],
+                replacements.map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)))
             configFile.close
             (cfg \ "processors").as[List[JsObject]]
         }

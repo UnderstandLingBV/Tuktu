@@ -1,6 +1,6 @@
 {
 	"name": "Generator Config Stream Processor",
-	"description": "Invokes a new generator, which sends its data to a selected list of processors from a given config.",
+	"description": "Invokes a new generator for every DataPacket, which sends its data to a selected list of processors from a given config, replacing Tuktu config strings within.",
 	"class": "tuktu.processors.meta.GeneratorConfigStreamProcessor",
 	"parameters": [
 		{
@@ -20,7 +20,7 @@
 			"parameters": [
 				{
 					"name": "name",
-					"description": "The name of the config.",
+					"description": "The name of the config so that you can follow it in the job overview.",
 					"type": "string",
 					"required": true
 				},
@@ -32,7 +32,7 @@
 				},
 				{
 					"name": "next",
-					"description": "The processors to send data into.",
+					"description": "The processors to send the data into.",
 					"type": "array",
 					"required": true,
 					"parameters": [
@@ -45,7 +45,7 @@
 				},
 				{
 					"name": "flow_field",
-					"description" : "Field containing the name of the flow to load; can contain variables which will be resolved with data packets.",
+					"description" : "Field containing the path of the flow to load relative to configs root folder; can contain variables which will be resolved with data packets' first datum.",
 					"type": "string",
 					"required": true
 				},
@@ -54,6 +54,33 @@
 					"description" : "True sends the whole DataPacket, false sends each data object inside the DataPacket separately.",
 					"type": "boolean",
 					"required": false
+				},
+				{
+					"name": "replacements",
+					"description": "The replacements used to replace Tuktu config strings #{source} by target.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "source",
+									"description": "The #{key} that will be replaced by the target string below in the invoked configs: #{source} -> target. Can contain Tuktu strings to populate with first Datum.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "target",
+									"description": "The replacement for the source above: #{source} -> target. Can contain Tuktu strings to populate with first Datum.",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
 				}
 			]
 		}
