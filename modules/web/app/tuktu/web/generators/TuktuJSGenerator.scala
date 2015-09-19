@@ -60,22 +60,11 @@ class TuktuJSGenerator(
             Enumerator(dp) |>> (processors.head compose sendBackEnum compose utils.logEnumeratee(idString)) &>> sinkIteratee
         }
     }
-    
-    // Notify the monitor for error recovery
-    Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorIdentifierPacket(idString, self)
-    
+
     def receive() = {
         case ip: InitPacket => {
             // Add ourselves to the cache
-            Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
-                .getOrElse(collection.mutable.Map[String, ActorRef]()) +=
-                (referer -> self)
-                
-            // Send the monitoring actor notification of start
-            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self,
-                    "start"
-            )
+            Cache.getOrElse[collection.mutable.Map[String, ActorRef]]("web.hostmap")(collection.mutable.Map.empty) += (referer -> self)
         }
         case config: JsValue => {}
         case sp: StopPacket => {

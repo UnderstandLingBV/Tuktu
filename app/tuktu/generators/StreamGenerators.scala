@@ -43,11 +43,10 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     var dontReturnAtAll = false
-    val idString = java.util.UUID.randomUUID.toString
     
     // Every processor but the first gets treated as asynchronous
     for (processor <- processors.drop(1))
-        processors.foreach(processor => enumerator |>> (processor compose utils.logEnumeratee(idString)) &>> sinkIteratee)
+        processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
         
     /**
      * We must somehow keep track of the sending actor of each data packet. This state is kept within this helper class that
@@ -71,21 +70,12 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         })
         
         def runProcessor() = {
-            Enumerator(dp) |>> (processors.head compose sendBackEnum compose utils.logEnumeratee(idString)) &>> sinkIteratee
+            Enumerator(dp) |>> (processors.head compose sendBackEnum) &>> sinkIteratee
         }
     }
-    
-    // Notify the monitor for error recovery
-    Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorIdentifierPacket(idString, self)
-    
+
     def receive() = {
-        case ip: InitPacket => {
-            // Send the monitoring actor notification of start
-            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self,
-                    "start"
-            )
-        }
+        case ip: InitPacket => { }
         case config: JsValue => {
             // Return or not?
             dontReturnAtAll = (config \ "no_return").asOpt[Boolean].getOrElse(false)
@@ -106,7 +96,7 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
             )
             
             val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
-            enum |>> (processors.head compose utils.logEnumeratee(idString)) &>> sinkIteratee
+            enum |>> processors.head &>> sinkIteratee
 
             channel.eofAndEnd           
             self ! PoisonPill

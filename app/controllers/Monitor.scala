@@ -6,6 +6,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import akka.actor._
 import akka.pattern.ask
+import akka.routing.Broadcast
 import akka.util.Timeout
 import play.api.Play
 import play.api.Play.current
@@ -33,8 +34,9 @@ object Monitor extends Controller {
         val fut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorOverviewPacket()).asInstanceOf[Future[MonitorOverviewResult]]
         fut.map(res => 
             Ok(views.html.monitor.showApps(
-                    res.runningJobs.toList.sortBy(elem => elem._2.getStartTime),
+                    res.runningJobs.toList.sortBy(elem => elem._2.startTime),
                     res.finishedJobs.toList.sortBy(elem => elem._2._1),
+                    res.monitorData,
                     util.flashMessagesToMap(request)
             ))
         )
@@ -45,22 +47,23 @@ object Monitor extends Controller {
      */
     def terminate(name: String, force: Boolean) = Action {
         // Send stop packet to actor
-        if (force)
-            Akka.system.actorSelection(name) ! PoisonPill
-        else 
-            Akka.system.actorSelection(name) ! new StopPacket
-            
-        // Inform the monitor since the generator won't do it itself
-        val generatorName = Akka.system.actorSelection(name) ? Identify(None)
-        generatorName.onSuccess {
-            case generator: ActorRef => {
-                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                        generator,
-                        "done"
-                )
-            } 
+        if (force) {
+            Akka.system.actorSelection(name) ! Broadcast(PoisonPill)
+
+            // Inform the monitor since the generator won't do it itself
+            val generatorName = Akka.system.actorSelection(name) ? Identify(None)
+            generatorName.onSuccess {
+                case generator: ActorRef => {
+                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                            generator,
+                            "kill"
+                    )
+                } 
+            }
         }
-        
+        else 
+            Akka.system.actorSelection(name) ! Broadcast(new StopPacket)
+
         Redirect(routes.Monitor.fetchLocalInfo()).flashing("success" -> ("Successfully " + {
             force match {
                 case true => "terminated"

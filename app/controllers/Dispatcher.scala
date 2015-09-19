@@ -8,6 +8,7 @@ import scala.concurrent.duration.DurationInt
 
 import akka.actor._
 import akka.pattern.ask
+import akka.routing.Broadcast
 import akka.routing.SmallestMailboxPool
 import akka.util.Timeout
 import controllers.nodehandler.nodeHandler
@@ -37,7 +38,7 @@ object Dispatcher {
     /**
      * Monitoring enumeratee
      */
-    def monitorEnumeratee(generatorName: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
+    def monitorEnumeratee(uuid: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
         implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
         
         // Get the monitoring actor
@@ -46,7 +47,7 @@ object Dispatcher {
         
         Enumeratee.mapM(data => Future {
             if (data.data.size > 0)
-                Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, generatorName, branch, data.data.size)
+                Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, uuid, branch, data.data.size)
             data
         })
     }
@@ -59,7 +60,6 @@ object Dispatcher {
     def buildEnums (
             nextIds: List[String],
             processorMap: Map[String, ProcessorDefinition],
-            monitorName: String,
             genActor: Option[ActorRef]
     ): (String, List[Enumeratee[DataPacket, DataPacket]]) = {
         // Get log level
@@ -210,9 +210,9 @@ object Dispatcher {
                     val index = elem._2
                     
                     // Prepend a start packet for the monitor and append a stop packet
-                    monitorEnumeratee(monitorName, index.toString, BeginType) compose
+                    monitorEnumeratee(idString, index.toString, BeginType) compose
                     buildSequential(nextId, utils.logEnumeratee[DataPacket](idString), 0) compose
-                    monitorEnumeratee(monitorName, index.toString, EndType)
+                    monitorEnumeratee(idString, index.toString, EndType)
                 }))
             }
             case "none" => (idString, nextIds.map(nextId => buildSequential(nextId, utils.logEnumeratee[DataPacket](idString), 0)))
@@ -274,7 +274,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     cfg
                 }
             }
-            
+
             // Get source actor if not set yet
             val sourceActor = dr.sync match {
                 case false => None
@@ -283,7 +283,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     case Some(sa) => Some(sa)
                 }
             }
-            
+
             // Start local actor, get all data processors
             val processorMap = buildProcessorMap((config \ "processors").as[List[JsObject]])
 
@@ -296,31 +296,31 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                 val resultName = (generator \ "result").as[String]
                 val next = (generator \ "next").as[List[String]]
                 val nodeAddress = (generator \ "nodes").asOpt[List[JsObject]]
-                
+
                 // Parse the nodes field to see where this generator should be constructed
-                val nodeList = nodeHandler.handleNodes(nodeAddress.getOrElse(List()))
-                
+                val nodeList = nodeHandler.handleNodes(nodeAddress.getOrElse(Nil))
+
                 // Go over all nodes and submit the generator there
                 for (nodeInstance <- nodeList) {
                     val hostname = nodeInstance._1
                     val instanceCount = nodeInstance._2
-                    
+
                     // See if this one needs to be started remotely or not
                     val startRemotely = {
                         // We may or may not need to start remotely
                         if (hostname == Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")) false
                         else true
                     }
-                            
+
                     val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
                     if (startRemotely && !dr.isRemote && hostname != "" && clusterNodes.contains(hostname)) {
                         // We need to start an actor on a remote location
                         val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname).akkaPort + "/user/TuktuDispatcher"
-                        
+
                         // Get the identity
                         val fut = Akka.system.actorSelection(location) ? Identify(None)
                         val remoteDispatcher = Await.result(fut.mapTo[ActorIdentity], 5 seconds).getRef
-                        
+
                         // Send a remoted dispatch request, which is just the obtained config
                         dr.returnRef match {
                             case true => {
@@ -333,78 +333,47 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     } else {
                         if (!startRemotely) {
                             // Build the processor pipeline for this generator
-                            val (idString, processorEnumeratee) = Dispatcher.buildEnums(next, processorMap, dr.configName + "/" + generatorName, dr.sourceActor)
-                            
+                            val (idString, processorEnumeratee) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor)
+
                             // Set up the generator
                             val clazz = Class.forName(generatorName)
-                            
-                            try {
-                                // Make the amount of actors we require
-                                val actorRef = {
-                                    // See if this is the JS generator or not
-                                    if (classOf[TuktuBaseJSGenerator].isAssignableFrom(clazz)) {
-                                        // Define name based on config location
-                                        val refererName = {
-                                            val split = dr.configName.split("/").takeRight(2)
-                                            if (split(1) == "Tuktu") split(0)
-                                            else split.mkString(".")
-                                        }
-                                        
-                                        Akka.system.actorOf(
-                                            SmallestMailboxPool(instanceCount).props(
-                                                Props(clazz, refererName, resultName, processorEnumeratee, dr.sourceActor)
-                                            ),
-                                            name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + index
-                                        )
+
+                            // Make the amount of actors we require
+                            val actorRef = {
+                                // See if this is the JS generator or not
+                                if (classOf[TuktuBaseJSGenerator].isAssignableFrom(clazz)) {
+                                    // Define name based on config location
+                                    val refererName = {
+                                        // TODO: do properly
+                                        val split = dr.configName.split("/").takeRight(2)
+                                        if (split(1) == "Tuktu") split(0)
+                                        else split.mkString(".")
                                     }
-                                    else
-                                        Akka.system.actorOf(
-                                            SmallestMailboxPool(instanceCount).props(
-                                                Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
-                                            ),
-                                            name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + index
-                                        )
+
+                                    Akka.system.actorOf(
+                                        SmallestMailboxPool(instanceCount).props(
+                                            Props(clazz, refererName, resultName, processorEnumeratee, dr.sourceActor)
+                                        ),
+                                        name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + idString
+                                    )
                                 }
-                                
-                                // Notify the monitor so we can recover from errors
-                                Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorIdentifierPacket(idString, actorRef)
-                                
-                                // Send init packet
-                                actorRef ! new InitPacket
-                                // Send it the config
-                                actorRef ! generatorConfig
-                                if (dr.returnRef) sender ! actorRef
+                                else
+                                    Akka.system.actorOf(
+                                        SmallestMailboxPool(instanceCount).props(
+                                            Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
+                                        ),
+                                        name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + idString
+                                    )
                             }
-                            catch {
-                                case e: akka.actor.InvalidActorNameException => {
-                                    val actorRef = {
-                                        // See if this is the JS generator or not
-                                        if (classOf[TuktuBaseJSGenerator].isAssignableFrom(clazz))
-                                            Akka.system.actorOf(
-                                                SmallestMailboxPool(instanceCount).props(
-                                                    Props(clazz, dr.configName.split("/").takeRight(1).head, resultName, processorEnumeratee, dr.sourceActor)
-                                                ),
-                                                name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + index
-                                            )
-                                        else
-                                            Akka.system.actorOf(
-                                                SmallestMailboxPool(instanceCount).props(
-                                                    Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
-                                                ),
-                                                name = dr.configName.replaceAll("/", "_") + "_" + clazz.getName +  "_" + java.util.UUID.randomUUID.toString
-                                            )
-                                    }
-                                    
-                                    // Notify the monitor so we can recover from errors
-                                    Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorIdentifierPacket(idString, actorRef)
-                                    
-                                    // Send init packet
-                                    actorRef ! new InitPacket
-                                    // Send it the config
-                                    actorRef ! generatorConfig
-                                    if (dr.returnRef) sender ! actorRef
-                                }
-                            }
+
+                            // Notify the monitor so we can recover from errors
+                            Akka.system.actorSelection("user/TuktuMonitor") ! new ActorIdentifierPacket(idString, instanceCount, actorRef)
+
+                            // Send init packet
+                            actorRef ! Broadcast(new InitPacket)
+                            // Send it the config
+                            actorRef ! Broadcast(generatorConfig)
+                            if (dr.returnRef) sender ! actorRef
                         }
                     }
                 }

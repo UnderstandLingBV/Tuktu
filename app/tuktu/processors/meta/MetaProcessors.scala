@@ -111,8 +111,7 @@ class SyncStreamForwarder() extends Actor with ActorLogging {
             }
         }
         case sp: StopPacket => {
-            remoteGenerator ! new StopPacket
-            self ! PoisonPill
+            remoteGenerator ! Broadcast(new StopPacket)
         }
     }
 }
@@ -189,13 +188,16 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         if (sync) {
             // Get the result from the generator
             val dataFut = forwarder ? data
-            Await.result(dataFut.mapTo[DataPacket], timeout.duration)
+            val result = Await.result(dataFut.mapTo[DataPacket], timeout.duration)
+            forwarder ! new StopPacket
+            result
         } else {
             forwarder ! data
+            forwarder ! new StopPacket
             data
         }
     }) compose Enumeratee.onEOF(() => {
-        forwarder ! new StopPacket
+        forwarder ! PoisonPill
     })
 }
 
@@ -280,7 +282,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
                 //send the data forward
                 generatorActor ! new DataPacket(data)
                 // Directly send stop packet
-                generatorActor ! new StopPacket
+                generatorActor ! Broadcast(new StopPacket)
             }
         }
     }
@@ -368,7 +370,7 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
 
             // Build the processor pipeline for this generator
             val (idString, processor) = {
-                val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, "ParalllelProcessor", None)
+                val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None)
                 (pipeline._1, pipeline._2.head)
             }
             // Set up the actor that will execute this processor

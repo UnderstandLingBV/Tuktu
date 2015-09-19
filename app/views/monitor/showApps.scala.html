@@ -1,60 +1,14 @@
-@(apps: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, (Long, Long))], messages: Map[String, List[String]])
+@(apps: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, (Long, Long, Int, Int))], monitorData: Map[String, collection.mutable.Map[tuktu.api.MPType, collection.mutable.Map[String, Int]]], messages: Map[String, List[String]])
+@import tuktu.api.{ BeginType, EndType }
 
 @index("Monitoring", messages) {
     @monitorMenu()
 } {
-	@if(apps.size > 0) {
-	    <h2>
-	       The following jobs are currently running on Tuktu
-	    </h2>
-	    
-	    <table class="table table-striped">
-	        <thead>
-		        <tr>
-		            <th>
-		                Job name
-		            </th>
-		            <th>
-		                Actions
-		            </th>
-		            <th style="text-align: right;">
-		                Running since
-		            </th>
-		        </tr>
-	        </thead>
-	        <tbody>
-				@for((appName, appProps) <- apps) {
-				    <tr>
-				        <th style="margin-right: 25px;">
-				            @appName
-				        </th>
-				        <td>
-				            <a href="@routes.Monitor.terminate(appName, false)">
-                                Stop
-                            </a>
-				            <a href="@routes.Monitor.terminate(appName, true)">
-                                Terminate
-                            </a>
-				        </td>
-				        <td style="text-align: right;">
-				            @{new java.util.Date(appProps.getStartTime * 1000).toString}
-				            (@{(System.currentTimeMillis / 1000L) - appProps.getStartTime} seconds)
-				        </td>
-				    </tr>
-			    }
-			</tbody>
-	    </table>
-	} else {
-	    <h2>Currently, no jobs are running on Tuktu</h2>
-	}
-	
-	<hr>
-	
-	@if(finished.size > 0) {
+    @if(apps.size > 0) {
         <h2>
-           The following jobs are finished
+           The following jobs are currently running on Tuktu
         </h2>
-        
+
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -62,12 +16,83 @@
                         Job name
                     </th>
                     <th>
+                        Instances
+                    </th>
+                    <th>
+                        Processed
+                    </th>
+                    <th>
+                        Actions
+                    </th>
+                    <th class="text-right">
+                        Running since
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @for((appName, appProps) <- apps) {
+                    <tr>
+                        <td style="margin-right: 25px;">
+                            @appName
+                        </td>
+                        <td>
+                            @{appProps.instances - appProps.finished_instances} / @appProps.instances
+                        </td>
+                        <td>
+                            @monitorData.get(appName) match {
+                                case Some(map) => {
+                                    @for(branch <- map.flatMap(x => x._2.keys).toSeq.distinct.sorted) {
+                                        @branch: @map(EndType)(branch) / @map(BeginType)(branch) <br>
+                                    }
+                                }
+                                case None => {0 / 0}
+                            }
+                        </td>
+                        <td>
+                            <a href="@routes.Monitor.terminate(appName, false)">
+                                Stop
+                            </a>
+                            <a href="@routes.Monitor.terminate(appName, true)">
+                                Terminate
+                            </a>
+                        </td>
+                        <td class="javascript-date-timestamp-duration text-right" title="@appProps.startTime">
+                            @* Filled and updated with JavaScript below to user user's time zone *@
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    } else {
+        <h2>Currently, no jobs are running on Tuktu</h2>
+    }
+
+    <hr>
+
+    @if(finished.size > 0) {
+        <h2>
+           The following jobs are finished
+        </h2>
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>
+                        Job name
+                    </th>
+                    <th>
+                        Instances
+                    </th>
+                    <th>
+                        Processed
+                    </th>
+                    <th>
                         Start Time
                     </th>
                     <th>
                         End Time
                     </th>
-                    <th style="text-align: right;">
+                    <th class="text-right">
                         Duration
                     </th>
                 </tr>
@@ -75,30 +100,60 @@
             <tbody>
                 @for((appName, appProps) <- finished) {
                     <tr>
-                        <th style="margin-right: 25px;">
+                        <td style="margin-right: 25px;">
                             @appName
-                        </th>
-                        <td>
-                            @{new java.util.Date(appProps._1 * 1000).toString}
                         </td>
                         <td>
-                            @{new java.util.Date(appProps._2 * 1000).toString}
+                            @appProps._3 / @appProps._4
                         </td>
-                        <td style="text-align: right;">
-                            @{(appProps._2 - appProps._1)} seconds
+                        <td>
+                            @monitorData.get(appName) match {
+                                case Some(map) => {
+                                    @for(branch <- map.flatMap(x => x._2.keys).toSeq.distinct.sorted) {
+                                        @branch: @map(EndType)(branch) / @map(BeginType)(branch) <br>
+                                    }
+                                }
+                            }
+                        </td>
+                        <td class="javascript-date-timestamp" title="@appProps._1">
+                            @* Filled with JavaScript below to use user's time zone *@
+                        </td>
+                        <td class="javascript-date-timestamp" title="@appProps._2">
+                            @* Filled with JavaScript below to use user's time zone *@
+                        </td>
+                        <td class="text-right">
+                            @if(appProps._2 - appProps._1 >= 1000) {
+                                @{(appProps._2 - appProps._1) / 1000D} s
+                            } else {
+                                @{appProps._2 - appProps._1} ms
+                            }
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
-	} else {
-	   <h2>No finished jobs were found.</h2>
-	}
-	
-	<script type="text/javascript">
-	   window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 30000);
-	   @if(messages.size > 0) {
-	       window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 3000);
-	   }
-	</script>
+    } else {
+        <h2>No finished jobs were found.</h2>
+    }
+
+    <script type="text/javascript">
+        $('td.javascript-date-timestamp').each(function(i, elem) {
+            elem.innerHTML = new Date(parseInt(elem.title, 10));
+        });
+        function refresh() {
+            $('td.javascript-date-timestamp-duration').each(function(i, elem) {
+                var now = new Date;
+                var then = new Date(parseInt(elem.title, 10));
+                elem.innerHTML = then;
+                elem.innerHTML += " (" + Math.floor((now - then) / 1000) + " seconds)";
+            });
+            window.setTimeout(refresh, 1000);
+        }
+        refresh();
+        @if(messages.size > 0) {
+            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 3000);
+        } else {
+            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 30000);
+        }
+    </script>
 }

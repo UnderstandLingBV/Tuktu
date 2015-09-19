@@ -62,7 +62,7 @@ case object CompleteType extends MPType
 
 case class MonitorPacket(
         typeOf: MPType,
-        actorName: String,
+        uuid: String,
         branch: String,
         amount: Integer
 )
@@ -70,19 +70,21 @@ case class MonitorPacket(
 case class MonitorOverviewPacket()
 case class MonitorOverviewResult(
         runningJobs: Map[String, AppMonitorObject],
-        finishedJobs: Map[String, (Long, Long)]
+        finishedJobs: Map[String, (Long, Long, Int, Int)],
+        monitorData: Map[String, collection.mutable.Map[MPType, collection.mutable.Map[String, Int]]]
 )
 
-class AppMonitorObject(actor: ActorRef, startTime: Long) {
-    def getActor = actor
-    def getStartTime = startTime
-    def getName = actor.path.toStringWithoutAddress
-}
+case class AppMonitorObject(
+        actor: ActorRef,
+        instances: Int,
+        var finished_instances: Int = 0,
+        startTime: Long = System.currentTimeMillis
+)
 
 case class AppMonitorPacket(
         val actor: ActorRef,
         val status: String,
-        val timestamp: Long = System.currentTimeMillis / 1000L
+        val timestamp: Long = System.currentTimeMillis
 ) {
     def getName = actor.path.toStringWithoutAddress
     def getParentName = actor.path.parent.toStringWithoutAddress 
@@ -91,12 +93,13 @@ case class AppMonitorPacket(
 case class AddMonitorEventListener()
 case class RemoveMonitorEventListener()
 
-case class ErrorIdentifierPacket(
-        logId: String,
-        generator: ActorRef
+case class ActorIdentifierPacket(
+        uuid: String,
+        instanceCount: Int,
+        mailbox: ActorRef
 )
 case class ErorNotificationPacket(
-        logId: String
+        uuid: String
 )
 /**
  * End monitoring stuff
@@ -123,7 +126,7 @@ abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends B
 abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
-    
+
     // Set up pipeline, either one that sends back the result, or one that just sinks
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     senderActor match {
@@ -135,29 +138,23 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
             })
             processors.foreach(processor => enumerator |>> (processor compose sendBackEnumeratee) &>> sinkIteratee)
         }
-        case _ => processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
+        case None => processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
     }
-    
+
     def cleanup() = {
         // Send message to the monitor actor
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
                 self,                
                 "done"
         )
-        
+
         channel.eofAndEnd
         //context.stop(self)
         self ! PoisonPill
     }
-    
-    def setup() = {
-        // Send the monitoring actor notification of start
-        Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                self,
-                "start"
-        )
-    }
-    
+
+    def setup() = {}
+
     def receive() = {
         case ip: InitPacket => setup
         case config: JsValue => ???
