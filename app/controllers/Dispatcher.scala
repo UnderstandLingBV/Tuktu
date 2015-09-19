@@ -56,16 +56,22 @@ object Dispatcher {
      * Takes a list of Enumeratees and iteratively composes them to form a single Enumeratee
      * @param nextId The names of the processors next to compose
      * @param processorMap A map cntaining the names of the processors and the processors themselves
+     * @return A 3-tuple containing:
+     *   - The idString used to map this flow against (for error recovery)
+     *   - A list of all processors, one for each branch
+     *   - A list of all subflow actors
      */
     def buildEnums (
             nextIds: List[String],
             processorMap: Map[String, ProcessorDefinition],
             genActor: Option[ActorRef]
-    ): (String, List[Enumeratee[DataPacket, DataPacket]]) = {
+    ): (String, List[Enumeratee[DataPacket, DataPacket]], List[ActorRef]) = {
         // Get log level
         val logLevel = Cache.getAs[String]("logLevel").getOrElse("none")
         // Generate the logEnumeratee ID
         val idString = java.util.UUID.randomUUID.toString
+        // Keep track of all subflows
+        val subflows = collection.mutable.ListBuffer.empty[ActorRef]
         
         /**
          * Builds a chain of processors recursively
@@ -73,7 +79,8 @@ object Dispatcher {
         def buildSequential(
                 procName: String,
                 accum: Enumeratee[DataPacket, DataPacket],
-                iterationCount: Int
+                iterationCount: Int,
+                branch: String
         ): Enumeratee[DataPacket, DataPacket] = {
             // Get processor definition
             val pd = processorMap(procName)
@@ -89,40 +96,63 @@ object Dispatcher {
                 
                 // Get sync or not
                 val sync = (pd.config \ "sync").asOpt[Boolean].getOrElse(false)
+                // Create an idString for the subflow
+                val subIdString = java.util.UUID.randomUUID.toString
                 // Create generator
                 val generator = sync match {
                     case true => {
                         if (classOf[EOFBufferProcessor].isAssignableFrom(procClazz)) {
-                            Akka.system.actorOf(Props(classOf[tuktu.generators.EOFSyncStreamGenerator], "",
-                                pd.next.map(processorName => {
-                                    // Create the new lines of processors
-                                    buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1)
-                                }),
-                                genActor
-                            ))
+                            Akka.system.actorOf(SmallestMailboxPool(1).props(
+                                Props(classOf[tuktu.generators.EOFSyncStreamGenerator], "",
+                                    pd.next.map(processorName => {
+                                        // Create the new lines of processors
+                                        monitorEnumeratee(subIdString, branch, BeginType) compose
+                                        buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1, branch) compose
+                                        monitorEnumeratee(subIdString, branch, EndType)
+                                    }),
+                                    genActor
+                                )), name = "subflows_" + subIdString
+                            )
                         } else {
-                            Akka.system.actorOf(Props(classOf[tuktu.generators.SyncStreamGenerator], "",
-                                pd.next.map(processorName => {
-                                    // Create the new lines of processors
-                                    buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1)
-                                }),
-                                {
-                                    if (classOf[BufferProcessor].isAssignableFrom(procClazz)) genActor
-                                    else None
-                                }
-                            ))
+                            Akka.system.actorOf(SmallestMailboxPool(1).props(
+                                    Props(classOf[tuktu.generators.SyncStreamGenerator], "",
+                                        pd.next.map(processorName => {
+                                            // Create the new lines of processors
+                                            monitorEnumeratee(subIdString, branch, BeginType) compose
+                                            buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1, branch) compose
+                                            monitorEnumeratee(subIdString, branch, EndType)
+                                        }),
+                                        {
+                                            if (classOf[BufferProcessor].isAssignableFrom(procClazz)) genActor
+                                            else None
+                                        }
+                                    )), name = "subflows_" + subIdString
+                            )
                         }
                     }
                     case false => {
-                        Akka.system.actorOf(Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
-                            pd.next.map(processorName => {
-                                // Create the new lines of processors
-                                buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1)
-                            }),
-                            None
-                        ))
+                        Akka.system.actorOf(SmallestMailboxPool(1).props(
+                                Props(classOf[tuktu.generators.AsyncStreamGenerator], "",
+                                    pd.next.map(processorName => {
+                                        // Create the new lines of processors
+                                        monitorEnumeratee(subIdString, branch, BeginType) compose
+                                        buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1, branch) compose
+                                        monitorEnumeratee(subIdString, branch, EndType)
+                                    }),
+                                    None
+                                )), name = "subflow_" + subIdString
+                        )
                     }
                 }
+                
+                // Notify the monitor so we can recover from errors
+                Akka.system.actorSelection("user/TuktuMonitor") ! new ActorIdentifierPacket(
+                        subIdString,
+                        1,
+                        generator
+                )
+                // Add to subflow list
+                subflows += generator
                 
                 // Instantiate the processor now
                 val iClazz = procClazz.getConstructor(
@@ -164,13 +194,15 @@ object Dispatcher {
                     }
                     case n::List() => {
                         // No branching, just recurse
-                        buildSequential(n, accum compose procEnum compose utils.logEnumeratee(idString), iterationCount + 1)
+                        buildSequential(n, accum compose procEnum compose utils.logEnumeratee(idString), iterationCount + 1, branch)
                     }
                     case _ => {
                         // We need to branch, use the broadcasting enumeratee
                         accum compose procEnum compose buildBranch(
-                                pd.next.map(nextProcessorName => {
-                                    buildSequential(nextProcessorName, utils.logEnumeratee(idString), iterationCount + 1)
+                                pd.next.zipWithIndex.map(elem => {
+                                    val nextProcessorName = elem._1
+                                    val index = elem._2
+                                    buildSequential(nextProcessorName, utils.logEnumeratee(idString), iterationCount + 1, branch + "_" + index)
                                 })
                         )
                     }
@@ -200,23 +232,21 @@ object Dispatcher {
                 data
             }) compose Enumeratee.onEOF(() => channel.eofAndEnd) compose utils.logEnumeratee(idString)
         }
-        
-        // Determine logging strategy and build the enumeratee
-        Cache.getAs[String]("logLevel").getOrElse("all") match {
-            case "all" => {
-                // First build all Enumeratees
-                (idString, nextIds.zipWithIndex.map(elem => {
+
+        // First build all Enumeratees
+        (
+                idString,
+                nextIds.zipWithIndex.map(elem => {
                     val nextId = elem._1
                     val index = elem._2
                     
                     // Prepend a start packet for the monitor and append a stop packet
                     monitorEnumeratee(idString, index.toString, BeginType) compose
-                    buildSequential(nextId, utils.logEnumeratee[DataPacket](idString), 0) compose
+                    buildSequential(nextId, utils.logEnumeratee[DataPacket](idString), 0, index.toString) compose
                     monitorEnumeratee(idString, index.toString, EndType)
-                }))
-            }
-            case "none" => (idString, nextIds.map(nextId => buildSequential(nextId, utils.logEnumeratee[DataPacket](idString), 0)))
-        }
+                }),
+                subflows toList
+        )
     }
 }
 
@@ -333,7 +363,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     } else {
                         if (!startRemotely) {
                             // Build the processor pipeline for this generator
-                            val (idString, processorEnumeratee) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor)
+                            val (idString, processorEnumeratee, subflows) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor)
 
                             // Set up the generator
                             val clazz = Class.forName(generatorName)
@@ -368,6 +398,8 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
 
                             // Notify the monitor so we can recover from errors
                             Akka.system.actorSelection("user/TuktuMonitor") ! new ActorIdentifierPacket(idString, instanceCount, actorRef)
+                            // Send all subflows
+                            Akka.system.actorSelection("user/TuktuMonitor") ! new SubflowMapPacket(actorRef, subflows)
 
                             // Send init packet
                             actorRef ! Broadcast(new InitPacket)

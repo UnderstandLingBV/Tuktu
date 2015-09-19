@@ -1,4 +1,4 @@
-@(apps: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, (Long, Long, Int, Int))], monitorData: Map[String, collection.mutable.Map[tuktu.api.MPType, collection.mutable.Map[String, Int]]], messages: Map[String, List[String]])
+@(apps: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, (Long, Long, Int, Int))], monitorData: Map[String, collection.mutable.Map[tuktu.api.MPType, collection.mutable.Map[String, Int]]], subflows: Map[String, String], messages: Map[String, List[String]])
 @import tuktu.api.{ BeginType, EndType }
 
 @index("Monitoring", messages) {
@@ -34,6 +34,9 @@
                     <tr>
                         <td style="margin-right: 25px;">
                             @appName
+                            @if(subflows.contains(appName)) {
+                                <i>(Subflow)</i>
+                            }
                         </td>
                         <td>
                             @{appProps.instances - appProps.finished_instances} / @appProps.instances
@@ -42,10 +45,24 @@
                             @monitorData.get(appName) match {
                                 case Some(map) => {
                                     @for(branch <- map.flatMap(x => x._2.keys).toSeq.distinct.sorted) {
-                                        @branch: @map(EndType)(branch) / @map(BeginType)(branch) <br>
+                                        <table>
+                                            <tr>
+                                                <td style="padding-right: 2px;">Branch</td>
+                                                <td>@branch</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding-right: 2px;">Sent</td>
+                                                <td>@map(BeginType)(branch)</td>
+                                            </tr>
+                                                <td style="padding-right: 2px;">Completed</td>
+                                                <td>@map(EndType)(branch)</td>
+                                            </tr>
+                                        </table>
                                     }
                                 }
-                                case None => {0 / 0}
+                                case None => {
+                                    0
+                                }   
                             }
                         </td>
                         <td>
@@ -102,15 +119,30 @@
                     <tr>
                         <td style="margin-right: 25px;">
                             @appName
+                            @if(subflows.contains(appName)) {
+                                <i>(Subflow)</i>
+                            }
                         </td>
                         <td>
-                            @appProps._3 / @appProps._4
+                            @appProps._4 / @appProps._3
                         </td>
                         <td>
                             @monitorData.get(appName) match {
                                 case Some(map) => {
                                     @for(branch <- map.flatMap(x => x._2.keys).toSeq.distinct.sorted) {
-                                        @branch: @map(EndType)(branch) / @map(BeginType)(branch) <br>
+                                        <table>
+                                            <tr>
+                                                <td style="padding-right: 2px;">Branch</td>
+                                                <td>@branch</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding-right: 2px;">Sent</td>
+                                                <td>@map(BeginType)(branch)</td>
+                                            </tr>
+                                                <td style="padding-right: 2px;">Completed</td>
+                                                <td>@map(EndType)(branch)</td>
+                                            </tr>
+                                        </table>
                                     }
                                 }
                             }

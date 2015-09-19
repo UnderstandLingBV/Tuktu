@@ -71,7 +71,8 @@ case class MonitorOverviewPacket()
 case class MonitorOverviewResult(
         runningJobs: Map[String, AppMonitorObject],
         finishedJobs: Map[String, (Long, Long, Int, Int)],
-        monitorData: Map[String, collection.mutable.Map[MPType, collection.mutable.Map[String, Int]]]
+        monitorData: Map[String, collection.mutable.Map[MPType, collection.mutable.Map[String, Int]]],
+        subflows: Map[String, String]
 )
 
 case class AppMonitorObject(
@@ -97,6 +98,10 @@ case class ActorIdentifierPacket(
         uuid: String,
         instanceCount: Int,
         mailbox: ActorRef
+)
+case class SubflowMapPacket(
+        mailbox: ActorRef,
+        subflows: List[ActorRef]
 )
 case class ErorNotificationPacket(
         uuid: String

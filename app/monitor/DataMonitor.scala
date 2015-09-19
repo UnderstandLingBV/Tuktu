@@ -19,6 +19,8 @@ class DataMonitor extends Actor with ActorLogging {
     // Monitoring maps
     val monitorData = collection.mutable.Map.empty[String, collection.mutable.Map[MPType, collection.mutable.Map[String, Int]]]
     val appMonitor = collection.mutable.Map.empty[String, AppMonitorObject]
+    // Mapping of all subflows
+    val subflowMap = collection.mutable.Map.empty[String, String]
     
     // Map of UUID -> Actor
     val uuidActorMap = collection.mutable.Map.empty[String, ActorRef]
@@ -34,6 +36,12 @@ class DataMonitor extends Actor with ActorLogging {
     def receive() = {
         case "init" => {
             // Initialize monitor
+        }
+        case fmp: SubflowMapPacket => {
+            // Add to our map
+            fmp.subflows.foreach(subflow => subflowMap +=
+                subflow.path.toStringWithoutAddress -> fmp.mailbox.path.toStringWithoutAddress
+            )
         }
         case aip: ActorIdentifierPacket => {
             // Add the ID and actor ref to our map
@@ -108,7 +116,8 @@ class DataMonitor extends Actor with ActorLogging {
             sender ! new MonitorOverviewResult(
                 appMonitor.toMap,
                 finishedJobs.toMap,
-                monitorData.map(x => uuidActorMap.get(x._1).map(_.path.toStringWithoutAddress).getOrElse(x._1) -> x._2).toMap
+                monitorData.map(x => uuidActorMap.get(x._1).map(_.path.toStringWithoutAddress).getOrElse(x._1) -> x._2).toMap,
+                subflowMap toMap
             )
         }
         case m => println("Monitor received unknown message: " + m)
