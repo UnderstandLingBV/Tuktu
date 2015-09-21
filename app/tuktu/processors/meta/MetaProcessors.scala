@@ -25,15 +25,15 @@ import akka.routing.Broadcast
 class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
-    var name = ""
-    var fieldsToAdd: Option[List[JsObject]] = _
+    var name: String = _
+    var replacements: Map[String, String] = _
 
     override def initialize(config: JsObject) {
         // Get the name of the config file
         name = (config \ "name").as[String]
 
-        // See if we need to populate the config file
-        fieldsToAdd = (config \ "add_fields").asOpt[List[JsObject]]
+        // Get meta replacements
+        replacements = (config \ "replacements").asOpt[List[Map[String, String]]].getOrElse(Nil).map(map => map("source") -> map("target")).toMap
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -45,44 +45,13 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
         // Open the config file to get contents, and evaluate as TuktuConfig
         val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
             "/" + nextName + ".json", "utf-8")
-        val conf = utils.evaluateTuktuConfig(Json.parse(configFile.mkString).as[JsObject], datum)
+        val conf = utils.evaluateTuktuConfig(Json.parse(configFile.mkString).as[JsObject],
+            replacements.map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)))
         configFile.close
-
-        // See if we need to add the config or not
-        val newConfig = fieldsToAdd match {
-            case Some(fields) => {
-                // Add fields to our config
-                val mapToAdd = (for (field <- fields) yield {
-                    // Get source and target name
-                    val source = (field \ "source").as[String]
-                    val target = (field \ "target").as[String]
-
-                    // Add to our new config, we assume only one element, otherwise this makes little sense
-                    target -> datum(source).toString
-                }).toMap
-
-                // We must obtain a new configuration file with our fields added to the generator(s)
-                // Modify generators
-                val generators = {
-                    (conf \ "generators").as[List[JsObject]].map(generator => {
-                        // Get config part
-                        val genConfig = (generator \ "config").as[JsObject]
-                        val newGenConfig = genConfig ++ Json.toJson(mapToAdd).asInstanceOf[JsObject]
-
-                        // Add new config to the generator
-                        (generator - "config") ++ Json.obj("config" -> newGenConfig)
-                    })
-                }
-
-                // Remove old ones and add new ones
-                (conf - "generators") ++ Json.obj("generators" -> generators)
-            }
-            case None => conf // No fields to add, take normal evaluated tuktu config
-        }
 
         // Invoke the new generator with custom config
         Akka.system.actorSelection("user/TuktuDispatcher") !
-            new DispatchRequest(nextName, Some(newConfig), false, false, false, None)
+            new DispatchRequest(nextName, Some(conf), false, false, false, None)
 
         // We can still continue with out data
         data

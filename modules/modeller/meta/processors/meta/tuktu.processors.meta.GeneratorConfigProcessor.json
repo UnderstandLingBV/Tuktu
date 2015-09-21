@@ -25,8 +25,8 @@
 					"required": true
 				},
 				{
-					"name": "add_fields",
-					"description": "Fields to add to the config.",
+					"name": "replacements",
+					"description": "The replacements used to replace Tuktu config strings #{source} by target.",
 					"type": "array",
 					"required": false,
 					"parameters": [
@@ -37,13 +37,13 @@
 							"parameters": [
 								{
 									"name": "source",
-									"description": "The field (key) whose value will be used as value for the config, with the key given below: target -> data(source)",
+									"description": "The #{key} that will be replaced by the target string below in the invoked configs: #{source} -> target. Can contain Tuktu strings to populate with first Datum.",
 									"type": "string",
 									"required": true
 								},
 								{
 									"name": "target",
-									"description": "The key used for the config with the value from the data packet at the given field provided above: target -> data(source)",
+									"description": "The replacement for the source above: #{source} -> target. Can contain Tuktu strings to populate with first Datum.",
 									"type": "string",
 									"required": true
 								}
