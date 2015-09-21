@@ -85,8 +85,16 @@ class HDFSWriterProcessor(resultName: String) extends BaseProcessor(resultName) 
         
         // close all writers
         writers.foreach(elem => {
-            elem._2._2.close
-            elem._2._1.close
+            try {
+                elem._2._2.close
+            } catch {
+                case _:Throwable => {}
+            }
+            try {
+                elem._2._1.close
+            } catch {
+                case _:Throwable => {}
+            }
         })
         
         data

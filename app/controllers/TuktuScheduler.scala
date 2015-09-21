@@ -47,7 +47,7 @@ class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
     val quartzScheduler = QuartzSchedulerExtension(Akka.system)
     
     def receive() = {        
-        case schedule: SimpleScheduler => {            
+        case schedule: SimpleScheduler => {
             schedulers += schedule.name -> Some(Akka.system.scheduler.schedule(
                     schedule.initialDelay,
                     schedule.interval,
@@ -56,10 +56,11 @@ class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
             ))
         }
         case schedule: CronScheduler => {
-            quartzScheduler.createSchedule(schedule.name, None, schedule.cronSchedule, None, Calendar.getInstance().getTimeZone())
-            quartzScheduler.schedule(schedule.name, actor, schedule.dispatchRequest)
+            val uniqueName = schedule.name + "_" + java.util.UUID.randomUUID.toString
+            quartzScheduler.createSchedule(uniqueName, None, schedule.cronSchedule, None, Calendar.getInstance.getTimeZone)
+            quartzScheduler.schedule(uniqueName, actor, schedule.dispatchRequest)
             
-            schedulers += (schedule.name -> None)
+            schedulers += (uniqueName -> None)
         }
         case _: Overview => sender ! schedulers.keys.toList
         case kr: KillRequest => {
@@ -70,7 +71,7 @@ class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
 
             schedulers -= kr.name
         }
-        case _ => {} 
+        case _ => {}
     }
 //    
 //    def dispatcherActorRef = {
