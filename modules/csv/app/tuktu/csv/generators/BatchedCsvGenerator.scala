@@ -1,8 +1,11 @@
 package tuktu.csv.generators
 
-import java.io.FileReader
-
-import akka.actor._
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.ActorRef
+import akka.actor.PoisonPill
+import akka.actor.Props
+import akka.actor.actorRef2Scala
 import au.com.bytecode.opencsv.CSVReader
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
@@ -29,7 +32,7 @@ class BatchedCsvReader(parentActor: ActorRef, fileName: String, hasHeaders: Bool
     def receive() = {
         case ip: InitPacket => {
             // Open CSV file for reading
-            val reader = new CSVReader(new FileReader(fileName), separator, quote, escape)
+            val reader = new CSVReader(tuktu.api.file.genericReader(fileName), separator, quote, escape)
             // See if we need to fetch headers
             headers = {
                 if (hasHeaders) Some(reader.readNext.toList)

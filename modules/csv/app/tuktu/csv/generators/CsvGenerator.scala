@@ -1,6 +1,5 @@
 package tuktu.csv.generators
 
-import java.io.FileReader
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -12,10 +11,10 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsValue
+import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.InitPacket
 import tuktu.api.StopPacket
-import tuktu.api.BaseGenerator
 
 case class CSVReadPacket(
         reader: CSVReader
@@ -31,7 +30,7 @@ class CsvReader(parentActor: ActorRef, fileName: String, hasHeaders: Boolean, gi
     def receive() = {
         case ip: InitPacket => {
             // Open CSV file for reading
-            val reader = new CSVReader(new FileReader(fileName), separator, quote, escape)
+            val reader = new CSVReader(tuktu.api.file.genericReader(fileName), separator, quote, escape)
             // See if we need to fetch headers
             headers = {
                 if (hasHeaders) Some(reader.readNext.toList)

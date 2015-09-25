@@ -57,6 +57,6 @@ object file {
     
     def dfsReader(uri: URI)(implicit codec: Codec) = {
 		val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
-        new BufferedDFSReader(new InputStreamReader(new FileInputStream(prefix + "/" + uri.getPath), codec.name), uri.getPath)
+        new BufferedDFSReader(new InputStreamReader(new FileInputStream(prefix + "/" + uri.getSchemeSpecificPart), codec.name), uri.getSchemeSpecificPart)
     }
 }

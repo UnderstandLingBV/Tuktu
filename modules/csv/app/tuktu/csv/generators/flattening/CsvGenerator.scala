@@ -1,21 +1,21 @@
 package tuktu.csv.generators.flattening
 
-import java.io.File
-import java.io.FileInputStream
-import scala.collection.JavaConversions.asScalaIterator
-import akka.actor._
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.ActorRef
+import akka.actor.PoisonPill
+import akka.actor.Props
+import akka.actor.actorRef2Scala
+import au.com.bytecode.opencsv.CSVReader
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
+import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.InitPacket
 import tuktu.api.StopPacket
-import play.api.libs.json.JsArray
-import au.com.bytecode.opencsv.CSVReader
-import java.io.FileReader
-import tuktu.api.BaseGenerator
 
 class CsvReader(parentActor: ActorRef, fileName: String, valueName: String,
         dataColStart: Int, dataColEnd: Option[Int], hierarchy: List[ParseNode], endFieldCol: Int, endField: String,
@@ -25,7 +25,7 @@ class CsvReader(parentActor: ActorRef, fileName: String, valueName: String,
     def receive() = {
         case ip: InitPacket => {
             // Open the CSV file for reading
-            val reader = new CSVReader(new FileReader(fileName), separator, quote, escape)
+            val reader = new CSVReader(tuktu.api.file.genericReader(fileName), separator, quote, escape)
             
             // Start processing
             self ! new CSVReadPacket(reader, 0)

@@ -1,14 +1,14 @@
 package tuktu.csv.generators
 
-import java.io.FileReader
 import akka.actor.ActorRef
+import akka.actor.actorRef2Scala
 import au.com.bytecode.opencsv.CSVReader
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsValue
 import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
-import tuktu.api.StopPacket
 import tuktu.api.InitPacket
+import tuktu.api.StopPacket
 
 
 class SimpleCSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
@@ -25,7 +25,7 @@ class SimpleCSVGenerator(resultName: String, processors: List[Enumeratee[DataPac
             val escape = (config \ "escape").asOpt[String].getOrElse("\\").head
             
             // Open CSV file
-            val reader = new CSVReader(new FileReader(fileName), separator, quote, escape)
+            val reader = new CSVReader(tuktu.api.file.genericReader(fileName), separator, quote, escape)
             
             // See if we need to fetch headers
             val headers = {
