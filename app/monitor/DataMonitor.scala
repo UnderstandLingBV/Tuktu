@@ -15,23 +15,19 @@ import play.api.Play
 
 class DataMonitor extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    
+
     // Monitoring maps
-    val monitorData = collection.mutable.Map.empty[String, collection.mutable.Map[MPType, collection.mutable.Map[String, Int]]]
-    val appMonitor = collection.mutable.Map.empty[String, AppMonitorObject]
+    var appMonitor = ExpirationMap[String, AppMonitorObject](
+        Play.current.configuration.getInt("tuktu.monitor.finish_expiration").getOrElse(30) * 60 * 1000)
+
     // Mapping of all subflows
     val subflowMap = collection.mutable.Map.empty[String, String]
-    
+
     // Map of UUID -> Actor
     val uuidActorMap = collection.mutable.Map.empty[String, ActorRef]
-    
+
     // Keep track of a list of actors we need to notify on push base about events happening
     val eventListeners = collection.mutable.HashSet.empty[ActorRef]
-    
-    // Keep track of finished jobs that can expire
-    var finishedJobs = ExpirationMap[String, (Long, Long, Int, Int)](
-            Play.current.configuration.getInt("tuktu.monitor.finish_expiration").getOrElse(30) * 60 * 1000
-    )
 
     def receive() = {
         case "init" => {
@@ -40,39 +36,38 @@ class DataMonitor extends Actor with ActorLogging {
         case fmp: SubflowMapPacket => {
             // Add to our map
             fmp.subflows.foreach(subflow => subflowMap +=
-                subflow.path.toStringWithoutAddress -> fmp.mailbox.path.toStringWithoutAddress
-            )
+                subflow.path.toStringWithoutAddress -> fmp.mailbox.path.toStringWithoutAddress)
         }
         case aip: ActorIdentifierPacket => {
             // Add the ID and actor ref to our map
             uuidActorMap += aip.uuid -> aip.mailbox
             val mailbox_address = aip.mailbox.path.toStringWithoutAddress
+            implicit val current = System.currentTimeMillis
             if (!appMonitor.contains(mailbox_address))
-                appMonitor += mailbox_address -> new AppMonitorObject(aip.mailbox, aip.instanceCount)
+                appMonitor = appMonitor + (mailbox_address -> new AppMonitorObject(aip.mailbox, aip.instanceCount, aip.timestamp))
         }
-        case enp: ErorNotificationPacket => {
+        case enp: ErrorNotificationPacket => {
             // Get the generator and kill it
             if (uuidActorMap.contains(enp.uuid)) {
                 val generator = uuidActorMap(enp.uuid)
                 generator ! new StopPacket
             }
         }
-        case amel: AddMonitorEventListener => eventListeners += sender
+        case amel: AddMonitorEventListener    => eventListeners += sender
         case rmel: RemoveMonitorEventListener => eventListeners -= sender
         case amp: AppMonitorPacket => {
+            implicit val current = System.currentTimeMillis
             amp.status match {
                 case "done" => {
                     // Get app from appMonitor  
                     appMonitor.get(amp.getParentName) match {
                         case Some(app) => {
                             app.finished_instances += 1
-                            
+
                             if (app.instances == app.finished_instances) {
-                                // Remove from current apps, add to finished jobs                    
-                                appMonitor -= amp.getParentName
-                                
-                                implicit def currentTime = System.currentTimeMillis
-                                finishedJobs = finishedJobs + (amp.getParentName, (app.startTime, currentTime, app.finished_instances, app.instances))
+                                // Update end time and start expiration
+                                app.endTime = current
+                                appMonitor.expire(amp.getParentName)
                             }
                         }
                         case None => {
@@ -81,14 +76,12 @@ class DataMonitor extends Actor with ActorLogging {
                     }
                 }
                 case "kill" => {
-                    // get app from appMonitor  
+                    // Get app from appMonitor  
                     appMonitor.get(amp.getParentName) match {
                         case Some(app) => {
-                            // Remove from current apps, add to finished jobs                    
-                            appMonitor -= amp.getParentName
-
-                            implicit def currentTime = System.currentTimeMillis
-                            finishedJobs = finishedJobs + (amp.getParentName, (app.startTime, currentTime, app.finished_instances, app.instances))
+                            // Update end time and start expiration
+                            app.endTime = current
+                            appMonitor.expire(amp.getParentName)
                         }
                         case None => {
                             System.err.println("DataMonitor received 'kill' for unknown app: " + amp.getName)
@@ -97,28 +90,59 @@ class DataMonitor extends Actor with ActorLogging {
                 }
                 case _ => { println("Unknown status: " + amp.status) }
             }
-            
+
             // Forward packet to all listeners
             eventListeners.foreach(listener => listener ! amp)
         }
-        case mp: MonitorPacket => {
-            // Initialize if we have to
-            val internalMap = monitorData.getOrElseUpdate(mp.uuid, collection.mutable.Map[MPType, collection.mutable.Map[String, Int]](
-                    BeginType -> collection.mutable.Map[String, Int]().withDefaultValue(0),
-                    EndType -> collection.mutable.Map[String, Int]().withDefaultValue(0),
-                    CompleteType -> collection.mutable.Map[String, Int]().withDefaultValue(0)))
+        case pmp: ProcessorMonitorPacket => {
+            implicit val current = System.currentTimeMillis
+            val mailbox_address = uuidActorMap.get(pmp.uuid) match {
+                case Some(actor) => actor.path.toStringWithoutAddress
+                case None        => ""
+            }
+            appMonitor.get(mailbox_address) match {
+                case Some(app) => {
+                    // Renew expiration and update maps
+                    app.endTime = current
+                    appMonitor.expire(mailbox_address)
 
-            // Increment
-            internalMap(mp.typeOf)(mp.branch) += mp.amount
+                    val latest = app.processorDataPackets.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty)
+                    latest(pmp.typeOf) = pmp.data
+                    val count = app.processorDataPacketCount.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty.withDefaultValue(0))
+                    count(pmp.typeOf) += 1
+                }
+                case None => {
+                    System.err.println("DataMonitor received ProcessorMonitorPacket for unkown app with uuid: " + pmp.uuid)
+                }
+            }
         }
-        case mop: MonitorOverviewPacket => {
-            implicit def currentTime = System.currentTimeMillis
+        case mp: MonitorPacket => {
+            implicit val current = System.currentTimeMillis
+            val mailbox_address = uuidActorMap.get(mp.uuid) match {
+                case Some(actor) => actor.path.toStringWithoutAddress
+                case None        => ""
+            }
+            appMonitor.get(mailbox_address) match {
+                case Some(app) => {
+                    // Renew expiration and update maps
+                    app.endTime = current
+                    appMonitor.expire(mailbox_address)
+
+                    val count = app.flowDataPacketCount.getOrElseUpdate(mp.branch, collection.mutable.Map.empty.withDefaultValue(0))
+                    count(mp.typeOf) += mp.amount
+                }
+                case None => {
+                    System.err.println("DataMonitor received MonitorPacket for unkown app with uuid: " + mp.uuid)
+                }
+            }
+        }
+        case mop: MonitorOverviewRequest => {
+            implicit def current = System.currentTimeMillis
+            val (running, finished) = appMonitor.partitioned
             sender ! new MonitorOverviewResult(
-                appMonitor.toMap,
-                finishedJobs.toMap,
-                monitorData.map(x => uuidActorMap.get(x._1).map(_.path.toStringWithoutAddress).getOrElse(x._1) -> x._2).toMap,
-                subflowMap toMap
-            )
+                running,
+                finished,
+                subflowMap toMap)
         }
         case m => println("Monitor received unknown message: " + m)
     }

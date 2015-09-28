@@ -4,6 +4,10 @@ body {
     font-size: 14px;
 }
 
+.data-modal {
+	width: 900px;
+}
+
 a:hover, a:focus, img, img:hover, img:focus {
 	border: 0;
 }

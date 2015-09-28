@@ -36,22 +36,31 @@ case class treeNode(
 
 object Dispatcher {
     /**
-     * Monitoring enumeratee
+     * Flow monitoring enumeratee
      */
     def monitorEnumeratee(uuid: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
         implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-        
-        // Get the monitoring actor
-        /*val fut = Akka.system.actorSelection("user/TuktuMonitor") ? Identify(None)
-        val monitorActor = Await.result(fut.mapTo[ActorIdentity], 2 seconds).getRef*/
-        
-        Enumeratee.mapM(data => Future {
+
+        Enumeratee.mapM((data: DataPacket) => Future {
             if (data.data.size > 0)
                 Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, uuid, branch, data.data.size)
             data
         })
     }
-    
+
+    /**
+     * Processor monitoring enumeratee
+     */
+    def processorMonitor(uuid: String, processor_id: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
+        implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+
+        Enumeratee.mapM((data: DataPacket) => Future {
+            if (data.data.size > 0)
+                Akka.system.actorSelection("user/TuktuMonitor") ! new ProcessorMonitorPacket(mpType, uuid, processor_id, data)
+            data
+        })
+    }
+
     /**
      * Takes a list of Enumeratees and iteratively composes them to form a single Enumeratee
      * @param nextId The names of the processors next to compose
@@ -162,43 +171,60 @@ object Dispatcher {
                         generator,
                         pd.resultName
                 )
-            
+
                 // Initialize the processor first
-                val initMethod = procClazz.getMethods.filter(m => m.getName == "initialize").head
+                val initMethod = procClazz.getMethods.find(m => m.getName == "initialize").get
                 initMethod.invoke(iClazz, pd.config)
 
                 // Add method to all our entries so far
-                val method = procClazz.getMethods.filter(m => m.getName == "processor").head
-                // Log enumeratee or not?
-                if (logLevel == "all")
-                    accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]] compose utils.logEnumeratee(idString)
-                else
-                    accum compose method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                val method = procClazz.getMethods.find(m => m.getName == "processor").get
+                val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+
+                if (logLevel == "all") {
+                    accum compose
+                        processorMonitor(idString, pd.id, BeginType) compose
+                        procEnum compose
+                        processorMonitor(idString, pd.id, EndType) compose
+                        utils.logEnumeratee(idString)
+                } else {
+                    accum compose
+                        procEnum compose
+                        utils.logEnumeratee(idString)
+                }
             }
             else {
                 // 'Regular' processor
                 val iClazz = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
-            
+
                 // Initialize the processor first
-                val initMethod = procClazz.getMethods.filter(m => m.getName == "initialize").head
+                val initMethod = procClazz.getMethods.find(m => m.getName == "initialize").get
                 initMethod.invoke(iClazz, pd.config)
-                
-                val method = procClazz.getMethods.filter(m => m.getName == "processor").head
+
+                val method = procClazz.getMethods.find(m => m.getName == "processor").get
                 val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
-                
+
+                val composition = if (logLevel == "all") {
+                    accum compose
+                        processorMonitor(idString, pd.id, BeginType) compose
+                        procEnum compose
+                        processorMonitor(idString, pd.id, EndType)
+                } else {
+                    accum compose procEnum
+                }
+
                 // Recurse, determine whether we need to branch or not
                 pd.next match {
                     case List() => {
                         // No processors left, return accum
-                        accum compose procEnum compose utils.logEnumeratee(idString)
+                        composition compose utils.logEnumeratee(idString)
                     }
-                    case n::List() => {
+                    case List(id) => {
                         // No branching, just recurse
-                        buildSequential(n, accum compose procEnum compose utils.logEnumeratee(idString), iterationCount + 1, branch)
+                        buildSequential(id, composition compose utils.logEnumeratee(idString), iterationCount + 1, branch)
                     }
                     case _ => {
                         // We need to branch, use the broadcasting enumeratee
-                        accum compose procEnum compose buildBranch(
+                        composition compose buildBranch(
                                 pd.next.zipWithIndex.map(elem => {
                                     val nextProcessorName = elem._1
                                     val index = elem._2
@@ -209,7 +235,7 @@ object Dispatcher {
                 }
             }
         }
-        
+
         /**
          * Whenever we branch in a flow, we need a special enumeratee that helps us with the broadcasting. The dispatcher
          * should make sure the flow ends there and the broadcaster picks up.

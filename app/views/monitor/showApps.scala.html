@@ -1,10 +1,12 @@
-@(apps: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, (Long, Long, Int, Int))], monitorData: Map[String, collection.mutable.Map[tuktu.api.MPType, collection.mutable.Map[String, Int]]], subflows: Map[String, String], messages: Map[String, List[String]])
+@(running: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, tuktu.api.AppMonitorObject)], subflows: Map[String, String], messages: Map[String, List[String]])
 @import tuktu.api.{ BeginType, EndType }
+@import play.api.libs.json.Json
+@import tuktu.api.utils.anyMapToJson
 
 @index("Monitoring", messages) {
     @monitorMenu()
 } {
-    @if(apps.size > 0) {
+    @if(running.size > 0) {
         <h2>
            The following jobs are currently running on Tuktu
         </h2>
@@ -15,7 +17,7 @@
                     <th>
                         Job name
                     </th>
-                    <th>
+                    <th title="Running / Total">
                         Instances
                     </th>
                     <th>
@@ -30,7 +32,7 @@
                 </tr>
             </thead>
             <tbody>
-                @for((appName, appProps) <- apps) {
+                @for((appName, appProps) <- running) {
                     <tr>
                         <td style="margin-right: 25px;">
                             @appName
@@ -42,27 +44,10 @@
                             @{appProps.instances - appProps.finished_instances} / @appProps.instances
                         </td>
                         <td>
-                            @monitorData.get(appName) match {
-                                case Some(map) => {
-                                    @for(branch <- map.flatMap(x => x._2.keys).toSeq.distinct.sorted) {
-                                        <table>
-                                            <tr>
-                                                <td style="padding-right: 2px;">Branch</td>
-                                                <td>@branch</td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding-right: 2px;">Sent</td>
-                                                <td>@map(BeginType)(branch)</td>
-                                            </tr>
-                                                <td style="padding-right: 2px;">Completed</td>
-                                                <td>@map(EndType)(branch)</td>
-                                            </tr>
-                                        </table>
-                                    }
-                                }
-                                case None => {
-                                    0
-                                }
+                            @if(appProps.flowDataPacketCount.nonEmpty || appProps.processorDataPacketCount.nonEmpty) {
+                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal_@appName.split('_').last">
+                                    Show Log
+                                </button>
                             }
                         </td>
                         <td>
@@ -74,7 +59,7 @@
                             </a>
                         </td>
                         <td class="javascript-date-timestamp-duration text-right" title="@appProps.startTime">
-                            @* Filled and updated with JavaScript below to user user's time zone *@
+                            @* Filled and updated with JavaScript below to use user's time zone *@
                         </td>
                     </tr>
                 }
@@ -97,7 +82,7 @@
                     <th>
                         Job name
                     </th>
-                    <th>
+                    <th title="Finished / Total">
                         Instances
                     </th>
                     <th>
@@ -124,43 +109,26 @@
                             }
                         </td>
                         <td>
-                            @appProps._4 / @appProps._3
+                            @appProps.finished_instances / @appProps.instances
                         </td>
                         <td>
-                            @monitorData.get(appName) match {
-                                case Some(map) => {
-                                    @for(branch <- map.flatMap(x => x._2.keys).toSeq.distinct.sorted) {
-                                        <table>
-                                            <tr>
-                                                <td style="padding-right: 2px;">Branch</td>
-                                                <td>@branch</td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding-right: 2px;">Sent</td>
-                                                <td>@map(BeginType)(branch)</td>
-                                            </tr>
-                                                <td style="padding-right: 2px;">Completed</td>
-                                                <td>@map(EndType)(branch)</td>
-                                            </tr>
-                                        </table>
-                                    }
-                                }
-                                case None => {
-                                    0
-                                }
+                            @if(appProps.flowDataPacketCount.nonEmpty || appProps.processorDataPacketCount.nonEmpty) {
+                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal_@appName.split('_').last">
+                                    Show Log
+                                </button>
                             }
                         </td>
-                        <td class="javascript-date-timestamp" title="@appProps._1">
+                        <td class="javascript-date-timestamp" title="@appProps.startTime">
                             @* Filled with JavaScript below to use user's time zone *@
                         </td>
-                        <td class="javascript-date-timestamp" title="@appProps._2">
+                        <td class="javascript-date-timestamp" title="@appProps.endTime">
                             @* Filled with JavaScript below to use user's time zone *@
                         </td>
                         <td class="text-right">
-                            @if(appProps._2 - appProps._1 >= 1000) {
-                                @{(appProps._2 - appProps._1) / 1000D} s
+                            @if(appProps.endTime - appProps.startTime >= 1000) {
+                                @{(appProps.endTime - appProps.startTime) / 1000D} s
                             } else {
-                                @{appProps._2 - appProps._1} ms
+                                @{appProps.endTime - appProps.startTime} ms
                             }
                         </td>
                     </tr>
@@ -180,7 +148,7 @@
                 var now = new Date;
                 var then = new Date(parseInt(elem.title, 10));
                 elem.innerHTML = then;
-                elem.innerHTML += " (" + Math.floor((now - then) / 1000) + " seconds)";
+                elem.innerHTML += " (" + Math.max(0, Math.floor((now - then) / 1000)) + " seconds)";
             });
             window.setTimeout(refresh, 1000);
         }
@@ -191,4 +159,66 @@
             window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 30000);
         }
     </script>
+
+    @for((appName, appProps) <- running ++ finished) {
+        <div class="modal fade" id="modal_@appName.split('_').last" tabindex="-1" role="dialog" aria-labelledby="modalLabel_@appName">
+            <div class="modal-dialog data-modal" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="modalLabel_@appName">Data</h4>
+                    </div>
+                    <div class="modal-body">
+                        @if(appProps.flowDataPacketCount.nonEmpty) {
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Branch</th>
+                                        <th>Sent</th>
+                                        <th>Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for(branch <- appProps.flowDataPacketCount.keys.toSeq.distinct.sorted) {
+                                        <tr>
+                                            <td>@branch</td>
+                                            <td>@appProps.flowDataPacketCount(branch)(BeginType)</td>
+                                            <td>@appProps.flowDataPacketCount(branch)(EndType)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        @if(appProps.processorDataPacketCount.nonEmpty) {
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Processor ID</th>
+                                        <th title="Received">Rec.</th>
+                                        <th title="Completed">Com.</th>
+                                        <th>Last DataPacket Received</th>
+                                        <th>Last DataPacket Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for(id <- appProps.processorDataPacketCount.keys.toSeq.sorted) {
+                                        <tr>
+                                            <td>@id</td>
+                                            <td>@appProps.processorDataPacketCount(id)(BeginType)</td>
+                                            <td>@appProps.processorDataPacketCount(id)(EndType)</td>
+                                            <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets(id)(BeginType).data.map(datum => anyMapToJson(datum))))</td>
+                                            <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets(id)(EndType).data.map(datum => anyMapToJson(datum))))</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }

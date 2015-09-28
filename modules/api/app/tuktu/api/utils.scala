@@ -23,7 +23,7 @@ object utils {
     def logEnumeratee[T](idString: String) = Enumeratee.recover[T] {
         case (e, input) => {
             // Notify the monitor so it can kill our flow
-            Akka.system.actorSelection("user/TuktuMonitor") ! new ErorNotificationPacket(idString)
+            Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorNotificationPacket(idString)
 
             // Log the error
             Logger.error("Error happened on: " + input, e)

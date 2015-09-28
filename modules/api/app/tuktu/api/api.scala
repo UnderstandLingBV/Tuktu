@@ -67,19 +67,29 @@ case class MonitorPacket(
         amount: Integer
 )
 
-case class MonitorOverviewPacket()
+case class MonitorOverviewRequest()
 case class MonitorOverviewResult(
         runningJobs: Map[String, AppMonitorObject],
-        finishedJobs: Map[String, (Long, Long, Int, Int)],
-        monitorData: Map[String, collection.mutable.Map[MPType, collection.mutable.Map[String, Int]]],
+        finishedJobs: Map[String, AppMonitorObject],
         subflows: Map[String, String]
+)
+
+case class ProcessorMonitorPacket(
+        typeOf: MPType,
+        uuid: String,
+        processor_id: String,
+        data: DataPacket
 )
 
 case class AppMonitorObject(
         actor: ActorRef,
         instances: Int,
+        startTime: Long,
         var finished_instances: Int = 0,
-        startTime: Long = System.currentTimeMillis
+        var endTime: Long = 0,
+        flowDataPacketCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
+        processorDataPackets: collection.mutable.Map[String, collection.mutable.Map[MPType, DataPacket]] = collection.mutable.Map.empty,
+        processorDataPacketCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty
 )
 
 case class AppMonitorPacket(
@@ -97,13 +107,14 @@ case class RemoveMonitorEventListener()
 case class ActorIdentifierPacket(
         uuid: String,
         instanceCount: Int,
-        mailbox: ActorRef
+        mailbox: ActorRef,
+        timestamp: Long = System.currentTimeMillis
 )
 case class SubflowMapPacket(
         mailbox: ActorRef,
         subflows: List[ActorRef]
 )
-case class ErorNotificationPacket(
+case class ErrorNotificationPacket(
         uuid: String
 )
 /**
