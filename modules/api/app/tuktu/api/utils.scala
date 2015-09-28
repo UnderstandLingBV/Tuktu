@@ -42,84 +42,93 @@ object utils {
      * Evaluates a Tuktu string to resolve variables in the actual string
      */
     def evaluateTuktuString(str: String, vars: Map[String, Any]) = {
-        // determine max length for performance reasons
-        val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
-        val result: StringBuffer = new StringBuffer
-        // a temporary buffer to determine if we need to replace this
-        var buffer = new StringBuffer
-        // The prefix length of TuktuStrings "${".length = 2
-        val prefixSize = "${".length
-        str.foreach { currentChar =>
-            if (buffer.length == 0) {
-                if (currentChar.equals('$')) {
+        if(vars.isEmpty) {
+            str
+        }
+        else {
+            // determine max length for performance reasons
+            val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
+            val result: StringBuffer = new StringBuffer
+            // a temporary buffer to determine if we need to replace this
+            var buffer = new StringBuffer
+            // The prefix length of TuktuStrings "${".length = 2
+            val prefixSize = "${".length
+            str.foreach { currentChar =>
+                if (buffer.length == 0) {
+                    if (currentChar.equals('$')) {
+                        buffer.append(currentChar)
+                    } else {
+                        result.append(currentChar)
+                    }
+                } else if (buffer.length == 1) {
                     buffer.append(currentChar)
-                } else {
-                    result.append(currentChar)
-                }
-            } else if (buffer.length == 1) {
-                buffer.append(currentChar)
-                if (!currentChar.equals('{')) {
-                    result.append(buffer)
-                    buffer = new StringBuffer
-                }
-            } else if (buffer.length > maxKeyLength + prefixSize) {
-                result.append(buffer).append(currentChar)
-                buffer = new StringBuffer
-            } else {
-                if (currentChar.equals('}')) {
-                    // apply with variable in vars, or leave it be if it cannot be found
-                    result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
+                    if (!currentChar.equals('{')) {
+                        result.append(buffer)
+                        buffer = new StringBuffer
+                    }
+                } else if (buffer.length > maxKeyLength + prefixSize) {
+                    result.append(buffer).append(currentChar)
                     buffer = new StringBuffer
                 } else {
-                    buffer.append(currentChar)
+                    if (currentChar.equals('}')) {
+                        // apply with variable in vars, or leave it be if it cannot be found
+                        result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
+                        buffer = new StringBuffer
+                    } else {
+                        buffer.append(currentChar)
+                    }
                 }
             }
+            // add any left overs
+            result.append(buffer)
+            result.toString
         }
-        // add any left overs
-        result.append(buffer)
-        result.toString
     }
 
     /**
      * Evaluates a Tuktu config to resolve variables in it
      */
     def evaluateTuktuConfig(str: String, vars: Map[String, Any]): String = {
-        // determine max length for performance reasons
-        val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
-        val result: StringBuffer = new StringBuffer
-        // a temporary buffer to determine if we need to replace this
-        var buffer = new StringBuffer
-        // The prefix length of TuktuStrings "#{".length = 2
-        val prefixSize = "#{".length
-        str.foreach { currentChar =>
-            if (buffer.length == 0) {
-                if (currentChar.equals('#')) {
+        if(vars.isEmpty) {
+            str
+        } else {
+            // determine max length for performance reasons
+            val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
+            val result: StringBuffer = new StringBuffer
+            // a temporary buffer to determine if we need to replace this
+            var buffer = new StringBuffer
+            // The prefix length of TuktuStrings "#{".length = 2
+            val prefixSize = "#{".length
+            str.foreach { currentChar =>
+                if (buffer.length == 0) {
+                    if (currentChar.equals('#')) {
+                        buffer.append(currentChar)
+                    } else {
+                        result.append(currentChar)
+                    }
+                } else if (buffer.length == 1) {
                     buffer.append(currentChar)
-                } else {
-                    result.append(currentChar)
-                }
-            } else if (buffer.length == 1) {
-                buffer.append(currentChar)
-                if (!currentChar.equals('{')) {
-                    result.append(buffer)
-                    buffer = new StringBuffer
-                }
-            } else if (buffer.length > maxKeyLength + prefixSize) {
-                result.append(buffer).append(currentChar)
-                buffer = new StringBuffer
-            } else {
-                if (currentChar.equals('}')) {
-                    // apply with variable in vars, or leave it be if it cannot be found
-                    result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
+                    if (!currentChar.equals('{')) {
+                        result.append(buffer)
+                        buffer = new StringBuffer
+                    }
+                } else if (buffer.length > maxKeyLength + prefixSize) {
+                    result.append(buffer).append(currentChar)
                     buffer = new StringBuffer
                 } else {
-                    buffer.append(currentChar)
+                    if (currentChar.equals('}')) {
+                        // apply with variable in vars, or leave it be if it cannot be found
+                        result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
+                        buffer = new StringBuffer
+                    } else {
+                        buffer.append(currentChar)
+                    }
                 }
             }
+            // add any left overs
+            result.append(buffer)
+            result.toString
         }
-        // add any left overs
-        result.append(buffer)
-        result.toString
     }
 
     /**
