@@ -48,9 +48,9 @@ object utils {
         else {
             // determine max length for performance reasons
             val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
-            val result: StringBuffer = new StringBuffer
+            val result = new StringBuilder
             // a temporary buffer to determine if we need to replace this
-            var buffer = new StringBuffer
+            val buffer = new StringBuilder
             // The prefix length of TuktuStrings "${".length = 2
             val prefixSize = "${".length
             str.foreach { currentChar =>
@@ -64,16 +64,16 @@ object utils {
                     buffer.append(currentChar)
                     if (!currentChar.equals('{')) {
                         result.append(buffer)
-                        buffer = new StringBuffer
+                        buffer.setLength(0)
                     }
                 } else if (buffer.length > maxKeyLength + prefixSize) {
                     result.append(buffer).append(currentChar)
-                    buffer = new StringBuffer
+                    buffer.setLength(0)
                 } else {
                     if (currentChar.equals('}')) {
                         // apply with variable in vars, or leave it be if it cannot be found
                         result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
-                        buffer = new StringBuffer
+                        buffer.setLength(0)
                     } else {
                         buffer.append(currentChar)
                     }
@@ -94,9 +94,9 @@ object utils {
         } else {
             // determine max length for performance reasons
             val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
-            val result: StringBuffer = new StringBuffer
+            val result = new StringBuilder
             // a temporary buffer to determine if we need to replace this
-            var buffer = new StringBuffer
+            val buffer = new StringBuilder
             // The prefix length of TuktuStrings "#{".length = 2
             val prefixSize = "#{".length
             str.foreach { currentChar =>
@@ -110,16 +110,16 @@ object utils {
                     buffer.append(currentChar)
                     if (!currentChar.equals('{')) {
                         result.append(buffer)
-                        buffer = new StringBuffer
+                        buffer.setLength(0)
                     }
                 } else if (buffer.length > maxKeyLength + prefixSize) {
                     result.append(buffer).append(currentChar)
-                    buffer = new StringBuffer
+                    buffer.setLength(0)
                 } else {
                     if (currentChar.equals('}')) {
                         // apply with variable in vars, or leave it be if it cannot be found
                         result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
-                        buffer = new StringBuffer
+                        buffer.setLength(0)
                     } else {
                         buffer.append(currentChar)
                     }
