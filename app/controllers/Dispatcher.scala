@@ -42,8 +42,7 @@ object Dispatcher {
         implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
         Enumeratee.mapM((data: DataPacket) => Future {
-            if (data.data.size > 0)
-                Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, uuid, branch, data.data.size)
+            Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, uuid, branch, data.data.size)
             data
         })
     }
@@ -55,8 +54,7 @@ object Dispatcher {
         implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
         Enumeratee.mapM((data: DataPacket) => Future {
-            if (data.data.size > 0)
-                Akka.system.actorSelection("user/TuktuMonitor") ! new ProcessorMonitorPacket(mpType, uuid, processor_id, data)
+            Akka.system.actorSelection("user/TuktuMonitor") ! new ProcessorMonitorPacket(mpType, uuid, processor_id, data)
             data
         })
     }

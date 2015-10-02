@@ -44,11 +44,9 @@
                             @{appProps.instances - appProps.finished_instances} / @appProps.instances
                         </td>
                         <td>
-                            @if(appProps.flowDataPacketCount.nonEmpty || appProps.processorDataPacketCount.nonEmpty) {
-                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal_@appName.split('_').last">
-                                    Show Log
-                                </button>
-                            }
+                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal_@appName.split('_').last">
+                                Show Log
+                            </button>
                         </td>
                         <td>
                             <a href="@routes.Monitor.terminate(appName, false)">
@@ -188,6 +186,8 @@
                                     }
                                 </tbody>
                             </table>
+                        } else {
+                            No data flow has been monitored yet.
                         }
                         @if(appProps.processorDataPacketCount.nonEmpty) {
                             <table class="table table-striped">

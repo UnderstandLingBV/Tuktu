@@ -14,7 +14,7 @@ trait ExpirationMap[A, +B] {
 
     def contains(key: A)(implicit current: Long): Boolean
 
-    def expire(key: A)(implicit current: Long): Unit
+    def expire(key: A, force: Boolean = true)(implicit current: Long): Unit
 
     def partitioned(implicit current: Long): (Map[A, B], Map[A, B])
 
@@ -32,9 +32,12 @@ object ExpirationMap {
     def apply[A, B](expirationInterval: Long): ExpirationMap[A, B] = ExpirationMapImpl[A, B](expirationInterval, Map.empty)
 }
 
-private case class ExpirationTuple[+B](value: B, var expiration: Option[Long]) {
+private case class ExpirationTuple[+B](value: B, var expiration: Option[Long] = None) {
 
-    def expire(expirationInterval: Long)(implicit current: Long) = expiration = Some(current + expirationInterval)
+    def expire(expirationInterval: Long, force: Boolean)(implicit current: Long) =
+        // Update expiration if forced or if it's already set
+        if (force || expiration != None)
+            expiration = Some(current + expirationInterval)
 }
 
 private case class ExpirationMapImpl[A, +B](expirationInterval: Long, keyValueExpiry: Map[A, ExpirationTuple[B]]) extends ExpirationMap[A, B] {
@@ -50,9 +53,9 @@ private case class ExpirationMapImpl[A, +B](expirationInterval: Long, keyValueEx
     def contains(key: A)(implicit current: Long): Boolean =
         get(key) != None
 
-    def expire(key: A)(implicit current: Long) {
+    def expire(key: A, force: Boolean = true)(implicit current: Long) {
         keyValueExpiry.get(key) collect {
-            case et: ExpirationTuple[B] => et.expire(expirationInterval)
+            case et: ExpirationTuple[B] => et.expire(expirationInterval, force)
         }
     }
 
@@ -64,7 +67,7 @@ private case class ExpirationMapImpl[A, +B](expirationInterval: Long, keyValueEx
     def toMap(implicit current: Long): Map[A, B] = clearExpired.mapValues(_.value)
 
     def +[B1 >: B](kv: (A, B1))(implicit current: Long): ExpirationMap[A, B1] = {
-        val newMap = (clearExpired + (kv._1 -> new ExpirationTuple(kv._2, None)))
+        val newMap = (clearExpired + (kv._1 -> new ExpirationTuple(kv._2)))
         ExpirationMapImpl(expirationInterval, newMap)
     }
 

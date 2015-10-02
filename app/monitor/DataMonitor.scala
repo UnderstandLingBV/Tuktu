@@ -104,7 +104,7 @@ class DataMonitor extends Actor with ActorLogging {
                 case Some(app) => {
                     // Renew expiration and update maps
                     app.endTime = current
-                    appMonitor.expire(mailbox_address)
+                    appMonitor.expire(mailbox_address, false)
 
                     val latest = app.processorDataPackets.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty)
                     latest(pmp.typeOf) = pmp.data
@@ -126,7 +126,7 @@ class DataMonitor extends Actor with ActorLogging {
                 case Some(app) => {
                     // Renew expiration and update maps
                     app.endTime = current
-                    appMonitor.expire(mailbox_address)
+                    appMonitor.expire(mailbox_address, false)
 
                     val count = app.flowDataPacketCount.getOrElseUpdate(mp.branch, collection.mutable.Map.empty.withDefaultValue(0))
                     count(mp.typeOf) += mp.amount
