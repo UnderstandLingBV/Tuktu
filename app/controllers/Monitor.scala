@@ -91,8 +91,10 @@ object Monitor extends Controller {
         
         // Get configs
         val configs = files.filter(!_.isDirectory).map(cfg => cfg.getName.take(cfg.getName.size - 5))
+        scala.util.Sorting.quickSort(configs)
         // Get subfolders
         val subfolders = files.filter(_.isDirectory).map(fldr => fldr.getName)
+        scala.util.Sorting.quickSort(subfolders)
         
         // Invoke view
         Ok(views.html.monitor.showConfigs(
