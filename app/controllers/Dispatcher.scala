@@ -272,14 +272,6 @@ object Dispatcher {
                 subflows toList
         )
     }
-}
-
-/**
- * This actor is the heart of Tuktu and bootstraps all flows executed by Tuktu.
- * For detailed explanation on this actor, read the manual at https://github.com/ErikTromp/Tuktu
- */
-class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     /**
      * Builds the processor map
@@ -307,6 +299,14 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
             processorId -> procDef
         }).toMap
     }
+}
+
+/**
+ * This actor is the heart of Tuktu and bootstraps all flows executed by Tuktu.
+ * For detailed explanation on this actor, read the manual at https://github.com/ErikTromp/Tuktu
+ */
+class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     /**
      * Receive function that does all the magic
@@ -339,7 +339,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
             }
 
             // Start local actor, get all data processors
-            val processorMap = buildProcessorMap((config \ "processors").as[List[JsObject]])
+            val processorMap = Dispatcher.buildProcessorMap((config \ "processors").as[List[JsObject]])
 
             // Get the data generators
             val generators = (config \ "generators").as[List[JsObject]]
@@ -387,7 +387,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     } else {
                         if (!startRemotely) {
                             // Build the processor pipeline for this generator
-                            val (idString, processorEnumeratee, subflows) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor)
+                            val (idString, processorEnumeratees, subflows) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor)
 
                             // Set up the generator
                             val clazz = Class.forName(generatorName)
@@ -406,7 +406,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
 
                                     Akka.system.actorOf(
                                         SmallestMailboxPool(instanceCount).props(
-                                            Props(clazz, refererName, resultName, processorEnumeratee, dr.sourceActor)
+                                            Props(clazz, refererName, resultName, processorEnumeratees, dr.sourceActor)
                                         ),
                                         name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + idString
                                     )
@@ -414,7 +414,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                 else
                                     Akka.system.actorOf(
                                         SmallestMailboxPool(instanceCount).props(
-                                            Props(clazz, resultName, processorEnumeratee, dr.sourceActor)
+                                            Props(clazz, resultName, processorEnumeratees, dr.sourceActor)
                                         ),
                                         name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + idString
                                     )
