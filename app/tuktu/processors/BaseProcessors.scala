@@ -230,19 +230,40 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
     }
     
     var expressions: List[JsObject] = _
+    var batch: Boolean = _
+    var batchMinCount: Int = _
+    
     override def initialize(config: JsObject) {
         expressions = (config \ "expressions").as[List[JsObject]]
+        batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
+        batchMinCount = (config \ "batch_min_count").asOpt[Int].getOrElse(1)
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         new DataPacket(
-            // Go over data
-            for {
-                datum <- data.data
-
-                // Evaluate expressions
-                if (evaluateExpressions(datum, expressions))
-            } yield datum
+            // Check if we need to do batch or individual
+            if (batch) {
+                // Count number of matches
+                val numMatches = (for {
+                    datum <- data.data
+    
+                    // Evaluate expressions
+                    if (evaluateExpressions(datum, expressions))
+                } yield 1).foldLeft(0)(_+_)
+                
+                // Check if we need to keep this DP in its entirety or not
+                if (numMatches >= batchMinCount) data.data
+                else List()
+            }
+            else {
+                // Go over data
+                for {
+                    datum <- data.data
+    
+                    // Evaluate expressions
+                    if (evaluateExpressions(datum, expressions))
+                } yield datum
+            }
         )
     }) compose Enumeratee.filter((data: DataPacket) => {
         data.data.size > 0
