@@ -50,22 +50,22 @@
 									"required": true
 								}
 							]
-						},
-						{
-							"name": "batch",
-							"type": "boolean",
-							"required": false,
-							"default": false,
-							"description": "Whether or not to include the entire DataPacket if one or more of the elements match the expression(s)"
-						},
-						{
-							"name": "batch_min_count",
-							"type": "int",
-							"required": false,
-							"default": 0,
-							"description": "If batch is set to true, this number is the minimum amount of elements that should fullfill the expression(s)"
 						}
 					]
+				},
+				{
+					"name": "batch",
+					"type": "boolean",
+					"required": false,
+					"default": false,
+					"description": "Whether or not to include the entire DataPacket if one or more of the elements match the expression(s)"
+				},
+				{
+					"name": "batch_min_count",
+					"type": "int",
+					"required": false,
+					"default": 0,
+					"description": "If batch is set to true, this number is the minimum amount of elements that should fullfill the expression(s)"
 				}
 			]
 		}
