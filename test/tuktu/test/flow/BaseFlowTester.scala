@@ -105,7 +105,7 @@ class BaseFlowTester(timeoutSeconds: Int = 5) extends TestKit(ActorSystem("test"
         // Ask all the actors for completion
         val results = Future.sequence(for (actor <- actors) yield (actor ? new ResultPacket()).asInstanceOf[Future[List[DataPacket]]])
         
-        // Inspect the results
+        // TODO: Inspect the results
         results.map(obtainedOutput => {
             true
         })
