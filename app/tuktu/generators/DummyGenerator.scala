@@ -14,6 +14,7 @@ import akka.actor.Actor
 import akka.pattern.ask
 import tuktu.api._
 import scala.concurrent.duration.Duration
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Just generates dummy strings every tick
@@ -22,7 +23,7 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
     var schedulerActor: Cancellable = null
     var message: String = null
     var maxAmount: Option[Int] = None
-    var amountSent = 0
+    var amountSent = new AtomicInteger(0)
     
     override def receive() = {
         case ip: InitPacket => setup
@@ -55,15 +56,17 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
             cleanup
         }
         case msg: String => {
-            channel.push(new DataPacket(List(Map(resultName -> message))))
-            // See if we need to stop
             maxAmount match {
+                // check if we need to stop
                 case Some(amnt) => {
-                    amountSent += 1
-                    if (amountSent >= amnt)
+                    if (amountSent.getAndIncrement >= amnt)
                             self ! new StopPacket
+                    else
+                        channel.push(new DataPacket(List(Map(resultName -> message))))
                 }
-                case None => {}
+                case None => {
+                    channel.push(new DataPacket(List(Map(resultName -> message))))
+                }
             }
         }
         case x => println("Dummy generator got unexpected packet " + x + "\r\n")
