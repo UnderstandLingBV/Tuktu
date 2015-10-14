@@ -1,6 +1,7 @@
 package controllers
 
-import java.io.File
+import java.nio.file.{ Path, Paths, Files }
+import scala.collection.JavaConversions.{ seqAsJavaList, asScalaBuffer }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
@@ -19,9 +20,6 @@ import play.api.mvc.Controller
 import tuktu.api._
 import tuktu.utils.util
 import play.api.cache.Cache
-import java.io.FileOutputStream
-import java.io.OutputStreamWriter
-import java.io.BufferedWriter
 import play.api.libs.json.Json
 
 object Monitor extends Controller {
@@ -76,29 +74,35 @@ object Monitor extends Controller {
      * Shows the form for getting configs
      */
     def showConfigs() = Action { implicit request => {
-        val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
-        
-        // Get the path from the body
-        val path = body("path").head.split("/").filter(elem => !elem.isEmpty)
-        
-        // Load the files and folders from the config repository
-        val configRepo = {
-            val location = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
-            if (location.last != '/') location + "/"
-            else location
-        }
-        val files = new File(configRepo + path.mkString("/")).listFiles
-        
+        // Get config repo
+        val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
+        val configsPath = Paths.get(configsRepo).toAbsolutePath.normalize
+
+        // Get file path from the body
+        val body = request.body.asFormUrlEncoded.getOrElse(Map.empty)
+        val file = body("path").headOption.getOrElse("")
+        val filePath = Paths.get(configsRepo, file).toAbsolutePath.normalize
+
+        // Check if file path is subpath of configs repo, or default to config repo
+        val path = if (filePath.startsWith(configsPath)) filePath else configsPath
+        val relativePath = configsPath.relativize(path)
+        val pathSeq = (for (i <- 0 until relativePath.getNameCount) yield relativePath.getName(i).toString).filter(_.nonEmpty)
+
+        // Define collector and partition files and directories
+        val collector = java.util.stream.Collectors.groupingBy[Path, Boolean](
+        new java.util.function.Function[Path, Boolean] {
+            def apply(path: Path): Boolean = Files.isDirectory(path)
+        })
+        val map = Files.list(path).collect(collector)
+
         // Get configs
-        val configs = files.filter(!_.isDirectory).map(cfg => cfg.getName.take(cfg.getName.size - 5))
-        scala.util.Sorting.quickSort(configs)
+        val configs = map.getOrDefault(false, Nil).map(cfg => cfg.getFileName.toString.dropRight(5)).sorted
         // Get subfolders
-        val subfolders = files.filter(_.isDirectory).map(fldr => fldr.getName)
-        scala.util.Sorting.quickSort(subfolders)
-        
+        val subfolders = map.getOrDefault(true, Nil).map(fldr => fldr.getFileName.toString).sorted
+
         // Invoke view
         Ok(views.html.monitor.showConfigs(
-                path, configs, subfolders
+                pathSeq, configs, subfolders
         ))
     }}
     
@@ -141,64 +145,88 @@ object Monitor extends Controller {
      * Creates a new JSON file
      */
     def newFile() = Action { implicit request => {
-        val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
-        
-        // Get the path and filename from the body
-        val path = body("path").head
-        val filename = {
-            val fname = body("file").head
-            if (fname.endsWith(".json")) fname
-            else fname + ".json"
-        }
-        // Folder or file?
-        val isFolder = body("folder").head.toBoolean
-        
-        // Get prefix
-        val configRepo = {
-            val location = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
-            if (location.last != '/') location + "/"
-            else location
-        }
+        // Get config repo
+        val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
+        val configsPath = Paths.get(configsRepo).toAbsolutePath.normalize
 
-        if (isFolder) {
-            // Create folder
-            new File(configRepo + path + "/" + filename.dropRight(5)).mkdir
+        // Get file path from the body
+        val body = request.body.asFormUrlEncoded.getOrElse(Map.empty)
+        body("file").headOption match {
+            case None => BadRequest
+            case Some(file) => {
+                val withEnding = if (file.endsWith(".json")) file else file + ".json"
+                // Check if absolute normalized path starts with configs repo and new file doesnt exist yet
+                val path = Paths.get(configsRepo, withEnding).toAbsolutePath.normalize
+                if (!path.startsWith(configsPath) || Files.exists(path))
+                    BadRequest
+                else {
+                    try {
+                        Files.write(path, Json.prettyPrint(Json.obj("generators" -> Json.arr(), "processors" -> Json.arr())).getBytes("utf-8"))
+                        Ok
+                    } catch {
+                        case _: Throwable => BadRequest
+                    }
+                }
+            }
         }
-        else {
-            // Wrte default output to file
-            val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(configRepo + path + "/" + filename), "utf-8"))
-            val output = Json.obj(
-                    "generators" -> Json.arr(),
-                    "processors" -> Json.arr()
-            )
-            writer.write(output.toString)
-            writer.close
-        }
+    }}
 
-        Ok("")
+    /**
+     * Creates a new directory
+     */
+    def newDirectory() = Action { implicit request => {
+        // Get config repo
+        val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
+        val configsPath = Paths.get(configsRepo).toAbsolutePath.normalize
+
+        // Get file path from the body
+        val body = request.body.asFormUrlEncoded.getOrElse(Map.empty)
+        body("path").headOption match {
+            case None => BadRequest
+            case Some(dir) => {
+                // Check if absolute normalized path starts with configs repo and new dir doesnt exist yet
+                val path = Paths.get(configsRepo, dir).toAbsolutePath.normalize
+                if (!path.startsWith(configsPath) || Files.exists(path))
+                    BadRequest
+                else {
+                    try {
+                        Files.createDirectory(path)
+                        Ok
+                    } catch {
+                        case _: Throwable => BadRequest
+                    }
+                }
+            }
+        }
     }}
     
     /**
      * Deletes a file from the config repository
      */
     def deleteFile() = Action { implicit request => {
-        val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
-        
-        // Get the filename from the body
-        val filename = {
-            val fname = body("file").head
-            val configRepo = {
-                val location = Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")
-                if (location.last != '/') location + "/"
-                else location
+        // Get config repo
+        val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
+        val configsPath = Paths.get(configsRepo).toAbsolutePath.normalize
+
+        // Get file path from the body
+        val body = request.body.asFormUrlEncoded.getOrElse(Map.empty)
+        body("file").headOption match {
+            case None => BadRequest
+            case Some(file) => {
+                // Check if absolute normalized path starts with configs repo and is a file
+                val path = Paths.get(configsRepo, file).toAbsolutePath.normalize
+                if (!path.startsWith(configsPath) || !Files.isRegularFile(path))
+                    BadRequest
+                else {
+                    try {
+                        Files.delete(path)
+                        Ok
+                    } catch {
+                        case _: Throwable => BadRequest
+                    }
+                }
             }
-            configRepo + fname
         }
-        
-        // Remove it
-        new File(filename).delete
-        
-        Ok("")
     }}
     
     /**

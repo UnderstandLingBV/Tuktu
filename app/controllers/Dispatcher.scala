@@ -1,6 +1,5 @@
 package controllers
 
-import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -429,6 +428,8 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                             actorRef ! Broadcast(new InitPacket)
                             // Send it the config
                             actorRef ! Broadcast(generatorConfig)
+
+                            // Return reference
                             if (dr.returnRef) sender ! actorRef
                         }
                     }

@@ -13,11 +13,13 @@ paper = Raphael('flowchart', '100%', '100%')
 flowchart = document.getElementById('flowchart')
 flowchart.firstChild.style.border = '2px #666 solid'
 flowchart.firstChild.style.borderRadius = '5px'
+
 # Make the flowchart height window height -10px; change it if window is resized
 flowchart.style.height = (window.innerHeight - flowchart.parentNode.offsetTop - 10) + 'px'
 $( window ).resize( ->
 	flowchart.style.height = (window.innerHeight - flowchart.parentNode.offsetTop - 10) + 'px'
 	paper.setViewBox(paperx, papery, paperw(), paperh()))
+
 
 # Create a huge background rect that will capture panning
 background = paper.rect(-10, -10, 1e6, 1e6)
@@ -688,28 +690,70 @@ window.onbeforeunload = (e) ->
 # Activate processor and generator filters
 $('#filterGenerators,#filterProcessors').each( (i, el) ->
 	$(el).on('change', (e) ->
-		$(el).closest('form').find('select').first().find('option').each( (i, option) ->
-			value = $(option).val()
-			title = $(option).text()
-			toBeHidden_value = false
-			toBeHidden_title = false
-			keywords = $(el).val().split(' ')
-			for str in keywords
-				if str.trim() isnt ''
-					re = new RegExp(str.trim().replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&'), 'i')
-					if not re.test(value)
-						toBeHidden_value = true
-					if not re.test(title)
-						toBeHidden_title = true
+		$(el).closest('form').find('select').first().find('> optgroup').each( (i, optgroup) ->
+			toBeHidden_group = true
+			$(optgroup).find('> option').each( (j, option) ->
+				value = $(option).val()
+				title = $(option).text()
+				toBeHidden_value = false
+				toBeHidden_title = false
+				keywords = $(el).val().split(' ')
+				for str in keywords
+					if str.trim() isnt ''
+						re = new RegExp(str.trim().replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&'), 'i')
+						if not re.test(value)
+							toBeHidden_value = true
+						if not re.test(title)
+							toBeHidden_title = true
+					if toBeHidden_value and toBeHidden_title
+						break
 				if toBeHidden_value and toBeHidden_title
-					break
-			if toBeHidden_value and toBeHidden_title
-				$(option).addClass('hidden')
+					$(option).addClass('hidden')
+				else
+					$(option).removeClass('hidden')
+					toBeHidden_group = false
+				return
+			)
+			if toBeHidden_group is true
+				$(optgroup).addClass('hidden')
 			else
-				$(option).removeClass('hidden')
+				$(optgroup).removeClass('hidden')
 			return
 		)
 		return
 	)
 	return
+)
+
+# Web Socket
+$('a[href="#RunConfig"]').on('click', (e) ->
+	e.preventDefault()
+	$(@).attr('disabled', 'disabled')
+	
+	# Open WebSocket
+	ws = new WebSocket(webSocketUrl)
+	ws.onopen = ->
+		# Send config to run
+		ws.send(JSON.stringify(getConfig()))
+	ws.onmessage = (e) ->
+		data = JSON.parse(e.data)
+		processor = _.find(allNodes.processors, (pro) -> pro.config.id is data.processor_id)
+		if processor isnt undefined
+			if data.type is 'EndType'
+				$(processor.circle.node).tooltip({
+					container: 'body'
+					placement: 'bottom'
+					title: JSON.stringify(data.data, null, '    ')
+				})
+			else if data.type is 'BeginType'
+				$(processor.targetInner.node).tooltip({
+					container: 'body'
+					placement: 'bottom'
+					title: JSON.stringify(data.data, null, '    ')
+				})
+				$(processor.targetOuter.node).tooltip({
+					container: 'body'
+					placement: 'bottom'
+					title: JSON.stringify(data.data, null, '    ')
+				})
 )

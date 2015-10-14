@@ -8,6 +8,7 @@ import akka.actor.ActorRef
 import akka.util.Timeout
 import play.api.Play.current
 import play.api.cache.Cache
+import play.api.Logger
 import tuktu.api._
 import tuktu.api.types.ExpirationMap
 import java.util.Date
@@ -27,9 +28,16 @@ class DataMonitor extends Actor with ActorLogging {
     val uuidActorMap = collection.mutable.Map.empty[String, ActorRef]
 
     // Keep track of a list of actors we need to notify on push base about events happening
-    val eventListeners = collection.mutable.HashSet.empty[ActorRef]
+    val eventListeners = collection.mutable.Set.empty[ActorRef]
 
-    def receive() = {
+    def receive = {
+        case any => {
+            for (listener <- eventListeners) listener.forward(any)
+            handle(any)
+        }
+    }
+
+    def handle: PartialFunction[Any, Unit] = {
         case "init" => {
             // Initialize monitor
         }
@@ -44,7 +52,7 @@ class DataMonitor extends Actor with ActorLogging {
             val mailbox_address = aip.mailbox.path.toStringWithoutAddress
             implicit val current = System.currentTimeMillis
             if (!appMonitor.contains(mailbox_address))
-                appMonitor = appMonitor + (mailbox_address -> new AppMonitorObject(aip.mailbox, aip.instanceCount, aip.timestamp))
+                appMonitor = appMonitor + (mailbox_address -> new AppMonitorObject(aip.mailbox, aip.uuid, aip.instanceCount, aip.timestamp))
         }
         case enp: ErrorNotificationPacket => {
             // Get the generator and kill it
@@ -56,7 +64,7 @@ class DataMonitor extends Actor with ActorLogging {
         case amel: AddMonitorEventListener    => eventListeners += sender
         case rmel: RemoveMonitorEventListener => eventListeners -= sender
         case amp: AppMonitorPacket => {
-            implicit val current = System.currentTimeMillis
+            implicit val current = amp.timestamp
             amp.status match {
                 case "done" => {
                     // Get app from appMonitor  
@@ -71,7 +79,7 @@ class DataMonitor extends Actor with ActorLogging {
                             }
                         }
                         case None => {
-                            System.err.println("DataMonitor received 'done' for unknown app: " + amp.getName)
+                            Logger.error("DataMonitor received 'done' for unknown app: " + amp.getName)
                         }
                     }
                 }
@@ -84,7 +92,7 @@ class DataMonitor extends Actor with ActorLogging {
                             appMonitor.expire(amp.getParentName)
                         }
                         case None => {
-                            System.err.println("DataMonitor received 'kill' for unknown app: " + amp.getName)
+                            Logger.error("DataMonitor received 'kill' for unknown app: " + amp.getName)
                         }
                     }
                 }
@@ -95,7 +103,7 @@ class DataMonitor extends Actor with ActorLogging {
             eventListeners.foreach(listener => listener ! amp)
         }
         case pmp: ProcessorMonitorPacket => {
-            implicit val current = System.currentTimeMillis
+            implicit val current = pmp.timestamp
             val mailbox_address = uuidActorMap.get(pmp.uuid) match {
                 case Some(actor) => actor.path.toStringWithoutAddress
                 case None        => ""
@@ -112,12 +120,12 @@ class DataMonitor extends Actor with ActorLogging {
                     count(pmp.typeOf) += 1
                 }
                 case None => {
-                    System.err.println("DataMonitor received ProcessorMonitorPacket for unkown app with uuid: " + pmp.uuid)
+                    Logger.error("DataMonitor received ProcessorMonitorPacket for unkown app with uuid: " + pmp.uuid)
                 }
             }
         }
         case mp: MonitorPacket => {
-            implicit val current = System.currentTimeMillis
+            implicit val current = mp.timestamp
             val mailbox_address = uuidActorMap.get(mp.uuid) match {
                 case Some(actor) => actor.path.toStringWithoutAddress
                 case None        => ""
@@ -132,7 +140,7 @@ class DataMonitor extends Actor with ActorLogging {
                     count(mp.typeOf) += mp.amount
                 }
                 case None => {
-                    System.err.println("DataMonitor received MonitorPacket for unkown app with uuid: " + mp.uuid)
+                    Logger.error("DataMonitor received MonitorPacket for unkown app with uuid: " + mp.uuid)
                 }
             }
         }
@@ -144,6 +152,6 @@ class DataMonitor extends Actor with ActorLogging {
                 finished,
                 subflowMap toMap)
         }
-        case m => println("Monitor received unknown message: " + m)
+        case m => Logger.error("Monitor received unknown message: " + m)
     }
 }

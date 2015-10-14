@@ -1,10 +1,8 @@
-@(path: Array[String], configs: Array[String], folders: Array[String])
+@(path: Seq[String], configs: collection.mutable.Buffer[String], folders: collection.mutable.Buffer[String])
     <div class="row" style="margin-bottom: 20px;">
        <div class="col-xs-11">
            <a href="#" onClick="navigateFolder('')">[root]</a>
-           @if(path.size > 0) {
-               @for((elem, index) <- path.zipWithIndex) { / <a href="#" onClick="navigateFolder('@path.take(index).mkString("/")/@elem')">@elem</a>}
-           }
+               @for((elem, index) <- path.zipWithIndex) { / <a href="#" onClick="navigateFolder('@path.take(index).mkString("/")/@elem')">@elem</a> }
         </div>
         <div class="col-xs-1 pull-right">
             <a href="#" onClick="createNew(false)">
@@ -38,39 +36,39 @@
             <input type="submit" class="btn btn-xs btn-info" value="Start Selected" onClick="batchStarter()">
         </div>
         
-	    <table class="table table-hover" id="configTable">
-		    @for(config <- configs) {
-		        <tr>
-		           <td width="20px">
-		               <input type="checkbox" value="@path.mkString("/")/@config">
-		           </td>
-		            <td>
-		                <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
-		                &nbsp;
-		                @config
-		            </td>
-		            <td width="10%">
-		                <form method="post" action="@routes.Monitor.startJob">
-		                    <input name="name" type="text" class="hidden" value="@path.mkString("/")/@config"/>
-		                    <input type="submit" class="btn btn-xs" value="Start Job">
-		                </form>
-		            </td>
-		            <td width="10%">
-	                    <a href="@controllers.modeller.routes.Application.index((path :+ config + ".json").mkString("/"))">Edit Config</a>
-	                </td>
-		            <td width="10%">
-	                    <a href="#" onClick="deleteFile('@{(path :+ config + ".json").mkString("/")}', '@config')" class="pull-right">
-	                        <span aria-hidden="true" class="glyphicon glyphicon-trash"></span>
-	                    </a>
-	                </td>
-		        </tr>
-		    }
-	    </table>
-	    
-	    <div class="row">
-	       <input type="submit" class="btn btn-xs btn-info" value="Start Selected" onClick="batchStarter()">
-	    </div>
-	}
+        <table class="table table-hover" id="configTable">
+            @for(config <- configs) {
+                <tr>
+                   <td width="20px">
+                       <input type="checkbox" value="@path.mkString("/")/@config">
+                   </td>
+                    <td>
+                        <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
+                        &nbsp;
+                        @config
+                    </td>
+                    <td width="10%">
+                        <form method="post" action="@routes.Monitor.startJob">
+                            <input name="name" type="text" class="hidden" value="@path.mkString("/")/@config"/>
+                            <input type="submit" class="btn btn-xs" value="Start Job">
+                        </form>
+                    </td>
+                    <td width="10%">
+                        <a href="@controllers.modeller.routes.Application.index((path :+ config + ".json").mkString("/"))">Edit Config</a>
+                    </td>
+                    <td width="10%">
+                        <a href="#" onClick="deleteFile('@{(path :+ config + ".json").mkString("/")}', '@config')" class="pull-right">
+                            <span aria-hidden="true" class="glyphicon glyphicon-trash"></span>
+                        </a>
+                    </td>
+                </tr>
+            }
+        </table>
+        
+        <div class="row">
+           <input type="submit" class="btn btn-xs btn-info" value="Start Selected" onClick="batchStarter()">
+        </div>
+    }
 
     <script type="text/javascript">
         function navigateFolder(folder) {
@@ -86,48 +84,54 @@
         }
         
         function createNew(isFolder) {
-            var filename = ""
+            var filename = "";
             if (isFolder) {
-                filename = prompt("Please enter the name of the folder.", "NewFile");
+                filename = prompt("Please enter the name of the folder.", "NewFolder");
+                $.ajax({
+                    method : "POST",
+                    url : "@routes.Monitor.newDirectory",
+                    data : {
+                        path: "@path.mkString("/")/" + filename
+                    }
+                }).done(function(html) {
+                    navigateFolder("@path.mkString("/")");
+                });
             }
             else {
                 filename = prompt("Please enter the name of the file.", "NewFile");
+                $.ajax({
+                    method : "POST",
+                    url : "@routes.Monitor.newFile",
+                    data : {
+                        file: "@path.mkString("/")/" + filename
+                    }
+                }).done(function(html) {
+                    navigateFolder("@path.mkString("/")");
+                });
             }
-            
-            $.ajax({
-                method : "POST",
-                url : "@routes.Monitor.newFile",
-                data : {
-                    path: "@path.mkString("/")",
-                    folder: isFolder,
-                    file: filename 
-                }
-            }).done(function(html) {
-                navigateFolder("@path.mkString("/")");
-            });
         }
         
         function deleteFile(filename, shortname) {
             var c = confirm("Are you sure you want to delete " + shortname + "?");
             if (c == true) {
                 $.ajax({
-	                method : "POST",
-	                url : "@routes.Monitor.deleteFile",
-	                data : {
-	                    file: filename
-	                }
-	            }).done(function(html) {
-	                navigateFolder("@path.mkString("/")");
-	            });
+                    method : "POST",
+                    url : "@routes.Monitor.deleteFile",
+                    data : {
+                        file: filename
+                    }
+                }).done(function(html) {
+                    navigateFolder("@path.mkString("/")");
+                });
             }
         }
         
         function batchStarter() {
             var configs = $("#configTable input:checkbox:checked").map(function(){
-		        return $(this).val();
-		    }).get();
-		    
-		    $.ajax({
+                return $(this).val();
+            }).get();
+            
+            $.ajax({
                 method : "POST",
                 url : "@routes.Monitor.batchStarter",
                 data : {

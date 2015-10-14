@@ -64,7 +64,8 @@ case class MonitorPacket(
         typeOf: MPType,
         uuid: String,
         branch: String,
-        amount: Integer
+        amount: Integer,
+        timestamp: Long = System.currentTimeMillis
 )
 
 case class MonitorOverviewRequest()
@@ -78,11 +79,13 @@ case class ProcessorMonitorPacket(
         typeOf: MPType,
         uuid: String,
         processor_id: String,
-        data: DataPacket
+        data: DataPacket,
+        timestamp: Long = System.currentTimeMillis
 )
 
 case class AppMonitorObject(
         actor: ActorRef,
+        uuid: String,
         instances: Int,
         startTime: Long,
         var finished_instances: Int = 0,

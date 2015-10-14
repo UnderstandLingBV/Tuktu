@@ -1,140 +1,150 @@
-@(running: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, tuktu.api.AppMonitorObject)], subflows: Map[String, String], messages: Map[String, List[String]])
-@import tuktu.api.{ BeginType, EndType }
-@import play.api.libs.json.Json
-@import tuktu.api.utils.anyMapToJson
+@(running: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, tuktu.api.AppMonitorObject)], subflows: Map[String, String], messages: Map[String, List[String]])(implicit requestHeader: RequestHeader)
 
 @index("Monitoring", messages) {
     @monitorMenu()
 } {
-    @if(running.size > 0) {
-        <h2>
-           The following jobs are currently running on Tuktu
-        </h2>
+    <h2>
+       The following jobs are currently running on Tuktu
+    </h2>
 
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>
-                        Job name
-                    </th>
-                    <th title="Running / Total">
-                        Instances
-                    </th>
-                    <th>
-                        Processed
-                    </th>
-                    <th>
-                        Actions
-                    </th>
-                    <th class="text-right">
-                        Running since
-                    </th>
-                </tr>
-            </thead>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>
+                    Job name
+                </th>
+                <th title="Running / Total">
+                    Instances
+                </th>
+                <th>
+                    Processed
+                </th>
+                <th>
+                    Actions
+                </th>
+                <th class="text-right">
+                    Running since
+                </th>
+            </tr>
+        </thead>
             <tbody>
-                @for((appName, appProps) <- running) {
-                    <tr>
-                        <td style="margin-right: 25px;">
-                            @appName
-                            @if(subflows.contains(appName)) {
-                                <i>(Subflow)</i>
-                            }
-                        </td>
-                        <td>
-                            @{appProps.instances - appProps.finished_instances} / @appProps.instances
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal_@appName.split('_').last">
-                                Show Log
-                            </button>
-                        </td>
-                        <td>
-                            <a href="@routes.Monitor.terminate(appName, false)">
-                                Stop
-                            </a>
-                            <a href="@routes.Monitor.terminate(appName, true)">
-                                Terminate
-                            </a>
-                        </td>
-                        <td class="javascript-date-timestamp-duration text-right" title="@appProps.startTime">
-                            @* Filled and updated with JavaScript below to use user's time zone *@
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    } else {
-        <h2>Currently, no jobs are running on Tuktu</h2>
+            @for((appName, appProps) <- running) {
+                <tr>
+                    <td style="margin-right: 25px;">
+                        @appName
+                        @if(subflows.contains(appName)) {
+                            <i>(Subflow)</i>
+                        }
+                    </td>
+                    <td>
+                        @{appProps.instances - appProps.finished_instances} / @appProps.instances
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal_@appName.split('_').last">
+                            Show Log
+                        </button>
+                    </td>
+                    <td>
+                        <a href="@routes.Monitor.terminate(appName, false)">Stop</a>
+                        <a href="@routes.Monitor.terminate(appName, true)">Terminate</a>
+                    </td>
+                    <td class="javascript-date-timestamp-duration text-right" title="@appProps.startTime">
+                        @* Filled and updated with JavaScript below to use user's time zone *@
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if(running.isEmpty) {
+        <h3>Currently, no jobs are running on Tuktu</h3>
     }
 
     <hr>
 
-    @if(finished.size > 0) {
-        <h2>
-           The following jobs are finished
-        </h2>
+    <h2>
+       The following jobs are finished
+    </h2>
 
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>
-                        Job name
-                    </th>
-                    <th title="Finished / Total">
-                        Instances
-                    </th>
-                    <th>
-                        Processed
-                    </th>
-                    <th>
-                        Start Time
-                    </th>
-                    <th>
-                        End Time
-                    </th>
-                    <th class="text-right">
-                        Duration
-                    </th>
-                </tr>
-            </thead>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>
+                    Job name
+                </th>
+                <th title="Finished / Total">
+                    Instances
+                </th>
+                <th>
+                    Processed
+                </th>
+                <th>
+                    Start Time
+                </th>
+                <th>
+                    End Time
+                </th>
+                <th class="text-right">
+                    Duration
+                </th>
+            </tr>
+        </thead>
             <tbody>
-                @for((appName, appProps) <- finished) {
-                    <tr>
-                        <td style="margin-right: 25px;">
-                            @appName
-                            @if(subflows.contains(appName)) {
-                                <i>(Subflow)</i>
-                            }
-                        </td>
-                        <td>
-                            @appProps.finished_instances / @appProps.instances
-                        </td>
-                        <td>
-                            @if(appProps.flowDataPacketCount.nonEmpty || appProps.processorDataPacketCount.nonEmpty) {
-                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal_@appName.split('_').last">
-                                    Show Log
-                                </button>
-                            }
-                        </td>
-                        <td class="javascript-date-timestamp" title="@appProps.startTime">
-                            @* Filled with JavaScript below to use user's time zone *@
-                        </td>
-                        <td class="javascript-date-timestamp" title="@appProps.endTime">
-                            @* Filled with JavaScript below to use user's time zone *@
-                        </td>
-                        <td class="text-right">
-                            @if(appProps.endTime - appProps.startTime >= 1000) {
-                                @{(appProps.endTime - appProps.startTime) / 1000D} s
-                            } else {
-                                @{appProps.endTime - appProps.startTime} ms
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    } else {
-        <h2>No finished jobs were found.</h2>
+            @for((appName, appProps) <- finished) {
+                <tr>
+                    <td style="margin-right: 25px;">
+                        @appName
+                        @if(subflows.contains(appName)) {
+                            <i>(Subflow)</i>
+                        }
+                    </td>
+                    <td>
+                        @appProps.finished_instances / @appProps.instances
+                    </td>
+                    <td>
+                        @if(appProps.flowDataPacketCount.nonEmpty || appProps.processorDataPacketCount.nonEmpty) {
+                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modal_@appName.split('_').last">
+                                Show Log
+                            </button>
+                        }
+                    </td>
+                    <td class="javascript-date-timestamp" title="@appProps.startTime">
+                        @* Filled with JavaScript below to use user's time zone *@
+                    </td>
+                    <td class="javascript-date-timestamp" title="@appProps.endTime">
+                        @* Filled with JavaScript below to use user's time zone *@
+                    </td>
+                    <td class="text-right">
+                        @if(appProps.endTime - appProps.startTime >= 1000) {
+                            @{(appProps.endTime - appProps.startTime) / 1000D} s
+                        } else {
+                            @{appProps.endTime - appProps.startTime} ms
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if(finished.isEmpty) {
+        <h3>No finished jobs were found.</h3>
+    }
+
+    @for((appName, appProps) <- running ++ finished) {
+        <div class="modal fade" id="modal_@appProps.uuid" tabindex="-1" role="dialog" aria-labelledby="modalLabel_@appProps.uuid">
+            <div class="modal-dialog data-modal" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="modalLabel_@appProps.uuid">Data</h4>
+                    </div>
+                    <div class="modal-body">
+                        @showAppData(appProps)
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
 
     <script type="text/javascript">
@@ -151,74 +161,11 @@
             window.setTimeout(refresh, 1000);
         }
         refresh();
-        @if(messages.size > 0) {
-            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 3000);
+
+        @if(messages.nonEmpty) {
+            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 1000);
         } else {
-            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 30000);
+            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 10000);
         }
     </script>
-
-    @for((appName, appProps) <- running ++ finished) {
-        <div class="modal fade" id="modal_@appName.split('_').last" tabindex="-1" role="dialog" aria-labelledby="modalLabel_@appName">
-            <div class="modal-dialog data-modal" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                        <h4 class="modal-title" id="modalLabel_@appName">Data</h4>
-                    </div>
-                    <div class="modal-body">
-                        @if(appProps.flowDataPacketCount.nonEmpty) {
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Branch</th>
-                                        <th>Sent</th>
-                                        <th>Completed</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @for(branch <- appProps.flowDataPacketCount.keys.toSeq.distinct.sorted) {
-                                        <tr>
-                                            <td>@branch</td>
-                                            <td>@appProps.flowDataPacketCount(branch)(BeginType)</td>
-                                            <td>@appProps.flowDataPacketCount(branch)(EndType)</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        } else {
-                            No data flow has been monitored yet.
-                        }
-                        @if(appProps.processorDataPacketCount.nonEmpty) {
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Processor ID</th>
-                                        <th title="Received">Rec.</th>
-                                        <th title="Completed">Com.</th>
-                                        <th>Last DataPacket Received</th>
-                                        <th>Last DataPacket Completed</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @for(id <- appProps.processorDataPacketCount.keys.toSeq.sorted) {
-                                        <tr>
-                                            <td>@id</td>
-                                            <td>@appProps.processorDataPacketCount(id)(BeginType)</td>
-                                            <td>@appProps.processorDataPacketCount(id)(EndType)</td>
-                                            <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets(id)(BeginType).data.map(datum => anyMapToJson(datum))))</td>
-                                            <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets(id)(EndType).data.map(datum => anyMapToJson(datum))))</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        }
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
 }
