@@ -1,5 +1,5 @@
 @(appProps: tuktu.api.AppMonitorObject)
-@import tuktu.api.{ BeginType, EndType }
+@import tuktu.api.{ DataPacket, BeginType, EndType }
 @import play.api.libs.json.Json
 @import tuktu.api.utils.anyMapToJson
 
@@ -40,10 +40,10 @@
             @for(id <- appProps.processorDataPacketCount.keys.toSeq.sorted) {
                 <tr>
                     <td>@id</td>
-                    <td>@appProps.processorDataPacketCount(id)(BeginType)</td>
-                    <td>@appProps.processorDataPacketCount(id)(EndType)</td>
-                    <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets(id)(BeginType).data.map(datum => anyMapToJson(datum))))</td>
-                    <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets(id)(EndType).data.map(datum => anyMapToJson(datum))))</td>
+                    <td>@appProps.processorDataPacketCount(id).getOrElse(BeginType, 0)</td>
+                    <td>@appProps.processorDataPacketCount(id).getOrElse(EndType, 0)</td>
+                    <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets.get(id).map(map => map.getOrElse(BeginType, new DataPacket(Nil)).data.map(datum => anyMapToJson(datum))).getOrElse(Nil)))</td>
+                    <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets.get(id).map(map => map.getOrElse(EndType, new DataPacket(Nil)).data.map(datum => anyMapToJson(datum))).getOrElse(Nil)))</td>
                 </tr>
             }
         </tbody>
