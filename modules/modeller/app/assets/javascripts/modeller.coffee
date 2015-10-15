@@ -740,20 +740,19 @@ $('a[href="#RunConfig"]').on('click', (e) ->
 		processor = _.find(allNodes.processors, (pro) -> pro.config.id is data.processor_id)
 		if processor isnt undefined
 			if data.type is 'EndType'
-				$(processor.circle.node).tooltip({
-					container: 'body'
-					placement: 'bottom'
-					title: JSON.stringify(data.data, null, '    ')
-				})
+				$(processor.circle.node)
+					.attr('title', JSON.stringify(data.data, null, '    '))
+					.tooltip({
+						container: 'body'
+						placement: 'bottom'
+					})
+					.tooltip('fixTitle')
 			else if data.type is 'BeginType'
-				$(processor.targetInner.node).tooltip({
-					container: 'body'
-					placement: 'bottom'
-					title: JSON.stringify(data.data, null, '    ')
-				})
-				$(processor.targetOuter.node).tooltip({
-					container: 'body'
-					placement: 'bottom'
-					title: JSON.stringify(data.data, null, '    ')
-				})
+				$([processor.targetInner.node, processor.targetOuter.node])
+					.attr('title', JSON.stringify(data.data, null, '    '))
+					.tooltip({
+						container: 'body'
+						placement: 'bottom'
+					})
+					.tooltip('fixTitle')
 )
