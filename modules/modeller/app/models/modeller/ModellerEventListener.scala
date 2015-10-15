@@ -13,6 +13,7 @@ import play.api.Logger
 import tuktu.api._
 import scala.util.Success
 import scala.util.Failure
+import scala.concurrent.Await
 
 object ModellerEventListener {
     def props(out: ActorRef) = Props(new ModellerEventListener(out))
@@ -42,8 +43,6 @@ class ModellerEventListener(out: ActorRef) extends Actor {
                     if (ar.isInstanceOf[ActorRef]) {
                         // Set mailbox and dequeue queue
                         mailbox = Some(ar.asInstanceOf[ActorRef])
-                        while (queue.nonEmpty)
-                            handle(queue.dequeue)
                     } else {
                         Logger.error("Modeller Websocket: Unexpected Dispatch Result - Closing WebSocket")
                         self ! PoisonPill
@@ -54,15 +53,13 @@ class ModellerEventListener(out: ActorRef) extends Actor {
                     self ! PoisonPill
                 }
             }
+            // Wait until the Dispatch Request is completed
+            Await.ready(future, timeout.duration)
         }
-        case any => mailbox match {
-            case None => queue.enqueue(any)
-            case _ => {
-                // Handle queue if necessary
-                while (queue.nonEmpty)
-                    handle(queue.dequeue)
-                // Handle new element
-                handle(any)
+        case any => {
+            queue.enqueue(any)
+            mailbox collect {
+                case _ => while(queue.nonEmpty) handle(queue.dequeue)
             }
         }
     }
