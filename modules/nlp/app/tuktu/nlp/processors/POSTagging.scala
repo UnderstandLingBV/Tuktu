@@ -6,6 +6,7 @@ import scala.concurrent.Future
 import nl.et4it.POSWrapper
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
+import play.api.Logger
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
@@ -48,7 +49,10 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
                 datum + (resultName -> posTags)
             }
             catch {
-                case _: Throwable => Map[String, Any]()
+                case e: Throwable => {
+                    Logger.error("POSTaggerProcessor", e)
+                    Map.empty[String, Any]
+                }
             }
         }).filter(!_.isEmpty))}
     }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
