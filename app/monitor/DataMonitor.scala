@@ -32,8 +32,8 @@ class DataMonitor extends Actor with ActorLogging {
 
     def receive = {
         case any => {
-            for (listener <- eventListeners) listener.forward(any)
             handle(any)
+            for (listener <- eventListeners) listener.forward(any)
         }
     }
 
