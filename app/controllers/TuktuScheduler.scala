@@ -22,6 +22,11 @@ import play.api.libs.concurrent.Akka
 
 import tuktu.api.DispatchRequest
 
+case class DelayedScheduler(
+        name: String,
+        delay: FiniteDuration,
+        dispatchRequest: DispatchRequest
+)
 case class SimpleScheduler(
         name: String,
         initialDelay: FiniteDuration,
@@ -46,7 +51,10 @@ class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
 
     val quartzScheduler = QuartzSchedulerExtension(Akka.system)
     
-    def receive() = {        
+    def receive() = {
+        case schedule: DelayedScheduler => {
+            Akka.system.scheduler.scheduleOnce(schedule.delay, actor, schedule.dispatchRequest)
+        }
         case schedule: SimpleScheduler => {
             schedulers += schedule.name -> Some(Akka.system.scheduler.schedule(
                     schedule.initialDelay,
@@ -73,8 +81,4 @@ class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
         }
         case _ => {}
     }
-//    
-//    def dispatcherActorRef = {
-//         Await.result(Akka.system.actorSelection("user/TuktuDispatcher").resolveOne()(timeout.duration), timeout.duration)
-//    }
 }

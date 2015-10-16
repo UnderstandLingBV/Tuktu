@@ -3,11 +3,18 @@ package controllers
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration.FiniteDuration
+
+import akka.actor.ActorSelection.toScala
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import play.api.libs.json._
-
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsString
+import play.api.libs.json.JsUndefined
+import play.api.libs.json.Json
 import tuktu.api.DispatchRequest
 
 /**
@@ -33,13 +40,19 @@ object AutoStart {
                     val id = (job \ "id").asInstanceOf[JsString].value
                     val dispatchRequest = new DispatchRequest(id, None, false, false, false, None)
                     val cron = job \ "cron"
-                    // when no cron is defined, immediately start running this job
-                    if (cron.isInstanceOf[JsUndefined]) {
-                        Akka.system.actorSelection("user/TuktuDispatcher") ! dispatchRequest
-                    } else {
+                    val delay = job \ "delay"
+                                        
+                    if (!delay.isInstanceOf[JsUndefined]) {
+                        // a delayed start is defined
+                        val delaySchedule = delay.asInstanceOf[JsString].value
+                        Akka.system.actorSelection("user/TuktuScheduler") ! new DelayedScheduler(id, Duration(delaySchedule).asInstanceOf[FiniteDuration], dispatchRequest)
+                    } else if(!cron.isInstanceOf[JsUndefined]) {
                         // a cron schedule is defined, start a cron job
                         val cronSchedule = cron.asInstanceOf[JsString].value
                         Akka.system.actorSelection("user/TuktuScheduler") ! new CronScheduler(id, cronSchedule, dispatchRequest)
+                    } else {
+                        // start immediately
+                        Akka.system.actorSelection("user/TuktuDispatcher") ! dispatchRequest
                     }
                 }
             }
