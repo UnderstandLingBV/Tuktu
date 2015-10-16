@@ -136,7 +136,11 @@ object utils {
         }
 
         if (toBeParsed)
-            Json.parse(replaced)
+            try
+                Json.parse(replaced)
+            catch {
+                case e: com.fasterxml.jackson.core.JsonParseException => new JsString("%{" + replaced + "}")
+            }
         else
             new JsString(replaced)
     }
