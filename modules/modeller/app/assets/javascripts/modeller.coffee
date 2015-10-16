@@ -659,8 +659,8 @@ checkValidity = (elem) ->
 					$(elem).closest('.form-group').addClass('has-error')
 
 # Bind respective input types to check validity
-$('#preferences input[type="text"]').on('input', -> checkValidity(this))
-$('#preferences input[type="number"][step="1"]').on('input', -> checkValidity(this))
+$('#preferences input[data-type="string"]').on('input', -> checkValidity(this))
+$('#preferences input[data-type="number"]').on('input', -> checkValidity(this))
 $('#preferences textarea[data-type="JsObject"]').on('input', -> checkValidity(this))
 $('#preferences textarea[data-type="any"]').on('input', -> checkValidity(this))
 

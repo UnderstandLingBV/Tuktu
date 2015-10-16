@@ -42,10 +42,9 @@ object utils {
      * Evaluates a Tuktu string to resolve variables in the actual string
      */
     def evaluateTuktuString(str: String, vars: Map[String, Any]) = {
-        if(vars.isEmpty) {
+        if (vars.isEmpty) {
             str
-        }
-        else {
+        } else {
             // determine max length for performance reasons
             val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
             val result = new StringBuilder
@@ -88,18 +87,24 @@ object utils {
     /**
      * Evaluates a Tuktu config to resolve variables in it
      */
-    def evaluateTuktuConfig(str: String, vars: Map[String, Any]): String = {
-        if(vars.isEmpty) {
-            str
+    def evaluateTuktuConfig(str: String, vars: Map[String, Any]): JsValue = {
+        // Check if str is of the form %{...} and hence is JSON that needs to be parsed
+        val toBeParsed = str.startsWith("%{") && str.endsWith("}")
+        val cleaned = if (toBeParsed) str.drop(2).dropRight(1) else str
+
+        // Replace all other Tuktu config strings
+        val replaced = if (vars.isEmpty) {
+            cleaned
         } else {
             // determine max length for performance reasons
             val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
             val result = new StringBuilder
-            // a temporary buffer to determine if we need to replace this
+            // a temporary buffer to determine if we need to replace a Tuktu config string
             val buffer = new StringBuilder
+
             // The prefix length of TuktuStrings "#{".length = 2
             val prefixSize = "#{".length
-            str.foreach { currentChar =>
+            cleaned.foreach { currentChar =>
                 if (buffer.length == 0) {
                     if (currentChar.equals('#')) {
                         buffer.append(currentChar)
@@ -129,6 +134,11 @@ object utils {
             result.append(buffer)
             result.toString
         }
+
+        if (toBeParsed)
+            Json.parse(replaced)
+        else
+            new JsString(replaced)
     }
 
     /**
@@ -150,8 +160,8 @@ object utils {
         new JsArray(arr.value.map(value => evaluateTuktuConfig(value, vars)))
     }
 
-    def evaluateTuktuConfig(str: JsString, vars: Map[String, Any]): JsString = {
-        new JsString(evaluateTuktuConfig(str.value, vars))
+    def evaluateTuktuConfig(str: JsString, vars: Map[String, Any]): JsValue = {
+        evaluateTuktuConfig(str.value, vars)
     }
 
     /**
