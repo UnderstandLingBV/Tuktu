@@ -96,9 +96,9 @@ object Monitor extends Controller {
         val map = Files.list(path).collect(collector)
 
         // Get configs
-        val configs = map.getOrDefault(false, Nil).map(cfg => cfg.getFileName.toString.dropRight(5)).sorted
+        val configs = map.getOrDefault(false, Nil).map(cfg => cfg.getFileName.toString.dropRight(5)).sortBy(_.toLowerCase)
         // Get subfolders
-        val subfolders = map.getOrDefault(true, Nil).map(fldr => fldr.getFileName.toString).sorted
+        val subfolders = map.getOrDefault(true, Nil).map(fldr => fldr.getFileName.toString).sortBy(_.toLowerCase)
 
         // Invoke view
         Ok(views.html.monitor.showConfigs(
