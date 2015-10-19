@@ -1,0 +1,36 @@
+{
+	"name": "Sentence Splitter Processor",
+	"description": "Splits a text up in Sentences, based on a Locale",
+	"class": "tuktu.nlp.processors.SentenceSplitterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the text to split.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "locale",
+					"description": "The locale of the text, e.g. en, nl.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
