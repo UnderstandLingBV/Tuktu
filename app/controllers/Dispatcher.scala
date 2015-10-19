@@ -222,11 +222,8 @@ object Dispatcher {
                     case _ => {
                         // We need to branch, use the broadcasting enumeratee
                         composition compose buildBranch(
-                                pd.next.zipWithIndex.map(elem => {
-                                    val nextProcessorName = elem._1
-                                    val index = elem._2
-                                    buildSequential(nextProcessorName, utils.logEnumeratee(idString), iterationCount + 1, branch + "_" + index)
-                                })
+                            for ((nextId, index) <- pd.next.zipWithIndex) yield
+                                buildSequential(nextId, utils.logEnumeratee(idString), iterationCount + 1, branch + "_" + index)
                         )
                     }
                 }
@@ -244,9 +241,8 @@ object Dispatcher {
             val (enumerator, channel) = Concurrent.broadcast[DataPacket]
             
             // Set up broadcast
-            nextProcessors.foreach(processor => {
+            for (processor <- nextProcessors)
                 enumerator |>> processor &>> Iteratee.ignore
-            })
             
             // Make a broadcasting Enumeratee and sink Iteratee
             Enumeratee.mapM[DataPacket]((data: DataPacket) => Future {
@@ -259,15 +255,11 @@ object Dispatcher {
         // First build all Enumeratees
         (
                 idString,
-                nextIds.zipWithIndex.map(elem => {
-                    val nextId = elem._1
-                    val index = elem._2
-                    
+                for ((nextId, index) <- nextIds.zipWithIndex) yield
                     // Prepend a start packet for the monitor and append a stop packet
                     monitorEnumeratee(idString, index.toString, BeginType) compose
                     buildSequential(nextId, utils.logEnumeratee[DataPacket](idString), 0, index.toString) compose
-                    monitorEnumeratee(idString, index.toString, EndType)
-                }),
+                    monitorEnumeratee(idString, index.toString, EndType),
                 subflows toList
         )
     }

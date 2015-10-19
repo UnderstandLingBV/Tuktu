@@ -1,6 +1,6 @@
 {
 	"name": "Parallel Processor",
-	"description": "Starts parallel processor pipelines, which are merge upon completion.",
+	"description": "Starts parallel processor pipelines, which are merged upon completion.",
 	"class": "tuktu.processors.meta.ParallelProcessor",
 	"parameters": [
 		{
@@ -78,12 +78,13 @@
 												},
 												{
 													"name": "next",
-													"description": "The next processors to be composed.",
+													"description": "The next processors to be composed. Due to current limitations, if this processor is the first one in the processor flow after start with not exactly one successor, its result is used for merging, ie. no branching is supported.",
 													"type": "array",
 													"required": true,
 													"parameters": [
 														{
 															"name": "",
+															"description": "The next processor to be composed. Due to current limitations, if this processor is the first one in the processor flow after start with not exactly one successor, its result is used for merging, ie. no branching is supported.",
 															"type": "string",
 															"required": true
 														}

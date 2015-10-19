@@ -17,6 +17,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import tuktu.api._
 import akka.routing.Broadcast
+import java.nio.file.{ Files, Paths }
 
 /**
  * Invokes a new generator for every DataPacket received
@@ -356,6 +357,74 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         // Apply the merger
         merger.invoke(mergerClass, results).asInstanceOf[DataPacket]
+    })
+
+}
+
+/**
+ * Executes a number of processor-flows in parallel
+ */
+class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+
+    var pipelines: List[JsObject] = _
+    var merger: Method = _
+    var mergerClass: Any = _
+    var include_original: Boolean = _
+    var replacements: Map[String, String] = _
+
+    override def initialize(config: JsObject) {
+        // Set up the merger
+        val mergerProcClazz = Class.forName((config \ "merger").as[String])
+        mergerClass = mergerProcClazz.getConstructor().newInstance()
+        merger = mergerProcClazz.getMethods.find(m => m.getName == "merge").get
+
+        // Should we merge the results into the original DataPacket
+        include_original = (config \ "include_original").asOpt[Boolean].getOrElse(false)
+
+        // Process config
+        pipelines = (config \ "pipelines").as[List[JsObject]]
+
+        // Get meta replacements
+        replacements = (config \ "replacements").asOpt[List[Map[String, String]]].getOrElse(Nil).map(map => map("source") -> map("target")).toMap
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+        // Get first datum to populate configs
+        val datum = data.data.headOption.getOrElse(Map.empty)
+
+        // For each pipeline, build the Enumeratee
+        val actors = pipelines.flatMap(pipeline => {
+            // Get and evaluate config file
+            val path = utils.evaluateTuktuString((pipeline \ "config_path").as[String], datum)
+            val processorMap = {
+                val configContent = Files.readAllBytes(Paths.get(Cache.getAs[String]("configRepo").getOrElse("configs"), path + ".json"))
+                val cfg = utils.evaluateTuktuConfig(Json.parse(configContent).as[JsObject],
+                    replacements.map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)))
+                controllers.Dispatcher.buildProcessorMap((cfg \ "processors").as[List[JsObject]])
+            }
+
+            // At what processor ID to start
+            val start = (pipeline \ "start").as[List[String]]
+
+            // Build the processor pipeline for this generator
+            val (idString, processors, subflows) = controllers.Dispatcher.buildEnums(start, processorMap, None)
+
+            // Set up the actor that will execute this processor
+            for (processor <- processors) yield Akka.system.actorOf(Props(classOf[ParallelProcessorActor], processor))
+        })
+
+        // Send data to actors
+        val futs = for (actor <- actors) yield (actor ? data).asInstanceOf[Future[DataPacket]]
+
+        // Get the results
+        val results = Await.result(Future.sequence(futs), timeout.duration)
+
+        // Apply the merger
+        if (include_original)
+            merger.invoke(mergerClass, data :: results).asInstanceOf[DataPacket]
+        else
+            merger.invoke(mergerClass, results).asInstanceOf[DataPacket]
     })
 
 }
