@@ -39,6 +39,12 @@
 					"default": true
 				},
 				{
+					"name": "timeout",
+					"description" : "The duration in seconds to wait for the results of each individual DataPacket before timing out. If nothing is specified, the global timeout duration of the Tuktu node this flow is running on be used.",
+					"type": "int",
+					"required": false
+				},
+				{
 					"name": "pipelines",
 					"description": "Each entry is defining a pipeline of processors for which an Enumeratee is built. The results of each is then merged using the merger class.",
 					"type": "array",

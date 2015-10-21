@@ -365,8 +365,7 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
  * Executes a number of processor-flows in parallel
  */
 class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultName) {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-
+    var timeout: Timeout = _
     var pipelines: List[JsObject] = _
     var merger: Method = _
     var mergerClass: Any = _
@@ -385,6 +384,12 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
 
         // Send the whole datapacket or in pieces
         send_whole = (config \ "send_whole").asOpt[Boolean].getOrElse(true)
+
+        // Will set timeout, if it is specified, or default to this nodes timeout
+        timeout = (config \ "timeout").asOpt[Int] match {
+            case None    => Timeout(Cache.getAs[Int]("timeout").getOrElse(30) seconds)
+            case Some(t) => Timeout(t seconds)
+        }
 
         // Process config
         pipelines = (config \ "pipelines").as[List[JsObject]]
