@@ -49,6 +49,31 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 /**
+ * Removes specific top-level fields from the each datum
+ */
+class FieldRemoveProcessor(resultName: String) extends BaseProcessor(resultName) {
+    // The list of top-level fields to remove
+    var fields: List[String] = _
+
+    override def initialize(config: JsObject) {
+        fields = (config \ "fields").asOpt[List[String]].getOrElse(Nil)
+    }
+
+    private def remove_helper(_fields: List[String], datum: Map[String, Any]): Map[String, Any] = {
+        _fields match {
+            case Nil => datum
+            case head :: tail => remove_helper(tail, datum - head)
+        }
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(
+            for (datum <- data.data) yield remove_helper(fields, datum)
+        )
+    })
+}
+
+/**
  * Adds a running count integer to data coming in
  */
 class RunningCountProcessor(resultName: String) extends BaseProcessor(resultName) {

@@ -1,0 +1,38 @@
+{
+	"name": "Field Remove Processor",
+	"description": "Removes specific top-level fields from each datum of the data packet.",
+	"class": "tuktu.processors.FieldRemoveProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The fields to be removed.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "field",
+							"description": "The field to be removed.",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}
