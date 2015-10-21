@@ -371,6 +371,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
     var merger: Method = _
     var mergerClass: Any = _
     var include_original: Boolean = _
+    var send_whole: Boolean = _
     var replacements: Map[String, String] = _
 
     override def initialize(config: JsObject) {
@@ -382,6 +383,9 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
         // Should we merge the results into the original DataPacket
         include_original = (config \ "include_original").asOpt[Boolean].getOrElse(false)
 
+        // Send the whole datapacket or in pieces
+        send_whole = (config \ "send_whole").asOpt[Boolean].getOrElse(true)
+
         // Process config
         pipelines = (config \ "pipelines").as[List[JsObject]]
 
@@ -389,12 +393,24 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
         replacements = (config \ "replacements").asOpt[List[Map[String, String]]].getOrElse(Nil).map(map => map("source") -> map("target")).toMap
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        if (send_whole) {
+            // Process and merge DataPacket as a whole
+            processData(data)
+        } else {
+            // Process and merge each datum individually, and concatenate the results into a new DataPacket
+            val futs = for (datum <- data.data) yield Future(processData(new DataPacket(List(datum))))
+            val results = Await.result(Future.sequence(futs), timeout.duration)
+            new DataPacket(results.foldLeft[List[Map[String, Any]]](Nil)((x, y) => x ++ y.data))
+        }
+    })
+
+    def processData(data: DataPacket): DataPacket = {
         // Get first datum to populate configs
         val datum = data.data.headOption.getOrElse(Map.empty)
 
-        // For each pipeline, build the Enumeratee
-        val actors = pipelines.flatMap(pipeline => {
+        // For each pipeline and starting processor, build the Enumeratee and run our data through it
+        val futs = (for (pipeline <- pipelines) yield Future {
             // Get and evaluate config file
             val path = utils.evaluateTuktuString((pipeline \ "config_path").as[String], datum)
             val processorMap = {
@@ -408,23 +424,21 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
             val start = (pipeline \ "start").as[List[String]]
 
             // Build the processor pipeline for this generator
-            val (idString, processors, subflows) = controllers.Dispatcher.buildEnums(start, processorMap, None)
+            val (idString, enumeratees, subflows) = controllers.Dispatcher.buildEnums(start, processorMap, None)
 
-            // Set up the actor that will execute this processor
-            for (processor <- processors) yield Akka.system.actorOf(Props(classOf[ParallelProcessorActor], processor))
-        })
+            // Run our data through each Enumeratee and return the result chunk
+            for (enumeratee <- enumeratees) yield {
+                Enumerator(data).through(enumeratee).run(Iteratee.getChunks)
+            }
+        } flatMap (t => Future.sequence(t))) // Flatten Future[List[Future[T]]] => Future[List[T]]
 
-        // Send data to actors
-        val futs = for (actor <- actors) yield (actor ? data).asInstanceOf[Future[DataPacket]]
-
-        // Get the results
-        val results = Await.result(Future.sequence(futs), timeout.duration)
+        // Await the futures and flatten the results
+        val results = Await.result(Future.sequence(futs), timeout.duration).flatten.flatten
 
         // Apply the merger
         if (include_original)
             merger.invoke(mergerClass, data :: results).asInstanceOf[DataPacket]
         else
             merger.invoke(mergerClass, results).asInstanceOf[DataPacket]
-    })
-
+    }
 }
