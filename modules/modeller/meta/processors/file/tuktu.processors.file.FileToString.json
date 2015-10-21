@@ -1,0 +1,59 @@
+{
+	"name": "File to String Processor",
+	"class": "tuktu.processors.file.FileToString",
+	"description": "Parses a file to String.",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "file_field",
+					"description": "The field that contains the file to be parsed.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "charset",
+					"description": "Charset that will be used to decode the file.",
+					"type": "string",
+					"required": false,
+					"default": "utf-8"
+				},
+				{
+					"name": "drop",
+					"description": "Drop first initial lines.",
+					"type": "int",
+					"required": false,
+					"default": 0
+				},
+				{
+					"name": "drop_right",
+					"description": "Drop last lines",
+					"type": "int",
+					"required": false,
+					"default": 0
+				},
+				{
+					"name": "overwrite",
+					"description": "Overwrite file field with the parsed JSON.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+
+			]
+		}
+	]
+}
