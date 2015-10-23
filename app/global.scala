@@ -83,10 +83,6 @@ object Global extends GlobalSettings {
             clusterNodes
         })
 
-        // Create configs folder if it doesn't exist
-        if (!Files.isDirectory(Paths.get(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs"))))
-            Files.createDirectories(Paths.get(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")))
-
         // Set up monitoring actor
         val monActor = Akka.system.actorOf(Props[DataMonitor], name = "TuktuMonitor")
         monActor ! "init"

@@ -79,6 +79,10 @@ object Monitor extends Controller {
         val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
         val configsPath = Paths.get(configsRepo).toAbsolutePath.normalize
 
+        // Create configs folder if it doesn't exist
+        if (!Files.isDirectory(configsPath))
+            Files.createDirectories(configsPath)
+
         // Get file path from the body
         val body = request.body.asFormUrlEncoded.getOrElse(Map.empty)
         val file = body("path").headOption.getOrElse("")
@@ -109,7 +113,7 @@ object Monitor extends Controller {
             ))
         } else {
             Ok(views.html.monitor.showConfigs(
-                    pathSeq, Buffer.empty, Buffer.empty
+                    Nil, Buffer.empty, Buffer.empty
             ))
         }
     }}
