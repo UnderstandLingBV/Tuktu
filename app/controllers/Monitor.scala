@@ -2,6 +2,7 @@ package controllers
 
 import java.nio.file.{ Path, Paths, Files }
 import scala.collection.JavaConversions.{ seqAsJavaList, asScalaBuffer }
+import scala.collection.mutable.Buffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
@@ -84,7 +85,7 @@ object Monitor extends Controller {
         val filePath = Paths.get(configsRepo, file).toAbsolutePath.normalize
 
         // Check if file path is subpath of configs repo, or default to config repo
-        val path = if (filePath.startsWith(configsPath)) filePath else configsPath
+        val path = if (filePath.startsWith(configsPath) && Files.isDirectory(filePath)) filePath else configsPath
         val relativePath = configsPath.relativize(path)
         val pathSeq = (for (i <- 0 until relativePath.getNameCount) yield relativePath.getName(i).toString).filter(_.nonEmpty)
 
@@ -93,17 +94,24 @@ object Monitor extends Controller {
         new java.util.function.Function[Path, Boolean] {
             def apply(path: Path): Boolean = Files.isDirectory(path)
         })
-        val map = Files.list(path).collect(collector)
 
-        // Get configs
-        val configs = map.getOrDefault(false, Nil).map(cfg => cfg.getFileName.toString.dropRight(5)).sortBy(_.toLowerCase)
-        // Get subfolders
-        val subfolders = map.getOrDefault(true, Nil).map(fldr => fldr.getFileName.toString).sortBy(_.toLowerCase)
-
-        // Invoke view
-        Ok(views.html.monitor.showConfigs(
-                pathSeq, configs, subfolders
-        ))
+        if (Files.isDirectory(path)) {
+            val map = Files.list(path).collect(collector)
+    
+            // Get configs
+            val configs = map.getOrDefault(false, Nil).map(cfg => cfg.getFileName.toString.dropRight(5)).sortBy(_.toLowerCase)
+            // Get subfolders
+            val subfolders = map.getOrDefault(true, Nil).map(fldr => fldr.getFileName.toString).sortBy(_.toLowerCase)
+    
+            // Invoke view
+            Ok(views.html.monitor.showConfigs(
+                    pathSeq, configs, subfolders
+            ))
+        } else {
+            Ok(views.html.monitor.showConfigs(
+                    pathSeq, Buffer.empty, Buffer.empty
+            ))
+        }
     }}
     
     /**

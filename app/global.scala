@@ -32,10 +32,11 @@ import play.api.mvc.Results.InternalServerError
 import play.api.mvc.Results.NotFound
 import tuktu.api.ClusterNode
 import tuktu.api.TuktuGlobal
+import java.nio.file.{ Files, Paths }
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
-    
+
     /**
      * Load module globals
      */
@@ -55,11 +56,11 @@ object Global extends GlobalSettings {
             }
         )
     }
-    
+
     /**
      * Load this on startup. The application is given as parameter
      */
-	override def onStart(app: Application) {
+    override def onStart(app: Application) {
         // Set timeout
         Cache.set("timeout", Play.current.configuration.getInt("tuktu.timeout").getOrElse(5))
         // Set location where config files are and store in cache
@@ -81,25 +82,29 @@ object Global extends GlobalSettings {
             )
             clusterNodes
         })
-        
+
+        // Create configs folder if it doesn't exist
+        if (!Files.isDirectory(Paths.get(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs"))))
+            Files.createDirectories(Paths.get(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")))
+
         // Set up monitoring actor
         val monActor = Akka.system.actorOf(Props[DataMonitor], name = "TuktuMonitor")
         monActor ! "init"
-        
+
         // Set up dispatcher(s), read from config how many
-		val dispActor = Akka.system.actorOf(
-                   SmallestMailboxPool(Play.current.configuration.getInt("tuktu.dispatchers").getOrElse(5))
-                   .props(Props(classOf[Dispatcher], monActor)), name = "TuktuDispatcher")
+        val dispActor = Akka.system.actorOf(
+            SmallestMailboxPool(Play.current.configuration.getInt("tuktu.dispatchers").getOrElse(5))
+                .props(Props(classOf[Dispatcher], monActor)), name = "TuktuDispatcher")
         dispActor ! "init"
-        
+
         // Set up scheduling actor
         val schedActor = Akka.system.actorOf(Props(classOf[TuktuScheduler], dispActor), name = "TuktuScheduler")
         schedActor ! "init"
-        
+
         // Set up health checker
         val healthChecker = Akka.system.actorOf(Props(classOf[HealthMonitor]), name = "TuktuHealthChecker")
         healthChecker ! "init"
-                
+
         // Set up FlowManager
         val flowManagerActor = Akka.system.actorOf(Props(classOf[FlowManagerActor], dispActor), name = "FlowManager")
         flowManagerActor ! "init"
@@ -107,48 +112,47 @@ object Global extends GlobalSettings {
         // Load module globals
         LoadModuleGlobals(app)
         moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStart(app))
-        
+
         // Already start running jobs as defined in the autostart file
         AutoStart
-	}
-    
+    }
+
     /**
-	 * Overwrite internal server error page (code 500)
-	 */
-	override def onError(request: RequestHeader, ex: Throwable) = {
-		Future.successful(InternalServerError(
-	    		Json.obj("error" -> "Internal server error")
-	    ))
-	}
-	
-	/**
-	 * Overwrite not found error page (code 404)
-	 */
-	override def onHandlerNotFound(request: RequestHeader) = {
-		Future.successful(NotFound(
-				Json.obj("error" -> "API endpoint not found")
-		))
-	}
-	
-	/**
-	 * Overwrite bad request error page (route found, but no binding)
-	 */
-	override def onBadRequest(request: RequestHeader, error: String) = {
-		Future.successful(BadRequest(
-		        Json.obj("error" -> "API endpoint not found")
-		))
-	}
-	
-	override def onStop(app: Application) {
-	    // Terminate our dispatchers and monitor
+     * Overwrite internal server error page (code 500)
+     */
+    override def onError(request: RequestHeader, ex: Throwable) = {
+        Future.successful(InternalServerError(
+            Json.obj("error" -> "Internal server error")
+        ))
+    }
+
+    /**
+     * Overwrite not found error page (code 404)
+     */
+    override def onHandlerNotFound(request: RequestHeader) = {
+        Future.successful(NotFound(
+            Json.obj("error" -> "API endpoint not found")
+        ))
+    }
+
+    /**
+     * Overwrite bad request error page (route found, but no binding)
+     */
+    override def onBadRequest(request: RequestHeader, error: String) = {
+        Future.successful(BadRequest(
+            Json.obj("error" -> "API endpoint not found")
+        ))
+    }
+
+    override def onStop(app: Application) {
+        // Terminate our dispatchers and monitor
         Akka.system.actorSelection("user/TuktuMonitor") ! PoisonPill
         Akka.system.actorSelection("user/TuktuScheduler") ! PoisonPill
         Akka.system.actorSelection("user/FlowManager") ! PoisonPill
-        Akka.system.actorSelection("user/TuktuHealthChecker") ! PoisonPill        
+        Akka.system.actorSelection("user/TuktuHealthChecker") ! PoisonPill
         Akka.system.actorSelection("user/TuktuDispatcher") ! Broadcast(PoisonPill)
-        
-        
+
         // Call onStop for module globals too
         moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStop(app))
-	}
+    }
 }
