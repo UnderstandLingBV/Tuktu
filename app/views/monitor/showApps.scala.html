@@ -114,10 +114,31 @@
                         @* Filled with JavaScript below to use user's time zone *@
                     </td>
                     <td class="text-right">
-                        @if(appProps.endTime - appProps.startTime >= 1000) {
-                            @{(appProps.endTime - appProps.startTime) / 1000D} s
+                        @if(appProps.endTime - appProps.startTime >= 60000) {
+                            @{
+                                var seconds = math.floor((appProps.endTime - appProps.startTime) / 1000D).toInt
+                                val values = for (v <- List(86400, 3600, 60)) yield {
+                                    val res = math.floor(seconds / v).toInt
+                                    seconds -= res * v
+                                    res
+                                }
+                                val actual_values = values.dropWhile(_ == 0)
+                                actual_values match {
+                                    case Nil => seconds + " s"
+                                    case head :: tail => head.toString + ":" + tail.map("%02d".format(_) + ":").mkString + seconds.toString + (tail.size match {
+                                        case 0 => " minutes"
+                                        case 1 => " hours"
+                                        case 2 => " days"
+                                        case _ => ""
+                                    })
+                                }
+                            }
                         } else {
-                            @{appProps.endTime - appProps.startTime} ms
+                            @if(appProps.endTime - appProps.startTime >= 1000) {
+                                @{(appProps.endTime - appProps.startTime) / 1000D} s
+                            } else {
+                                @{appProps.endTime - appProps.startTime} ms
+                            }
                         }
                     </td>
                 </tr>
@@ -148,24 +169,58 @@
     }
 
     <script type="text/javascript">
+        var monitorTimeOffset = @System.currentTimeMillis - Date.now();
         $('td.javascript-date-timestamp').each(function(i, elem) {
             elem.innerHTML = new Date(parseInt(elem.title, 10));
         });
         function refresh() {
+            function durationToString(s) {
+                var seconds = s;
+                var days = Math.floor(seconds / 86400);
+                seconds = seconds - days * 86400;
+                var hours = Math.floor(seconds / 3600);
+                seconds = seconds - hours * 3600;
+                var minutes = Math.floor(seconds / 60);
+                seconds = seconds - minutes * 60;
+
+                var result = '';
+                var unit = '';
+                if (days > 0) {
+                    result += days + ':';
+                    unit = 'days';
+                }
+                if (hours > 0) {
+                    if (unit === '') unit = 'hours';
+                    if (result === '') result += hours + ':';
+                    else if (hours < 10) result += '0' + hours + ':'
+                    else result += hours + ':';
+                }
+                if (minutes > 0) {
+                    if (unit === '') unit = 'minutes';
+                    if (result === '') result += minutes + ':';
+                    else if (minutes < 10) result += '0' + minutes + ':'
+                    else result += minutes + ':';
+                }
+                if (unit === '') unit = 'seconds';
+                if (result === '') return Math.max(0, seconds) + ' ' + unit
+                else if (seconds < 10) return result + '0' + seconds + ' ' + unit
+                else return result + seconds + ' ' + unit
+            }
             $('td.javascript-date-timestamp-duration').each(function(i, elem) {
                 var now = new Date;
                 var then = new Date(parseInt(elem.title, 10));
                 elem.innerHTML = then;
-                elem.innerHTML += " (" + Math.max(0, Math.floor((now - then) / 1000)) + " seconds)";
+                var seconds = Math.floor((now - then + monitorTimeOffset) / 1000);
+                elem.innerHTML += " (" + durationToString(seconds) + ")";
             });
             window.setTimeout(refresh, 1000);
         }
         refresh();
 
         @if(messages.nonEmpty) {
-            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 1000);
+            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 3000);
         } else {
-            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 10000);
+            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 30000);
         }
     </script>
 }
