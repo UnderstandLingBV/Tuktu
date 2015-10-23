@@ -99,18 +99,10 @@ class ModellerGlobal() extends TuktuGlobal() {
      * Load this on startup. The application is given as parameter
      */
     override def onStart(app: Application) {
-        val metaActor = Akka.system.actorOf(Props(new Actor {
-            def receive = {
-                case "cache" ⇒ setCache
-            }
-        }))
-
         setCache
         // Load meta info, update every 5 minutes
-        Akka.system.scheduler.schedule(
-            5 minutes,
-            5 minutes,
-            metaActor,
-            "cache")
+        Akka.system.scheduler.schedule(5 minutes, 5 minutes) {
+            setCache
+        }
     }
 }
