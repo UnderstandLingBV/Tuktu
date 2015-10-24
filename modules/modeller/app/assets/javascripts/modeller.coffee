@@ -619,8 +619,8 @@ $('#preferences button[name="DeleteArrayElement"]').on('click', ->
 )
 # Highlight which element(s) will be deleted
 $('#preferences button[name="DeleteArrayElement"]').hover(
-	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '#f2dede'),
-	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '')
+	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '#f2dede').find('div[data-depth]').css('background-color', '#f2dede'),
+	-> $(this).closest('div[data-arraytype="value"]').css('background-color', '').find('div[data-depth]').css('background-color', '')
 )
 
 # Takes a DOM element and handles validity of its input using has-error and has-warning css classes

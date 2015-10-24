@@ -1,9 +1,0 @@
-.tooltip-inner {
-	max-width: 300px;
-	text-align: left;
-	white-space: pre-wrap;
-}
-
-div[data-arraytype="value"] {
-	padding-left: 15px;
-}
