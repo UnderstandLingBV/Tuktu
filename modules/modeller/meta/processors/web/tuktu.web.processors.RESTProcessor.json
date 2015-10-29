@@ -25,13 +25,6 @@
 					"required": true
 				},
 				{
-					"name": "port",
-					"description": "The port number.",
-					"type": "int",
-					"required": false,
-					"default": 80
-				},
-				{
 					"name": "http_method",
 					"description": "The HTTP method to use (post/put/delete/get).",
 					"type": "string",

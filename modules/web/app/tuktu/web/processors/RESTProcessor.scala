@@ -21,14 +21,12 @@ class RESTProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     var url = ""
-    var port = 9200
     var httpMethod = ""
     var requestBody: Option[JsValue] = None
 
     override def initialize(config: JsObject) {
         // Get URL, port and REST options        
         url = (config \ "url").as[String]
-        port = (config \ "port").asOpt[Int].getOrElse(80)
         httpMethod = (config \ "http_method").asOpt[String].getOrElse("get")
         requestBody = (config \ "body").asOpt[JsValue]
     }
@@ -37,7 +35,7 @@ class RESTProcessor(resultName: String) extends BaseProcessor(resultName) {
         // Get all future responses 
         val responses = Future.sequence(for (datum <- data.data) yield {
             // Build URL
-            val requestUrl = tuktu.api.utils.evaluateTuktuString(url, datum) + ":" + port
+            val requestUrl = tuktu.api.utils.evaluateTuktuString(url, datum)
             // Get web service
             val ws = WS.url(requestUrl)
 
