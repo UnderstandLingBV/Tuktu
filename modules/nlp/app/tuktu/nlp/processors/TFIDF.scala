@@ -49,7 +49,7 @@ class TFIDFApplyProcessor(resultName: String) extends BaseMLApplyProcessor[TFIDF
         for (datum <- data) yield
             datum + (resultName -> {
                 // Check field type
-                datum match {
+                datum(field) match {
                     case dtm: Seq[String] => model.computeScores(dtm.toList)
                     case dtm: Any => model.computeScores(dtm.toString)
                 }
