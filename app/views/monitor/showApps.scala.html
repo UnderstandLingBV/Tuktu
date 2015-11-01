@@ -125,7 +125,7 @@
                                 val actual_values = values.dropWhile(_ == 0)
                                 actual_values match {
                                     case Nil => seconds + " s"
-                                    case head :: tail => head.toString + ":" + tail.map("%02d".format(_) + ":").mkString + seconds.toString + (tail.size match {
+                                    case head :: tail => head.toString + ":" + tail.map("%02d".format(_) + ":").mkString + "%02d".format(seconds) + (tail.size match {
                                         case 0 => " minutes"
                                         case 1 => " hours"
                                         case 2 => " days"
