@@ -25,7 +25,7 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
     var modelName = ""
     var waitForStore = false
     var destroyOnEOF = true
-    var toBeDestroyed = collection.mutable.Set.empty[String]
+    val toBeDestroyed = collection.mutable.Set.empty[String]
 
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
@@ -87,7 +87,7 @@ abstract class BaseMLApplyProcessor[BM <: BaseModel](resultName: String) extends
 
     var modelName = ""
     var destroyOnEOF = true
-    var toBeDestroyed = collection.mutable.Set.empty[String]
+    val toBeDestroyed = collection.mutable.Set.empty[String]
 
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
@@ -134,7 +134,7 @@ class MLSerializeProcessor[BM <: BaseModel](resultName: String) extends BaseProc
     var fileName = ""
     var destroyOnEOF = true
     var onlyOnce = true
-    var isSerialized = false
+    val serialized = collection.mutable.Set.empty[String]
 
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
@@ -144,17 +144,20 @@ class MLSerializeProcessor[BM <: BaseModel](resultName: String) extends BaseProc
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        // Get name of the model
+        val newModelName = utils.evaluateTuktuString(modelName, data.data.headOption.getOrElse(Map.empty))
+
         // Check if we actually need to serialize
-        if (!onlyOnce || !isSerialized) {
+        if (!onlyOnce || !serialized.contains(newModelName)) {
             // Ask model repository for this model
-            val modelFut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new GetModel(modelName)
+            val modelFut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new GetModel(newModelName)
             // We cannot but wait here
             val model = Await.result(modelFut, timeout.duration).asInstanceOf[Option[BM]]
 
             // Model cannot be null
             model match {
                 case Some(m) => {
-                    isSerialized = true
+                    serialized += newModelName
                     m.serialize(fileName)
                 }
                 case None => {}
@@ -162,12 +165,11 @@ class MLSerializeProcessor[BM <: BaseModel](resultName: String) extends BaseProc
         }
 
         data
-    }) compose Enumeratee.onEOF(() => destroyOnEOF match {
-        case true => {
+    }) compose Enumeratee.onEOF(() => if (destroyOnEOF) {
+        for (modelName <- serialized) {
             // Send model repository the signal to clean up the model
             Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new DestroyModel(modelName)
         }
-        case _ => {}
     })
 }
 
