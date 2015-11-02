@@ -50,7 +50,7 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
             }
             catch {
                 case e: Throwable => {
-                    Logger.error("POSTaggerProcessor", e)
+                    Logger.warn("Error trying to POSTag tokens in language " + language + ", are you sure you support this language? Datum will be filtered out, rest should work normally.")
                     Map.empty[String, Any]
                 }
             }
