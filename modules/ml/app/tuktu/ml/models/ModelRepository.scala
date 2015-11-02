@@ -7,6 +7,9 @@ import akka.actor.Actor
 case class GetModel (
         name: String
 )
+case class ExistsModel (
+        name: String
+)
 case class UpsertModel (
         name: String,
         model: BaseModel,
@@ -34,6 +37,10 @@ class ModelRepository() extends Actor with ActorLogging {
                 case true => sender ! Some(modelRepository(gm.name))
                 case false => sender ! None
             }
+        }
+        case em: ExistsModel => {
+            // Check if a model with the given name was already initialized
+            sender ! modelRepository.contains(em.name)
         }
         case um: UpsertModel => {
             // Insert or overwrite the model

@@ -13,11 +13,8 @@ import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
-import tuktu.ml.models.GetModel
 import scala.concurrent.Await
-import tuktu.ml.models.BaseModel
-import tuktu.ml.models.UpsertModel
-import tuktu.ml.models.DestroyModel
+import tuktu.ml.models.{ BaseModel, GetModel, ExistsModel, UpsertModel, DestroyModel }
 
 /**
  * Abstract class that trains an ML model, supervised or unsupervised
@@ -28,6 +25,7 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
     var modelName = ""
     var waitForStore = false
     var destroyOnEOF = true
+    var toBeDestroyed = collection.mutable.Set.empty[String]
 
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
@@ -36,15 +34,19 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+        // Get name of the model and line it up for destruction
+        val newModelName = utils.evaluateTuktuString(modelName, data.data.headOption.getOrElse(Map.empty))
+        if (destroyOnEOF) toBeDestroyed += newModelName
+
         // Ask model repository for this model
-        val modelFut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new GetModel(modelName)
+        val modelFut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new GetModel(newModelName)
         // We cannot but wait here
         val model = Await.result(modelFut, timeout.duration).asInstanceOf[Option[BM]]
         val modelInstance = model match {
             case None => {
                 // No model was found, create it and send it to our repository
                 val model = instantiate
-                Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, model, false)
+                Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(newModelName, model, false)
 
                 model
             }
@@ -56,17 +58,14 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
 
         // Write back to our model repository
         if (waitForStore) {
-            val fut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new UpsertModel(modelName, newModel, true)
+            val fut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new UpsertModel(newModelName, newModel, true)
             Await.result(fut, timeout.duration)
-        } else Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, newModel, false)
+        } else Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(newModelName, newModel, false)
 
         data
-    }) compose Enumeratee.onEOF(() => destroyOnEOF match {
-        case true => {
-            // Send model repository the signal to clean up the model
-            Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new DestroyModel(modelName)
-        }
-        case _ => {}
+    }) compose Enumeratee.onEOF(() => for (modelName <- toBeDestroyed) {
+        // Send model repository the signal to clean up the model
+        Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new DestroyModel(modelName)
     })
 
     /**
@@ -88,6 +87,7 @@ abstract class BaseMLApplyProcessor[BM <: BaseModel](resultName: String) extends
 
     var modelName = ""
     var destroyOnEOF = true
+    var toBeDestroyed = collection.mutable.Set.empty[String]
 
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
@@ -95,22 +95,27 @@ abstract class BaseMLApplyProcessor[BM <: BaseModel](resultName: String) extends
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        // Get name of the model
+        val newModelName = utils.evaluateTuktuString(modelName, data.data.headOption.getOrElse(Map.empty))
+
         // Ask model repository for this model
-        val modelFut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new GetModel(modelName)
+        val modelFut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new GetModel(newModelName)
         // We cannot but wait here
         val model = Await.result(modelFut, timeout.duration).asInstanceOf[Option[BM]]
 
         // Model cannot be null
         model match {
-            case Some(m) => new DataPacket(applyModel(resultName, data.data, m))
-            case None    => data
+            case Some(m) => {
+                // New Model Name will be used, so line it up for destruction
+                if (destroyOnEOF) toBeDestroyed += newModelName
+                // Apply model
+                new DataPacket(applyModel(resultName, data.data, m))
+            }
+            case None => data
         }
-    }) compose Enumeratee.onEOF(() => destroyOnEOF match {
-        case true => {
-            // Send model repository the signal to clean up the model
-            Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new DestroyModel(modelName)
-        }
-        case _ => {}
+    }) compose Enumeratee.onEOF(() => for (modelName <- toBeDestroyed) {
+        // Send model repository the signal to clean up the model
+        Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new DestroyModel(modelName)
     })
 
     /**
@@ -124,20 +129,20 @@ abstract class BaseMLApplyProcessor[BM <: BaseModel](resultName: String) extends
  */
 class MLSerializeProcessor[BM <: BaseModel](resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    
+
     var modelName = ""
     var fileName = ""
     var destroyOnEOF = true
     var onlyOnce = true
     var isSerialized = false
-    
+
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
         fileName = (config \ "file_name").as[String]
         destroyOnEOF = (config \ "destroy_on_eof").asOpt[Boolean].getOrElse(true)
         onlyOnce = (config \ "only_once").asOpt[Boolean].getOrElse(true)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Check if we actually need to serialize
         if (!onlyOnce || !isSerialized) {
@@ -145,17 +150,17 @@ class MLSerializeProcessor[BM <: BaseModel](resultName: String) extends BaseProc
             val modelFut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new GetModel(modelName)
             // We cannot but wait here
             val model = Await.result(modelFut, timeout.duration).asInstanceOf[Option[BM]]
-    
+
             // Model cannot be null
             model match {
                 case Some(m) => {
                     isSerialized = true
                     m.serialize(fileName)
                 }
-                case None    => {}
+                case None => {}
             }
         }
-        
+
         data
     }) compose Enumeratee.onEOF(() => destroyOnEOF match {
         case true => {
@@ -171,39 +176,51 @@ class MLSerializeProcessor[BM <: BaseModel](resultName: String) extends BaseProc
  */
 abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    
+
     var modelName = ""
     var fileName = ""
     var onlyOnce = true
-    var isDeserialized = false
     var waitForLoad = false
-    
+
     override def initialize(config: JsObject) {
         modelName = (config \ "model_name").as[String]
         fileName = (config \ "file_name").as[String]
         onlyOnce = (config \ "only_once").asOpt[Boolean].getOrElse(true)
         waitForLoad = (config \ "wait_for_load").asOpt[Boolean].getOrElse(false)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Check if we actually need to deserialize
-        if ((!onlyOnce || !isDeserialized) && !data.data.isEmpty) {
+        if (data.data.nonEmpty) {
             // Get name of the model
-            val newFileName = utils.evaluateTuktuString(fileName, data.data.head)
             val newModelName = utils.evaluateTuktuString(modelName, data.data.head)
-            
-            // Deserialize the model
-            val model = deserializeModel(newFileName)
-            
-            // Send it to the repository
-            if (waitForLoad)
-                Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new UpsertModel(modelName, model, true)
-            else
-                Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(modelName, model, false)
+
+            // Check if we need to deserialize this model
+            val toDeserialize = !onlyOnce || {
+                // Check if model is already deserialized
+                val isDeserialized = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new ExistsModel(newModelName)
+                !Await.result(isDeserialized, timeout.duration).asInstanceOf[Boolean]
+            }
+
+            if (toDeserialize) {
+                // Get file name of the model
+                val newFileName = utils.evaluateTuktuString(fileName, data.data.head)
+
+                // Deserialize the model
+                val model = deserializeModel(newFileName)
+
+                // Send it to the repository
+                if (waitForLoad) {
+                    val fut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new UpsertModel(newModelName, model, true)
+                    // Wait for response
+                    Await.result(fut, timeout.duration)
+                } else
+                    Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(newModelName, model, false)
+            }
         }
-        
+
         data
     })
-    
+
     def deserializeModel(filename: String): BM = ???
 }
