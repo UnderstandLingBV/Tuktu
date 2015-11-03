@@ -70,6 +70,8 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                         channel.push(new DataPacket(res))
                     else
                         res.foreach(row => channel.push(new DataPacket(List(row))))
+                        
+                    self ! new StopPacket()
                 }
                 case _ => self ! new StopPacket()
             }
