@@ -96,7 +96,7 @@ class DataMonitor extends Actor with ActorLogging {
                         }
                     }
                 }
-                case _ => { println("Unknown status: " + amp.status) }
+                case _ => { Logger.warn("Unknown status: " + amp.status) }
             }
 
             // Forward packet to all listeners

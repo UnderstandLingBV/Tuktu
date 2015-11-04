@@ -21,6 +21,7 @@ import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsValue
 import tuktu.api._
+import play.api.Logger
 
 /**
  * Async 'special' generator that just waits for DataPackets to come in and processes them
@@ -124,7 +125,7 @@ class ConcurrentStreamGenerator(resultName: String, processors: List[Enumeratee[
     
     // Logging enumeratee
     def logEnumeratee[T] = Enumeratee.recover[T] {
-        case (e, input) => System.err.println("Synced generator error happened on: " + input, e)
+        case (e, input) => Logger.error("Synced generator error happened on: " + input, e)
     }
     
     // Every processor but the first gets treated as asynchronous
@@ -192,7 +193,7 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
     
     // Logging enumeratee
     def logEnumeratee[T] = Enumeratee.recover[T] {
-        case (e, input) => System.err.println("Synced generator error happened on: " + input, e)
+        case (e, input) => Logger.error("Synced generator error happened on: " + input, e)
     }
     
     // Every processor but the first gets treated as asynchronous

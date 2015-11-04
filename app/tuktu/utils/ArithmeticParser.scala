@@ -1,5 +1,7 @@
 package tuktu.utils
 
+import play.api.Logger
+
 /**
  * An ArithmicParser.
  *
@@ -12,7 +14,7 @@ object ArithmeticParser extends scala.util.parsing.combinator.RegexParsers {
             case Success(result, _) =>
                 Some(result)
             case other =>
-                println(other)
+                Logger.warn("Received unexpected result in ArithmeticParser: " + other)
                 None
         }
     }

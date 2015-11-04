@@ -19,7 +19,7 @@ lazy val modellerDependencies = Seq(
 lazy val apiDependencies = Seq(
     cache,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
-    "org.apache.hadoop" % "hadoop-client" % "2.6.0",
+    "org.apache.hadoop" % "hadoop-client" % "2.6.0" excludeAll(ExclusionRule(organization = "org.slf4j")),
     "com.netaporter" %% "scala-uri" % "0.4.7"
 )
 

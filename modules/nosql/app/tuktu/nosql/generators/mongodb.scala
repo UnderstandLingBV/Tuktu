@@ -21,6 +21,7 @@ import tuktu.nosql.util.MongoSettings
 import reactivemongo.api.QueryOpts
 import play.api.libs.json.Json
 import scala.concurrent.Future
+import play.api.Logger
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -77,7 +78,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             }
             resultFuture.onFailure {
                 case e: Throwable => {
-                    e.printStackTrace
+                    Logger.error("Error executing MongoDB Query",e)                    
                     self ! new StopPacket
                 }
             }

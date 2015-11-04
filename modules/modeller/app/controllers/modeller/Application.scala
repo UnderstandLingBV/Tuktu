@@ -5,6 +5,7 @@ import play.api.mvc._
 import play.api.cache.Cache
 import play.api.Play.current
 import play.api.libs.json.{ Json, JsObject, JsValue }
+import play.api.Logger
 
 object Application extends Controller {
     def index(file: String) = Action { implicit request =>
@@ -46,7 +47,7 @@ object Application extends Controller {
                         Ok
                     } catch {
                         case e: Throwable => {
-                            e.printStackTrace
+                            Logger.error("Can't write to config",e)                            
                             InternalServerError
                         }
                     }

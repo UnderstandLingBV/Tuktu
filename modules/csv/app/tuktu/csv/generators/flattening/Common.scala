@@ -7,6 +7,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsArray
 import au.com.bytecode.opencsv.CSVReader
+import play.api.Logger
 
 case class ParseNode(
         name: String,
@@ -56,7 +57,7 @@ object Common {
                 clazz.getConstructor(classOf[JsValue]).newInstance(locatorParams)
             } catch {
                 case e: java.lang.reflect.InvocationTargetException => {
-                    e.getTargetException.printStackTrace()
+                    Logger.error("Couldn't get class", e.getTargetException)                    
                     null
                 }
             }

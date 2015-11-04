@@ -15,6 +15,7 @@ import akka.pattern.ask
 import tuktu.api._
 import scala.concurrent.duration.Duration
 import java.util.concurrent.atomic.AtomicInteger
+import play.api.Logger
 
 /**
  * Just generates dummy strings every tick
@@ -69,7 +70,7 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
                 }
             }
         }
-        case x => println("Dummy generator got unexpected packet " + x + "\r\n")
+        case x => Logger.error("Dummy generator got unexpected packet " + x + "\r\n")
     }
 }
 
@@ -115,7 +116,7 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
                 case num: Int => channel.push(new DataPacket(List(Map(resultName -> num))))
             }
         }
-        case x => println("Dummy generator got unexpected packet " + x + "\r\n")
+        case x => Logger.error("Dummy generator got unexpected packet " + x + "\r\n")
     }
 }
 
