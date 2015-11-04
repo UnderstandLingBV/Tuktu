@@ -23,18 +23,58 @@ import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration.DurationInt
 import play.api.libs.json.JsValue
+import akka.actor.PoisonPill
+import akka.actor.Cancellable
 
 case class ResultPacket()
+case class CheckPacket(sender: ActorRef, iteration: Int)
 
 /**
  * Actor that will collect data packets
  */
 class BaseFlowTesterCollector() extends Actor with ActorLogging {
     val buffer = collection.mutable.ListBuffer.empty[DataPacket]
+    var done = false
+    var schedulerActor: Cancellable = null
+    
     def receive() = {
         case dp: DataPacket => buffer += dp
-        case sp: StopPacket => {}
-        case rp: ResultPacket => {}
+        case sp: StopPacket => done = true
+        case rp: ResultPacket => {
+            if (done) {
+                sender ! buffer
+                self ! PoisonPill
+            }
+            else {
+                schedulerActor = Akka.system.scheduler.schedule(
+                    1000 milliseconds,
+                    1000 milliseconds,
+                    self,
+                    new CheckPacket(sender, 0))
+            }
+        }
+        case cp: CheckPacket => {
+            schedulerActor.cancel
+            if (done) {
+                cp.sender ! buffer
+                self ! PoisonPill
+            }
+            else {
+                if (cp.iteration == 3) {
+                    // Tried too long, fail
+                    cp.sender ! null
+                    self ! PoisonPill
+                }
+                else {
+                    // Try again
+                    schedulerActor = Akka.system.scheduler.schedule(
+                        1000 milliseconds,
+                        1000 milliseconds,
+                        self,
+                        new CheckPacket(cp.sender, cp.iteration + 1))
+                }
+            }
+        }
     }
 }
 
@@ -111,20 +151,24 @@ class BaseFlowTester(timeoutSeconds: Int = 5) extends TestKit(ActorSystem("test"
         
         // Inspect the results
         results.map(obtainedOutput => {
-            // Compare data packet by data packet
-            obtainedOutput.zip(outputs).forall(packetLists => {
-                val obtainedList = packetLists._1
-                val expectedList = packetLists._2
-                
-                // Inspect the next level
-                obtainedList.zip(expectedList).forall(packets => {
-                    val obtained = packets._1
-                    val expected = packets._2
+            if (obtainedOutput == null)
+                false
+            else {
+                // Compare data packet by data packet
+                obtainedOutput.zip(outputs).forall(packetLists => {
+                    val obtainedList = packetLists._1
+                    val expectedList = packetLists._2
                     
-                    // Inspect the data inside the packets
-                    obtained.data.zip(expected.data).forall(data => inspectMaps(data._1, data._2))
+                    // Inspect the next level
+                    obtainedList.zip(expectedList).forall(packets => {
+                        val obtained = packets._1
+                        val expected = packets._2
+                        
+                        // Inspect the data inside the packets
+                        obtained.data.zip(expected.data).forall(data => inspectMaps(data._1, data._2))
+                    })
                 })
-            })
+            }
         })
     }
     
