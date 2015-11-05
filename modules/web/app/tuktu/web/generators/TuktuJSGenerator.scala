@@ -16,6 +16,7 @@ import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsValue
 import tuktu.api._
+import play.api.Logger
 
 /**
  * Gets a webpage's content based on REST request
@@ -71,7 +72,7 @@ class TuktuJSGenerator(
             // Remove ourselves from the cache
             Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
                 .getOrElse(collection.mutable.Map[String, ActorRef]()) -= referer
-            println("Removing from generator: " + referer)
+            Logger.info("Removing from generator: " + referer)
             
             // Send message to the monitor actor
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(

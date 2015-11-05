@@ -21,6 +21,7 @@ import akka.actor.ActorLogging
 import akka.actor.Actor
 import play.api.cache.Cache
 import java.lang.reflect.InvocationTargetException
+import play.api.Logger
 
 case class ResultDataPacket(
         packet: DataPacket
@@ -175,7 +176,7 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                             processMethod.invoke(iClazz, combinedResult.flatten.toList).asInstanceOf[List[Map[String, Any]]]
                     } catch {
                         case e: Exception => {
-                            e.printStackTrace()
+                            Logger.error("Unknown error occured",e)
                             null
                         }
                     }

@@ -20,6 +20,7 @@ import tuktu.api._
 import java.text.SimpleDateFormat
 import tuktu.nosql.util.stringHandler
 import tuktu.api.utils.evaluateTuktuString
+import play.api.Logger
 
 /**
  * Filters specific fields from the data tuple
@@ -463,7 +464,7 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
 	                    recursiveFlattener(datum(fieldName).asInstanceOf[Map[String, Any]], fieldName, separator)
 	                } catch {
 	                    case e: Exception => {
-	                        e.printStackTrace()
+	                        Logger.error("Unknown error occured",e)
 	                        Map[String, Any]()
 	                    }
 	                }

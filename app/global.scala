@@ -33,6 +33,7 @@ import play.api.mvc.Results.NotFound
 import tuktu.api.ClusterNode
 import tuktu.api.TuktuGlobal
 import java.nio.file.{ Files, Paths }
+import play.api.Logger
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -50,7 +51,7 @@ object Global extends GlobalSettings {
                 moduleGlobals += moduleGlobal.newInstance().asInstanceOf[TuktuGlobal]
             } catch {
                 case e: Exception => {
-                    System.err.println("Failed loading Global of " + moduleGlobal.getName)
+                    Logger.error("Failed loading Global of " + moduleGlobal.getName,e)
                     e.getMessage
                 }
             }
