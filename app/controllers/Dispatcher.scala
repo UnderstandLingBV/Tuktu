@@ -70,7 +70,8 @@ object Dispatcher {
     def buildEnums (
             nextIds: List[String],
             processorMap: Map[String, ProcessorDefinition],
-            genActor: Option[ActorRef]
+            genActor: Option[ActorRef],
+            configName: String
     ): (String, List[Enumeratee[DataPacket, DataPacket]], List[ActorRef]) = {
         // Get log level
         val logLevel = Cache.getAs[String]("logLevel").getOrElse("none")
@@ -113,7 +114,7 @@ object Dispatcher {
                                     pd.next.map(processorName => {
                                         // Create the new lines of processors
                                         monitorEnumeratee(subIdString, branch, BeginType) compose
-                                        buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1, branch) compose
+                                        buildSequential(processorName, utils.logEnumeratee(idString, configName), iterationCount + 1, branch) compose
                                         monitorEnumeratee(subIdString, branch, EndType)
                                     }),
                                     genActor
@@ -125,7 +126,7 @@ object Dispatcher {
                                         pd.next.map(processorName => {
                                             // Create the new lines of processors
                                             monitorEnumeratee(subIdString, branch, BeginType) compose
-                                            buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1, branch) compose
+                                            buildSequential(processorName, utils.logEnumeratee(idString, configName), iterationCount + 1, branch) compose
                                             monitorEnumeratee(subIdString, branch, EndType)
                                         }),
                                         {
@@ -142,7 +143,7 @@ object Dispatcher {
                                     pd.next.map(processorName => {
                                         // Create the new lines of processors
                                         monitorEnumeratee(subIdString, branch, BeginType) compose
-                                        buildSequential(processorName, utils.logEnumeratee(idString), iterationCount + 1, branch) compose
+                                        buildSequential(processorName, utils.logEnumeratee(idString, configName, processorName), iterationCount + 1, branch) compose
                                         monitorEnumeratee(subIdString, branch, EndType)
                                     }),
                                     None
@@ -182,11 +183,11 @@ object Dispatcher {
                         processorMonitor(idString, pd.id, BeginType) compose
                         procEnum compose
                         processorMonitor(idString, pd.id, EndType) compose
-                        utils.logEnumeratee(idString)
+                        utils.logEnumeratee(idString, configName)
                 } else {
                     accum compose
                         procEnum compose
-                        utils.logEnumeratee(idString)
+                        utils.logEnumeratee(idString, configName)
                 }
             }
             else {
@@ -213,17 +214,17 @@ object Dispatcher {
                 pd.next match {
                     case List() => {
                         // No processors left, return accum
-                        composition compose utils.logEnumeratee(idString)
+                        composition compose utils.logEnumeratee(idString, configName)
                     }
                     case List(id) => {
                         // No branching, just recurse
-                        buildSequential(id, composition compose utils.logEnumeratee(idString), iterationCount + 1, branch)
+                        buildSequential(id, composition compose utils.logEnumeratee(idString, configName, id), iterationCount + 1, branch)
                     }
                     case _ => {
                         // We need to branch, use the broadcasting enumeratee
                         composition compose buildBranch(
                             for ((nextId, index) <- pd.next.zipWithIndex) yield
-                                buildSequential(nextId, utils.logEnumeratee(idString), iterationCount + 1, branch + "_" + index)
+                                buildSequential(nextId, utils.logEnumeratee(idString, configName), iterationCount + 1, branch + "_" + index)
                         )
                     }
                 }
@@ -258,7 +259,7 @@ object Dispatcher {
                 for ((nextId, index) <- nextIds.zipWithIndex) yield
                     // Prepend a start packet for the monitor and append a stop packet
                     monitorEnumeratee(idString, index.toString, BeginType) compose
-                    buildSequential(nextId, utils.logEnumeratee[DataPacket](idString), 0, index.toString) compose
+                    buildSequential(nextId, utils.logEnumeratee[DataPacket](idString, configName, nextId), 0, index.toString) compose
                     monitorEnumeratee(idString, index.toString, EndType),
                 subflows toList
         )
@@ -378,7 +379,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     } else {
                         if (!startRemotely) {
                             // Build the processor pipeline for this generator
-                            val (idString, processorEnumeratees, subflows) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor)
+                            val (idString, processorEnumeratees, subflows) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor, dr.configName)
 
                             // Set up the generator
                             val clazz = Class.forName(generatorName)
