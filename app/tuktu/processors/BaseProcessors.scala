@@ -55,23 +55,20 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
 class FieldRemoveProcessor(resultName: String) extends BaseProcessor(resultName) {
     // The list of top-level fields to remove
     var fields: List[String] = _
+    var ignoreEmptyDatums = false
+    var ignoreEmptyDataPackets = false
 
     override def initialize(config: JsObject) {
         fields = (config \ "fields").asOpt[List[String]].getOrElse(Nil)
+        ignoreEmptyDatums = (config \ "ignore_empty_datums").asOpt[Boolean].getOrElse(false)
+        ignoreEmptyDataPackets = (config \ "ignore_empty_datapackets").asOpt[Boolean].getOrElse(false)
     }
 
-    private def remove_helper(_fields: List[String], datum: Map[String, Any]): Map[String, Any] = {
-        _fields match {
-            case Nil => datum
-            case head :: tail => remove_helper(tail, datum - head)
-        }
-    }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         new DataPacket(
-            for (datum <- data.data) yield remove_helper(fields, datum)
+            (for (datum <- data.data) yield datum -- fields).filterNot(ignoreEmptyDatums && _.isEmpty)
         )
-    })
+    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmptyDataPackets && data.data.isEmpty)
 }
 
 /**

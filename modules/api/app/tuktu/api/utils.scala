@@ -19,14 +19,16 @@ object utils {
      * Enumeratee for error-logging and handling
      * @param idString A string used to identify the flow this logEnumeratee is part of. A mapping exists
      * within the monitor that maps this ID to a generator name.
+     * @param configName The name of the config (if known)
+     * @param processorName The name of the processor (if known)
      */
-    def logEnumeratee[T](idString: String) = Enumeratee.recover[T] {
+    def logEnumeratee[T](idString: String, configName: String = "Unknown", processorName:String = "Unknown") = Enumeratee.recover[T] {
         case (e, input) => {
             // Notify the monitor so it can kill our flow
             Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorNotificationPacket(idString)
 
             // Log the error
-            Logger.error("Error happened on: " + input, e)
+            Logger.error(s"Error happened at flow:$configName processor: $processorName id:$idString on: " + input, e)
         }
     }
 

@@ -79,7 +79,7 @@ class DataMonitor extends Actor with ActorLogging {
                             }
                         }
                         case None => {
-                            Logger.error("DataMonitor received 'done' for unknown app: " + amp.getName)
+                            Logger.warn("DataMonitor received 'done' for unknown app: " + amp.getName)
                         }
                     }
                 }
@@ -92,7 +92,7 @@ class DataMonitor extends Actor with ActorLogging {
                             appMonitor.expire(amp.getParentName)
                         }
                         case None => {
-                            Logger.error("DataMonitor received 'kill' for unknown app: " + amp.getName)
+                            Logger.warn("DataMonitor received 'kill' for unknown app: " + amp.getName)
                         }
                     }
                 }
@@ -120,7 +120,7 @@ class DataMonitor extends Actor with ActorLogging {
                     count(pmp.typeOf) += 1
                 }
                 case None => {
-                    Logger.error("DataMonitor received ProcessorMonitorPacket for unkown app with uuid: " + pmp.uuid)
+                    Logger.warn("DataMonitor received ProcessorMonitorPacket for unkown app with uuid: " + pmp.uuid)
                 }
             }
         }
@@ -140,7 +140,7 @@ class DataMonitor extends Actor with ActorLogging {
                     count(mp.typeOf) += mp.amount
                 }
                 case None => {
-                    Logger.error("DataMonitor received MonitorPacket for unkown app with uuid: " + mp.uuid)
+                    Logger.warn("DataMonitor received MonitorPacket for unkown app with uuid: " + mp.uuid)
                 }
             }
         }
@@ -152,6 +152,6 @@ class DataMonitor extends Actor with ActorLogging {
                 finished,
                 subflowMap toMap)
         }
-        case m => Logger.error("Monitor received unknown message: " + m)
+        case m => Logger.warn("Monitor received unknown message: " + m)
     }
 }

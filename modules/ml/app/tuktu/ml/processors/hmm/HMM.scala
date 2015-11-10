@@ -19,7 +19,7 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
 
     // Keep track of how many packets we have seen
     var packetCount = 0
-    
+
     // Used for setting priors
     var priorA: List[List[Double]] = _
     var priorB: List[List[Double]] = _
@@ -32,7 +32,7 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
         // Get number of hidden and observable states
         numHidden = (config \ "num_hidden").as[Int]
         numObservable = (config \ "num_observable").as[Int]
-        
+
         // Read out the priors, if any
         val priorsObject = (config \ "priors").asOpt[JsObject]
         priorsObject match {
@@ -63,7 +63,7 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
                     j <- 0 to numObservable - 1
                 } B(i, j) = priorB(i)(j)
                 for (i <- 0 to numHidden - 1) Pi(i) = priorPi(i)
-                
+
                 this.normalize()
             }
             else {
@@ -80,19 +80,23 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
             }
         }
     }
-        
+
     // Trains the Hidden Markov Model using a sequence of observations for a number of steps
     override def train(data: List[Map[String, Any]], model: HiddenMarkovModel): HiddenMarkovModel = {
-        val observations = (for (datum <- data) yield {
+        val observations = (for (datum <- data if datum.contains(observationsField)) yield {
             // Get the observations, as sequence
             datum(observationsField).asInstanceOf[Seq[Int]]
         }).groupBy(elem => elem).mapValues(value => value.size)
-        
-        // Further train the HMM
-        val method = new BaumWelchMethod(observations)
-        val newModel = method.apply(model)
-        
-        newModel
+
+        if (observations.nonEmpty) {
+            // Further train the HMM
+            val method = new BaumWelchMethod(observations)
+            val newModel = method.apply(model)
+
+            newModel
+        } else {
+            model
+        }
     }
 }
 
@@ -155,7 +159,7 @@ class HMMApplyPredictProcessor(resultName: String) extends BaseMLApplyProcessor[
 class HMMDeserializeProcessor(resultName: String) extends BaseMLDeserializeProcessor[HiddenMarkovModel](resultName) {
     var numHidden = 0
     var numObservable = 0
-    
+
     override def initialize(config: JsObject) {
         // Get number of hidden and observable states
         numHidden = (config \ "num_hidden").as[Int]
@@ -163,7 +167,7 @@ class HMMDeserializeProcessor(resultName: String) extends BaseMLDeserializeProce
 
         super.initialize(config)
     }
-    
+
     override def deserializeModel(filename: String) = {
         val model = new HiddenMarkovModel(numHidden, numObservable)
         model.deserialize(filename)

@@ -340,7 +340,7 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
 
             // Build the processor pipeline for this generator
             val (idString, processor) = {
-                val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None)
+                val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Parallel Processor - Unknown")
                 (pipeline._1, pipeline._2.head)
             }
             // Set up the actor that will execute this processor
@@ -429,7 +429,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
             val start = (pipeline \ "start").as[List[String]]
 
             // Build the processor pipeline for this generator
-            val (idString, enumeratees, subflows) = controllers.Dispatcher.buildEnums(start, processorMap, None)
+            val (idString, enumeratees, subflows) = controllers.Dispatcher.buildEnums(start, processorMap, None, "Parallel Config Processor - Unknown")
 
             // Run our data through each Enumeratee and return the result chunk
             for (enumeratee <- enumeratees) yield {

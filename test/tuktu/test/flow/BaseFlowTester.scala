@@ -122,7 +122,7 @@ class BaseFlowTester(timeoutSeconds: Int = 5) extends TestKit(ActorSystem("test"
         
         // Build the processor pipeline for this generator
         val (enums, actors) = {
-            val enumActors = for ((procEnum, index) <- Dispatcher.buildEnums(next, processorMap, None)._2.zipWithIndex) yield {
+            val enumActors = for ((procEnum, index) <- Dispatcher.buildEnums(next, processorMap, None, "")._2.zipWithIndex) yield {
                 // Create actor that will fetch the results
                 val collectionActor = Akka.system.actorOf(Props(classOf[BaseFlowTesterCollector]),
                         name = "testActor_" + java.util.UUID.randomUUID.toString)
