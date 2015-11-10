@@ -61,6 +61,13 @@
 					]
 				}
 			]
+		},
+		{
+			"name": "separate",
+			"type": "boolean",
+			"required": false,
+			"description":"Send each item separately, or as one big list.",
+			"default": true
 		}
 	]
 }
