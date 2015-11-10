@@ -1,0 +1,36 @@
+{
+	"name": "HTTP Get Processor",
+	"description": "Makes a HTTP get request to a specific URL.",
+	"class": "tuktu.web.processors.HTTPGetProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field that contains the URL(s) to get.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "timeout",
+					"description": "The time, expressed in seconds, after which an unsuccessful request times out",
+					"type": "int",
+					"required": false
+				}
+			]
+		}
+	]
+}
