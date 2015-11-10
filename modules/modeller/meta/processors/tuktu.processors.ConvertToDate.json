@@ -28,13 +28,15 @@
 					"name": "format",
 					"description": "The string formatter.",
 					"type": "string",
-					"required": false
+					"required": false,
+					"default": "EEE MMM dd HH:mm:ss zzz yyyy"
 				},
 				{
 					"name": "locale",
 					"description": "The locale for the string formatter.",
 					"type": "string",
-					"required": false
+					"required": false,
+					"default": "US"
 				}
 			]
 		}
