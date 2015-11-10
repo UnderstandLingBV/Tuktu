@@ -1,0 +1,44 @@
+{
+	"name": "Convert Any to Number Processor",
+	"class": "tuktu.processors.ConvertToNumber",
+	"description": "Converts an Any or Seq[Any] to a Number or a sequence of numbers, respectively, and stores them under the result name.",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "string",
+					"description": "The field to be converted.",
+					"required": true
+				},
+				{
+					"name": "locale",
+					"type": "string",
+					"description": "The locale to be used to convert strings to numbers. For example: en, nl, ...",
+					"required": false,
+					"default": "en"
+				},
+				{
+					"name": "number_type",
+					"type": "string",
+					"description": "The type to which the field is to be converted, one of byte, short, int, long, float, double.",
+					"required": false,
+					"default": "double"
+				}
+			]
+		}
+	]
+}
