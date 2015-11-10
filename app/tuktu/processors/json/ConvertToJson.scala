@@ -27,9 +27,9 @@ class ConvertToJson(resultName: String) extends BaseProcessor(resultName) {
         Future {
             new DataPacket(for (datum <- data.data) yield {
                 if (!append)
-                    datum + (field -> utils.anyMapToJson(datum))
+                    datum + (field -> utils.anyMapToJson(datum) \ field)
                 else
-                    datum + (resultName -> utils.anyMapToJson(datum))
+                    datum + (resultName -> utils.anyMapToJson(datum) \ field)
             })
         }
     })
