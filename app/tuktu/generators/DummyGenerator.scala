@@ -126,22 +126,29 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
 class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var randomActor: ActorRef = null
     var vals = List[String]()
+    var separate = true
     
     override def receive() = {
         case ip: InitPacket => setup
         case config: JsValue => {
             // Get the values
             vals = (config \ "values").as[List[String]]
+            separate = (config \ "separate").asOpt[Boolean].getOrElse(true)
             
             // Send message to self
             self ! 0
         }
         case sp: StopPacket => cleanup
         case num: Int => {
-            channel.push(new DataPacket(List(Map(resultName -> vals(num)))))
-            // See if we're done or not
-            if (num < vals.size - 1) self ! (num + 1)
-            else self ! new StopPacket
+            if(separate) {
+              channel.push(new DataPacket(List(Map(resultName -> vals(num)))))
+              // See if we're done or not
+              if (num < vals.size - 1) self ! (num + 1)
+              else self ! new StopPacket
+            } else {
+                channel.push(new DataPacket(List(Map(resultName -> vals))))
+                self ! new StopPacket
+            }
         }
     }
 }

@@ -1,0 +1,50 @@
+{
+	"name": "Nearest word2vec words.",
+	"description": "Find nearests top words for word2vec.",
+	"class": "tuktu.nlp.processors.Word2VecNearestWordsProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be applied. If a model with this name cannot be found, the data will go through unchanged.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "data_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the data resides in. Data can be textual (String) or Seq[String]."
+				},
+				{
+					"name": "top",
+					"type": "int",
+					"required": false,
+					"description": "How many top nearests words should be returned.",
+					"default": 10
+				}
+			]
+		}
+	]
+}

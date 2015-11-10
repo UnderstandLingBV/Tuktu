@@ -70,6 +70,12 @@
 					"type": "int",
 					"required": false,
 					"description":"The maximum amount of messages to be sent."
+				},
+				{
+					"name": "separate",
+					"type": "boolean",
+					"required": false,
+					"description":"Send each item separately, or as one big list."
 				}
 			]
 		}
