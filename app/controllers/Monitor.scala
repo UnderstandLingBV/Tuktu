@@ -100,7 +100,9 @@ object Monitor extends Controller {
         })
 
         if (Files.isDirectory(path)) {
-            val map = Files.list(path).collect(collector)
+            val stream = Files.list(path)
+            val map = stream.collect(collector)
+            stream.close
     
             // Get configs
             val configs = map.getOrDefault(false, Nil).map(cfg => cfg.getFileName.toString.dropRight(5)).sortBy(_.toLowerCase)

@@ -62,7 +62,9 @@ class ModellerGlobal() extends TuktuGlobal() {
                 new java.util.function.Function[Path, Boolean] {
                     def apply(path: Path): Boolean = Files.isDirectory(path)
                 })
-            val map = Files.list(dir).collect(collector)
+            val stream = Files.list(dir)
+            val map = stream.collect(collector)
+            stream.close
 
             // Get configs
             val configs = map.getOrDefault(false, Nil).toList
