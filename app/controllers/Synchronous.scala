@@ -51,23 +51,20 @@ object Synchronous extends Controller {
             
             // Forward data to generator and fetch result
             val resultFuture = (generator ? new DataPacket(List(utils.JsObjectToMap((jsonBody \ "body").as[JsObject])))).asInstanceOf[Future[DataPacket]]
-            val timeoutFuture = Promise.timeout(TimeoutPacket, customTimeout)
-            Future.firstCompletedOf(Seq(resultFuture, timeoutFuture)).map {
-                case dp: DataPacket => {
-                    // Only makes sense if we get one result
-                    val packet = dp.data.head
-                    
-                    // Read the responding field
-                    val fieldName = (jsonBody \ "field").as[String]
-                    Ok(Json.obj(fieldName -> Json.parse(packet(fieldName).toString)))
+            resultFuture.map {
+              dp =>
+                {
+                  // Only makes sense if we get one result
+                  val packet = dp.data.head
+      
+                  // Read the responding field
+                  val fieldName = (jsonBody \ "field").as[String]
+                  Ok(Json.obj(fieldName -> Json.parse(packet(fieldName).toString)))
                 }
-                case t: TimeoutPacket => InternalServerError(Json.obj(
-                        "error" -> "Flow timed out during execution."
-                ))
-                case t: Any => InternalServerError(Json.obj(
-                        "error" -> "Error during execution of flow.",
-                        "description" -> t.toString
-                ))
+            }.recover {
+              case t => InternalServerError(Json.obj(
+                "error" -> "Error during execution of flow.",
+                "description" -> t.toString))
             }
         } else Future(BadRequest(
             Json.obj("error" -> "No JSON body given!")))
