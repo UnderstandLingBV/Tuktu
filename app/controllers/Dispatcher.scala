@@ -4,7 +4,6 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import akka.actor._
 import akka.pattern.ask
 import akka.routing.Broadcast
@@ -26,6 +25,7 @@ import tuktu.generators.EOFSyncStreamGenerator
 import tuktu.generators.SyncStreamGenerator
 import tuktu.processors.EOFBufferProcessor
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
+import tuktu.processors.meta.ConcurrentProcessor
 
 case class treeNode(
         name: String,
@@ -94,8 +94,32 @@ object Dispatcher {
             
             // Initialize the processor
             val procClazz = Class.forName(pd.name)
+            
+            // Check if this ia ConcurrentProcessor
+            if (classOf[ConcurrentProcessor].isAssignableFrom(procClazz)) {
+                // @TODO: The remaining flow has to be concurrent, pick up config and set up supervising actor
+                
+                // Recurse, determine whether we need to branch or not
+                pd.next match {
+                    case List() => {
+                        // No processors left, return accum
+                        accum
+                    }
+                    case List(id) => {
+                        // No branching, just recurse
+                        buildSequential(id, accum, iterationCount, branch)
+                    }
+                    case _ => {
+                        // We need to branch, use the broadcasting enumeratee
+                        accum compose buildBranch(
+                            for ((nextId, index) <- pd.next.zipWithIndex) yield
+                                buildSequential(nextId, utils.logEnumeratee(idString, configName), iterationCount, branch + "_" + index)
+                        )
+                    }
+                }
+            }
             // Check if this processor is a bufferer
-            if (classOf[BufferProcessor].isAssignableFrom(procClazz) || classOf[BaseConcurrentProcessor].isAssignableFrom(procClazz)) {
+            else if (classOf[BufferProcessor].isAssignableFrom(procClazz) || classOf[BaseConcurrentProcessor].isAssignableFrom(procClazz)) {
                 /*
                  * Bufferer processor, we pass on an actor that can take up the datapackets with the regular
                  * flow and cut off regular flow for now
