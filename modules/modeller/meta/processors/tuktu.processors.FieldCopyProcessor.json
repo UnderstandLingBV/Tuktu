@@ -19,15 +19,36 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "path",
-					"description": "The path at which the value is located. Leave empty to copy the whole datum.",
+					"name": "fields",
+					"description": "The fields to be copied.",
 					"type": "array",
 					"required": true,
 					"parameters": [
 						{
 							"name": "",
-							"type": "string",
-							"required": true
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "path",
+									"description": "The path at which the value is located. Leave empty to copy the whole datum.",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"type": "string",
+											"required": true
+										}
+									]
+								},
+								{
+									"name": "result",
+									"description": "The result name the value will be copied to.",
+									"type": "string",
+									"required": true
+								}
+							]
 						}
 					]
 				}

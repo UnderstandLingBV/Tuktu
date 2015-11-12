@@ -75,14 +75,23 @@ class FieldRemoveProcessor(resultName: String) extends BaseProcessor(resultName)
  * Copies a path to resultName for each datum
  */
 class FieldCopyProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var path: List[String] = Nil
+    var copyList: List[JsObject] = Nil
 
-    override def initialize(config: JsObject) = {
-        path = (config \ "path").asOpt[List[String]].getOrElse(Nil)
+    override def initialize(config: JsObject) {
+        copyList = (config \ "fields").asOpt[List[JsObject]].getOrElse(Nil)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield datum + (resultName -> utils.fieldParser(datum, path, null)))
+        new DataPacket(for (datum <- data.data) yield {
+            datum ++ (for {
+                copy <- copyList
+
+                path = (copy \ "path").as[List[String]]
+                result = (copy \ "result").as[String]
+            } yield {
+                result -> utils.fieldParser(datum, path, null)
+            })
+        })
     })
 }
 
