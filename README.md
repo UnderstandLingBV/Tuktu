@@ -28,7 +28,7 @@ The following companies or organizations use or actively contribute to Tuktu.
 
 [RISA IT](https://www.risa-it.nl/) is a partner of the Tuktu platform and is using it in all of its big data science projects.
 
-![EclipseIT logo](images/eclipse.png)
+![EclipseIT logo](http://www.eclipseit.nl/content/images/EclipseIT-logo.png)
 
 [EclipseIT](http://www.eclipseit.nl/) is a partner of the Tuktu platform and is using it in all of its big data science projects.
 
