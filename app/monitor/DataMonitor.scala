@@ -41,6 +41,9 @@ class DataMonitor extends Actor with ActorLogging {
         case "init" => {
             // Initialize monitor
         }
+        case "clearFinished" => {
+            appMonitor = appMonitor.clearFinished
+        }
         case fmp: SubflowMapPacket => {
             // Add to our map
             fmp.subflows.foreach(subflow => subflowMap +=

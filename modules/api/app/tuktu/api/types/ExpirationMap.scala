@@ -12,6 +12,8 @@ trait ExpirationMap[A, +B] {
 
     def get(key: A)(implicit current: Long): Option[B]
 
+    def clearFinished: ExpirationMap[A, B]
+
     def contains(key: A)(implicit current: Long): Boolean
 
     def expire(key: A, force: Boolean = true)(implicit current: Long): Unit
@@ -49,6 +51,8 @@ private case class ExpirationMapImpl[A, +B](expirationInterval: Long, keyValueEx
         keyValueExpiry.get(key) collect {
             case et: ExpirationTuple[B] if (et.expiration.map(expiry => expiry > current).getOrElse(true)) => et.value
         }
+
+    def clearFinished: ExpirationMap[A, B] = ExpirationMapImpl(expirationInterval, keyValueExpiry.filter(_._2.expiration == None))
 
     def contains(key: A)(implicit current: Long): Boolean =
         get(key) != None

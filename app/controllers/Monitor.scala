@@ -40,7 +40,15 @@ object Monitor extends Controller {
             ))
         })
     }
-    
+
+    /**
+     * Clears the monitor's info about finished flows 
+     */
+    def clearFinished() = Action { implicit request =>
+        Akka.system.actorSelection("user/TuktuMonitor") ! "clearFinished"
+        Redirect(routes.Monitor.fetchLocalInfo)
+    }
+
     /**
      * Terminates a Tuktu job
      */
@@ -70,7 +78,7 @@ object Monitor extends Controller {
             }
         } + " job " + name))
     }
-    
+
     /**
      * Shows the form for getting configs
      */
@@ -103,12 +111,12 @@ object Monitor extends Controller {
             val stream = Files.list(path)
             val map = stream.collect(collector)
             stream.close
-    
+
             // Get configs
             val configs = map.getOrDefault(false, Nil).map(cfg => cfg.getFileName.toString.dropRight(5)).sortBy(_.toLowerCase)
             // Get subfolders
             val subfolders = map.getOrDefault(true, Nil).map(fldr => fldr.getFileName.toString).sortBy(_.toLowerCase)
-    
+
             // Invoke view
             Ok(views.html.monitor.showConfigs(
                     pathSeq, configs, subfolders
@@ -119,7 +127,7 @@ object Monitor extends Controller {
             ))
         }
     }}
-    
+
     /**
      * Shows the start-job view
      */
@@ -127,17 +135,17 @@ object Monitor extends Controller {
             Ok(views.html.monitor.browseConfigs(util.flashMessagesToMap(request)))
         }
     }
-    
+
     case class job(
         name: String
     )
-    
+
     val jobForm = Form(
         mapping(
             "name" -> text.verifying(nonEmpty, minLength(1))
         ) (job.apply)(job.unapply)
     )
-    
+
     /**
      * Actually starts a job
      */
@@ -154,7 +162,7 @@ object Monitor extends Controller {
             )
         }
     }
-    
+
     /**
      * Creates a new JSON file
      */
@@ -213,7 +221,7 @@ object Monitor extends Controller {
             }
         }
     }}
-    
+
     /**
      * Deletes a file from the config repository
      */
@@ -242,18 +250,18 @@ object Monitor extends Controller {
             }
         }
     }}
-    
+
     /**
      * Starts multiple jobs at the same time
      */
     def batchStarter() = Action { implicit request => {
         val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
         val jobs = body("jobs").head.split(",")
-        
+
         // Go over them and start them
         val dispatcher = Akka.system.actorSelection("user/TuktuDispatcher")
         jobs.foreach(job => dispatcher ! new DispatchRequest(job, None, false, false, false, None))
-        
+
         Ok("")
     }}
 }

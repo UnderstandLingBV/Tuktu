@@ -62,7 +62,12 @@
     <hr>
 
     <h2>
-       The following jobs are finished
+        The following jobs are finished
+        @if(finished.nonEmpty) {
+            <form class="pull-right" action="@routes.Monitor.clearFinished" method="POST">
+                <input class="btn btn-primary" type="submit" value="Clear">
+            </form>
+        }
     </h2>
 
     <table class="table table-striped">
