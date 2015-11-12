@@ -1,0 +1,37 @@
+{
+	"name": "Field Copy Processor",
+	"description": "Copies a (nested) field to the top under a new result name.",
+	"class": "tuktu.processors.FieldCopyProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "path",
+					"description": "The path at which the value is located. Leave empty to copy the whole datum.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}

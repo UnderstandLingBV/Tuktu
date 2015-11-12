@@ -72,6 +72,21 @@ class FieldRemoveProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 /**
+ * Copies a path to resultName for each datum
+ */
+class FieldCopyProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var path: List[String] = Nil
+
+    override def initialize(config: JsObject) = {
+        path = (config \ "path").asOpt[List[String]].getOrElse(Nil)
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield datum + (resultName -> utils.fieldParser(datum, path, null)))
+    })
+}
+
+/**
  * Adds a running count integer to data coming in
  */
 class RunningCountProcessor(resultName: String) extends BaseProcessor(resultName) {
