@@ -130,15 +130,17 @@
             var configs = $("#configTable input:checkbox:checked").map(function(){
                 return $(this).val();
             }).get();
-            
-            $.ajax({
-                method : "POST",
-                url : "@routes.Monitor.batchStarter",
-                data : {
-                    jobs: configs.join(",")
-                }
-            }).done(function(html) {
-                window.location = '@routes.Monitor.fetchLocalInfo(1, 1)';
-            });
+
+            if (configs.length > 0) {
+                $.ajax({
+                    method : "POST",
+                    url : "@routes.Monitor.batchStarter",
+                    data : {
+                        jobs: configs.join(",")
+                    }
+                }).done(function(html) {
+                    window.location = '@routes.Monitor.fetchLocalInfo(1, 1)';
+                });
+            }
         }
     </script>
