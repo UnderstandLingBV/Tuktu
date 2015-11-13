@@ -28,11 +28,13 @@ object Monitor extends Controller {
     /**
      * Fetches the monitor's info
      */
-    def fetchLocalInfo() = Action.async { implicit request =>
+    def fetchLocalInfo(runningPage: Int = 1, finishedPage: Int = 1) = Action.async { implicit request =>
         // Get the monitor
         val fut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorOverviewRequest).asInstanceOf[Future[MonitorOverviewResult]]
         fut.map(res => {
             Ok(views.html.monitor.showApps(
+                    runningPage,
+                    finishedPage,
                     res.runningJobs.toList.sortBy(elem => elem._2.startTime),
                     res.finishedJobs.toList.sortBy(elem => elem._2.startTime),
                     res.subflows,
@@ -44,15 +46,15 @@ object Monitor extends Controller {
     /**
      * Clears the monitor's info about finished flows 
      */
-    def clearFinished() = Action { implicit request =>
+    def clearFinished(runningPage: Int = 1, finishedPage: Int = 1) = Action { implicit request =>
         Akka.system.actorSelection("user/TuktuMonitor") ! "clearFinished"
-        Redirect(routes.Monitor.fetchLocalInfo)
+        Redirect(routes.Monitor.fetchLocalInfo(runningPage, finishedPage))
     }
 
     /**
      * Terminates a Tuktu job
      */
-    def terminate(name: String, force: Boolean) = Action {
+    def terminate(name: String, force: Boolean, runningPage: Int = 1, finishedPage: Int = 1) = Action {
         // Send stop packet to actor
         if (force) {
             Akka.system.actorSelection(name) ! Broadcast(PoisonPill)
@@ -71,7 +73,7 @@ object Monitor extends Controller {
         else 
             Akka.system.actorSelection(name) ! Broadcast(new StopPacket)
 
-        Redirect(routes.Monitor.fetchLocalInfo()).flashing("success" -> ("Successfully " + {
+        Redirect(routes.Monitor.fetchLocalInfo(runningPage, finishedPage)).flashing("success" -> ("Successfully " + {
             force match {
                 case true => "terminated"
                 case _ => "stopped"
@@ -157,7 +159,7 @@ object Monitor extends Controller {
                 },
                 job => {
                     Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(job.name, None, false, false, false, None)
-                    Redirect(routes.Monitor.fetchLocalInfo).flashing("success" -> ("Successfully started job " + job.name))
+                    Redirect(routes.Monitor.fetchLocalInfo(1, 1)).flashing("success" -> ("Successfully started job " + job.name))
                 }
             )
         }

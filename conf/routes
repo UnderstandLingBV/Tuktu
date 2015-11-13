@@ -2,18 +2,20 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-GET     /                                   controllers.Monitor.fetchLocalInfo
-GET     /index                              controllers.Monitor.fetchLocalInfo
+# Monitor Overview
+GET     /                                   controllers.Monitor.fetchLocalInfo(runningPage: Int = 1, finishedPage: Int = 1)
+GET     /index                              controllers.Monitor.fetchLocalInfo(runningPage: Int = 1, finishedPage: Int = 1)
+GET     /showApps/:rPage/:fPage             controllers.Monitor.fetchLocalInfo(rPage: Int, fPage: Int)
 
 # Dispatching
-GET     /dispatch/:id/:inst 		        controllers.Asynchronous.load(id, inst: Int)
-POST	/config						        controllers.Asynchronous.loadPost
+GET     /dispatch/:id/:inst                 controllers.Asynchronous.load(id, inst: Int)
+POST    /config                             controllers.Asynchronous.loadPost
 
 # Synchronous
 POST    /sync                               controllers.Synchronous.loadJsonPost
 
 # Monitoring
-GET     /terminate/:id/:force               controllers.Monitor.terminate(id, force: Boolean)
+GET     /terminate/:id/:force/:r/:f         controllers.Monitor.terminate(id, force: Boolean, r: Int, f: Int)
 POST    /showConfigs                        controllers.Monitor.showConfigs
 GET     /browseConfigs                      controllers.Monitor.browseConfigs
 POST    /startJob                           controllers.Monitor.startJob
@@ -21,7 +23,7 @@ POST    /newFile                            controllers.Monitor.newFile
 POST    /newDirectory                       controllers.Monitor.newDirectory
 POST    /deleteFile                         controllers.Monitor.deleteFile
 POST    /batchStarter                       controllers.Monitor.batchStarter
-POST    /clearFinished                      controllers.Monitor.clearFinished
+POST    /clearFinished/:r/:f                controllers.Monitor.clearFinished(r: Int, f: Int)
 
 # Cluster management
 GET     /cluster                            controllers.Cluster.overview
@@ -31,12 +33,12 @@ GET     /delNode/:address                   controllers.Cluster.removeNode(addre
 POST    /updateCluster                      controllers.Cluster.updateCluster
 
 # Scheduler
-GET     /scheduler							controllers.Scheduler.overview
-GET     /scheduleSimple						controllers.Scheduler.scheduleSimple
-GET     /scheduleCron						controllers.Scheduler.scheduleCron
-POST    /scheduleSimple						controllers.Scheduler.scheduleSimpleStart
-POST    /scheduleCron						controllers.Scheduler.scheduleCronStart
-GET		/terminateScheduler/:id				controllers.Scheduler.terminate(id)
+GET     /scheduler                          controllers.Scheduler.overview
+GET     /scheduleSimple                     controllers.Scheduler.scheduleSimple
+GET     /scheduleCron                       controllers.Scheduler.scheduleCron
+POST    /scheduleSimple                     controllers.Scheduler.scheduleSimpleStart
+POST    /scheduleCron                       controllers.Scheduler.scheduleCronStart
+GET     /terminateScheduler/:id             controllers.Scheduler.terminate(id)
 POST    /showConfigsScheduler               controllers.Scheduler.showConfigs
 
 # Visualization
@@ -57,9 +59,6 @@ POST    /Tuktu.js                           controllers.web.Application.web
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                       controllers.Assets.versioned(path="/public", file)
 
-# Monitor Overview
-GET     /                                   controllers.Monitor.fetchLocalInfo
-
 # Flow Manager
-GET 	/flowManager						controllers.FlowManager.overview
-POST	/flowManager						controllers.FlowManager.start
+GET     /flowManager                        controllers.FlowManager.overview
+POST    /flowManager                        controllers.FlowManager.start

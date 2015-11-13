@@ -1,4 +1,4 @@
-@(running: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, tuktu.api.AppMonitorObject)], subflows: Map[String, String], messages: Map[String, List[String]])(implicit requestHeader: RequestHeader)
+@(runningPage: Int, finishedPage: Int, running: List[(String, tuktu.api.AppMonitorObject)], finished: List[(String, tuktu.api.AppMonitorObject)], subflows: Map[String, String], messages: Map[String, List[String]])(implicit requestHeader: RequestHeader)
 
 @index("Monitoring", messages) {
     @monitorMenu()
@@ -6,6 +6,38 @@
     <h2>
        The following jobs are currently running on Tuktu
     </h2>
+
+    @if(running.size > 100) {
+    <nav>
+        <ul class="pagination">
+            @if(runningPage == 1) {
+                <li class="disabled">
+                    <span aria-hidden="true">&laquo;</span>
+                </li>
+            } else {
+                <li>
+                    <a href="@routes.Monitor.fetchLocalInfo(runningPage - 1, finishedPage)" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            }
+            @for(i <- 1 to math.ceil(running.size / 100.toDouble).toInt) {
+                <li @if(i == runningPage) {class="active"}><a href="@routes.Monitor.fetchLocalInfo(i, finishedPage)">@i</a></li>
+            }
+            @if(runningPage >= math.ceil(running.size / 100.toDouble).toInt) {
+                <li class="disabled">
+                    <span aria-hidden="true">&raquo;</span>
+                </li>
+            } else {
+                <li>
+                   <a href="@routes.Monitor.fetchLocalInfo(runningPage + 1, finishedPage)" aria-label="Next">
+                       <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+    }
 
     <table class="table table-striped">
         <thead>
@@ -28,7 +60,7 @@
             </tr>
         </thead>
             <tbody>
-            @for((appName, appProps) <- running) {
+            @for((appName, appProps) <- running.drop((runningPage - 1) * 100).take(100)) {
                 <tr>
                     <td style="margin-right: 25px;">
                         @appName
@@ -45,8 +77,8 @@
                         </button>
                     </td>
                     <td>
-                        <a href="@routes.Monitor.terminate(appName, false)">Stop</a>
-                        <a href="@routes.Monitor.terminate(appName, true)">Terminate</a>
+                        <a href="@routes.Monitor.terminate(appName, false, runningPage, finishedPage)">Stop</a>
+                        <a href="@routes.Monitor.terminate(appName, true, runningPage, finishedPage)">Terminate</a>
                     </td>
                     <td class="javascript-date-timestamp-duration text-right" title="@appProps.startTime">
                         @* Filled and updated with JavaScript below to use user's time zone *@
@@ -64,11 +96,43 @@
     <h2>
         The following jobs are finished
         @if(finished.nonEmpty) {
-            <form class="pull-right" action="@routes.Monitor.clearFinished" method="POST">
+            <form class="pull-right" action="@routes.Monitor.clearFinished(runningPage, finishedPage)" method="POST">
                 <input class="btn btn-primary" type="submit" value="Clear">
             </form>
         }
     </h2>
+
+    @if(finished.size > 100) {
+    <nav>
+        <ul class="pagination">
+            @if(finishedPage == 1) {
+                <li class="disabled">
+                    <span aria-hidden="true">&laquo;</span>
+                </li>
+            } else {
+                <li>
+                    <a href="@routes.Monitor.fetchLocalInfo(runningPage, finishedPage - 1)" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            }
+            @for(i <- 1 to math.ceil(finished.size / 100.toDouble).toInt) {
+                <li @if(i == finishedPage) {class="active"}><a href="@routes.Monitor.fetchLocalInfo(runningPage, i)">@i</a></li>
+            }
+            @if(finishedPage >= math.ceil(finished.size / 100.toDouble).toInt) {
+                <li class="disabled">
+                    <span aria-hidden="true">&raquo;</span>
+                </li>
+            } else {
+                <li>
+                   <a href="@routes.Monitor.fetchLocalInfo(runningPage, finishedPage + 1)" aria-label="Next">
+                       <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+    }
 
     <table class="table table-striped">
         <thead>
@@ -94,7 +158,7 @@
             </tr>
         </thead>
             <tbody>
-            @for((appName, appProps) <- finished) {
+            @for((appName, appProps) <- finished.drop((finishedPage - 1) * 100).take(100)) {
                 <tr>
                     <td style="margin-right: 25px;">
                         @appName
@@ -154,7 +218,7 @@
         <h3>No finished jobs were found.</h3>
     }
 
-    @for((appName, appProps) <- running ++ finished) {
+    @for((appName, appProps) <- running.drop((runningPage - 1) * 100).take(100) ++ finished.drop((finishedPage - 1) * 100).take(100)) {
         <div class="modal fade" id="modal_@appProps.uuid" tabindex="-1" role="dialog" aria-labelledby="modalLabel_@appProps.uuid">
             <div class="modal-dialog data-modal" role="document">
                 <div class="modal-content">
@@ -223,9 +287,9 @@
         refresh();
 
         @if(messages.nonEmpty) {
-            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 3000);
+            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo(runningPage, finishedPage)'", 3000);
         } else {
-            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo'", 30000);
+            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo(runningPage, finishedPage)'", 30000);
         }
     </script>
 }
