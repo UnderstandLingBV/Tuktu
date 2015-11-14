@@ -48,7 +48,7 @@ object Monitor extends Controller {
      */
     def clearFinished(runningPage: Int = 1, finishedPage: Int = 1) = Action { implicit request =>
         Akka.system.actorSelection("user/TuktuMonitor") ! "clearFinished"
-        Redirect(routes.Monitor.fetchLocalInfo(runningPage, finishedPage))
+        Redirect(routes.Monitor.fetchLocalInfo(runningPage, 1))
     }
 
     /**
