@@ -29,17 +29,24 @@ object Monitor extends Controller {
      * Fetches the monitor's info
      */
     def fetchLocalInfo(runningPage: Int = 1, finishedPage: Int = 1) = Action.async { implicit request =>
-        // Get the monitor
+        // Get the monitor overview result
         val fut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorOverviewRequest).asInstanceOf[Future[MonitorOverviewResult]]
         fut.map(res => {
-            Ok(views.html.monitor.showApps(
+            // If we are out of range, go back into range
+            if (runningPage < 1 || runningPage > math.max(math.ceil(res.runningJobs.size / 100.0), 1) || finishedPage < 1 || finishedPage > math.max(math.ceil(res.finishedJobs.size / 100.0), 1))
+                Redirect(routes.Monitor.fetchLocalInfo(
+                    math.max(math.min(runningPage, math.ceil(res.runningJobs.size / 100.0).toInt), 1),
+                    math.max(math.min(finishedPage, math.ceil(res.finishedJobs.size / 100.0).toInt), 1)
+                ))
+            else
+                Ok(views.html.monitor.showApps(
                     runningPage,
                     finishedPage,
                     res.runningJobs.toList.sortBy(elem => elem._2.startTime),
                     res.finishedJobs.toList.sortBy(elem => elem._2.startTime),
                     res.subflows,
                     util.flashMessagesToMap(request)
-            ))
+                ))
         })
     }
 
