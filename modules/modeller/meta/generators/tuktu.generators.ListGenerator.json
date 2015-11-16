@@ -1,73 +1,72 @@
 {
-   "name":"List Generator",
-   "description":"Generates a list of given values.",
-   "class":"tuktu.generators.ListGenerator",
-   "parameters":[
-      {
-         "name":"nodes",
-         "type":"array",
-         "required":false,
-         "description":"Optionally specify on which nodes to run and how many instances you want on each node.",
-         "parameters":[
-            {
-               "name":"",
-               "type":"object",
-               "required":true,
-               "parameters":[
-                  {
-                     "name":"type",
-                     "type":"string",
-                     "required":true,
-                     "description":"The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
-                  },
-                  {
-                     "name":"nodes",
-                     "type":"string",
-                     "required":true,
-                     "description":"The nodes to use for this node handler type"
-                  },
-                  {
-                     "name":"instances",
-                     "type":"int",
-                     "required":false,
-                     "default":1,
-                     "description":"The amount of instances per node of this handler type"
-                  }
-               ]
-            }
-         ]
-      },
-      {
-         "name":"result",
-         "type":"string",
-         "required":true
-      },
-      {
-         "name":"config",
-         "type":"object",
-         "required":true,
-         "parameters":[
-            {
-               "name":"values",
-               "description":"List of values to be streamed.",
-               "type":"array",
-               "required":true,
-               "parameters":[
-                  {
-                     "name":"",
-                     "type":"string",
-                     "required":true
-                  }
-               ]
-            },
-            {
-               "name":"separate",
-               "type":"boolean",
-               "required":false,
-               "description":"Send each item separately, or as one big list.",
-               "default":true
-            }
-         ]
-      }
-   ]
+	"name": "List Generator",
+	"description": "Generates a list of given values.",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "values",
+					"description": "List of values to be streamed.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "separate",
+					"type": "boolean",
+					"required": false,
+					"description": "Send each item separately, or as one big list.",
+					"default": true
+				}
+			]
+		}
+	]
 }
