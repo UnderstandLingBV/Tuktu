@@ -35,7 +35,7 @@ class BaseProcessorTestSuite extends PlaySpec {
                     Map()
             )))
             
-            new BaseProcessorTest()(proc, config, input, output) mustBe true
+            new BaseProcessorTest()(proc, config, input, output)
         }
     }
 }

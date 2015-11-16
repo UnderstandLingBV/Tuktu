@@ -10,13 +10,14 @@ import scala.concurrent.duration.DurationInt
 import tuktu.test.testUtil
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
+import org.scalatest.Assertions._
 
 /**
  * Base class to test a processor
  */
 class BaseProcessorTest {
     def apply(processor: BaseProcessor, config: JsObject, input: List[DataPacket],
-            expectedList: List[DataPacket], timeout: Int = 5): Boolean = {
+            expectedList: List[DataPacket], timeout: Int = 5) = {
         // Initialize
         processor.initialize(config)
         
@@ -25,12 +26,16 @@ class BaseProcessorTest {
         val obtainedList = Await.result(Enumerator.enumerate(input).run(processor.processor() &>> iter), timeout seconds)
         
         // Compare/inspect the output
-        obtainedList.zip(expectedList).forall(packets => {
+        val res = obtainedList.zip(expectedList).forall(packets => {
             val obtained = packets._1
             val expected = packets._2
             
             // Inspect the data inside the packets
             obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
         })
+        
+        assertResult(true, "Obtained output is:\r\n" + expectedList + "\r\nExpected:\r\n" + obtainedList) {
+            res
+        }
     }
 }
