@@ -191,32 +191,39 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
  * Renames a single field
  */
 class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fieldList = List[JsObject]()
-    
-    override def initialize(config: JsObject) {
-        fieldList = (config \ "fields").as[List[JsObject]]
-    }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {new DataPacket(for (datum <- data.data) yield {
-	        var mutableDatum = collection.mutable.Map(datum.toSeq: _*) 
-	        for {
-	                field <- fieldList
-                    
-                    fields = (field \ "path").as[List[String]]
-                    fieldName = (field \ "result").as[String]
-                    f = fields.head
-                    if (f.size > 0 && datum.contains(f))
-	        } {
-                val newValue = fieldName -> utils.fieldParser(datum, fields, null)
+  var fieldList = List[JsObject]()
 
-	            // Replace
-	            mutableDatum = mutableDatum - f + newValue
-	        }
-	        
-	        mutableDatum.toMap
-        })}
-    })
+  override def initialize(config: JsObject) {
+    fieldList = (config \ "fields").as[List[JsObject]]
+  }
+
+  override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+    Future {
+      new DataPacket(for (datum <- data.data) yield {
+        val mutableDatum = collection.mutable.Map[String,Any](datum.toSeq: _*)
+        // a set of items that must be clean up at the end
+        val cleanUp = collection.mutable.Set[String]()
+        // a separate set of items that need to be preserved because they got recycled
+        val dontCleanUp = collection.mutable.Set[String]()
+        for {
+          field <- fieldList
+
+          fields = (field \ "path").as[List[String]]
+          fieldName = (field \ "result").as[String]
+          f = fields.head
+          if (f.size > 0 && datum.contains(f))
+        } {
+          mutableDatum += fieldName -> utils.fieldParser(datum, fields, null)
+          cleanUp += f
+          dontCleanUp += fieldName
+        }
+        // only remove items that should be removed!
+        cleanUp.&~(dontCleanUp).foreach { x => mutableDatum.remove(x) }
+        
+        mutableDatum.toMap
+      })
+    }
+  })
 }
 
 /**
