@@ -25,6 +25,7 @@ import scala.concurrent.duration.DurationInt
 import play.api.libs.json.JsValue
 import akka.actor.PoisonPill
 import akka.actor.Cancellable
+import tuktu.test.testUtil
 
 case class ResultPacket()
 case class CheckPacket(sender: ActorRef, iteration: Int)
@@ -165,49 +166,10 @@ class BaseFlowTester(timeoutSeconds: Int = 5) extends TestKit(ActorSystem("test"
                         val expected = packets._2
                         
                         // Inspect the data inside the packets
-                        obtained.data.zip(expected.data).forall(data => inspectMaps(data._1, data._2))
+                        obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
                     })
                 })
             }
         })
-    }
-    
-    /**
-     * Inspects and matches an obtained map with an expected map
-     */
-    private def inspectMaps(obtained: Map[String, Any], expected: Map[String, Any]): Boolean = {
-        // Check keys first
-        if (!obtained.keys.toList.diff(expected.keys.toList).isEmpty)
-            // Keys differ
-            false
-        else {
-            // Keys match, inspect all values
-            (for ((key, value) <- obtained) yield {
-                inspectValue(value, expected(key))
-            }).foldLeft(true)(_ && _)
-        }
-    }
-    
-    /**
-     * Function to inspect a single value
-     */
-    private def inspectValue(obtained: Any, expected: Any): Boolean = {
-        // Check types first
-        try {
-            obtained match {
-                case v: Map[Any, Any] => {
-                    val w = expected.asInstanceOf[Map[Any, Any]]
-                    v.keys.toList.diff(w.keys.toList).isEmpty && v.forall(elem => inspectValue(elem._2, w(elem._1)))
-                }
-                case v: List[Any] => {
-                    val w = expected.asInstanceOf[List[Any]]
-                    v.zip(w).forall(elems => inspectValue(elems._1, elems._2))
-                }
-                case _: Any => obtained.toString == expected.toString
-            }
-        } catch {
-            // TODO: Maybe differentiate on types of exceptions?
-            case e: Throwable => false
-        }
     }
 }

@@ -6,3 +6,4 @@ target
 *.class
 *.gitignore
 *.cache-main
+/modules/crawler/app/tuktu/crawler/generators/RexelGenerator.scala

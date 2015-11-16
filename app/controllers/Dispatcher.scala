@@ -97,7 +97,17 @@ object Dispatcher {
             
             // Check if this ia ConcurrentProcessor
             if (classOf[ConcurrentProcessor].isAssignableFrom(procClazz)) {
-                // @TODO: The remaining flow has to be concurrent, pick up config and set up supervising actor
+                // The remaining flow has to be concurrent, we need to read its config for concurrency count and distirbution strategy
+                val instanceCount = (pd.config \ "instances").as[Int]
+                val strategy = {
+                    // Make sure we use a valid strategy
+                    val str = (pd.config \ "strategy").asOpt[String].getOrElse("RoundRobin")
+                    if (List("RoundRobin", "Smallest").contains(str)) str
+                    else "RoundRobin"
+                }
+                
+                // @TODO: Set up supervisor actor with remaining processors
+                
                 
                 // Recurse, determine whether we need to branch or not
                 pd.next match {
