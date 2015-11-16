@@ -245,7 +245,8 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                             try {
                                 Eval.me(replacedExpression).asInstanceOf[Boolean]
                             } catch {
-                                case _: Throwable => true
+                                case e: Throwable => Logger.error("Incorrect groovy expression",e)
+                                true
                             }
                         }
                         case _ => {
