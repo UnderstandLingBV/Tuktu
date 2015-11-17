@@ -19,11 +19,29 @@ import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
+import play.api.libs.json.{ Json, JsArray, JsObject, JsValue }
 import tuktu.api.TuktuGlobal
 
 class ModellerGlobal() extends TuktuGlobal() {
+
+    /**
+     * Checks if a parameter contains all necessary fields
+     */
+    private def checkParameter(param: JsValue): Boolean = {
+        try {
+            val map = param.as[JsObject].value
+            map.contains("type") && map.contains("name") && map.contains("required") && {
+                // Check recursively
+                map.get("parameters") match {
+                    case None    => true
+                    case Some(p) => p.as[Seq[JsValue]].forall(checkParameter(_))
+                }
+            }
+        } catch {
+            case _: Throwable => false
+        }
+    }
+
     def getDescriptors(files: List[Path]): Map[String, JsValue] = {
         (for {
             file <- files
@@ -32,7 +50,24 @@ class ModellerGlobal() extends TuktuGlobal() {
                 // Read file and try to parse as json
                 val js = Json.parse(Files.readAllBytes(file))
 
-                (true, js)
+                // Check if format is correct
+                val parseable = {
+                    val map = js.as[JsObject].value
+                    if (!map.contains("name") || !map.contains("class")) {
+                        Logger.error("Incorrect JSON found, keys 'name' and/or 'class' are missing in meta config file: " + file.toAbsolutePath.normalize)
+                        false
+                    } else
+                        true
+                } && {
+                    val parameters = js.as[JsObject].value.get("parameters").getOrElse(new JsArray()).as[Seq[JsValue]]
+                    if (!parameters.forall(checkParameter(_))) {
+                        Logger.error("Incorrect JSON found, at least one parameter is missing 'type', 'name' and/or 'required' in meta config file: " + file.toAbsolutePath.normalize)
+                        false
+                    } else
+                        true
+                }
+
+                (parseable, js)
             } catch {
                 case e: JsonParseException => {
                     Logger.error("Invalid JSON found in meta config file: " + file.toAbsolutePath.normalize, e)
