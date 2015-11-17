@@ -7,7 +7,6 @@ object testUtil {
     def inspectMaps(obtained: Map[String, Any], expected: Map[String, Any]): Boolean = {
         // Check keys first
         if (!obtained.keys.toList.diff(expected.keys.toList).isEmpty)
-            // Keys differ
             false
         else {
             // Keys match, inspect all values

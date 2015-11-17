@@ -2,29 +2,34 @@ package tuktu.test.flow
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.Await
+
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.WordSpecLike
+import org.scalatest.Assertions._
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
+import akka.actor.Cancellable
+import akka.actor.PoisonPill
 import akka.actor.Props
-import akka.actor.actorRef2Scala
+import akka.pattern.ask
+import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
+import akka.util.Timeout
 import controllers.Dispatcher
 import play.api.Play
 import play.api.Play.current
-import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
+import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import tuktu.api.DataPacket
 import tuktu.api.InitPacket
 import tuktu.api.StopPacket
-import akka.pattern.ask
-import akka.util.Timeout
-import scala.concurrent.duration.DurationInt
-import play.api.libs.json.JsValue
-import akka.actor.PoisonPill
-import akka.actor.Cancellable
 import tuktu.test.testUtil
 
 case class ResultPacket()
@@ -33,7 +38,7 @@ case class CheckPacket(sender: ActorRef, iteration: Int)
 /**
  * Actor that will collect data packets
  */
-class BaseFlowTesterCollector() extends Actor with ActorLogging {
+class BaseFlowTesterCollector(as: ActorSystem) extends Actor with ActorLogging {
     val buffer = collection.mutable.ListBuffer.empty[DataPacket]
     var done = false
     var schedulerActor: Cancellable = null
@@ -47,7 +52,7 @@ class BaseFlowTesterCollector() extends Actor with ActorLogging {
                 self ! PoisonPill
             }
             else {
-                schedulerActor = Akka.system.scheduler.schedule(
+                schedulerActor = as.scheduler.schedule(
                     1000 milliseconds,
                     1000 milliseconds,
                     self,
@@ -68,7 +73,7 @@ class BaseFlowTesterCollector() extends Actor with ActorLogging {
                 }
                 else {
                     // Try again
-                    schedulerActor = Akka.system.scheduler.schedule(
+                    schedulerActor = as.scheduler.schedule(
                         1000 milliseconds,
                         1000 milliseconds,
                         self,
@@ -94,10 +99,10 @@ class EnumForwarder(actor: ActorRef) {
 /**
  * Base flow tester class, should be invoked for testing flows
  */
-class BaseFlowTester(timeoutSeconds: Int = 5) extends TestKit(ActorSystem("test")) {
+class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(as) {
     implicit val timeout = Timeout(timeoutSeconds seconds)
     
-    def apply(outputs: List[List[DataPacket]], flowName: String): Future[Boolean] = {
+    def apply(outputs: List[List[DataPacket]], flowName: String): Unit = {
         // Open the file and pass on
         val configFile = scala.io.Source.fromFile(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs") +
                 "/" + flowName + ".json", "utf-8")
@@ -109,7 +114,7 @@ class BaseFlowTester(timeoutSeconds: Int = 5) extends TestKit(ActorSystem("test"
     /**
      * Executes a flow to capture its output and match it with a set of expected outputs
      */
-    def apply(outputs: List[List[DataPacket]], config: JsObject): Future[Boolean] = {
+    def apply(outputs: List[List[DataPacket]], config: JsObject): Unit = {
         // Build processor map
         val processorMap = Dispatcher.buildProcessorMap((config \ "processors").as[List[JsObject]])
         
@@ -125,7 +130,7 @@ class BaseFlowTester(timeoutSeconds: Int = 5) extends TestKit(ActorSystem("test"
         val (enums, actors) = {
             val enumActors = for ((procEnum, index) <- Dispatcher.buildEnums(next, processorMap, None, "")._2.zipWithIndex) yield {
                 // Create actor that will fetch the results
-                val collectionActor = Akka.system.actorOf(Props(classOf[BaseFlowTesterCollector]),
+                val collectionActor = as.actorOf(Props(classOf[BaseFlowTesterCollector], as),
                         name = "testActor_" + java.util.UUID.randomUUID.toString)
     
                 // Append enumeratee with actor sending functionality
@@ -141,35 +146,35 @@ class BaseFlowTester(timeoutSeconds: Int = 5) extends TestKit(ActorSystem("test"
         // Set up the generator
         val clazz = Class.forName(generatorName)
         // Run the flow
-        val flow = Akka.system.actorOf(Props(clazz, resultName, enums, None),
+        val flow = as.actorOf(Props(clazz, resultName, enums, None),
             name = clazz.getName +  "_" + java.util.UUID.randomUUID.toString
         )
         flow ! new InitPacket
         flow ! generatorConfig
         
         // Ask all the actors for completion
-        val results = Future.sequence(for (actor <- actors) yield (actor ? new ResultPacket()).asInstanceOf[Future[List[DataPacket]]])
-        
-        // Inspect the results
-        results.map(obtainedOutput => {
-            if (obtainedOutput == null)
-                false
-            else {
-                // Compare data packet by data packet
-                obtainedOutput.zip(outputs).forall(packetLists => {
-                    val obtainedList = packetLists._1
-                    val expectedList = packetLists._2
-                    
-                    // Inspect the next level
-                    obtainedList.zip(expectedList).forall(packets => {
-                        val obtained = packets._1
-                        val expected = packets._2
-                        
-                        // Inspect the data inside the packets
-                        obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
-                    })
-                })
-            }
+        val obtainedOutput = Await.result(
+                Future.sequence(for (actor <- actors) yield (actor ? new ResultPacket()).asInstanceOf[Future[List[DataPacket]]]),
+                timeout.duration
+        )
+
+        // Compare data packet by data packet
+        val res = obtainedOutput.zip(outputs).forall(packetLists => {
+            val obtainedList = packetLists._1
+            val expectedList = packetLists._2
+            
+            // Inspect the next level
+            obtainedList.zip(expectedList).forall(packets => {
+                val obtained = packets._1
+                val expected = packets._2
+                
+                // Inspect the data inside the packets
+                obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
+            })
         })
+        
+        assertResult(true, "Obtained output is:\r\n" + obtainedOutput + "\r\nExpected:\r\n" + outputs) {
+            res
+        }
     }
 }
