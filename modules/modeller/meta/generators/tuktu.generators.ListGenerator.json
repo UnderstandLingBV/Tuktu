@@ -1,6 +1,7 @@
 {
 	"name": "List Generator",
 	"description": "Generates a list of given values.",
+	"class": "tuktu.generators.ListGenerator",
 	"parameters": [
 		{
 			"name": "nodes",
