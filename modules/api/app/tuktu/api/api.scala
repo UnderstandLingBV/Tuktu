@@ -75,6 +75,11 @@ case class MonitorOverviewResult(
         subflows: Map[String, String]
 )
 
+case class MonitorLastDataPacketRequest(
+        flow_name: String,
+        processor_id: String
+)
+
 case class ProcessorMonitorPacket(
         typeOf: MPType,
         uuid: String,

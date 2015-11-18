@@ -6,6 +6,7 @@
 GET     /                                   controllers.Monitor.fetchLocalInfo(runningPage: Int = 1, finishedPage: Int = 1)
 GET     /index                              controllers.Monitor.fetchLocalInfo(runningPage: Int = 1, finishedPage: Int = 1)
 GET     /showApps/:rPage/:fPage             controllers.Monitor.fetchLocalInfo(rPage: Int, fPage: Int)
+GET     /lastDataPackets/:flow/:proc        controllers.Monitor.getLastDataPacket(flow, proc)
 
 # Dispatching
 GET     /dispatch/:id/:inst                 controllers.Asynchronous.load(id, inst: Int)

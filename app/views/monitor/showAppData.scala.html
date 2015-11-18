@@ -1,7 +1,5 @@
-@(appProps: tuktu.api.AppMonitorObject)
-@import tuktu.api.{ DataPacket, BeginType, EndType }
-@import play.api.libs.json.Json
-@import tuktu.api.utils.anyMapToJson
+@(appProps: tuktu.api.AppMonitorObject, flow_name: String)
+@import tuktu.api.{ BeginType, EndType }
 
 @if(appProps.flowDataPacketCount.nonEmpty) {
     <table class="table table-striped">
@@ -42,9 +40,7 @@
             @for((id, uuid) <- appProps.processorDataPacketCount.keys.toSeq.sorted.zip(appProps.processorDataPacketCount.map(x => java.util.UUID.randomUUID.toString))) {
                 <tr>
                     <td>
-                        <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target=".lastDP_@{id}_@{uuid}" aria-expanded="false" aria-controls="collapseExample">
-                            @id
-                        </button>
+                        <button data-flow="@flow_name" class="btn btn-primary btn-sm processor_monitor_collapse" type="button">@id</button>
                     </td>
                     <td title="@appProps.processorDataPacketCount(id).getOrElse(BeginType, 0) DataPackets containing a total of @appProps.processorDatumCount(id).getOrElse(BeginType, 0) Datums">
                         @appProps.processorDataPacketCount(id).getOrElse(BeginType, 0) (@appProps.processorDatumCount(id).getOrElse(BeginType, 0))
@@ -55,7 +51,7 @@
                 </tr>
                 <tr>
                     <td>
-                        <div class="collapse lastDP_@{id}_@{uuid}">
+                        <div class="collapse">
                             @if(appProps.processorDurations.getOrElse(id, Nil).nonEmpty) {
                                 Min: @{appProps.processorDurations(id).min / 1000.0} s <br>
                                 Max: @{appProps.processorDurations(id).max / 1000.0} s <br>
@@ -65,10 +61,10 @@
                         </div>
                     </td>
                     <td>
-                        <div class="collapse lastDP_@{id}_@{uuid}" style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets.get(id).map(map => map.getOrElse(BeginType, new DataPacket(Nil)).data.map(datum => anyMapToJson(datum))).getOrElse(Nil)))</div>
+                        <div class="collapse last_DP_received" style="white-space: pre-wrap;"></div>
                     </td>
                     <td>
-                        <div class="collapse lastDP_@{id}_@{uuid}" style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets.get(id).map(map => map.getOrElse(EndType, new DataPacket(Nil)).data.map(datum => anyMapToJson(datum))).getOrElse(Nil)))</div>
+                        <div class="collapse last_DP_processed" style="white-space: pre-wrap;"></div>
                     </td>
                 </tr>
             }

@@ -11,8 +11,10 @@ import play.api.cache.Cache
 import play.api.Logger
 import tuktu.api._
 import tuktu.api.types.ExpirationMap
+import tuktu.api.utils.anyMapToJson
 import java.util.Date
 import play.api.Play
+import play.api.libs.json.Json
 
 class DataMonitor extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -175,6 +177,30 @@ class DataMonitor extends Actor with ActorLogging {
                 running,
                 finished,
                 subflowMap toMap)
+        }
+        case mldp: MonitorLastDataPacketRequest => {
+            implicit val current = System.currentTimeMillis
+            val result = appMonitor.get(mldp.flow_name) match {
+                case None => ("Nothing recorded for this flow yet.", "Nothing recorded for this flow yet.")
+                case Some(appData) => {
+                    val in = appData.processorDataPackets.get(mldp.processor_id) match {
+                        case None => "No DataPackets recorded for this procsesor yet."
+                        case Some(map) => map.get(BeginType) match {
+                            case None => "No incoming DataPackets recorded for this processor yet."
+                            case Some(dp) => Json.prettyPrint(Json.toJson(dp.data.map(datum => anyMapToJson(datum))))
+                        }
+                    }
+                    val out = appData.processorDataPackets.get(mldp.processor_id) match {
+                        case None => "No DataPackets recorded for this procsesor yet."
+                        case Some(map) => map.get(EndType) match {
+                            case None => "No processed DataPackets recorded for this processor yet."
+                            case Some(dp) => Json.prettyPrint(Json.toJson(dp.data.map(datum => anyMapToJson(datum))))
+                        }
+                    }
+                    (in, out)
+                }
+            }
+            sender ! result
         }
         case m => Logger.warn("Monitor received unknown message: " + m)
     }

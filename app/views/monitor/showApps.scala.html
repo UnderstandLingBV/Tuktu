@@ -227,7 +227,7 @@
                         <h4 class="modal-title" id="modalLabel_@appProps.uuid">Data</h4>
                     </div>
                     <div class="modal-body">
-                        @showAppData(appProps)
+                        @showAppData(appProps, appName)
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -237,7 +237,27 @@
         </div>
     }
 
+    @helper.javascriptRouter("monitorJsRoutes")(routes.javascript.Monitor.getLastDataPacket)
+
     <script type="text/javascript">
+        $('div.collapse.last_DP_received').on('show.bs.collapse', function () {
+            if ($(this).text() !== '') return;
+
+            var button = $(this).closest('tr').prev('tr').find('button.processor_monitor_collapse').first();
+            var flow_uuid = $(button).data('flow');
+            var processor_id = $(button).text();
+
+            $.ajax(monitorJsRoutes.controllers.Monitor.getLastDataPacket(flow_uuid, processor_id))
+            .done(function(data) {
+                $(button).closest('tr').next('tr').find('.last_DP_received').text(data[0]);
+                $(button).closest('tr').next('tr').find('.last_DP_processed').text(data[1]);
+            });
+        })
+
+        $('button.processor_monitor_collapse').bind('click', function(event) {
+            $(this).closest('tr').next('tr').find('.collapse').collapse('toggle');
+        });
+
         var monitorTimeOffset = @System.currentTimeMillis - Date.now();
         $('td.javascript-date-timestamp').each(function(i, elem) {
             elem.innerHTML = new Date(parseInt(elem.title, 10));

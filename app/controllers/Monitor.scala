@@ -59,6 +59,16 @@ object Monitor extends Controller {
     }
 
     /**
+     * Gets the last received and processed DataPacket for a processor_id and a flow
+     */
+    def getLastDataPacket(flow_name: String, processor_id: String) = Action.async { implicit request =>
+        val fut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorLastDataPacketRequest(flow_name, processor_id)).asInstanceOf[Future[(String, String)]]
+        fut.map(res => {
+            Ok(Json.arr(res._1, res._2))
+        })
+    }
+
+    /**
      * Terminates a Tuktu job
      */
     def terminate(name: String, force: Boolean, runningPage: Int = 1, finishedPage: Int = 1) = Action {
