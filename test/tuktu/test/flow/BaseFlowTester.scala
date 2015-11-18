@@ -62,7 +62,7 @@ class BaseFlowTesterCollector(as: ActorSystem) extends Actor with ActorLogging {
         case cp: CheckPacket => {
             schedulerActor.cancel
             if (done) {
-                cp.sender ! buffer
+                cp.sender ! buffer.toList
                 self ! PoisonPill
             }
             else {
@@ -128,7 +128,17 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
         
         // Build the processor pipeline for this generator
         val (enums, actors) = {
-            val enumActors = for ((procEnum, index) <- Dispatcher.buildEnums(next, processorMap, None, "")._2.zipWithIndex) yield {
+            val builtEnums = {
+                val e = Dispatcher.buildEnums(next, processorMap, None, "")._2
+                // Special case: check for empty processor list and simply add a dummy processor
+                if (e.isEmpty) {
+                    val dummy: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => dp)
+                    List(dummy)
+                }
+                else e
+            }
+            
+            val enumActors = for ((procEnum, index) <- builtEnums.zipWithIndex) yield {
                 // Create actor that will fetch the results
                 val collectionActor = as.actorOf(Props(classOf[BaseFlowTesterCollector], as),
                         name = "testActor_" + java.util.UUID.randomUUID.toString)
@@ -169,12 +179,13 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
                 val expected = packets._2
                 
                 // Inspect the data inside the packets
-                obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
+                (obtained.data.isEmpty && expected.data.isEmpty) ||
+                    obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
             })
         })
         
         assertResult(true, "Obtained output is:\r\n" + obtainedOutput + "\r\nExpected:\r\n" + outputs) {
-            res
+            (obtainedOutput.isEmpty && outputs.isEmpty) || (!obtainedOutput.isEmpty && !outputs.isEmpty && res)
         }
     }
 }

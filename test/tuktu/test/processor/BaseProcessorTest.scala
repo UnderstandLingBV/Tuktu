@@ -31,11 +31,12 @@ class BaseProcessorTest {
             val expected = packets._2
             
             // Inspect the data inside the packets
-            obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
+            (obtained.data.isEmpty && expected.data.isEmpty) ||
+                obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
         })
         
-        assertResult(true, "Obtained output is:\r\n" + expectedList + "\r\nExpected:\r\n" + obtainedList) {
-            res
+        assertResult(true, "Obtained output is:\r\n" + obtainedList + "\r\nExpected:\r\n" + expectedList) {
+            (obtainedList.isEmpty && expectedList.isEmpty) || (!obtainedList.isEmpty && !expectedList.isEmpty && res)
         }
     }
 }
