@@ -66,6 +66,8 @@ To build Tuktu (for production), run:
 
 This will generate a compressed archive in the *target/universal/* folder of the root folder of the Tuktu project. This archive can be extracted and contains a startup script named *bin/tuktu(.bat)* that can be used to start Tuktu in production mode.
 
+**NOTE:** If you plan to use Tuktu on Windows, after doing dist, you have to make sure the classfile names are not too lengthy because Windows cannot deal with lengthy names. To make sure the classfile names are limited in length, uncomment the `//javaOptions += "-Xmax-classfile-name 100"` line in build.sbt in the root of the Tuktu folder. 
+
 To run Tuktu on your local machine for testing and to be able to modify it using the [Scala IDE](http://scala-ide.org/), run:
 
 `activator clean eclipse ~run`
