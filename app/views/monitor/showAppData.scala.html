@@ -54,7 +54,16 @@
                     </td>
                 </tr>
                 <tr>
-                    <td></td>
+                    <td>
+                        <div class="collapse lastDP_@{id}_@{uuid}">
+                            @if(appProps.processorDurations.nonEmpty) {
+                                Min: @{appProps.processorDurations(id).min / 1000.0} s <br>
+                                Max: @{appProps.processorDurations(id).max / 1000.0} s <br>
+                                Avg: @{appProps.processorDurations(id).sum / 1000.0 / appProps.processorDurations(id).size} s <br>
+                                Med: @{appProps.processorDurations(id).sorted.apply(appProps.processorDurations(id).size / 2) / 1000.0} s
+                            }
+                        </div>
+                    </td>
                     <td>
                         <div class="collapse lastDP_@{id}_@{uuid}" style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets.get(id).map(map => map.getOrElse(BeginType, new DataPacket(Nil)).data.map(datum => anyMapToJson(datum))).getOrElse(Nil)))</div>
                     </td>

@@ -94,7 +94,9 @@ case class AppMonitorObject(
         flowDatumCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
         processorDataPackets: collection.mutable.Map[String, collection.mutable.Map[MPType, DataPacket]] = collection.mutable.Map.empty,
         processorDataPacketCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
-        processorDatumCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty
+        processorDatumCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
+        processorBeginTimes: collection.mutable.Map[String, collection.mutable.Queue[Long]] = collection.mutable.Map.empty,
+        processorDurations: collection.mutable.Map[String, collection.mutable.ListBuffer[Long]] = collection.mutable.Map.empty
 )
 
 case class AppMonitorPacket(

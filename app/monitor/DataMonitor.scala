@@ -125,6 +125,20 @@ class DataMonitor extends Actor with ActorLogging {
 
                     val DPcount = app.processorDataPacketCount.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty.withDefaultValue(0))
                     DPcount(pmp.typeOf) += 1
+
+                    // If BeginType, queue up new BeginTime
+                    if (pmp.typeOf == BeginType) {
+                        val beginTimes = app.processorBeginTimes.getOrElseUpdate(pmp.processor_id, collection.mutable.Queue.empty)
+                        beginTimes.enqueue(pmp.timestamp)
+                    } else if (pmp.typeOf == EndType) {
+                        val beginTimes = app.processorBeginTimes.getOrElseUpdate(pmp.processor_id, collection.mutable.Queue.empty)
+                        if (beginTimes.nonEmpty) {
+                            val durations = app.processorDurations.getOrElseUpdate(pmp.processor_id, collection.mutable.ListBuffer.empty)
+                            durations += pmp.timestamp - beginTimes.dequeue
+                        } else {
+                            Logger.warn("DataMonitor received more ProcessorMonitorPackets of type EndType than BeginType for app " + pmp.uuid + " and processor " + pmp.processor_id)
+                        }
+                    }
                 }
                 case None => {
                     Logger.warn("DataMonitor received ProcessorMonitorPacket for unkown app with uuid: " + pmp.uuid)
