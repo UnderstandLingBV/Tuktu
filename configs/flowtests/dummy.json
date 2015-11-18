@@ -1,0 +1,15 @@
+{
+    "generators": [
+        {
+            "result": "test",
+            "config": {
+                "values": [
+                    "test"
+                ]
+            },
+            "name": "tuktu.generators.ListGenerator",
+            "next": []
+        }
+    ],
+    "processors": []
+}
