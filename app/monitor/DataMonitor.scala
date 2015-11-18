@@ -119,8 +119,12 @@ class DataMonitor extends Actor with ActorLogging {
 
                     val latest = app.processorDataPackets.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty)
                     latest(pmp.typeOf) = pmp.data
-                    val count = app.processorDataPacketCount.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty.withDefaultValue(0))
-                    count(pmp.typeOf) += 1
+
+                    val count = app.processorDatumCount.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty.withDefaultValue(0))
+                    count(pmp.typeOf) += pmp.data.data.size
+
+                    val DPcount = app.processorDataPacketCount.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty.withDefaultValue(0))
+                    DPcount(pmp.typeOf) += 1
                 }
                 case None => {
                     Logger.warn("DataMonitor received ProcessorMonitorPacket for unkown app with uuid: " + pmp.uuid)
@@ -139,8 +143,11 @@ class DataMonitor extends Actor with ActorLogging {
                     app.endTime = current
                     appMonitor.expire(mailbox_address, false)
 
-                    val count = app.flowDataPacketCount.getOrElseUpdate(mp.branch, collection.mutable.Map.empty.withDefaultValue(0))
+                    val count = app.flowDatumCount.getOrElseUpdate(mp.branch, collection.mutable.Map.empty.withDefaultValue(0))
                     count(mp.typeOf) += mp.amount
+
+                    val DPcount = app.flowDataPacketCount.getOrElseUpdate(mp.branch, collection.mutable.Map.empty.withDefaultValue(0))
+                    DPcount(mp.typeOf) += 1
                 }
                 case None => {
                     Logger.warn("DataMonitor received MonitorPacket for unkown app with uuid: " + mp.uuid)

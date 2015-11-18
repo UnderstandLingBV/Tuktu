@@ -8,16 +8,20 @@
         <thead>
             <tr>
                 <th>Branch</th>
-                <th>Sent</th>
-                <th>Completed</th>
+                <th title="DataPackets (Datums)">Sent</th>
+                <th title="DataPackets (Datums)">Completed</th>
             </tr>
         </thead>
         <tbody>
             @for(branch <- appProps.flowDataPacketCount.keys.toSeq.distinct.sorted) {
                 <tr>
                     <td>@branch</td>
-                    <td>@appProps.flowDataPacketCount(branch)(BeginType)</td>
-                    <td>@appProps.flowDataPacketCount(branch)(EndType)</td>
+                    <td title="@appProps.flowDataPacketCount(branch).getOrElse(BeginType, 0) DataPackets containing a total of  @appProps.flowDatumCount(branch).getOrElse(BeginType, 0) Datums">
+                        @appProps.flowDataPacketCount(branch).getOrElse(BeginType, 0) (@appProps.flowDatumCount(branch).getOrElse(BeginType, 0))
+                    </td>
+                    <td title="@appProps.flowDataPacketCount(branch).getOrElse(EndType, 0) DataPackets containing a total of  @appProps.flowDatumCount(branch).getOrElse(EndType, 0) Datums">
+                        @appProps.flowDataPacketCount(branch).getOrElse(EndType, 0) (@appProps.flowDatumCount(branch).getOrElse(EndType, 0))
+                    </td>
                 </tr>
             }
         </tbody>
@@ -29,21 +33,34 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Processor ID</th>
-                <th title="Received">Rec.</th>
-                <th title="Completed">Com.</th>
-                <th>Last DataPacket Received</th>
-                <th>Last DataPacket Completed</th>
+                <th width="30%">Processor ID</th>
+                <th width="35%">Received</th>
+                <th width="35%">Completed</th>
             </tr>
         </thead>
         <tbody>
-            @for(id <- appProps.processorDataPacketCount.keys.toSeq.sorted) {
+            @for((id, uuid) <- appProps.processorDataPacketCount.keys.toSeq.sorted.zip(appProps.processorDataPacketCount.map(x => java.util.UUID.randomUUID.toString))) {
                 <tr>
-                    <td>@id</td>
-                    <td>@appProps.processorDataPacketCount(id).getOrElse(BeginType, 0)</td>
-                    <td>@appProps.processorDataPacketCount(id).getOrElse(EndType, 0)</td>
-                    <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets.get(id).map(map => map.getOrElse(BeginType, new DataPacket(Nil)).data.map(datum => anyMapToJson(datum))).getOrElse(Nil)))</td>
-                    <td style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets.get(id).map(map => map.getOrElse(EndType, new DataPacket(Nil)).data.map(datum => anyMapToJson(datum))).getOrElse(Nil)))</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" type="button" data-toggle="collapse" data-target=".lastDP_@{id}_@{uuid}" aria-expanded="false" aria-controls="collapseExample">
+                            @id
+                        </button>
+                    </td>
+                    <td title="@appProps.processorDataPacketCount(id).getOrElse(BeginType, 0) DataPackets containing a total of @appProps.processorDatumCount(id).getOrElse(BeginType, 0) Datums">
+                        @appProps.processorDataPacketCount(id).getOrElse(BeginType, 0) (@appProps.processorDatumCount(id).getOrElse(BeginType, 0))
+                    </td>
+                    <td title="@appProps.processorDataPacketCount(id).getOrElse(EndType, 0) DataPackets containing a total of @appProps.processorDatumCount(id).getOrElse(EndType, 0) Datums">
+                        @appProps.processorDataPacketCount(id).getOrElse(EndType, 0) (@appProps.processorDatumCount(id).getOrElse(EndType, 0))
+                    </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>
+                        <div class="collapse lastDP_@{id}_@{uuid}" style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets.get(id).map(map => map.getOrElse(BeginType, new DataPacket(Nil)).data.map(datum => anyMapToJson(datum))).getOrElse(Nil)))</div>
+                    </td>
+                    <td>
+                        <div class="collapse lastDP_@{id}_@{uuid}" style="white-space: pre-wrap;">@Json.prettyPrint(Json.toJson(appProps.processorDataPackets.get(id).map(map => map.getOrElse(EndType, new DataPacket(Nil)).data.map(datum => anyMapToJson(datum))).getOrElse(Nil)))</div>
+                    </td>
                 </tr>
             }
         </tbody>
