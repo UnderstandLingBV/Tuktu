@@ -125,8 +125,11 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
         case dp: DataPacket => {
             // Here we need to hash the data packet based on key and forward it to the joiners
             dp.data.foreach {datum =>
+                // Get the Router of this Routee
+                val router = Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+                    .getOrElse(collection.mutable.Map[ActorRef, ActorRef]())(sender)
                 // See what source this came from
-                val sourceIndex = sourceActors(sender)
+                val sourceIndex = sourceActors(router)
                 // Get bucket-hash from key
                 val bucket = packetToNodeHasher(datum, sources(sourceIndex)._2, joinActors.size)
                 

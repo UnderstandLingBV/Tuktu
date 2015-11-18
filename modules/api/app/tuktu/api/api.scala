@@ -145,6 +145,10 @@ abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends B
 abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
+    
+    // Add our parent (the Router of this Routee) to cache
+    Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+        .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) += self -> context.parent
 
     // Set up pipeline, either one that sends back the result, or one that just sinks
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
@@ -166,6 +170,10 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
                 self,                
                 "done"
         )
+        
+        // Remove parent relationship from Cache
+        Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+            .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) -= self
 
         channel.eofAndEnd
         //context.stop(self)

@@ -2,9 +2,7 @@ import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.JavaConverters.asScalaSetConverter
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import org.reflections.Reflections
-
 import akka.actor.ActorSelection.toScala
 import akka.actor.PoisonPill
 import akka.actor.Props
@@ -34,6 +32,7 @@ import tuktu.api.ClusterNode
 import tuktu.api.TuktuGlobal
 import java.nio.file.{ Files, Paths }
 import play.api.Logger
+import akka.actor.ActorRef
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -83,6 +82,8 @@ object Global extends GlobalSettings {
             )
             clusterNodes
         })
+        // Routee to Router mapping
+        Cache.set("router.mapping", scala.collection.mutable.Map[ActorRef, ActorRef]())
 
         // Set up monitoring actor
         val monActor = Akka.system.actorOf(Props[DataMonitor], name = "TuktuMonitor")

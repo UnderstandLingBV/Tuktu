@@ -40,6 +40,10 @@ class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataP
  */
 class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit var timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    // Add our parent (the Router of this Routee) to cache
+    Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+        .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) += self -> context.parent
 
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
@@ -96,6 +100,10 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
                     "done"
             )
             
+            // Remove parent relationship from Cache
+            Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+                .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) -= self
+            
             val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
             enum |>> processors.head &>> sinkIteratee
 
@@ -118,6 +126,10 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
  */
 class ConcurrentStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+
+    // Add our parent (the Router of this Routee) to cache
+    Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+        .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) += self -> context.parent
 
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
@@ -165,6 +177,10 @@ class ConcurrentStreamGenerator(resultName: String, processors: List[Enumeratee[
                     "done"
             )
             
+            // Remove parent relationship from Cache
+            Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+                .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) -= self
+            
             val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
             enum |>> (processors.head compose logEnumeratee) &>> sinkIteratee
 
@@ -187,6 +203,10 @@ class ConcurrentStreamGenerator(resultName: String, processors: List[Enumeratee[
  */
 class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    // Add our parent (the Router of this Routee) to cache
+    Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+        .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) += self -> context.parent
 
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
@@ -241,6 +261,10 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
                     self,
                     "done"
             )
+            
+            // Remove parent relationship from Cache
+            Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+                .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) -= self
             
             channel.eofAndEnd
             self ! PoisonPill
