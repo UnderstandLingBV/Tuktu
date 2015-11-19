@@ -219,7 +219,7 @@
     }
 
     @for((appName, appProps) <- running.drop((runningPage - 1) * 100).take(100) ++ finished.drop((finishedPage - 1) * 100).take(100)) {
-        <div class="modal fade" id="modal_@appProps.uuid" tabindex="-1" role="dialog" aria-labelledby="modalLabel_@appProps.uuid">
+        <div class="modal fade job_modal" id="modal_@appProps.uuid" tabindex="-1" role="dialog" aria-labelledby="modalLabel_@appProps.uuid">
             <div class="modal-dialog data-modal" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -307,9 +307,17 @@
         refresh();
 
         @if(messages.nonEmpty) {
-            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo(runningPage, finishedPage)'", 3000);
+            var timeout = window.setTimeout("location = '@routes.Monitor.fetchLocalInfo(runningPage, finishedPage)'", 3000);
         } else {
-            window.setTimeout("location = '@routes.Monitor.fetchLocalInfo(runningPage, finishedPage)'", 30000);
+            var timeout = window.setTimeout("location = '@routes.Monitor.fetchLocalInfo(runningPage, finishedPage)'", 30000);
         }
+
+        $('div.job_modal').on('show.bs.modal', function () {
+            timeout = window.clearTimeout(timeout);
+        })
+
+        $('div.job_modal').on('hide.bs.modal', function () {
+            timeout = window.setTimeout("location = '@routes.Monitor.fetchLocalInfo(runningPage, finishedPage)'", 3000@if(messages.isEmpty){0});
+        })
     </script>
 }
