@@ -61,13 +61,13 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                 }
                 // See if we need to append or not
                 if (append) {
-                    client.query(evalQuery)
-                    query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> Nil
-                    Nil
-                } else {
                     val res = client.queryResult(evalQuery).map(row => rowToMap(row))
                     query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> res
                     res
+                } else {
+                    client.query(evalQuery)
+                    query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> Nil
+                    Nil
                 }
             }
         }
@@ -78,5 +78,5 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
         } else {
             data
         }
-    }) compose Enumeratee.onEOF(() => client.close)
+    }) compose Enumeratee.onEOF(() => if (client != null) client.close)
 }
