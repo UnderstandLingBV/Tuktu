@@ -53,6 +53,13 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "distinct",
+					"description": "Only execute distinct queries within each DataPacket once, and reuse results if append is true.",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}
