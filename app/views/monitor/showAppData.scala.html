@@ -51,20 +51,22 @@
                 </tr>
                 <tr>
                     <td>
-                        <div class="collapse">
-                            @if(appProps.processorDurations.getOrElse(id, Nil).nonEmpty) {
-                                Min: @{appProps.processorDurations(id).min / 1000.0} s <br>
-                                Max: @{appProps.processorDurations(id).max / 1000.0} s <br>
-                                Avg: @{appProps.processorDurations(id).sum / 1000.0 / appProps.processorDurations(id).size} s <br>
-                                Med: @{appProps.processorDurations(id).sorted.apply(appProps.processorDurations(id).size / 2) / 1000.0} s
-                            }
+                        @if(appProps.processorDurations.getOrElse(id, Nil).nonEmpty) {
+                            Min: @{appProps.processorDurations(id).min / 1000.0} s <br>
+                            Max: @{appProps.processorDurations(id).max / 1000.0} s <br>
+                            Avg: @{appProps.processorDurations(id).sum / 1000.0 / appProps.processorDurations(id).size} s <br>
+                            Med: @{appProps.processorDurations(id).sorted.apply(appProps.processorDurations(id).size / 2) / 1000.0} s
+                        }
+                    </td>
+                    <td>
+                        <div class="collapse last_DP_received">
+                            <div class="well" style="white-space: pre-wrap;"></div>
                         </div>
                     </td>
                     <td>
-                        <div class="collapse last_DP_received" style="white-space: pre-wrap;"></div>
-                    </td>
-                    <td>
-                        <div class="collapse last_DP_processed" style="white-space: pre-wrap;"></div>
+                        <div class="collapse last_DP_processed">
+                            <div class="well" style="white-space: pre-wrap;"></div>
+                        </div>
                     </td>
                 </tr>
             }

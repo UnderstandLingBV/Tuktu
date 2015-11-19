@@ -241,7 +241,7 @@
 
     <script type="text/javascript">
         $('div.collapse.last_DP_received').on('show.bs.collapse', function () {
-            if ($(this).text() !== '') return;
+            if ($(this).find('.well').text() !== '') return;
 
             var button = $(this).closest('tr').prev('tr').find('button.processor_monitor_collapse').first();
             var flow_uuid = $(button).data('flow');
@@ -249,8 +249,8 @@
 
             $.ajax(monitorJsRoutes.controllers.Monitor.getLastDataPacket(flow_uuid, processor_id))
             .done(function(data) {
-                $(button).closest('tr').next('tr').find('.last_DP_received').text(data[0]);
-                $(button).closest('tr').next('tr').find('.last_DP_processed').text(data[1]);
+                $(button).closest('tr').next('tr').find('.last_DP_received > .well').text(data[0]);
+                $(button).closest('tr').next('tr').find('.last_DP_processed > .well').text(data[1]);
             });
         })
 
