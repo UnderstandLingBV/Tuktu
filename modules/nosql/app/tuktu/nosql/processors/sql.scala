@@ -51,8 +51,11 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
             if (distinct && query_results.contains((evalQuery, evalUrl, evalUser, evalPassword, evalDriver)))
                 query_results((evalQuery, evalUrl, evalUser, evalPassword, evalDriver))
             else {
+                // See if we need to initialize client
+                if (client == null)
+                    client = new client(evalUrl, evalUser, evalPassword, evalDriver)
                 // See if we need to update the client
-                if (evalUrl != client.url || evalUser != client.user || evalPassword != client.password || evalDriver != client.driver) {
+                else if (evalUrl != client.url || evalUser != client.user || evalPassword != client.password || evalDriver != client.driver) {
                     client.close
                     client = new client(evalUrl, evalUser, evalPassword, evalDriver)
                 }
