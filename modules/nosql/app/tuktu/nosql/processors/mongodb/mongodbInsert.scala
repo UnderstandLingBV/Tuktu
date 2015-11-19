@@ -19,7 +19,7 @@ import tuktu.nosql.util.MongoSettings
 /**
  * Inserts data into MongoDB
  */
-class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultName) { 
+class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fields = List[String]()
     var collection: JSONCollection = _
     var timeout: Int = _
@@ -29,30 +29,30 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         val hosts = (config \ "hosts").as[List[String]]
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
-        
+
         // create connectionPool
         val settings = MongoSettings(hosts, database, coll)
         collection = MongoCollectionPool.getCollection(settings)
 
         // What fields to write?
         fields = (config \ "fields").as[List[String]]
-        
-        timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(5))
+
+        timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Convert to JSON
         val bulkData = data.data.map(datum => fields match {
             case Nil => anyMapToJson(datum, true)
-            case _ => anyMapToJson(datum.filter(elem => fields.contains(elem._1)), true)
+            case _   => anyMapToJson(datum.filter(elem => fields.contains(elem._1)), true)
         })
-        
+
         // Bulk insert and await
         val future = collection.bulkInsert(Enumerator.enumerate(bulkData))
-        
+
         // Wait for all the results to be retrieved
         Await.ready(future, timeout seconds)
-        
+
         data
-    }) 
+    })
 }

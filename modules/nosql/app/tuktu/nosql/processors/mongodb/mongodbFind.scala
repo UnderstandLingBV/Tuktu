@@ -48,25 +48,26 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        // Get data from Mongo and sequence
-        val resultListFutures = Future.sequence(for(datum <- data.data) yield {
-            // Evaluate the query en filter strings and convert to JSON
-            val queryJson = Json.parse(stringHandler.evaluateString(query, datum,"\"",""))
+        // Get data from MongoDB and sequence
+        val resultListFutures = Future.sequence(for (datum <- data.data) yield {
+            // Evaluate the query and filter strings and convert to JSON
+            val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", ""))
             val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum))
             val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
+
             // Get data based on query and filter
             val resultData = limit match {
-                case Some(s) => collection.find(queryJson,filterJson).sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject].collect[List](s)
-                case None => collection.find(queryJson,filterJson).sort(sortJson).cursor[JsObject].collect[List]()
-            }   
-            
-            resultData.map { resultList => {
+                case Some(s) => collection.find(queryJson, filterJson).sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject].collect[List](s)
+                case None    => collection.find(queryJson, filterJson).sort(sortJson).cursor[JsObject].collect[List]()
+            }
+
+            resultData.map(resultList => {
                 for (resultRow <- resultList) yield {
                     tuktu.api.utils.JsObjectToMap(resultRow)
                 }
-            }}    
+            })
         })
-        
+
         // Iterate over result futures
         val dataFuture = resultListFutures.map(resultList => {
             // Combine result with data
@@ -74,8 +75,8 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
                 datum + (resultName -> result)
             }
         })
-        
+
         // Gather results
-        new DataPacket(Await.result(dataFuture, Cache.getAs[Int]("timeout").getOrElse(5) seconds))
-    }) 
+        new DataPacket(Await.result(dataFuture, Cache.getAs[Int]("timeout").getOrElse(30) seconds))
+    })
 }
