@@ -40,25 +40,25 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
 
         // Get query and filter
         query = (config \ "query").as[String]
-        
+
         // Only delete maximum of one item?
         justOne = (config \ "just_one").asOpt[Boolean].getOrElse(false)
-        
+
         // Maximum time out
-        timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(5))
+        timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // create one big remove query
-        val queries = (for(datum <- data.data) yield {
-            Json.parse(stringHandler.evaluateString(query, datum,"\"","")).toString()
-        }).distinct.mkString(",")
+        val queries = (for (datum <- data.data) yield {
+            Json.parse(stringHandler.evaluateString(query, datum, "\"", ""))
+        }).distinct
 
         // execute and wait for completion
-        val result = collection.remove(Json.parse("{ \"$or\": [ "+queries+" ] }"))
+        val result = collection.remove(Json.obj("$or" -> queries))
         Await.ready(result, timeout seconds)
-        
+
         // return original data
         data
-    }) 
+    })
 }
