@@ -52,10 +52,10 @@
                 <tr>
                     <td>
                         @if(appProps.processorDurations.getOrElse(id, Nil).nonEmpty) {
-                            Min: @{appProps.processorDurations(id).min / 1000.0} s <br>
-                            Max: @{appProps.processorDurations(id).max / 1000.0} s <br>
-                            Avg: @{appProps.processorDurations(id).sum / 1000.0 / appProps.processorDurations(id).size} s <br>
-                            Med: @{appProps.processorDurations(id).sorted.apply(appProps.processorDurations(id).size / 2) / 1000.0} s
+                            Min: @{math.round(appProps.processorDurations(id).min) / 1000.0} s <br>
+                            Max: @{math.round(appProps.processorDurations(id).max) / 1000.0} s <br>
+                            Avg: @{math.round(appProps.processorDurations(id).sum / appProps.processorDurations(id).size.toDouble) / 1000.0} s <br>
+                            Med: @{math.round(appProps.processorDurations(id).sorted.apply(appProps.processorDurations(id).size / 2)) / 1000.0} s
                         }
                     </td>
                     <td>
