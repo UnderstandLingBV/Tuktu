@@ -322,28 +322,27 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
         new DataPacket(
             // Check if we need to do batch or individual
             if (batch) {
-                // Count number of matches
-                val numMatches = (for {
-                    datum <- data.data
-
-                    // Evaluate expressions
-                    if (evaluateExpressions(datum, expressions))
-                } yield 1).foldLeft(0)(_ + _)
-
+                // Helper function to check if at least batchMinCount datums fulfill the expressions
+                def helper(datums: List[Map[String, Any]], remaining: Int, matches: Int = 0): Boolean = {
+                    if (matches >= batchMinCount) true
+                    else if (matches + remaining < batchMinCount) false
+                    else datums match {
+                        case Nil => false
+                        case datum :: tail => {
+                            if (evaluateExpressions(datum, expressions)) helper(tail, remaining - 1, matches + 1)
+                            else helper(tail, remaining - 1, matches)
+                        }
+                    }
+                }
                 // Check if we need to keep this DP in its entirety or not
-                if (numMatches >= batchMinCount) data.data
+                if (helper(data.data, data.data.size)) data.data
                 else List()
             } else {
-                // Go over data
-                for {
-                    datum <- data.data
-
-                    // Evaluate expressions
-                    if (evaluateExpressions(datum, expressions))
-                } yield datum
+                // Filter data
+                data.data.filter(datum => evaluateExpressions(datum, expressions))
             })
     }) compose Enumeratee.filter((data: DataPacket) => {
-        data.data.size > 0
+        data.data.nonEmpty
     })
 }
 
