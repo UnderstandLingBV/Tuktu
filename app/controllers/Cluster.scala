@@ -58,7 +58,7 @@ object Cluster extends Controller {
                 Cache.set("timeout", cluster.timeout)
                 
                 // Redirect back to overview
-                Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully uodated cluster configuration!."))
+                Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully updated cluster configuration!"))
             }
         )
     }}

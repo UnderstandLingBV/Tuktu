@@ -275,6 +275,12 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                                 } else if (replacedExpression.contains("==")) {
                                     val split = replacedExpression.split("==").map(_.trim)
                                     (1 until split.length).forall(i => split(i - 1) == split(i))
+                                } else if (replacedExpression.contains("!=")) {
+                                    val split = replacedExpression.split("!=").map(_.trim)
+                                    (1 until split.length).forall(i => split(i - 1) != split(i))
+                                } else if (replacedExpression.contains("<>")) {
+                                    val split = replacedExpression.split("<>").map(_.trim)
+                                    (1 until split.length).forall(i => split(i - 1) != split(i))
                                 } else if (replacedExpression.contains('=')) {
                                     val split = replacedExpression.split('=').map(_.trim)
                                     (1 until split.length).forall(i => split(i - 1) == split(i))
