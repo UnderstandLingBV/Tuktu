@@ -1,0 +1,79 @@
+{
+	"name": "Regex Filter Processor",
+	"description": "Filters data packets satisfying a number of regular expressions.",
+	"class": "tuktu.processors.PacketRegexFilterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "expressions",
+					"description": "The list of expressions.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "expression",
+							"type": "object",
+							"required": true,
+							"description": "The actual expression.",
+							"parameters": [
+								{
+									"name": "type",
+									"description": "The type of the expression: 'negate' or 'simple'.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "and_or",
+									"description": "In case of a list of expressions below, do all statements need to evaluate to true (and), or at least one (or).",
+									"type": "string",
+									"required": false,
+									"default": "and"
+								},
+								{
+									"name": "field",
+									"description": "The field to be tested for the regular expression. If type is not negate, all datums are selected which have at least one match, otherwise all datums are selected which have no matches.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "expression",
+									"description": "The regular expression itself. This can be a string that needs to be evaluated, or it can be a nested array of new expressions that follow the same structure as any top-level expression.",
+									"type": "any",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "batch",
+					"type": "boolean",
+					"required": false,
+					"default": false,
+					"description": "Whether or not to include the entire DataPacket if one or more of the elements match the expression(s)."
+				},
+				{
+					"name": "batch_min_count",
+					"type": "int",
+					"required": false,
+					"default": 1,
+					"description": "If batch is set to true, this number is the minimum amount of elements that should fulfill the expression(s) before including the whole DataPacket."
+				}
+			]
+		}
+	]
+}

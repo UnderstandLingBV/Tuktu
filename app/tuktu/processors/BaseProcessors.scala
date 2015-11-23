@@ -353,6 +353,81 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
 }
 
 /**
+ * Filters out data packets that satisfy a certain condition
+ */
+class PacketRegexFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
+    /**
+     * Evaluates a number of expressions
+     */
+    private def evaluateExpressions(datum: Map[String, Any], expressions: List[JsObject]): Boolean = {
+        def evaluateExpression(expression: JsObject): Boolean = {
+            // Get type, and/or and sub expressions, if any
+            val exprType = (expression \ "type").as[String]
+            val andOr = (expression \ "and_or").asOpt[String].getOrElse("and")
+            val evalExpr = (expression \ "expression").as[JsValue]
+            val field = (expression \ "field").as[String]
+
+            // See what the actual expression looks like
+            evalExpr match {
+                case e: JsString => {
+                    val replacedExpression = evaluateTuktuString(e.value, datum).r
+
+                    val find = replacedExpression.findFirstIn(datum(field).asInstanceOf[String]) != None
+
+                    if (exprType == "negate") !find else find
+                }
+                case e: JsArray => {
+                    // We have sub elements, process all of them
+                    if (andOr == "or") e.as[List[JsObject]].exists(expr => evaluateExpression(expr))
+                    else e.as[List[JsObject]].forall(expr => evaluateExpression(expr))
+                }
+                case _ => true
+            }
+        }
+
+        // Go over all expressions and evaluate them
+        expressions.exists(expr => evaluateExpression(expr))
+    }
+
+    var expressions: List[JsObject] = _
+    var batch: Boolean = _
+    var batchMinCount: Int = _
+
+    override def initialize(config: JsObject) {
+        expressions = (config \ "expressions").as[List[JsObject]]
+        batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
+        batchMinCount = (config \ "batch_min_count").asOpt[Int].getOrElse(1)
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(
+            // Check if we need to do batch or individual
+            if (batch) {
+                // Helper function to check if at least batchMinCount datums fulfill the expressions
+                def helper(datums: List[Map[String, Any]], remaining: Int, matches: Int = 0): Boolean = {
+                    if (matches >= batchMinCount) true
+                    else if (matches + remaining < batchMinCount) false
+                    else datums match {
+                        case Nil => false
+                        case datum :: tail => {
+                            if (evaluateExpressions(datum, expressions)) helper(tail, remaining - 1, matches + 1)
+                            else helper(tail, remaining - 1, matches)
+                        }
+                    }
+                }
+                // Check if we need to keep this DP in its entirety or not
+                if (helper(data.data, data.data.size)) data.data
+                else List()
+            } else {
+                // Filter data
+                data.data.filter(datum => evaluateExpressions(datum, expressions))
+            })
+    }) compose Enumeratee.filter((data: DataPacket) => {
+        data.data.nonEmpty
+    })
+}
+
+/**
  * Adds a field with a constant (static) value
  */
 class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resultName) {

@@ -64,7 +64,7 @@
 					"name": "batch_min_count",
 					"type": "int",
 					"required": false,
-					"default": 0,
+					"default": 1,
 					"description": "If batch is set to true, this number is the minimum amount of elements that should fulfill the expression(s)"
 				}
 			]
