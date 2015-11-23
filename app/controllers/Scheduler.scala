@@ -33,7 +33,7 @@ object Scheduler extends Controller {
     // Show an overview of all active schedulers
     def overview() = Action.async { implicit request =>
         // Get the monitor
-        val fut = (scheduler ? new Overview()).asInstanceOf[Future[List[String]]]
+        val fut = (scheduler ? new Overview()).asInstanceOf[Future[List[(String, String)]]]
         fut.map(res =>
             Ok(views.html.scheduler.overview(
                     res,

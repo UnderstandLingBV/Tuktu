@@ -1,37 +1,42 @@
-@(jobs: List[String], messages: Map[String, List[String]])
+@(jobs: List[(String, String)], messages: Map[String, List[String]])
 
 @index("Scheduler", messages) {
     @schedulerMenu()
 } {
-	@if(jobs.size == 0) {
-		<h2>No scheduled jobs found!</h2>
-	} else {
-		<table class="table table-striped">
-	        <thead>
-		        <tr>
-		            <th>
-		                Job name
-		            </th>
-		            <th>
-		                Actions
-		            </th>		            
-		        </tr>
-	        </thead>
-	        <tbody>
-				@for(job <- jobs) {
-				    <tr>
-				        <th style="margin-right: 25px;">
-				            @job
-				        </th>
-				        <td>
-				            <a href="@routes.Scheduler.terminate(job)">
+    @if(jobs.size == 0) {
+        <h2>No scheduled jobs found!</h2>
+    } else {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>
+                        Job name
+                    </th>
+                    <th>
+                        Schedule
+                    </th>
+                    <th>
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @for((name, schedule) <- jobs) {
+                    <tr>
+                        <th style="margin-right: 25px;">
+                            @name
+                        </th>
+                        <th>
+                            @schedule
+                        </th>
+                        <td>
+                            <a href="@routes.Scheduler.terminate(name)">
                                 Stop
-                            </a>				            
-				        </td>				        
-				    </tr>
-			    }
-			</tbody>
-	    </table>
-
-	}
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 }

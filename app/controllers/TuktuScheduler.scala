@@ -43,40 +43,52 @@ case class KillRequest(
         name: String        
 )
 
+abstract class Schedule(actor: ActorRef) {
+    def description: String = ???
+    def cancel: Unit = ???
+}
+class SimpleSchedule(actor: ActorRef, scheduler: SimpleScheduler) extends Schedule(actor) {
+    val schedule = Akka.system.scheduler.schedule(
+        scheduler.initialDelay,
+        scheduler.interval,
+        actor,
+        scheduler.dispatchRequest)
+
+    override def description = "Every " + scheduler.interval.length + " " + scheduler.interval.unit.toString.toLowerCase
+    override def cancel = schedule.cancel
+}
+class CronSchedule(actor: ActorRef, scheduler: CronScheduler, quartzScheduler: QuartzSchedulerExtension, name: String) extends Schedule(actor) {
+    quartzScheduler.createSchedule(name, None, scheduler.cronSchedule, None, Calendar.getInstance.getTimeZone)
+    quartzScheduler.schedule(name, actor, scheduler.dispatchRequest)
+
+    override def description = scheduler.cronSchedule
+    override def cancel = quartzScheduler.cancelJob(name)
+}
 
 class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     // a list of active schedulers
-    var schedulers = Map[String, Option[Cancellable]]()
+    var schedulers = Map[String, Schedule]()
 
     val quartzScheduler = QuartzSchedulerExtension(Akka.system)
-    
+
     def receive() = {
         case schedule: DelayedScheduler => {
             Akka.system.scheduler.scheduleOnce(schedule.delay, actor, schedule.dispatchRequest)
         }
         case schedule: SimpleScheduler => {
-            schedulers += schedule.name -> Some(Akka.system.scheduler.schedule(
-                    schedule.initialDelay,
-                    schedule.interval,
-                    actor,
-                    schedule.dispatchRequest
-            ))
+            // If overwriting, cancel old schedule
+            if (schedulers.contains(schedule.name)) schedulers(schedule.name).cancel
+            // Add new schedule
+            schedulers += schedule.name -> new SimpleSchedule(actor, schedule)
         }
         case schedule: CronScheduler => {
             val uniqueName = schedule.name + "_" + java.util.UUID.randomUUID.toString
-            quartzScheduler.createSchedule(uniqueName, None, schedule.cronSchedule, None, Calendar.getInstance.getTimeZone)
-            quartzScheduler.schedule(uniqueName, actor, schedule.dispatchRequest)
-            
-            schedulers += (uniqueName -> None)
+            schedulers += uniqueName -> new CronSchedule(actor, schedule, quartzScheduler, uniqueName)
         }
-        case _: Overview => sender ! schedulers.keys.toList
+        case _: Overview => sender ! schedulers.mapValues(_.description).toList.sorted
         case kr: KillRequest => {
-            schedulers(kr.name) match {
-                case Some(cancellable) => cancellable.cancel
-                case None => quartzScheduler.cancelJob(kr.name)
-            }
-
+            schedulers(kr.name).cancel
             schedulers -= kr.name
         }
         case _ => {}
