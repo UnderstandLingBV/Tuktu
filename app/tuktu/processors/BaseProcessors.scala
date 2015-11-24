@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat
 import tuktu.nosql.util.stringHandler
 import tuktu.api.utils.evaluateTuktuString
 import play.api.Logger
+import scala.collection.GenTraversableOnce
 
 /**
  * Filters specific fields from the data tuple
@@ -805,5 +806,31 @@ class AkkaSenderProcessor(resultName: String) extends BaseProcessor(resultName) 
         val selection = Akka.system.actorSelection(actor_path)
         selection ! data.data
         data
+    })
+}
+
+/**
+ * Zips two traversables and explodes the result into separate datums, overwriting the original traversables
+ */
+class ZipExplodeProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field1: String = _
+    var field2: String = _
+
+    override def initialize(config: JsObject) {
+        field1 = (config \ "field_1").as[String]
+        field2 = (config \ "field_2").as[String]
+    }
+
+    private def toList(any: Any): List[Any] = any match {
+        case tra: GenTraversableOnce[_] => tra.toList
+        case arr: Array[_]              => arr.toList
+        case any: Any                   => List(any)
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(data.data.flatMap(datum => {
+            val zipped = toList(datum(field1)).zip(toList(datum(field2)))
+            for ((any1, any2) <- zipped) yield datum + (field1 -> any1) + (field2 -> any2)
+        }))
     })
 }

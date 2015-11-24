@@ -1,0 +1,36 @@
+{
+	"name": "Zip Explode Processor",
+	"description": "Zips two traversables and explodes the result into separate datums, overwriting the original fields.",
+	"class": "tuktu.processors.ZipExplodeProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field_1",
+					"type": "string",
+					"description": "First field to zip.",
+					"required": true
+				},
+				{
+					"name": "field_2",
+					"type": "string",
+					"description": "Second field to zip.",
+					"required": true
+				}
+			]
+		}
+	]
+}
