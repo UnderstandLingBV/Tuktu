@@ -12,6 +12,7 @@ import tuktu.api.DataPacket
 import tuktu.api.utils
 import scala.io.Codec
 import scala.io.Source
+import java.io.BufferedReader
 
 /**
  * Streams data into a file and closes it when it's done
@@ -108,6 +109,7 @@ class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) 
     var encoding = "utf-8"
     var startLine = 0
     var lineSep: String = _
+    var reader: BufferedReader = null
 
     override def initialize(config: JsObject) {
         // Get the location of the file to write to
@@ -122,10 +124,13 @@ class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) 
             val fileName = utils.evaluateTuktuString(this.fileName, datum)
             val encoding = utils.evaluateTuktuString(this.encoding, datum)
 
-            val reader = tuktu.api.file.genericReader(fileName)(Codec.apply(encoding))
+            reader = tuktu.api.file.genericReader(fileName)(Codec.apply(encoding))
             val res = datum + (resultName -> Stream.continually(reader.readLine()).takeWhile(_ != null).mkString(lineSep))
             reader.close
+            reader = null
             res
         })
-    })
+    }) compose Enumeratee.onEOF{() =>
+        if (reader != null) reader.close
+    }
 }
