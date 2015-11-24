@@ -249,6 +249,7 @@ object utils {
                 case a: JsValue    => a
                 case a: BigDecimal => a
                 case a: Seq[Any]   => anyListToJsonHelper(a)
+                case a: Array[_]   => anyListToJsonHelper(a.toList)
                 case a: Map[_, _]  => mapToJsonHelper(a.toList)
                 case _             => head._2.toString
             })) ++ mapToJsonHelper(remainder)
@@ -273,6 +274,7 @@ object utils {
                 case a: JsValue    => a
                 case a: BigDecimal => a
                 case a: Seq[Any]   => anyListToJsonHelper(a)
+                case a: Array[_]   => anyListToJsonHelper(a.toList)
                 case a: Map[_, _]  => mapToJsonHelper(a.toList)
                 case _             => elem.toString
             }) ++ anyListToJsonHelper(remainder)
