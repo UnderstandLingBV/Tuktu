@@ -1,7 +1,7 @@
 {
 	"name": "String Imploder Processor",
 	"description": "Implodes arrays into a string, overwriting its top-level ancestor.",
-	"class": "tuktu.processors.String ImploderProcessor",
+	"class": "tuktu.processors.StringImploderProcessor",
 	"parameters": [
 		{
 			"name": "id",
