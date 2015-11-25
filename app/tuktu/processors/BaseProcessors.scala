@@ -489,6 +489,8 @@ class StringImploderProcessor(resultName: String) extends BaseProcessor(resultNa
                     val someVal = utils.fieldParser(datum, fields, None)
                     if (someVal.isInstanceOf[JsValue])
                         someVal.asInstanceOf[JsValue].as[Traversable[String]]
+                    else if (someVal.isInstanceOf[Array[String]])
+                        someVal.asInstanceOf[Array[String]].toTraversable
                     else
                         someVal.asInstanceOf[Traversable[String]]
                 }
