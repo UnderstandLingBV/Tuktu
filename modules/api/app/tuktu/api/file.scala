@@ -23,20 +23,19 @@ object file {
     def genericReader(uri: URI)(implicit codec: Codec): BufferedReader = {
         uri.getScheme match {
             case "file" | "" | null => fileReader(uri)
-            case "hdfs" => hdfsReader(uri)
-            case "tdfs" => dfsReader(uri)
-            case _ => throw new Exception ("Unknown file format")
+            case "hdfs"             => hdfsReader(uri)
+            case "tdfs"             => dfsReader(uri)
+            case _                  => throw new Exception("Unknown file format")
         }
     }
-    
+
     /**
      * Wrapper for a string instead of URI
      */
     def genericReader(string: String)(implicit codec: Codec): BufferedReader = {
         genericReader(Uri.parse(string).toURI)(codec)
     }
-    
-    
+
     /**
      * Reads from Local disk
      */
@@ -49,14 +48,14 @@ object file {
      */
     def hdfsReader(uri: URI)(implicit codec: Codec): BufferedReader = {
         val conf = new Configuration
-        conf.set("fs.defaultFS", uri.getHost + ":" + uri.getPort)        
+        conf.set("fs.defaultFS", uri.getHost + ":" + uri.getPort)
         val fs = FileSystem.get(conf)
         val path = new Path(uri.getPath)
-        new BufferedReader(new InputStreamReader(fs.open(path),codec.decoder))        
+        new BufferedReader(new InputStreamReader(fs.open(path), codec.decoder))
     }
-    
+
     def dfsReader(uri: URI)(implicit codec: Codec) = {
-		val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+        val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
         new BufferedDFSReader(new InputStreamReader(new FileInputStream(prefix + "/" + uri.getSchemeSpecificPart), codec.name), uri.getSchemeSpecificPart)
     }
 }

@@ -105,11 +105,10 @@ class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resul
 }
 
 class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fileName = ""
-    var encoding = "utf-8"
-    var startLine = 0
+    var fileName: String = _
+    var encoding: String = _
+    var startLine: Int = _
     var lineSep: String = _
-    var reader: BufferedReader = null
 
     override def initialize(config: JsObject) {
         // Get the location of the file to write to
@@ -124,13 +123,14 @@ class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) 
             val fileName = utils.evaluateTuktuString(this.fileName, datum)
             val encoding = utils.evaluateTuktuString(this.encoding, datum)
 
-            reader = tuktu.api.file.genericReader(fileName)(Codec.apply(encoding))
-            val res = datum + (resultName -> Stream.continually(reader.readLine()).takeWhile(_ != null).mkString(lineSep))
-            reader.close
-            reader = null
-            res
+            var reader: BufferedReader = null
+            try {
+                reader = tuktu.api.file.genericReader(fileName)(Codec(encoding))
+                datum + (resultName -> Stream.continually(reader.readLine).takeWhile(_ != null).drop(startLine).mkString(lineSep))
+            } finally {
+                if (reader != null)
+                    reader.close
+            }
         })
-    }) compose Enumeratee.onEOF{() =>
-        if (reader != null) reader.close
-    }
+    })
 }

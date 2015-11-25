@@ -1,0 +1,50 @@
+{
+	"name": "File Reader Processor",
+	"description": "Reads data from a file.",
+	"class": "tuktu.processors.FileReaderProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "filename",
+					"description": "The file to be read.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "encoding",
+					"description": "The encoding used.",
+					"type": "string",
+					"required": false,
+					"default": "utf-8"
+				},
+				{
+					"name": "start_line",
+					"description": "The line to start reading from.",
+					"type": "int",
+					"required": false,
+					"default": 0
+				},
+				{
+					"name": "line_separator",
+					"description": "The line separator character, default is newline (\\r\\n).",
+					"type": "string",
+					"required": false
+				}
+			]
+		}
+	]
+}
