@@ -95,41 +95,8 @@ object Dispatcher {
             // Initialize the processor
             val procClazz = Class.forName(pd.name)
             
-            // Check if this ia ConcurrentProcessor
-            if (classOf[ConcurrentProcessor].isAssignableFrom(procClazz)) {
-                // The remaining flow has to be concurrent, we need to read its config for concurrency count and distirbution strategy
-                val instanceCount = (pd.config \ "instances").as[Int]
-                val strategy = {
-                    // Make sure we use a valid strategy
-                    val str = (pd.config \ "strategy").asOpt[String].getOrElse("RoundRobin")
-                    if (List("RoundRobin", "Smallest").contains(str)) str
-                    else "RoundRobin"
-                }
-                
-                // @TODO: Set up supervisor actor with remaining processors
-                
-                
-                // Recurse, determine whether we need to branch or not
-                pd.next match {
-                    case List() => {
-                        // No processors left, return accum
-                        accum
-                    }
-                    case List(id) => {
-                        // No branching, just recurse
-                        buildSequential(id, accum, iterationCount, branch)
-                    }
-                    case _ => {
-                        // We need to branch, use the broadcasting enumeratee
-                        accum compose buildBranch(
-                            for ((nextId, index) <- pd.next.zipWithIndex) yield
-                                buildSequential(nextId, utils.logEnumeratee(idString, configName), iterationCount, branch + "_" + index)
-                        )
-                    }
-                }
-            }
             // Check if this processor is a bufferer
-            else if (classOf[BufferProcessor].isAssignableFrom(procClazz) || classOf[BaseConcurrentProcessor].isAssignableFrom(procClazz)) {
+            if (classOf[BufferProcessor].isAssignableFrom(procClazz) || classOf[BaseConcurrentProcessor].isAssignableFrom(procClazz)) {
                 /*
                  * Bufferer processor, we pass on an actor that can take up the datapackets with the regular
                  * flow and cut off regular flow for now

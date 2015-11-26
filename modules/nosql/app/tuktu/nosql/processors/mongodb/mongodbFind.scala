@@ -9,7 +9,9 @@ import scala.concurrent.Future
 import play.api.libs.json.JsObject
 import reactivemongo.api._
 import play.api.libs.iteratee.Iteratee
-import play.modules.reactivemongo.json.collection.JSONCollection
+import play.modules.reactivemongo.json._
+import play.modules.reactivemongo.json.collection._
+import reactivemongo.api.MongoDriver
 import scala.concurrent.Await
 import play.api.cache.Cache
 import scala.concurrent.duration.DurationInt
@@ -51,14 +53,16 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         // Get data from MongoDB and sequence
         val resultListFutures = Future.sequence(for (datum <- data.data) yield {
             // Evaluate the query and filter strings and convert to JSON
-            val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", ""))
-            val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum))
+            val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
+            val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
             val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
 
             // Get data based on query and filter
-            val resultData = limit match {
-                case Some(s) => collection.find(queryJson, filterJson).sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject].collect[List](s)
-                case None    => collection.find(queryJson, filterJson).sort(sortJson).cursor[JsObject].collect[List]()
+            val resultData: Future[List[JsObject]] = limit match {
+                case Some(s) => collection.find(queryJson, filterJson)
+                    .sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject].collect[List](s)
+                case None    => collection.find(queryJson, filterJson)
+                    .sort(sortJson).cursor[JsObject].collect[List]()
             }
 
             resultData.map(resultList => {

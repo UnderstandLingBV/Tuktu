@@ -63,8 +63,7 @@ lazy val nosqlDependencies = Seq(
     "org.postgresql" % "postgresql" % "9.3-1102-jdbc41",
     "org.xerial" % "sqlite-jdbc" % "3.8.7",
     "org.apache.kafka" %% "kafka" % "0.8.2-beta",
-    "org.reactivemongo" %% "reactivemongo" % "0.10.5.0.akka23",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.0.akka23",
+    "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play23",
     "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.4",
     "org.elasticsearch" % "elasticsearch" % "1.4.4",
     "org.apache.hadoop" % "hadoop-client" % "2.6.0"

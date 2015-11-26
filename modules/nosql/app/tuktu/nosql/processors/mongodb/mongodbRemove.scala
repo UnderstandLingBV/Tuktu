@@ -9,7 +9,8 @@ import play.api.cache.Cache
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
-import play.modules.reactivemongo.json.collection.JSONCollection
+import play.modules.reactivemongo.json._
+import play.modules.reactivemongo.json.collection._
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.nosql.util.MongoCollectionPool
@@ -55,7 +56,7 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         }).distinct
 
         // execute and wait for completion
-        val result = collection.remove(Json.obj("$or" -> queries))
+        val result = collection.remove[JsObject](Json.obj("$or" -> queries))
         Await.ready(result, timeout seconds)
 
         // return original data

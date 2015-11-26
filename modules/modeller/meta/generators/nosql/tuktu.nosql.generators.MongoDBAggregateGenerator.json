@@ -1,0 +1,98 @@
+{
+	"name": "MongoDB Aggregate Generator",
+	"description": "Executes tasks in an aggregation pipeline on a given list of nodes.",
+	"class": "tuktu.nosql.generators.MongoDBAggregateGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"description": "The database name.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"description": "The name of the collection to aggregate.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tasks",
+					"description": "A list of aggregation tasks for the pipeline.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "JsObject",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "batch",
+					"description": "Are all results to be batched before pushing it on the channel.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

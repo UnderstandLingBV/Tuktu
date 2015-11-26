@@ -1,0 +1,62 @@
+{
+	"name": "MongoDB Aggregate Processor",
+	"description": "Executes MongoDB aggregation pipeline.",
+	"class": "tuktu.nosql.processors.MongoDBAggregateProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"description": "The database name.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"description": "The name of the collection to open.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tasks",
+					"description": "A list of tasks in the aggregation pipeline.  Note that currently, only the following tasks are supported: \"$skip\", \"$limit\", \"$unwind\", \"$out\", \"$sort\", \"$match\", \"$project\", and \"$group\".",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "JsObject",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}
