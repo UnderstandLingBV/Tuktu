@@ -75,19 +75,19 @@
 				{
 					"name": "query",
 					"description": "Find the documents matching these given criteria.",
-					"type": "string",
+					"type": "JsObject",
 					"required": true
 				},
 				{
 					"name": "filter",
 					"description": "Filter results by this projection.",
-					"type": "string",
+					"type": "JsObject",
 					"required": false
 				},
 				{
 					"name": "sort",
 					"description": "Sort results by this projection.",
-					"type": "string",
+					"type": "JsObject",
 					"required": false
 				},
 				{
