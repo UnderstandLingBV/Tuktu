@@ -46,13 +46,13 @@
 				{
 					"name": "query",
 					"description": "The selection criteria for the update. ",
-					"type": "JsObject",
+					"type": "string",
 					"required": true					
 				},
 				{
 					"name": "update",
 					"description": "The modifications to apply.",
-					"type": "JsObject",
+					"type": "string",
 					"required": true
 				},
 				{
