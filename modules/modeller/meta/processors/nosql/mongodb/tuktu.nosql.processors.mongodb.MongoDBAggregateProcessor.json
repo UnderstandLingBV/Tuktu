@@ -1,7 +1,7 @@
 {
 	"name": "MongoDB Aggregate Processor",
 	"description": "Executes MongoDB aggregation pipeline.",
-	"class": "tuktu.nosql.processors.MongoDBAggregateProcessor",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBAggregateProcessor",
 	"parameters": [
 		{
 			"name": "id",
