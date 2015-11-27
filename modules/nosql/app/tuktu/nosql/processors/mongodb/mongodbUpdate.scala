@@ -30,9 +30,9 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     // If set to true, creates a new document when no document matches the query criteria. 
     var upsert = false
     // The selection criteria for the update. 
-    var query: String = _
+    var query: JsObject = _
     // The modifications to apply. 
-    var update: String = _
+    var update: JsObject = _
     //  If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document. 
     var multi = false
 
@@ -41,8 +41,8 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         val hosts = (config \ "hosts").as[List[String]]
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
-        query = (config \ "query").as[String]
-        update = (config \ "update").as[String]
+        query = (config \ "query").as[JsObject]
+        update = (config \ "update").as[JsObject]
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
         multi = (config \ "multi").asOpt[Boolean].getOrElse(false)
                 
@@ -54,9 +54,7 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Update data into MongoDB
         val futures = data.data.map(datum => {
-            val selector = Json.parse(stringHandler.evaluateString(update, datum,"\"","")).as[JsObject]
-            val updater = Json.parse(stringHandler.evaluateString(query, datum,"\"","")).as[JsObject]
-            collection.update(selector, updater, upsert = upsert, multi = multi)
+            collection.update(query, update, upsert = upsert, multi = multi)
         })
         // Wait for all the updates to be finished
         futures.foreach { f => if(!f.isCompleted) Await.ready(f, Cache.getAs[Int]("timeout").getOrElse(5) seconds) }
