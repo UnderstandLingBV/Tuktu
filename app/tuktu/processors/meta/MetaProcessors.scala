@@ -433,7 +433,14 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
 
             // Run our data through each Enumeratee and return the result chunk
             for (enumeratee <- enumeratees) yield {
-                Enumerator(data).through(enumeratee).run(Iteratee.getChunks)
+                val inclMonitor = Enumeratee.mapM((data: DataPacket) => Future {
+                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, 1)
+                    data
+                }) compose enumeratee compose Enumeratee.mapM((data: DataPacket) => Future {
+                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppStopPacket(idString)
+                    data
+                })
+                Enumerator(data).through(inclMonitor).run(Iteratee.getChunks)
             }
         } flatMap (t => Future.sequence(t))) // Flatten Future[List[Future[T]]] => Future[List[T]]
 

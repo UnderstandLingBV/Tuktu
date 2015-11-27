@@ -65,7 +65,7 @@ class ModellerEventListener(out: ActorRef) extends Actor {
     }
 
     def handle: PartialFunction[Any, Unit] = {
-        case aip: ActorIdentifierPacket => {
+        case aip: AppInitPacket => {
             // Store uuid as soon as this mailbox is identified
             mailbox collect {
                 case mb => if (mb == aip.mailbox) uuid = Some(aip.uuid)

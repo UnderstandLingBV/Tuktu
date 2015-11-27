@@ -89,12 +89,14 @@ case class ProcessorMonitorPacket(
 )
 
 case class AppMonitorObject(
-        actor: ActorRef,
         uuid: String,
         instances: Int,
         startTime: Long,
         var finished_instances: Int = 0,
-        var endTime: Long = 0,
+        var endTime: Option[Long] = None,
+        expirationTime: Long = play.api.Play.current.configuration.getInt("tuktu.monitor.finish_expiration").getOrElse(30) * 60 * 1000,
+        var hadErrors: Boolean = false,
+        actors: collection.mutable.Set[ActorRef] = collection.mutable.Set.empty,
         flowDataPacketCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
         flowDatumCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
         processorDataPackets: collection.mutable.Map[String, collection.mutable.Map[MPType, DataPacket]] = collection.mutable.Map.empty,
@@ -102,7 +104,16 @@ case class AppMonitorObject(
         processorDatumCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
         processorBeginTimes: collection.mutable.Map[String, collection.mutable.Queue[Long]] = collection.mutable.Map.empty,
         processorDurations: collection.mutable.Map[String, collection.mutable.ListBuffer[Long]] = collection.mutable.Map.empty
-)
+) {
+    def expire(current: Long = System.currentTimeMillis, force: Boolean = true) {
+        if (force || endTime != None)
+            endTime = Some(current)
+    }
+    def is_expired(current: Long = System.currentTimeMillis): Boolean = endTime match {
+        case None            => false
+        case Some(timestamp) => timestamp + expirationTime <= current
+    }
+}
 
 case class AppMonitorPacket(
         val actor: ActorRef,
@@ -116,10 +127,14 @@ case class AppMonitorPacket(
 case class AddMonitorEventListener()
 case class RemoveMonitorEventListener()
 
-case class ActorIdentifierPacket(
+case class AppInitPacket(
         uuid: String,
         instanceCount: Int,
-        mailbox: ActorRef,
+        mailbox: Option[ActorRef] = None,
+        timestamp: Long = System.currentTimeMillis
+)
+case class AppStopPacket(
+        uuid: String,
         timestamp: Long = System.currentTimeMillis
 )
 case class SubflowMapPacket(

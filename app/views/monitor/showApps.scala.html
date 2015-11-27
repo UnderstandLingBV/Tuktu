@@ -61,9 +61,9 @@
         </thead>
             <tbody>
             @for((appName, appProps) <- running.drop((runningPage - 1) * 100).take(100)) {
-                <tr>
+                <tr@if(appProps.hadErrors){ class="danger"}>
                     <td style="margin-right: 25px;">
-                        @appName
+                        @if(appProps.actors.isEmpty){@appName}else{@appProps.actors.head.path.toStringWithoutAddress}
                         @if(subflows.contains(appName)) {
                             <i>(Subflow)</i>
                         }
@@ -159,9 +159,9 @@
         </thead>
             <tbody>
             @for((appName, appProps) <- finished.drop((finishedPage - 1) * 100).take(100)) {
-                <tr>
+                <tr@if(appProps.hadErrors){ class="danger"}>
                     <td style="margin-right: 25px;">
-                        @appName
+                        @if(appProps.actors.isEmpty){@appName}else{@appProps.actors.head.path.toStringWithoutAddress}
                         @if(subflows.contains(appName)) {
                             <i>(Subflow)</i>
                         }
@@ -183,9 +183,9 @@
                         @* Filled with JavaScript below to use user's time zone *@
                     </td>
                     <td class="text-right">
-                        @if(appProps.endTime - appProps.startTime >= 60000) {
+                        @if(appProps.endTime.getOrElse(appProps.startTime) - appProps.startTime >= 60000) {
                             @{
-                                var seconds = math.floor((appProps.endTime - appProps.startTime) / 1000D).toInt
+                                var seconds = math.floor((appProps.endTime.getOrElse(appProps.startTime) - appProps.startTime) / 1000D).toInt
                                 val values = for (v <- List(86400, 3600, 60)) yield {
                                     val res = math.floor(seconds / v).toInt
                                     seconds -= res * v
@@ -203,10 +203,10 @@
                                 }
                             }
                         } else {
-                            @if(appProps.endTime - appProps.startTime >= 1000) {
-                                @{(appProps.endTime - appProps.startTime) / 1000D} s
+                            @if(appProps.endTime.getOrElse(appProps.startTime) - appProps.startTime >= 1000) {
+                                @{(appProps.endTime.getOrElse(appProps.startTime) - appProps.startTime) / 1000D} s
                             } else {
-                                @{appProps.endTime - appProps.startTime} ms
+                                @{appProps.endTime.getOrElse(appProps.startTime) - appProps.startTime} ms
                             }
                         }
                     </td>
