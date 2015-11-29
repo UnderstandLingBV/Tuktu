@@ -1,0 +1,50 @@
+{
+	"name": "Free Geo IP Processor",
+	"description": "Searches the geolocation of IP addresses using an instance of the freegeoip.net web service. See http://freegeoip.net/ for details about the service and its limitations.",
+	"class": "tuktu.web.processors.FreeGeoIPProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "ipfield",
+					"description": "The field that contains the IP address(es) to lookup.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "geoipurl",
+					"description": "The URL of the Free Geo IP service instance to call.",
+					"type": "string",
+					"required": false,
+					"default": "http://freegeoip.net"
+				},
+				{
+					"name": "format",
+					"description": "The format (json, csv or xml) in which the geolocation data should be returned (default is json).",
+					"type": "string",
+					"required": false,
+					"default": "json"
+				},
+				{
+					"name": "timeout",
+					"description": "The time, expressed in seconds, after which an unsuccessful request times out",
+					"type": "int",
+					"required": false
+				}
+			]
+		}
+	]
+}
