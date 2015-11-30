@@ -3,28 +3,19 @@ package tuktu.nosql.processors.mongodb
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.iteratee.Enumeratee
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsObject
-import play.modules.reactivemongo.json._
-import play.modules.reactivemongo.json.collection._
-import tuktu.api.BaseProcessor
-import tuktu.api.DataPacket
-import tuktu.api.utils.anyMapToJson
-import tuktu.nosql.util.MongoCollectionPool
-import tuktu.nosql.util.MongoSettings
-import tuktu.api.utils.anyMapToJson
-import tuktu.api.utils.evaluateTuktuString
+import tuktu.api.{ BaseProcessor, DataPacket }
+import tuktu.api.utils.{ anyMapToJson, evaluateTuktuString }
+import tuktu.nosql.util.{ MongoSettings, MongoCollectionPool }
 
 /**
  * Inserts data into MongoDB
  */
 class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fields = List[String]()
-    var collection: JSONCollection = _
     var hosts: List[String] = _
     var database: String = _
     var coll: String = _
@@ -36,10 +27,6 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         database = (config \ "database").as[String]
         coll = (config \ "collection").as[String]
 
-        // create connectionPool
-        val settings = MongoSettings(hosts, database, coll)
-        collection = MongoCollectionPool.getCollection(settings)
-
         // What fields to write?
         fields = (config \ "fields").as[List[String]]
 
@@ -50,21 +37,20 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         val result = scala.collection.mutable.Map[(List[String], String, String), scala.collection.mutable.ListBuffer[JsObject]]()
 
         // Convert to JSON
-        data.data.foreach(datum => {
-            result.getOrElseUpdate((hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum)), scala.collection.mutable.ListBuffer[JsObject]()) +=
-                {
-                    fields match {
-                        case Nil => anyMapToJson(datum, true)
-                        case _   => anyMapToJson(datum.filter(elem => fields.contains(elem._1)), true)
-                    }
+        for (datum <- data.data) {
+            result.getOrElseUpdate((hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum)), scala.collection.mutable.ListBuffer[JsObject]()) += {
+                fields match {
+                    case Nil => anyMapToJson(datum, true)
+                    case _   => anyMapToJson(datum.filter(elem => fields.contains(elem._1)), true)
                 }
-        })
+            }
+        }
 
         // Bulk insert and await
-        val futures = result.map(f => {
+        val futures = for (f <- result) yield {
             val collection = MongoCollectionPool.getCollection(MongoSettings(f._1._1, f._1._2, f._1._3))
             collection.bulkInsert(f._2.toStream, false)
-        })
+        }
         // Wait for all the results to be retrieved
         futures.foreach { x => if (!x.isCompleted) Await.ready(x, timeout seconds) }
 
