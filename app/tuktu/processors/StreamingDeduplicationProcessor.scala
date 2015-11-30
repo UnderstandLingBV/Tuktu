@@ -7,7 +7,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
- * Deduplicates in a stream, meaning that only previously unseen daat packets are forwarded
+ * Deduplicates in a stream, meaning that only previously unseen data packets are forwarded
  */
 class StreamingDeduplicationProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fields = collection.mutable.ListBuffer[String]()
