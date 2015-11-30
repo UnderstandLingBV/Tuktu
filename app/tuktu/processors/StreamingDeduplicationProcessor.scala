@@ -10,25 +10,26 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * Deduplicates in a stream, meaning that only previously unseen data packets are forwarded
  */
 class StreamingDeduplicationProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fields = collection.mutable.ListBuffer[String]()
+    var fields: List[String] = _
     var seenRecords = collection.mutable.ArrayBuffer[List[Any]]()
-    
+
     override def initialize(config: JsObject) {
         // Get the field to sort on
-        fields.appendAll((config \ "fields").as[List[String]])
+        fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         new DataPacket((for {
-                datum <- data.data
-                
-                // Get the fields we need to check upon
-                key = fields.map(field => datum(field)).toList
-                
-                // Check if this one has been seen yet
-                if (!seenRecords.contains(key))
+            datum <- data.data
+
+            // Get the fields we need to check upon
+            key = fields.map(field => datum(field)).toList
+
+            // Check if this one has been seen yet
+            if (!seenRecords.contains(key))
         } yield {
-               datum
+            seenRecords += key
+            datum
         }).toList)
     })
 }
