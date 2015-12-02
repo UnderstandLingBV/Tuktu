@@ -1,0 +1,56 @@
+{
+	"name": "MongoDB Raw Command Processor",
+	"description": "Runs a command on the specified database on a given list of nodes.",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBRawCommandProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"description": "The database name.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "command",
+					"description": "The command to run on the database.",
+					"type": "JsObject",
+					"required": true
+				},
+				{
+					"name": "resultOnly",
+					"description": "Only returns the result part of the command output?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}
