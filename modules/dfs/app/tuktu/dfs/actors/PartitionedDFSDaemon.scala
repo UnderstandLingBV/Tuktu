@@ -11,13 +11,20 @@ import play.api.cache.Cache
 import java.io.OutputStreamWriter
 import java.io.BufferedWriter
 import akka.actor.ActorRef
+import tuktu.api.ClusterNode
+import akka.pattern.ask
+import akka.actor.Identify
+import akka.actor.ActorIdentity
+import scala.concurrent.Await
+import akka.util.Timeout
+import scala.concurrent.duration.DurationInt
 
 case class TDFSWriteRequest(
         filename: String,
         filepart: Int,
         binary: Boolean,
         blockSize: Option[Int],
-        returnWriter: Boolean
+        nodeSet: Boolean
 )
 case class TDFSWriterReply(
         writer: ActorRef
@@ -27,27 +34,62 @@ case class TDFSContentPacket(
 )
 
 class TDFSDaemon extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    var nodeOffset = 0
+    
+    def createWriter(twr: TDFSWriteRequest) = {
+        // Get block size
+        val blockSize = twr.blockSize match {
+            case None => Cache.getAs[Int]("dfs.blocksize").getOrElse(128)
+            case Some(size) => size
+        }
+        
+        // Set up the writer actor
+        val partname = twr.filename + "-part" + twr.filepart
+        val writer = if (twr.binary)
+                Akka.system.actorOf(Props(classOf[TDFSBinaryWriterActor], partname, blockSize),
+                    name = "tuktu.dfs.Writer.binary." + partname)
+            else
+                Akka.system.actorOf(Props(classOf[TDFSTextWriterActor], partname, blockSize),
+                    name = "tuktu.dfs.Writer.binary." + partname)
+        
+        // TODO: Keep track of writers per file name in Cache ?
+
+        // Send back the actor ref to the sender
+        writer
+    }
+    
     def receive() = {
         case twr: TDFSWriteRequest => {
-            // Get block size
-            val blockSize = twr.blockSize match {
-                case None => Cache.getAs[Int]("dfs.blocksize").getOrElse(128)
-                case Some(size) => size
+            if (twr.nodeSet)
+                // Node is already set (we are the node), we don't need to pick one
+                sender ! new TDFSWriterReply(createWriter(twr))
+            else {
+                // Get all DFS nodes
+                val dfsNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+                val thisNode = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
+                // Determine the node to write to
+                val node = dfsNodes.toList(nodeOffset % dfsNodes.size)
+                nodeOffset = (nodeOffset + 1) % dfsNodes.size
+                
+                // Check if we are the node that needs to write or not
+                if (node._1 == thisNode) sender ! new TDFSWriterReply(createWriter(twr))
+                else {
+                    // Ask the other node for a writer
+                    val otherNode = node._2
+                    val location = "akka.tcp://application@" + otherNode.host  + ":" + otherNode.akkaPort + "/user/tuktu.dfs.Daemon"
+                    
+                    // TODO: Create writer and send back
+                    val fut = Akka.system.actorSelection(location) ? new TDFSWriteRequest(
+                            twr.filename,
+                            twr.filepart,
+                            twr.binary,
+                            twr.blockSize,
+                            true
+                    )
+                }
             }
-            
-            // Set up the writer actor
-            val partname = twr.filename + "-part" + twr.filepart
-            val writer = if (twr.binary)
-                    Akka.system.actorOf(Props(classOf[TDFSBinaryWriterActor], partname, blockSize),
-                        name = "tuktu.dfs.Writer.binary." + partname)
-                else
-                    Akka.system.actorOf(Props(classOf[TDFSTextWriterActor], partname, blockSize),
-                        name = "tuktu.dfs.Writer.binary." + partname)
-            
-            // TODO: Keep track of writers per file name in Cache ?
-
-            // Send back the actor ref to the sender
-            if (twr.returnWriter) sender ! new TDFSWriterReply(writer)
         }
     }
 }
