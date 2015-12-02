@@ -226,3 +226,30 @@ abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) e
 
     def deserializeModel(filename: String): BM = ???
 }
+
+/**
+ * Destroys a model / removes it from memory
+ */
+class MLDestroyProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var modelName: String = _
+    var destroyOnEOF: Boolean = _
+    val toBeDestroyed = collection.mutable.Set.empty[String]
+
+    override def initialize(config: JsObject) {
+        modelName = (config \ "model_name").as[String]
+        destroyOnEOF = (config \ "destroy_on_eof").asOpt[Boolean].getOrElse(true)
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        val newModelName = utils.evaluateTuktuString(modelName, data.data.headOption.getOrElse(Map.empty))
+        if (!destroyOnEOF)
+            Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new DestroyModel(newModelName)
+        else
+            toBeDestroyed += newModelName
+
+        data
+    }) compose Enumeratee.onEOF(() => for (modelName <- toBeDestroyed) {
+        // Send model repository the signal to clean up the model
+        Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new DestroyModel(modelName)
+    })
+}

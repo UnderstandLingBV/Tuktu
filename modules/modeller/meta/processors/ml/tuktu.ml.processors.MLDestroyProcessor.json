@@ -1,0 +1,37 @@
+{
+	"name": "ML Destroy Processor",
+	"description": "Removes a Machine Learning model from memory.",
+	"class": "tuktu.ml.processors.MLDestroyProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to destroy. Can contain Tuktu strings.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will models be cleaned up once EOF is reached, or after every DataPacket.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				}
+			]
+		}
+	]
+}
