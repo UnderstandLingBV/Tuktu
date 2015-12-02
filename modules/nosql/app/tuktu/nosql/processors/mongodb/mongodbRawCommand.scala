@@ -42,7 +42,6 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
     var command: JsObject = _
     var db: DefaultDB = _
     var resultOnly: Boolean = _
-    // var timeout: Int = _
 
     override def initialize(config: JsObject) 
     {
@@ -59,27 +58,8 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
         // Get result format
         resultOnly = (config \ "resultOnly").asOpt[Boolean].getOrElse(false)
         
-        // Get the timeout of the service
-        // timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
     }
-/*
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
-            
-            val runner = Command.run( JSONSerializationPack )
-            val futureResult = runner.apply( db, runner.rawCommand( command ) ).one[JsObject]
-            val result = Await.result( futureResult, timeout.seconds )
-            if (resultOnly)
-            {
-                datum + (resultName -> (result \ "result") )
-            }
-            else
-            {
-                datum + (resultName -> result)
-            }
-        })
-    })
-*/
+
     
   override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
             val runner = Command.run( JSONSerializationPack )
