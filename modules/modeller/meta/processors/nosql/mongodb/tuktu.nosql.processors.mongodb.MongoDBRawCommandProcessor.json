@@ -45,16 +45,10 @@
 				},
 				{
 					"name": "resultOnly",
-					"description": "Only returns the result part of command output?",
+					"description": "Only returns the result part of the command output?",
 					"type": "boolean",
 					"required": false,
 					"default": false
-				},
-				{
-					"name": "timeout",
-					"description": "The time, expressed in seconds, after which an unsuccessful command times out",
-					"type": "int",
-					"required": false
 				}
 			]
 		}
