@@ -10,7 +10,7 @@ import play.api.Play.current
 import play.api.cache.Cache
 import play.api.Logger
 import tuktu.api._
-import tuktu.api.utils.anyMapToJson
+import tuktu.api.utils.MapToJsObject
 import java.util.Date
 import play.api.Play
 import play.api.libs.json.Json
@@ -197,14 +197,14 @@ class DataMonitor extends Actor with ActorLogging {
                         case None => "No DataPackets recorded for this procsesor yet."
                         case Some(map) => map.get(BeginType) match {
                             case None     => "No incoming DataPackets recorded for this processor yet."
-                            case Some(dp) => Json.prettyPrint(Json.toJson(dp.data.map(datum => anyMapToJson(datum))))
+                            case Some(dp) => Json.prettyPrint(Json.toJson(dp.data.map(datum => MapToJsObject(datum))))
                         }
                     }
                     val out = appData.processorDataPackets.get(mldp.processor_id) match {
                         case None => "No DataPackets recorded for this procsesor yet."
                         case Some(map) => map.get(EndType) match {
                             case None     => "No processed DataPackets recorded for this processor yet."
-                            case Some(dp) => Json.prettyPrint(Json.toJson(dp.data.map(datum => anyMapToJson(datum))))
+                            case Some(dp) => Json.prettyPrint(Json.toJson(dp.data.map(datum => MapToJsObject(datum))))
                         }
                     }
                     (in, out)

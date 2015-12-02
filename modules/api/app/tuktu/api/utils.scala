@@ -13,8 +13,6 @@ import play.api.Logger
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object utils {
-    val pattern = Pattern.compile("\\$\\{(.*?)\\}")
-
     /**
      * Enumeratee for error-logging and handling
      * @param idString A string used to identify the flow this logEnumeratee is part of. A mapping exists
@@ -22,22 +20,14 @@ object utils {
      * @param configName The name of the config (if known)
      * @param processorName The name of the processor (if known)
      */
-    def logEnumeratee[T](idString: String, configName: String = "Unknown", processorName:String = "Unknown") = Enumeratee.recover[T] {
+    def logEnumeratee[T](idString: String, configName: String = "Unknown", processorName: String = "Unknown") = Enumeratee.recover[T] {
         case (e, input) => {
             // Notify the monitor so it can kill our flow
             Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorNotificationPacket(idString)
 
             // Log the error
-            Logger.error(s"Error happened at flow:$configName processor: $processorName id:$idString on: " + input, e)
+            Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString, on Input: " + input, e)
         }
-    }
-
-    /**
-     * Checks if a string contains variables that can be populated using evaluateTuktuString
-     */
-    def containsTuktuStringVariable(str: String) = {
-        val matcher = pattern.matcher(str)
-        matcher.find()
     }
 
     /**
@@ -65,16 +55,16 @@ object utils {
                     buffer.append(currentChar)
                     if (!currentChar.equals('{')) {
                         result.append(buffer)
-                        buffer.setLength(0)
+                        buffer.clear
                     }
                 } else if (buffer.length > maxKeyLength + prefixSize) {
                     result.append(buffer).append(currentChar)
-                    buffer.setLength(0)
+                    buffer.clear
                 } else {
                     if (currentChar.equals('}')) {
                         // apply with variable in vars, or leave it be if it cannot be found
                         result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
-                        buffer.setLength(0)
+                        buffer.clear
                     } else {
                         buffer.append(currentChar)
                     }
@@ -117,16 +107,16 @@ object utils {
                     buffer.append(currentChar)
                     if (!currentChar.equals('{')) {
                         result.append(buffer)
-                        buffer.setLength(0)
+                        buffer.clear
                     }
                 } else if (buffer.length > maxKeyLength + prefixSize) {
                     result.append(buffer).append(currentChar)
-                    buffer.setLength(0)
+                    buffer.clear
                 } else {
                     if (currentChar.equals('}')) {
                         // apply with variable in vars, or leave it be if it cannot be found
                         result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
-                        buffer.setLength(0)
+                        buffer.clear
                     } else {
                         buffer.append(currentChar)
                     }
@@ -227,67 +217,50 @@ object utils {
     }
 
     /**
-     * Turns a map of string -> any into a JSON object
-     */
-    def anyMapToJson(map: Map[String, Any], mongo: Boolean = false): JsObject = {
-        /**
-         * Dealing with objects
-         */
-        def mapToJsonHelper(mapping: List[(Any, Any)]): JsObject = mapping match {
-            case Nil => Json.obj()
-            case head :: remainder => Json.obj(head._1.toString -> (head._2 match {
-                case a: String     => a
-                case a: Char       => a.toString
-                case a: Int        => a
-                case a: Double     => a
-                case a: Long       => a
-                case a: Short      => a
-                case a: Float      => a
-                case a: Boolean    => a
-                case a: Date       => if (mongo) Json.obj("$date" -> a.getTime) else a
-                case a: DateTime   => if (mongo) Json.obj("$date" -> a.getMillis) else a
-                case a: JsValue    => a
-                case a: BigDecimal => a
-                case a: Seq[Any]   => anyListToJsonHelper(a)
-                case a: Array[_]   => anyListToJsonHelper(a.toList)
-                case a: Map[_, _]  => mapToJsonHelper(a.toList)
-                case _             => head._2.toString
-            })) ++ mapToJsonHelper(remainder)
-        }
-
-        /**
-         * Dealing with arrays
-         */
-        def anyListToJsonHelper(list: Seq[Any], mongo: Boolean = false): JsArray = list.toList match {
-            case Nil => Json.arr()
-            case elem :: remainder => Json.arr(elem match {
-                case a: String     => a
-                case a: Char       => a.toString
-                case a: Int        => a
-                case a: Double     => a
-                case a: Long       => a
-                case a: Short      => a
-                case a: Float      => a
-                case a: Boolean    => a
-                case a: Date       => if (mongo) Json.obj("$date" -> a.getTime) else a
-                case a: DateTime   => if (mongo) Json.obj("$date" -> a.getMillis) else a
-                case a: JsValue    => a
-                case a: BigDecimal => a
-                case a: Seq[Any]   => anyListToJsonHelper(a)
-                case a: Array[_]   => anyListToJsonHelper(a.toList)
-                case a: Map[_, _]  => mapToJsonHelper(a.toList)
-                case _             => elem.toString
-            }) ++ anyListToJsonHelper(remainder)
-        }
-
-        mapToJsonHelper(map.toList)
-    }
-
-    /**
      * ---------------------
      * JSON helper functions
      * ---------------------
      */
+
+    /**
+     * Turns Any into a JsValueWrapper to use by Json.arr and Json.obj
+     */
+    private def AnyToJsValueWrapper(a: Any, mongo: Boolean = false): Json.JsValueWrapper = a match {
+        case a: Boolean    => a
+        case a: String     => a
+        case a: Char       => a.toString
+        case a: Short      => a
+        case a: Int        => a
+        case a: Long       => a
+        case a: Float      => a
+        case a: Double     => a
+        case a: BigDecimal => a
+        case a: Date       => if (!mongo) a else Json.obj("$date" -> a.getTime)
+        case a: DateTime   => if (!mongo) a else Json.obj("$date" -> a.getMillis)
+        case a: JsValue    => a
+        case a: Seq[_]     => SeqToJsArray(a, mongo)
+        case a: Array[_]   => SeqToJsArray(a, mongo)
+        case a: Map[_, _]  => MapToJsObject(a, mongo)
+        case _             => a.toString
+    }
+
+    /**
+     * Turns Any into a JsValue
+     */
+    def AnyToJsValue(a: Any, mongo: Boolean = false): JsValue =
+        Json.arr(AnyToJsValueWrapper(a, mongo))(0)
+
+    /**
+     * Turns any Seq[Any] into a JsArray
+     */
+    def SeqToJsArray(seq: Seq[Any], mongo: Boolean = false): JsArray =
+        Json.arr(seq.map(value => AnyToJsValueWrapper(value, mongo)): _*)
+
+    /**
+     * Turns a Map[Any, Any] into a JsObject
+     */
+    def MapToJsObject(map: Map[_ <: Any, Any], mongo: Boolean = false): JsObject =
+        Json.obj(map.map(tuple => tuple._1.toString -> AnyToJsValueWrapper(tuple._2, mongo)).toSeq: _*)
 
     /**
      * Takes a JsValue and returns a scala object
@@ -312,6 +285,12 @@ object utils {
      */
     def JsObjectToMap(json: JsObject): Map[String, Any] =
         json.value.mapValues(jsValue => JsValueToAny(jsValue)).toMap
+
+    /**
+     * -----------------------------
+     * Node hashing helper functions
+     * -----------------------------
+     */
 
     def indexToNodeHasher(keys: List[Any], replicationCount: Option[Int], includeSelf: Boolean): List[String] =
         indexToNodeHasher(keys.map(_.toString).mkString(""), replicationCount, includeSelf)

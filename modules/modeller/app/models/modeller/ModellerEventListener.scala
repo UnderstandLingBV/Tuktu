@@ -84,7 +84,7 @@ class ModellerEventListener(out: ActorRef) extends Actor {
                         val obj = Json.obj(
                             "type" -> typeOf,
                             "processor_id" -> pmp.processor_id,
-                            "data" -> Json.toJson(pmp.data.data.map(map => tuktu.api.utils.anyMapToJson(map))),
+                            "data" -> Json.toJson(pmp.data.data.map(map => tuktu.api.utils.MapToJsObject(map))),
                             "timestamp" -> pmp.timestamp)
                         out ! obj
                     }

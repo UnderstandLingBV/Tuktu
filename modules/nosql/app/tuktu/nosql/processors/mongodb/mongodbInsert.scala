@@ -8,7 +8,7 @@ import play.api.cache.Cache
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.{ BaseProcessor, DataPacket }
-import tuktu.api.utils.{ anyMapToJson, evaluateTuktuString }
+import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString }
 import tuktu.nosql.util.{ MongoSettings, MongoCollectionPool }
 
 /**
@@ -40,8 +40,8 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         for (datum <- data.data) {
             result.getOrElseUpdate((hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum)), scala.collection.mutable.ListBuffer[JsObject]()) += {
                 fields match {
-                    case Nil => anyMapToJson(datum, true)
-                    case _   => anyMapToJson(datum.filter(elem => fields.contains(elem._1)), true)
+                    case Nil => MapToJsObject(datum, true)
+                    case _   => MapToJsObject(datum.filter(elem => fields.contains(elem._1)), true)
                 }
             }
         }

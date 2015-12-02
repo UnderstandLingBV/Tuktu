@@ -461,7 +461,7 @@ class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultNam
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        if (prettify) println(Json.prettyPrint(Json.toJson(data.data.map(datum => utils.anyMapToJson(datum)))))
+        if (prettify) println(Json.prettyPrint(Json.toJson(data.data.map(datum => utils.MapToJsObject(datum)))))
         else println(data + "\r\n")
 
         data
