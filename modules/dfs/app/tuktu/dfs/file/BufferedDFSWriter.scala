@@ -103,7 +103,17 @@ class PartitionedDFSWriter(filename: String, filepart: Int, blockSize: Int, othe
             writer.write(content, 0, blockSize - byteCount)
             // Get remainder
             val remainder = content.slice(blockSize - byteCount, content.length)
-            // @TODO: Send to the next block writer, but check if we are so we dont have network latency
+            // Close this block
+            byteCount = 0
+            writer.close()
+            
+            // Send to the next block writer, but check if we are so we dont have network latency
+            val nextPartName = filename + "-part" + filepart
+            if (otherNodes.isEmpty) {
+                // We are the next writer
+                writer = new FileOutputStream(nextPartName)
+                write(remainder)
+            }
         }
         else {
             // Write entirely
