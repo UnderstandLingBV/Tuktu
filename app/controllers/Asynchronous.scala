@@ -2,10 +2,6 @@ package controllers
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import akka.actor.ActorIdentity
-import akka.actor.Identify
-import akka.actor.actorRef2Scala
-import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
@@ -22,12 +18,12 @@ object Asynchronous extends Controller {
      * @param id String The ID (name) of the config to fetch
      */
     def load(id: String, instances: Int) = Action {
-    	// Send this to our analytics async handler
-    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, None, false, false, false, None)
-        
+        // Send this to our analytics async handler
+        Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, None, false, false, false, None)
+
         Ok("")
     }
-    
+
     /**
      * Does the same as load but now the config is given as post parameter
      */
@@ -39,12 +35,11 @@ object Asynchronous extends Controller {
             val id = (jsonBody \ "id").as[String]
             // Get the number of instances
             val instances = (jsonBody \ "instances").asOpt[Int].getOrElse(1)
-            
-	    	// Send this to our analytics async handler
-	    	Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, Some(jsonBody), false, false, false, None)
+
+            // Send this to our analytics async handler
+            Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(id, Some(jsonBody), false, false, false, None)
         }
-	    
+
         Ok("")
     }
-
 }

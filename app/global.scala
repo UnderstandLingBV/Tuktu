@@ -3,10 +3,9 @@ import scala.collection.JavaConverters.asScalaSetConverter
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import org.reflections.Reflections
-import akka.actor.ActorSelection.toScala
+import akka.actor.ActorRef
 import akka.actor.PoisonPill
 import akka.actor.Props
-import akka.actor.actorRef2Scala
 import akka.routing.Broadcast
 import akka.routing.SmallestMailboxPool
 import akka.util.Timeout
@@ -23,16 +22,13 @@ import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import play.api.libs.json.Json
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.mvc.RequestHeader
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.Results.InternalServerError
 import play.api.mvc.Results.NotFound
 import tuktu.api.ClusterNode
 import tuktu.api.TuktuGlobal
-import java.nio.file.{ Files, Paths }
 import play.api.Logger
-import akka.actor.ActorRef
 
 object Global extends GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
@@ -46,15 +42,15 @@ object Global extends GlobalSettings {
         val reflections = new Reflections("globals")
         val moduleGlobalClasses = reflections.getSubTypesOf(classOf[TuktuGlobal]).asScala
 
-        moduleGlobalClasses.foreach(moduleGlobal => try {
-                moduleGlobals += moduleGlobal.newInstance().asInstanceOf[TuktuGlobal]
+        for (moduleGlobal <- moduleGlobalClasses) {
+            try {
+                moduleGlobals += moduleGlobal.newInstance.asInstanceOf[TuktuGlobal]
             } catch {
-                case e: Exception => {
-                    Logger.error("Failed loading Global of " + moduleGlobal.getName,e)
-                    e.getMessage
+                case e: Throwable => {
+                    Logger.error("Failed loading Global of " + moduleGlobal.getName, e)
                 }
             }
-        )
+        }
     }
 
     /**
@@ -72,14 +68,12 @@ object Global extends GlobalSettings {
         // Get the cluster setup, which nodes are present
         Cache.set("clusterNodes", {
             val clusterNodes = scala.collection.mutable.Map[String, ClusterNode]()
-            Play.current.configuration.getConfigList("tuktu.cluster.nodes").foreach(nodeList =>
-                nodeList.asScala.foreach(node => {
-                    val host = node.getString("host").getOrElse("127.0.0.1")
-                    val akkaPort = node.getString("port").getOrElse("2552").toInt
-                    val UIPort = node.getString("uiport").getOrElse("9000").toInt
-                    clusterNodes += host -> new ClusterNode(host, akkaPort, UIPort)
-                })
-            )
+            for (node <- Play.current.configuration.getConfigList("tuktu.cluster.nodes").map(_.asScala).getOrElse(Nil)) {
+                val host = node.getString("host").getOrElse("127.0.0.1")
+                val akkaPort = node.getString("port").getOrElse("2552").toInt
+                val UIPort = node.getString("uiport").getOrElse("9000").toInt
+                clusterNodes += host -> new ClusterNode(host, akkaPort, UIPort)
+            }
             clusterNodes
         })
         // Routee to Router mapping
@@ -109,7 +103,7 @@ object Global extends GlobalSettings {
 
         // Load module globals
         LoadModuleGlobals(app)
-        moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStart(app))
+        for (moduleGlobal <- moduleGlobals) moduleGlobal.onStart(app)
 
         // Already start running jobs as defined in the autostart file
         AutoStart
@@ -120,8 +114,7 @@ object Global extends GlobalSettings {
      */
     override def onError(request: RequestHeader, ex: Throwable) = {
         Future.successful(InternalServerError(
-            Json.obj("error" -> "Internal server error")
-        ))
+            Json.obj("error" -> "Internal server error")))
     }
 
     /**
@@ -129,8 +122,7 @@ object Global extends GlobalSettings {
      */
     override def onHandlerNotFound(request: RequestHeader) = {
         Future.successful(NotFound(
-            Json.obj("error" -> "API endpoint not found")
-        ))
+            Json.obj("error" -> "API endpoint not found")))
     }
 
     /**
@@ -138,8 +130,7 @@ object Global extends GlobalSettings {
      */
     override def onBadRequest(request: RequestHeader, error: String) = {
         Future.successful(BadRequest(
-            Json.obj("error" -> "API endpoint not found")
-        ))
+            Json.obj("error" -> "API endpoint not found")))
     }
 
     override def onStop(app: Application) {
@@ -151,6 +142,6 @@ object Global extends GlobalSettings {
         Akka.system.actorSelection("user/TuktuDispatcher") ! Broadcast(PoisonPill)
 
         // Call onStop for module globals too
-        moduleGlobals.foreach(moduleGlobal => moduleGlobal.onStop(app))
+        for (moduleGlobal <- moduleGlobals) moduleGlobal.onStop(app)
     }
 }
