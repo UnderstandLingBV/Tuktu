@@ -13,8 +13,8 @@ import tuktu.api.utils
  */
 class ArithmeticProcessor(resultName: String) extends BaseProcessor(resultName) {
     var calculate: String = _
-    var numberOfDecimals: Int = 0
-    var doRounding = false
+    var numberOfDecimals: Int = _
+    var doRounding: Boolean = _
 
     override def initialize(config: JsObject) {
         calculate = (config \ "calculate").as[String]
@@ -22,19 +22,17 @@ class ArithmeticProcessor(resultName: String) extends BaseProcessor(resultName) 
         doRounding = (config \ "do_rounding").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {
-            new DataPacket(for (datum <- data.data) yield {
-                val formula = utils.evaluateTuktuString(calculate, datum)
-                val result = tuktu.utils.ArithmeticParser.readExpression(formula)
-                if (result.isDefined)
-                    if(doRounding)
-                        datum + (resultName -> (math rint result.get() * math.pow(10, numberOfDecimals)) / math.pow(10, numberOfDecimals))
-                    else
-                        datum + (resultName -> result.get())
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            val formula = utils.evaluateTuktuString(calculate, datum)
+            val result = tuktu.utils.ArithmeticParser.readExpression(formula)
+            if (result.isDefined)
+                if (doRounding)
+                    datum + (resultName -> (math rint result.get() * math.pow(10, numberOfDecimals)) / math.pow(10, numberOfDecimals))
                 else
-                    datum
-            })
-        }
+                    datum + (resultName -> result.get())
+            else
+                datum
+        })
     })
 }

@@ -12,14 +12,14 @@ import play.api.libs.json.JsObject
 
 class JSProcessor(resultName: String) extends BaseProcessor(resultName) {
     var js = ""
-    
+
     override def initialize(config: JsObject) {
         js = (config \ "js").as[String]
     }
-    
-	override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-	    Future {new DataPacket(for (datum <- data.data) yield {
-	        datum + (resultName -> js)
-	    })}
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            datum + (resultName -> js)
+        })
     })
 }

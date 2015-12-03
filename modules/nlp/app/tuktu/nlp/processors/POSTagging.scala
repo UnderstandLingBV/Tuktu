@@ -16,22 +16,22 @@ import tuktu.api.utils
  */
 class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var taggers = scala.collection.mutable.Map[String, POSWrapper]()
-    
+
     var lang = ""
     var tokens = ""
-    
+
     override def initialize(config: JsObject) {
         lang = (config \ "language").as[String]
         tokens = (config \ "tokens").as[String]
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        Future {new DataPacket((for (datum <- data.data) yield {
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket((for (datum <- data.data) yield {
             // Get the language
             val language = utils.evaluateTuktuString(lang, datum)
             // Get the tokens
             val tkns = datum(tokens).asInstanceOf[Array[String]]
-            
+
             // See if the tagger is already loaded
             /*if (!taggers.contains(language)) {
                 val tagger = new POSWrapper(language)
@@ -45,15 +45,14 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
             try {
                 val tagger = new POSWrapper(language)
                 val posTags = tagger.tag(tkns)
-                
+
                 datum + (resultName -> posTags)
-            }
-            catch {
+            } catch {
                 case e: Throwable => {
                     Logger.warn("Error trying to POSTag tokens in language " + language + ", are you sure you support this language? Datum will be filtered out, rest should work normally.")
                     Map.empty[String, Any]
                 }
             }
-        }).filter(!_.isEmpty))}
+        }).filter(!_.isEmpty))
     }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
 }

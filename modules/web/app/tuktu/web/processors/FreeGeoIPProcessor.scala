@@ -25,16 +25,16 @@ import tuktu.api._
 class FreeGeoIPProcessor(resultName: String) extends BaseProcessor(resultName) {
     var ipfield: String = _
     var freegeoip: String = _
-    var format: String = _ 
+    var format: String = _
     var timeout: Int = _
 
     override def initialize(config: JsObject) {
         // Get the name of the field containing the ip to lookup.
         ipfield = (config \ "ipfield").as[String]
         // Get the url of the freegeoip service to call.
-        freegeoip = (config \ "geoipurl").asOpt[String].getOrElse( "http://freegeoip.net" )
+        freegeoip = (config \ "geoipurl").asOpt[String].getOrElse("http://freegeoip.net")
         // Get the format in which the geolocation data should be returned (i.e., json, csv or xml - default is json).
-        format = (config \ "format").asOpt[String].getOrElse( "json" )
+        format = (config \ "format").asOpt[String].getOrElse("json")
         // Get the timeout of the service
         timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
     }
@@ -58,15 +58,15 @@ class FreeGeoIPProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     def lookupIP(ip: String): Any = {
-        val future = WS.url( freegeoip + "/" + format + "/" + ip ).get
+        val future = WS.url(freegeoip + "/" + format + "/" + ip).get
         val body = future.map(response => response.body)
         val result = Await.result(body, timeout seconds)
-        format match{
-          case "json" => Json.parse(result)
-          case "csv" => result
-          case "xml" => result
-          case _ => "invalid format requested!"
+        format match {
+            case "json" => Json.parse(result)
+            case "csv"  => result
+            case "xml"  => result
+            case _      => "invalid format requested!"
         }
-        
+
     }
 }

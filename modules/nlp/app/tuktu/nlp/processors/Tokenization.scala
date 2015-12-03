@@ -14,29 +14,29 @@ import tuktu.api.DataPacket
  * Tokenizes a piece of data
  */
 class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fieldName = ""
-    var asString = false
-    
+    var fieldName: String = _
+    var asString: Boolean = _
+
     override def initialize(config: JsObject) {
         // Get fields
         fieldName = (config \ "field").as[String]
         asString = (config \ "as_string").asOpt[Boolean].getOrElse(false)
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {new DataPacket(for (datum <- data.data) yield {
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
             // Tokenize
             val fieldValue = {
                 if (datum(fieldName).isInstanceOf[JsString]) datum(fieldName).asInstanceOf[JsString].value
                 else datum(fieldName).asInstanceOf[String]
             }
             val tokens = Tokenizer.tokenize(fieldValue)
-            
+
             // See if we need to concat into a space-separated string
             if (asString)
                 datum + (resultName -> tokens.mkString(" "))
             else
                 datum + (resultName -> tokens)
-        })}
+        })
     })
 }

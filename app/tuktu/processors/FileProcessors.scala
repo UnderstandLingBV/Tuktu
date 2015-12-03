@@ -36,17 +36,15 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
         writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        Future {
-            new DataPacket(for (datum <- data.data) yield {
-                // Write it
-                val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            // Write it
+            val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
 
-                writer.write(output + lineSep)
+            writer.write(output + lineSep)
 
-                datum
-            })
-        }
+            datum
+        })
     }) compose Enumeratee.onEOF(() => {
         writer.flush
         writer.close
@@ -81,23 +79,21 @@ class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resul
         writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        Future {
-            new DataPacket(for (datum <- data.data) yield {
-                // Write it
-                val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            // Write it
+            val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
 
-                // Add to batch or write
-                batch.append(output + lineSep)
-                batchCount = batchCount + 1
-                if (batchCount == batchSize) {
-                    writer.write(batch.toString)
-                    batch.clear
-                }
+            // Add to batch or write
+            batch.append(output + lineSep)
+            batchCount = batchCount + 1
+            if (batchCount == batchSize) {
+                writer.write(batch.toString)
+                batch.clear
+            }
 
-                datum
-            })
-        }
+            datum
+        })
     }) compose Enumeratee.onEOF(() => {
         writer.flush
         writer.close

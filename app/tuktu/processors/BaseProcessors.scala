@@ -196,35 +196,33 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
         fieldList = (config \ "fields").as[List[JsObject]]
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {
-            new DataPacket(for (datum <- data.data) yield {
-                val mutableDatum = collection.mutable.Map[String, Any](datum.toSeq: _*)
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            val mutableDatum = collection.mutable.Map[String, Any](datum.toSeq: _*)
 
-                // A set of items that must be clean up at the end
-                val cleanUp = collection.mutable.Set[String]()
-                // A separate set of items that need to be preserved because they got recycled
-                val dontCleanUp = collection.mutable.Set[String]()
+            // A set of items that must be clean up at the end
+            val cleanUp = collection.mutable.Set[String]()
+            // A separate set of items that need to be preserved because they got recycled
+            val dontCleanUp = collection.mutable.Set[String]()
 
-                for {
-                    field <- fieldList
+            for {
+                field <- fieldList
 
-                    fields = (field \ "path").as[List[String]]
-                    result = (field \ "result").as[String]
-                    f = fields.headOption.getOrElse("")
-                    if (f.nonEmpty && datum.contains(f))
-                } {
-                    mutableDatum += result -> utils.fieldParser(datum, fields, null)
-                    cleanUp += f
-                    dontCleanUp += result
-                }
+                fields = (field \ "path").as[List[String]]
+                result = (field \ "result").as[String]
+                f = fields.headOption.getOrElse("")
+                if (f.nonEmpty && datum.contains(f))
+            } {
+                mutableDatum += result -> utils.fieldParser(datum, fields, null)
+                cleanUp += f
+                dontCleanUp += result
+            }
 
-                // Only remove items that should be removed
-                mutableDatum --= cleanUp.diff(dontCleanUp)
+            // Only remove items that should be removed
+            mutableDatum --= cleanUp.diff(dontCleanUp)
 
-                mutableDatum.toMap
-            })
-        }
+            mutableDatum.toMap
+        })
     })
 }
 

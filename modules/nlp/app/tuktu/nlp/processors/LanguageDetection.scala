@@ -15,17 +15,17 @@ import tuktu.api.DataPacket
  */
 class LIGAProcessor(resultName: String) extends BaseProcessor(resultName) {
     // LIGA has only one model
-    var liga = new LIGA()
+    val liga = new LIGA()
     liga.loadModel()
-    
-    var fieldName = ""
-    
+
+    var fieldName: String = _
+
     override def initialize(config: JsObject) {
         fieldName = (config \ "field").as[String]
     }
-    
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {new DataPacket(for (datum <- data.data) yield {
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
             // Get the field on which we should perform the language detection
             val text = {
                 if (datum(fieldName).isInstanceOf[JsString]) datum(fieldName).asInstanceOf[JsString].value
@@ -33,8 +33,8 @@ class LIGAProcessor(resultName: String) extends BaseProcessor(resultName) {
             }
             // Get language
             val language = liga.classify(text)
-        
+
             datum + (resultName -> language)
-        })}
+        })
     })
 }

@@ -28,17 +28,15 @@ class ConvertToDate(resultName: String) extends BaseProcessor(resultName) {
         formatter = DateTimeFormat.forPattern(format).withLocale(Locale.forLanguageTag(locale))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {
-            new DataPacket(for (datum <- data.data) yield {
-                val dateField = utils.evaluateTuktuString(datum(field).toString, datum)
-                val dateAsString = datum(field) match {
-                    case g: String   => g
-                    case g: JsString => g.value
-                    case g: Any      => g.toString
-                }
-                datum + (field -> formatter.parseDateTime(dateAsString))
-            })
-        }
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            val dateField = utils.evaluateTuktuString(datum(field).toString, datum)
+            val dateAsString = datum(field) match {
+                case g: String   => g
+                case g: JsString => g.value
+                case g: Any      => g.toString
+            }
+            datum + (field -> formatter.parseDateTime(dateAsString))
+        })
     })
 }

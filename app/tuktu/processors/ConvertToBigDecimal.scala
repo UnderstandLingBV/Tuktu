@@ -21,22 +21,20 @@ class ConvertToBigDecimal(resultName: String) extends BaseProcessor(resultName) 
         field = (config \ "field").as[String]
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {
-            new DataPacket(for (datum <- data.data) yield {
-                val bigDecimalVal = datum(field) match {
-                    case g: String   => BigDecimal(g)
-                    case g: Integer  => BigDecimal(g)
-                    case g: Long     => BigDecimal(g)
-                    case g: Double   => BigDecimal(g)
-                    case g: Char     => BigDecimal(g)
-                    case g: JsString => BigDecimal(g.value)
-                    case g: Seq[Any] => anyListToBigDecimal(g)
-                    case g: Any      => BigDecimal(g.toString)
-                }
-                datum + (field -> bigDecimalVal)
-            })
-        }
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            val bigDecimalVal = datum(field) match {
+                case g: String   => BigDecimal(g)
+                case g: Integer  => BigDecimal(g)
+                case g: Long     => BigDecimal(g)
+                case g: Double   => BigDecimal(g)
+                case g: Char     => BigDecimal(g)
+                case g: JsString => BigDecimal(g.value)
+                case g: Seq[Any] => anyListToBigDecimal(g)
+                case g: Any      => BigDecimal(g.toString)
+            }
+            datum + (field -> bigDecimalVal)
+        })
     })
 
     def anyListToBigDecimal(list: Seq[Any]): Seq[BigDecimal] = list match {

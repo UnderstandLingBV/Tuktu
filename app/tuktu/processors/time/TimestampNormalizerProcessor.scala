@@ -1,6 +1,5 @@
 package tuktu.processors.time
 
-import tuktu.api.BaseProcessor
 import play.api.libs.json.JsObject
 import play.api.libs.iteratee.Enumeratee
 import tuktu.api._
@@ -18,17 +17,17 @@ import java.util.Locale
 class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(resultName) {
 
     // the field containing the datetime
-    var datetimeField = ""
+    var datetimeField: String = _
     // do we append or overwrite the datetimeField
-    var overwrite = false
+    var overwrite: Boolean = _
 
-    var millis = 0
-    var seconds = 0
-    var minutes = 0
-    var hours = 0
-    var days = 0
-    var months = 0
-    var years = 0
+    var millis: Int = _
+    var seconds: Int = _
+    var minutes: Int = _
+    var hours: Int = _
+    var days: Int = _
+    var months: Int = _
+    var years: Int = _
 
     var dateTimeFormatter: DateTimeFormatter = _
 
@@ -52,49 +51,46 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
         dateTimeFormatter = DateTimeFormat.forPattern(datetimeFormat).withLocale(Locale.forLanguageTag(datetimeLocale))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
-        Future {
-            new DataPacket(for (datum <- data.data) yield {
-                // Make string of it
-                val str = datum(datetimeField) match {
-                    case a: String   => a
-                    case a: JsString => a.value
-                    case a: Any      => a.toString
-                }
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            // Make string of it
+            val str = datum(datetimeField) match {
+                case a: String   => a
+                case a: JsString => a.value
+                case a: Any      => a.toString
+            }
 
-                // Prase
-                val dt = dateTimeFormatter.parseDateTime(tuktu.api.utils.evaluateTuktuString(str, datum))
-                val newDate = {
-                    if (years > 0) {
-                        val currentYear = dt.year.roundFloorCopy
-                        currentYear.minusYears(currentYear.year.get % years)
-                    } else if (months > 0) {
-                        val currentMonth = dt.monthOfYear.roundFloorCopy
-                        currentMonth.minusMonths(currentMonth.month.get % months)
-                    } else if (days > 0) {
-                        val currentDay = dt.dayOfYear.roundFloorCopy
-                        currentDay.minusDays(currentDay.dayOfYear.get % days)
-                    } else if (hours > 0) {
-                        val currentHours = dt.hourOfDay.roundFloorCopy
-                        currentHours.minusHours(currentHours.hourOfDay.get % hours)
-                    } else if (minutes > 0) {
-                        val currentMinutes = dt.minuteOfDay.roundFloorCopy
-                        currentMinutes.minusMinutes(currentMinutes.minuteOfDay.get % minutes)
-                    } else if (seconds > 0) {
-                        val currentSeconds = dt.secondOfDay.roundFloorCopy
-                        currentSeconds.minusSeconds(currentSeconds.secondOfDay.get % seconds)
-                    } else {
-                        val currentMillis = dt.millisOfDay.roundFloorCopy
-                        currentMillis.minusMillis(currentMillis.millisOfDay.get % millis)
-                    }
+            // Prase
+            val dt = dateTimeFormatter.parseDateTime(tuktu.api.utils.evaluateTuktuString(str, datum))
+            val newDate = {
+                if (years > 0) {
+                    val currentYear = dt.year.roundFloorCopy
+                    currentYear.minusYears(currentYear.year.get % years)
+                } else if (months > 0) {
+                    val currentMonth = dt.monthOfYear.roundFloorCopy
+                    currentMonth.minusMonths(currentMonth.month.get % months)
+                } else if (days > 0) {
+                    val currentDay = dt.dayOfYear.roundFloorCopy
+                    currentDay.minusDays(currentDay.dayOfYear.get % days)
+                } else if (hours > 0) {
+                    val currentHours = dt.hourOfDay.roundFloorCopy
+                    currentHours.minusHours(currentHours.hourOfDay.get % hours)
+                } else if (minutes > 0) {
+                    val currentMinutes = dt.minuteOfDay.roundFloorCopy
+                    currentMinutes.minusMinutes(currentMinutes.minuteOfDay.get % minutes)
+                } else if (seconds > 0) {
+                    val currentSeconds = dt.secondOfDay.roundFloorCopy
+                    currentSeconds.minusSeconds(currentSeconds.secondOfDay.get % seconds)
+                } else {
+                    val currentMillis = dt.millisOfDay.roundFloorCopy
+                    currentMillis.minusMillis(currentMillis.millisOfDay.get % millis)
                 }
+            }
 
-                datum + {
-                    if (overwrite) datetimeField -> newDate
-                    else resultName -> newDate
-                }
-            })
-        }
+            datum + {
+                if (overwrite) datetimeField -> newDate
+                else resultName -> newDate
+            }
+        })
     })
-
 }

@@ -4,19 +4,19 @@ import akka.actor.ActorLogging
 import akka.actor.Actor
 
 // Helper classes for messages
-case class GetModel (
-        name: String
+case class GetModel(
+    name: String
 )
-case class ExistsModel (
-        name: String
+case class ExistsModel(
+    name: String
 )
-case class UpsertModel (
-        name: String,
-        model: BaseModel,
-        reply: Boolean
+case class UpsertModel(
+    name: String,
+    model: BaseModel,
+    reply: Boolean
 )
-case class DestroyModel (
-        name: String
+case class DestroyModel(
+    name: String
 )
 
 /**
@@ -26,17 +26,14 @@ case class DestroyModel (
  */
 class ModelRepository() extends Actor with ActorLogging {
     val modelRepository = collection.mutable.Map[String, BaseModel]()
-    
+
     def receive() = {
         case "init" => {
             // Initialize
         }
         case gm: GetModel => {
-            // Check if the model exists, otherwise initialize it
-            modelRepository contains gm.name match {
-                case true => sender ! Some(modelRepository(gm.name))
-                case false => sender ! None
-            }
+            // Check if model exists and return Some(model) or None to sender
+            sender ! modelRepository.get(gm.name)
         }
         case em: ExistsModel => {
             // Check if a model with the given name was already initialized

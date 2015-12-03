@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 class StreamingDeduplicationProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fields: List[String] = _
-    var seenRecords = collection.mutable.ArrayBuffer[List[Any]]()
+    val seenRecords = collection.mutable.ArrayBuffer[List[Any]]()
 
     override def initialize(config: JsObject) {
         // Get the field to sort on
