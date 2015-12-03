@@ -5,28 +5,23 @@ import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.PoisonPill
 import akka.actor.Props
-import akka.actor.actorRef2Scala
 import au.com.bytecode.opencsv.CSVReader
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
-import tuktu.api.BaseGenerator
-import tuktu.api.DataPacket
-import tuktu.api.InitPacket
-import tuktu.api.StopPacket
+import tuktu.api._
 
 class CsvReader(parentActor: ActorRef, fileName: String, valueName: String,
-        dataColStart: Int, dataColEnd: Option[Int], hierarchy: List[ParseNode], endFieldCol: Int, endField: String,
-        separator: Char, quote: Char, escape: Char
-) extends Actor with ActorLogging {
-    
+                dataColStart: Int, dataColEnd: Option[Int], hierarchy: List[ParseNode], endFieldCol: Int, endField: String,
+                separator: Char, quote: Char, escape: Char) extends Actor with ActorLogging {
+
     def receive() = {
         case ip: InitPacket => {
             // Open the CSV file for reading
             val reader = new CSVReader(tuktu.api.file.genericReader(fileName), separator, quote, escape)
-            
+
             // Start processing
             self ! new CSVReadPacket(reader, 0)
         }
@@ -40,16 +35,15 @@ class CsvReader(parentActor: ActorRef, fileName: String, valueName: String,
             case csvLine: Array[String] => {
                 // Get the row as a list of String
                 val line = csvLine.toList
-                
+
                 // See if this is the end or not
                 if (line(endFieldCol) == endField) {
                     // We may need to stop preliminary if we find the end field
                     self ! new CSVStopPacket(pkt.reader)
-                }
-                else {
+                } else {
                     val endPos = dataColEnd match {
                         case Some(end) => end
-                        case None => line.size - 1
+                        case None      => line.size - 1
                     }
                     // Go through cells of this row
                     for (i <- 0 to endPos) {
@@ -57,7 +51,7 @@ class CsvReader(parentActor: ActorRef, fileName: String, valueName: String,
                         val flattenedMap = (for (pn <- hierarchy) yield {
                             pn.name -> pn.locator(line, pkt.rowOffset, i)
                         }).toMap
-                        
+
                         // Only do something if we have all values
                         if (i >= dataColStart && flattenedMap.forall(elem => elem._2 != null)) {
                             // Send back to parent
@@ -65,9 +59,9 @@ class CsvReader(parentActor: ActorRef, fileName: String, valueName: String,
                             parentActor ! mapToSend
                         }
                     }
-	                
-	                // Continue with next line
-	                self ! new CSVReadPacket(pkt.reader, pkt.rowOffset + 1)
+
+                    // Continue with next line
+                    self ! new CSVReadPacket(pkt.reader, pkt.rowOffset + 1)
                 }
             }
         }
@@ -76,41 +70,41 @@ class CsvReader(parentActor: ActorRef, fileName: String, valueName: String,
 
 class CsvGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     private var flattened = false
-    
-	override def receive() = {
-	    case config: JsValue => {
-	        // Get filename, sheet name and data start
-	        val fileName = (config \ "filename").as[String]
+
+    override def receive() = {
+        case config: JsValue => {
+            // Get filename, sheet name and data start
+            val fileName = (config \ "filename").as[String]
             val valueName = (config \ "value_name").as[String]
-            
+
             // Get hierarchy
             val hierarchy = Common.parseHierarchy((config \ "locators").as[List[JsObject]])
-            
-	        // Flattened or not
-	        flattened = (config \ "flattened").asOpt[Boolean].getOrElse(false)
+
+            // Flattened or not
+            flattened = (config \ "flattened").asOpt[Boolean].getOrElse(false)
             val dataColStart = (config \ "data_start_col").as[Int]
             val dataColEnd = (config \ "data_end_col").asOpt[Int]
-	        val endFieldCol = (config \ "end_field" \ "column").as[Int]
-	        val endField = (config \ "end_field" \ "value").as[String]
-            
+            val endFieldCol = (config \ "end_field" \ "column").as[Int]
+            val endField = (config \ "end_field" \ "value").as[String]
+
             // Get separator, quote and escape char
             val separator = (config \ "separator").asOpt[String].getOrElse(";").head
             val quote = (config \ "quote").asOpt[String].getOrElse("\"").head
             val escape = (config \ "escape").asOpt[String].getOrElse("\\").head
-	        
-	        // Create actor and kickstart
-	        val csvGenActor = Akka.system.actorOf(Props(classOf[CsvReader], self, fileName, valueName,
-                    dataColStart, dataColEnd, hierarchy, endFieldCol, endField,
-                    separator, quote, escape))
-	        csvGenActor ! new InitPacket()
-	    }
-	    case sp: StopPacket => {
+
+            // Create actor and kickstart
+            val csvGenActor = Akka.system.actorOf(Props(classOf[CsvReader], self, fileName, valueName,
+                dataColStart, dataColEnd, hierarchy, endFieldCol, endField,
+                separator, quote, escape))
+            csvGenActor ! new InitPacket()
+        }
+        case sp: StopPacket => {
             channel.eofAndEnd
             self ! PoisonPill
         }
-	    case headerfullLine: Map[String, String] => flattened match {
-	        case false => channel.push(new DataPacket(List(Map(resultName -> headerfullLine))))
-	        case true => channel.push(new DataPacket(List(headerfullLine)))
-	    }
-	}
+        case headerfullLine: Map[String, String] => flattened match {
+            case false => channel.push(new DataPacket(List(Map(resultName -> headerfullLine))))
+            case true  => channel.push(new DataPacket(List(headerfullLine)))
+        }
+    }
 }

@@ -18,9 +18,8 @@ import play.api.libs.json.JsArray
 import tuktu.api.BaseGenerator
 
 class XlsReader(parentActor: ActorRef, fileName: String, sheetName: String, valueName: String,
-        dataColStart: Int, dataColEnd: Option[Int], hierarchy: List[ParseNode], endFieldCol: Int, endField: String
-) extends Actor with ActorLogging {
-    
+                dataColStart: Int, dataColEnd: Option[Int], hierarchy: List[ParseNode], endFieldCol: Int, endField: String) extends Actor with ActorLogging {
+
     private[this] def rowToList(row: Row): List[String] = {
         // Get the max column
         val maxColumn = row.getLastCellNum
@@ -29,11 +28,11 @@ class XlsReader(parentActor: ActorRef, fileName: String, sheetName: String, valu
             val cell = row.getCell(col, Row.RETURN_BLANK_AS_NULL)
             if (cell == null) ""
             else {
-		        // Get the value
-		        cell.getCellType match {
-		            case org.apache.poi.ss.usermodel.Cell.CELL_TYPE_BOOLEAN =>
-		                cell.getBooleanCellValue.toString
-		            case org.apache.poi.ss.usermodel.Cell.CELL_TYPE_NUMERIC => {
+                // Get the value
+                cell.getCellType match {
+                    case org.apache.poi.ss.usermodel.Cell.CELL_TYPE_BOOLEAN =>
+                        cell.getBooleanCellValue.toString
+                    case org.apache.poi.ss.usermodel.Cell.CELL_TYPE_NUMERIC => {
                         // Double or int?
                         val originalValue = cell.getNumericCellValue
                         if (originalValue.toInt.toDouble == originalValue)
@@ -41,14 +40,14 @@ class XlsReader(parentActor: ActorRef, fileName: String, sheetName: String, valu
                         else
                             cell.getNumericCellValue.toString // Double
                     }
-		            case org.apache.poi.ss.usermodel.Cell.CELL_TYPE_STRING =>
-		                cell.getStringCellValue
-		            case _ => ""
-		        }
+                    case org.apache.poi.ss.usermodel.Cell.CELL_TYPE_STRING =>
+                        cell.getStringCellValue
+                    case _ => ""
+                }
             }
         }).toList
-	}
-    
+    }
+
     def receive() = {
         case ip: InitPacket => {
             // Open the workbook for reading
@@ -56,7 +55,7 @@ class XlsReader(parentActor: ActorRef, fileName: String, sheetName: String, valu
             // Get the proper sheet
             val sheet = workbook.getSheet(sheetName)
             val rowIterator = sheet.iterator
-            
+
             // Start processing
             self ! new XlsReadPacket(workbook, rowIterator, 0)
         }
@@ -70,16 +69,15 @@ class XlsReader(parentActor: ActorRef, fileName: String, sheetName: String, valu
             case true => {
                 // Get the row as a list of String
                 val line = rowToList(pkt.reader.next)
-                
+
                 // See if this is the end or not
                 if (line(endFieldCol) == endField) {
                     // We may need to stop preliminary if we find the end field
                     self ! new XlsStopPacket(pkt.workbook)
-                }
-                else {
+                } else {
                     val endPos = dataColEnd match {
                         case Some(end) => end
-                        case None => line.size - 1
+                        case None      => line.size - 1
                     }
                     // Go through cells of this row
                     for (i <- 0 to endPos) {
@@ -87,7 +85,7 @@ class XlsReader(parentActor: ActorRef, fileName: String, sheetName: String, valu
                         val flattenedMap = (for (pn <- hierarchy) yield {
                             pn.name -> pn.locator(line, pkt.rowOffset, i)
                         }).toMap
-                        
+
                         // Only do something if we have all values
                         if (i >= dataColStart && flattenedMap.forall(elem => elem._2 != null)) {
                             // Send back to parent
@@ -95,9 +93,9 @@ class XlsReader(parentActor: ActorRef, fileName: String, sheetName: String, valu
                             parentActor ! mapToSend
                         }
                     }
-	                
-	                // Continue with next line
-	                self ! new XlsReadPacket(pkt.workbook, pkt.reader, pkt.rowOffset + 1)
+
+                    // Continue with next line
+                    self ! new XlsReadPacket(pkt.workbook, pkt.reader, pkt.rowOffset + 1)
                 }
             }
         }
@@ -106,36 +104,36 @@ class XlsReader(parentActor: ActorRef, fileName: String, sheetName: String, valu
 
 class XlsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     private var flattened = false
-    
-	override def receive() = {
-	    case config: JsValue => {
-	        // Get filename, sheet name and data start
-	        val fileName = (config \ "filename").as[String]
-	        val sheetName = (config \ "sheet_name").as[String]
+
+    override def receive() = {
+        case config: JsValue => {
+            // Get filename, sheet name and data start
+            val fileName = (config \ "filename").as[String]
+            val sheetName = (config \ "sheet_name").as[String]
             val valueName = (config \ "value_name").as[String]
-            
+
             // Get hierarchy
             val hierarchy = Common.parseHierarchy((config \ "locators").as[List[JsObject]])
-            
-	        // Flattened or not
-	        flattened = (config \ "flattened").asOpt[Boolean].getOrElse(false)
+
+            // Flattened or not
+            flattened = (config \ "flattened").asOpt[Boolean].getOrElse(false)
             val dataColStart = (config \ "data_start_col").as[Int]
             val dataColEnd = (config \ "data_end_col").asOpt[Int]
-	        val endFieldCol = (config \ "end_field" \ "column").as[Int]
-	        val endField = (config \ "end_field" \ "value").as[String]
-	        
-	        // Create actor and kickstart
-	        val xslGenActor = Akka.system.actorOf(Props(classOf[XlsReader], self, fileName, sheetName, valueName,
-                    dataColStart, dataColEnd, hierarchy, endFieldCol, endField))
-	        xslGenActor ! new InitPacket()
-	    }
-	    case sp: StopPacket => {
+            val endFieldCol = (config \ "end_field" \ "column").as[Int]
+            val endField = (config \ "end_field" \ "value").as[String]
+
+            // Create actor and kickstart
+            val xslGenActor = Akka.system.actorOf(Props(classOf[XlsReader], self, fileName, sheetName, valueName,
+                dataColStart, dataColEnd, hierarchy, endFieldCol, endField))
+            xslGenActor ! new InitPacket()
+        }
+        case sp: StopPacket => {
             channel.eofAndEnd
             self ! PoisonPill
         }
-	    case headerfullLine: Map[String, String] => flattened match {
-	        case false => channel.push(new DataPacket(List(Map(resultName -> headerfullLine))))
-	        case true => channel.push(new DataPacket(List(headerfullLine)))
-	    }
-	}
+        case headerfullLine: Map[String, String] => flattened match {
+            case false => channel.push(new DataPacket(List(Map(resultName -> headerfullLine))))
+            case true  => channel.push(new DataPacket(List(headerfullLine)))
+        }
+    }
 }
