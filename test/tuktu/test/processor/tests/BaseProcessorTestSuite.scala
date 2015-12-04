@@ -838,7 +838,7 @@ class BaseProcessorTestSuite extends PlaySpec {
             val config = Json.parse("""{
                  "field": "key1",
                  "separator": ",",
-                 "overwrite": "true"
+                 "overwrite": true
               }""").as[JsObject]
 
             //Expected output
@@ -858,7 +858,7 @@ class BaseProcessorTestSuite extends PlaySpec {
             val config = Json.parse("""{
                  "field": "key1",
                  "separator": ",",
-                 "overwrite": "false"
+                 "overwrite": false
               }""").as[JsObject]
             
             //Expected output
