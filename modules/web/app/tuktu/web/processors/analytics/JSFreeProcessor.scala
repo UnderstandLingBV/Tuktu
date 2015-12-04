@@ -20,8 +20,8 @@ class JSFreeProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield datum + (resultName -> new WebJsCodeObject(
+        for (datum <- data) yield datum + (resultName -> new WebJsCodeObject(
                 utils.evaluateTuktuString(code, datum)
-        )))
+        ))
     })
 }

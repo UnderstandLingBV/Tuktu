@@ -21,6 +21,6 @@ class JSONParseProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield datum + (resultName -> Json.parse(datum(field).asInstanceOf[String])))
+        for (datum <- data) yield datum + (resultName -> Json.parse(datum(field).asInstanceOf[String]))
     })
 }

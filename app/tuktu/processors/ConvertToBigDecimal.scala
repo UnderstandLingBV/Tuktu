@@ -22,7 +22,7 @@ class ConvertToBigDecimal(resultName: String) extends BaseProcessor(resultName) 
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val bigDecimalVal = datum(field) match {
                 case g: String   => BigDecimal(g)
                 case g: Integer  => BigDecimal(g)
@@ -34,7 +34,7 @@ class ConvertToBigDecimal(resultName: String) extends BaseProcessor(resultName) 
                 case g: Any      => BigDecimal(g.toString)
             }
             datum + (field -> bigDecimalVal)
-        })
+        }
     })
 
     def anyListToBigDecimal(list: Seq[Any]): Seq[BigDecimal] = list match {

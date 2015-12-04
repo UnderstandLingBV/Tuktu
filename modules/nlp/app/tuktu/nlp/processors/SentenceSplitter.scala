@@ -17,7 +17,7 @@ import tuktu.api.DataPacket
  */
 class SentenceSplitterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
-    var locale = Locale.ENGLISH
+    var locale: Locale = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
@@ -25,12 +25,12 @@ class SentenceSplitterProcessor(resultName: String) extends BaseProcessor(result
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket((for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val text = datum(field).asInstanceOf[String]
             val bi = BreakIterator.getSentenceInstance(locale)
 
             datum + (resultName -> new Splitter(text, bi).toList)
-        }))
+        }
     })
 
     /**
@@ -48,5 +48,4 @@ class SentenceSplitterProcessor(resultName: String) extends BaseProcessor(result
             result
         }
     }
-    
 }

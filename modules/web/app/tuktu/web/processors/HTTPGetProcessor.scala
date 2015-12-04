@@ -30,7 +30,7 @@ class HTTPGetProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val urls: Stream[String] = datum(field) match {
                 case u: String      => Stream(u)
                 case u: JsString    => Stream(u.value)
@@ -38,7 +38,7 @@ class HTTPGetProcessor(resultName: String) extends BaseProcessor(resultName) {
                 case a: Any         => Stream(a.toString)
             }
             datum + (resultName -> urls.map(callService(_)))
-        })
+        }
     })
 
     private def anyToString(any: Any): String = any match {

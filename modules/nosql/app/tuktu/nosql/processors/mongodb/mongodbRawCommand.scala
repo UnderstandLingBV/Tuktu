@@ -39,9 +39,9 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
         val futureResult = runner.apply(db, runner.rawCommand(command)).one[JsObject]
         futureResult.map { result =>
             if (resultOnly) {
-                new DataPacket(for (datum <- data.data) yield { datum + (resultName -> (result \ "result")) })
+                for (datum <- data) yield datum + (resultName -> (result \ "result"))
             } else {
-                new DataPacket(for (datum <- data.data) yield { datum + (resultName -> result) })
+                for (datum <- data) yield datum + (resultName -> result)
             }
         }
     })

@@ -30,7 +30,7 @@ class SummarizeProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Obtain all the lines
             val lines = {
                 val text = datum(textField) match {
@@ -70,6 +70,6 @@ class SummarizeProcessor(resultName: String) extends BaseProcessor(resultName) {
             datum + (resultName -> {
                 if (asPlainText) resultLines.mkString(". ") else resultLines
             })
-        })
+        }
     })
 }

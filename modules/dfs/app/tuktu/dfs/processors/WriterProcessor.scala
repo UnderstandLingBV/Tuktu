@@ -18,45 +18,44 @@ class WriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fields: List[String] = _
     var fieldSep: String = _
     var lineSep: String = _
-    
+
     val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
-    
+
     override def initialize(config: JsObject) {
         // Get the field we need to write out
         fields = (config \ "fields").as[List[String]]
         fieldSep = (config \ "field_separator").asOpt[String].getOrElse(",")
         lineSep = (config \ "line_separator").asOpt[String].getOrElse("\r\n")
-        
+
         val filename = (config \ "file_name").as[String]
         val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
         val replicationFactor = (config \ "replication").asOpt[Int]
-        
+
         // Get the nodes to use
         val otherNodes = utils.indexToNodeHasher(filename, replicationFactor, false)
-        
+
         // See if we need to make the dirs
         val (dummy, dirs) = util.getIndex(prefix + "/" + filename)
         val dir = new File(dirs.mkString("/"))
         if (!dir.exists)
             dir.mkdirs
-        
+
         // Initialize writer
         writer = new BufferedDFSWriter(
-                new OutputStreamWriter(new FileOutputStream(prefix + "/" + filename), encoding),
-                filename,
-                encoding,
-                otherNodes
-        )
+            new OutputStreamWriter(new FileOutputStream(prefix + "/" + filename), encoding),
+            filename,
+            encoding,
+            otherNodes)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) {
             // Write it
             val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
             writer.write(output + lineSep)
+        }
 
-            datum
-        })
+        data
     }) compose Enumeratee.onEOF(() => {
         writer.flush
         writer.close

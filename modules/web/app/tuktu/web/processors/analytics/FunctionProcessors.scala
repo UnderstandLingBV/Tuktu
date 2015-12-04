@@ -25,13 +25,13 @@ class FunctionProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             datum + (resultName -> new WebJsFunctionObject(
                     utils.evaluateTuktuString(name, datum),
                     params.map(p => utils.evaluateTuktuString(p, datum)),
                     utils.evaluateTuktuString(body, datum)
             ))
-        })
+        }
     })
 }
 
@@ -46,10 +46,10 @@ class FunctionFetcherProcessor(resultName: String) extends BaseProcessor(resultN
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             datum + (resultName -> new WebJsObject(
                     "function() {" + utils.evaluateTuktuString(body, datum) + "}"
             ))
-        })
+        }
     })
 }

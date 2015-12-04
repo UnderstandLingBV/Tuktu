@@ -41,7 +41,7 @@ class TimestampPeriodAdderProcessor(resultName: String) extends BaseProcessor(re
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val time = (datum(timeField) match {
                 case x: Long     => new DateTime(x)
                 case x: DateTime => x
@@ -60,6 +60,6 @@ class TimestampPeriodAdderProcessor(resultName: String) extends BaseProcessor(re
                 case _: DateTime => time
                 case _: String   => DateTimeFormat.forPattern(format).withLocale(Locale.forLanguageTag(locale)).print(time)
             }))
-        })
+        }
     })
 }

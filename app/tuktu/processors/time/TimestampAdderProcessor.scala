@@ -19,7 +19,7 @@ class TimestampAdderProcessor(resultName: String) extends BaseProcessor(resultNa
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         val timestamp = System.currentTimeMillis
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             format match {
                 case None => datum + (resultName -> timestamp)
                 case Some(frmt) => {
@@ -27,6 +27,6 @@ class TimestampAdderProcessor(resultName: String) extends BaseProcessor(resultNa
                     datum + (resultName -> dateFormat.format(timestamp))
                 }
             }
-        })
+        }
     })
 }

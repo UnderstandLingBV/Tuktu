@@ -18,10 +18,10 @@ import java.io.BufferedReader
  * Streams data into a file and closes it when it's done
  */
 class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var writer: BufferedWriter = null
-    var fields = List[String]()
-    var fieldSep: String = null
-    var lineSep: String = null
+    var writer: BufferedWriter = _
+    var fields: List[String] = _
+    var fieldSep: String = _
+    var lineSep: String = _
 
     override def initialize(config: JsObject) {
         // Get the location of the file to write to
@@ -37,14 +37,14 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) {
             // Write it
             val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
 
             writer.write(output + lineSep)
+        }
 
-            datum
-        })
+        data
     }) compose Enumeratee.onEOF(() => {
         writer.flush
         writer.close
@@ -55,13 +55,13 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
  * Streams data into a file and closes it when it's done
  */
 class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var writer: BufferedWriter = null
-    var fields = List[String]()
-    var fieldSep: String = null
-    var lineSep: String = null
-    var batchSize: Int = 1
+    var writer: BufferedWriter = _
+    var fields: List[String] = _
+    var fieldSep: String = _
+    var lineSep: String = _
+    var batchSize: Int = _
     var batch = new StringBuilder()
-    var batchCount = 0
+    var batchCount: Int = _
 
     override def initialize(config: JsObject) {
         // Get the location of the file to write to
@@ -80,7 +80,7 @@ class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resul
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) {
             // Write it
             val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
 
@@ -91,9 +91,9 @@ class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resul
                 writer.write(batch.toString)
                 batch.clear
             }
+        }
 
-            datum
-        })
+        data
     }) compose Enumeratee.onEOF(() => {
         writer.flush
         writer.close
@@ -115,7 +115,7 @@ class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) 
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val fileName = utils.evaluateTuktuString(this.fileName, datum)
             val encoding = utils.evaluateTuktuString(this.encoding, datum)
 
@@ -127,6 +127,6 @@ class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) 
                 if (reader != null)
                     reader.close
             }
-        })
+        }
     })
 }

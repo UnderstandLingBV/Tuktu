@@ -2,12 +2,12 @@ package tuktu.api
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
+import scala.collection.GenTraversableOnce
 import akka.actor.Actor
-import akka.actor.ActorIdentity
 import akka.actor.ActorLogging
+import akka.actor.ActorRef
 import akka.actor.Identify
 import akka.actor.PoisonPill
-import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play.current
@@ -16,14 +16,21 @@ import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsValue
-import akka.actor.ActorRef
 import play.api.libs.json.JsObject
 import play.api.cache.Cache
 import play.api.Application
 
 case class DataPacket(
         data: List[Map[String, Any]]
-) extends java.io.Serializable
+) extends java.io.Serializable {
+    def isEmpty: Boolean = data.isEmpty
+    def nonEmpty: Boolean = data.nonEmpty
+    def filter(f: Map[String, Any] => Boolean): DataPacket = new DataPacket(data.filter(f))
+    def filterNot(f: Map[String, Any] => Boolean): DataPacket = new DataPacket(data.filterNot(f))
+    def map(f: Map[String, Any] => Map[String, Any]): DataPacket = new DataPacket(data.map(f))
+    def flatMap(f: Map[String, Any] => GenTraversableOnce[Map[String, Any]]): DataPacket = new DataPacket(data.flatMap(f))
+    def foreach(f: Map[String, Any] => Unit): Unit = data.foreach(f)
+}
 
 case class DispatchRequest(
         configName: String,

@@ -25,7 +25,7 @@ class LIGAProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get the field on which we should perform the language detection
             val text = {
                 if (datum(fieldName).isInstanceOf[JsString]) datum(fieldName).asInstanceOf[JsString].value
@@ -35,6 +35,6 @@ class LIGAProcessor(resultName: String) extends BaseProcessor(resultName) {
             val language = liga.classify(text)
 
             datum + (resultName -> language)
-        })
+        }
     })
 }

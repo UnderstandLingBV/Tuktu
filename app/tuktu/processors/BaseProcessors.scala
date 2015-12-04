@@ -35,7 +35,7 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             (for {
                 fieldItem <- fieldList
                 default = (fieldItem \ "default").asOpt[JsValue]
@@ -46,7 +46,7 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
             } yield {
                 fieldName -> utils.fieldParser(datum, fields, default)
             }).toMap
-        })
+        }
     })
 }
 
@@ -66,9 +66,8 @@ class FieldRemoveProcessor(resultName: String) extends BaseProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(
-            (for (datum <- data.data) yield datum -- fields).filterNot(ignoreEmptyDatums && _.isEmpty))
-    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmptyDataPackets && data.data.isEmpty)
+        (for (datum <- data) yield datum -- fields).filterNot(ignoreEmptyDatums && _.isEmpty)
+    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmptyDataPackets && data.isEmpty)
 }
 
 /**
@@ -82,7 +81,7 @@ class FieldCopyProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             datum ++ (for {
                 copy <- copyList
 
@@ -91,7 +90,7 @@ class FieldCopyProcessor(resultName: String) extends BaseProcessor(resultName) {
             } yield {
                 result -> utils.fieldParser(datum, path, null)
             })
-        })
+        }
     })
 }
 
@@ -111,15 +110,15 @@ class RunningCountProcessor(resultName: String) extends BaseProcessor(resultName
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         if (perBlock) {
-            val res = new DataPacket(data.data.map(datum => datum + (resultName -> cnt)))
+            val res = for (datum <- data) yield datum + (resultName -> cnt)
             cnt += stepSize
             res
         } else {
-            new DataPacket(data.data.map(datum => {
+            for (datum <- data) yield {
                 val r = datum + (resultName -> cnt)
                 cnt += stepSize
                 r
-            }))
+            }
         }
     })
 }
@@ -147,13 +146,7 @@ class ReplaceProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(data.data.map(datum => datum + (field -> {
-            // Get field value to replace
-            val value = datum(field).toString
-
-            // Replace
-            replaceHelper(value, 0)
-        })))
+        for (datum <- data) yield datum + (field -> replaceHelper(datum(field).toString, 0))
     })
 }
 
@@ -169,7 +162,7 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val newData = (for {
                 fieldItem <- fieldList
                 default = (fieldItem \ "default").asOpt[JsValue]
@@ -182,7 +175,7 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
             }).toMap
 
             datum ++ newData
-        })
+        }
     })
 }
 
@@ -197,7 +190,7 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val mutableDatum = collection.mutable.Map[String, Any](datum.toSeq: _*)
 
             // A set of items that must be clean up at the end
@@ -222,7 +215,7 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
             mutableDatum --= cleanUp.diff(dontCleanUp)
 
             mutableDatum.toMap
-        })
+        }
     })
 }
 
@@ -439,12 +432,12 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             if (!isNumeric)
                 datum + (resultName -> evaluateTuktuString(value, datum))
             else
                 datum + (resultName -> evaluateTuktuString(value, datum).toLong)
-        })
+        }
     })
 }
 
@@ -476,7 +469,7 @@ class StringImploderProcessor(resultName: String) extends BaseProcessor(resultNa
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Find out which fields we should extract
             datum ++ (for (fieldObject <- fieldList) yield {
                 // Get fields and separator
@@ -495,7 +488,7 @@ class StringImploderProcessor(resultName: String) extends BaseProcessor(resultNa
                 // Overwrite top-level field
                 fields.head -> value.mkString(sep)
             })
-        })
+        }
     })
 }
 
@@ -528,7 +521,7 @@ class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(result
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Find out which fields we should extract
             datum ++ (for (fieldObject <- fieldList) yield {
                 // Get fields
@@ -550,7 +543,7 @@ class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(result
                 // Replace top-level field
                 fields.head -> gluedValue
             })
-        })
+        }
     })
 }
 
@@ -581,7 +574,7 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Set up mutable datum
             var mutableDatum = collection.mutable.Map(datum.toSeq: _*)
 
@@ -606,7 +599,7 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
                 mutableDatum ++= value
             }
             mutableDatum.toMap
-        })
+        }
     })
 }
 
@@ -629,7 +622,7 @@ class SequenceExploderProcessor(resultName: String) extends BaseProcessor(result
 
             for (value <- values) yield datum + (field -> value)
         }).flatten)
-    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmpty && data.data.isEmpty)
+    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmpty && data.isEmpty)
 }
 
 /**
@@ -647,14 +640,14 @@ class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultNa
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get the field and explode it
             val values = datum(field).toString.split(separator).toList
 
             datum + {
                 if (overwrite) field -> values else resultName -> values
             }
-        })
+        }
     })
 }
 
@@ -675,7 +668,7 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get the list field's value
             val listValue = datum(listField).asInstanceOf[List[Map[String, Any]]]
 
@@ -690,8 +683,8 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
                 datum + (listField -> newList)
             else
                 datum + (resultName -> newList)
-        })
-    }) compose Enumeratee.filter((data: DataPacket) => { if (ignoreEmpty) !data.data.isEmpty else true })
+        }
+    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmpty && data.isEmpty)
 }
 
 /**
@@ -710,7 +703,7 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get the list field's value
             val listValue = datum(listField).asInstanceOf[List[Map[String, Any]]]
 
@@ -730,8 +723,8 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
 
             // Add to our total result
             datum -- mapFields ++ resultMap.map(elem => elem._1 -> elem._2.toList)
-        })
-    }) compose Enumeratee.filter((data: DataPacket) => { if (ignoreEmpty) !data.data.isEmpty else true })
+        }
+    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmpty && data.isEmpty)
 }
 
 /**
@@ -740,7 +733,7 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
 class ContainsAllFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldContainingList: String = _
     var field: String = _
-    var containsField = ""
+    var containsField: String = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
@@ -749,46 +742,41 @@ class ContainsAllFilterProcessor(resultName: String) extends BaseProcessor(resul
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket({
-            val resultMap = (for (datum <- data.data) yield {
-                // Build the actual set of contain-values
-                val containsSet = collection.mutable.Set[Any]() ++ datum(containsField).asInstanceOf[Seq[Any]]
+        (for (datum <- data) yield {
+            // Build the actual set of contain-values
+            val containsSet = collection.mutable.Set[Any](datum(containsField).asInstanceOf[Seq[Any]]: _*)
 
-                // Get our record
-                val record = datum(fieldContainingList).asInstanceOf[List[Map[String, Any]]]
+            // Get our record
+            val record = datum(fieldContainingList).asInstanceOf[List[Map[String, Any]]]
 
-                // Do the matching
-                for (rec <- record if !containsSet.isEmpty)
-                    containsSet -= rec(field)
+            // Do the matching
+            for (rec <- record if containsSet.nonEmpty)
+                containsSet -= rec(field)
 
-                if (containsSet.isEmpty) datum
-                else Map[String, Any]()
-            })
-
-            val filteredMap = resultMap.filter(elem => !elem.isEmpty)
-            filteredMap
-        })
-    }) compose Enumeratee.filter((data: DataPacket) => !data.data.isEmpty)
+            if (containsSet.isEmpty) datum
+            else Map[String, Any]()
+        }).filter(_.nonEmpty)
+    }) compose Enumeratee.filter((data: DataPacket) => data.nonEmpty)
 }
 
 /**
  * Takes a Map[String, Any] and makes it a top-level citizen
  */
 class MapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var field = ""
+    var field: String = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get map
             val map = datum(field).asInstanceOf[Map[String, Any]]
 
             // Add to total
             datum ++ map
-        })
+        }
     })
 }
 
@@ -828,9 +816,9 @@ class ZipExplodeProcessor(resultName: String) extends BaseProcessor(resultName) 
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(data.data.flatMap(datum => {
+        data.flatMap(datum => {
             val zipped = toList(datum(field1)).zip(toList(datum(field2)))
             for ((any1, any2) <- zipped) yield datum + (field1 -> any1) + (field2 -> any2)
-        }))
+        })
     })
 }

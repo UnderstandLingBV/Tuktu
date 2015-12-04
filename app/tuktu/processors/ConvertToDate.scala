@@ -29,7 +29,7 @@ class ConvertToDate(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val dateField = utils.evaluateTuktuString(datum(field).toString, datum)
             val dateAsString = datum(field) match {
                 case g: String   => g
@@ -37,6 +37,6 @@ class ConvertToDate(resultName: String) extends BaseProcessor(resultName) {
                 case g: Any      => g.toString
             }
             datum + (field -> formatter.parseDateTime(dateAsString))
-        })
+        }
     })
 }

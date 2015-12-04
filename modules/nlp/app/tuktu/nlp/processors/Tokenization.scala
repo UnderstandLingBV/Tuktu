@@ -24,7 +24,7 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Tokenize
             val fieldValue = {
                 if (datum(fieldName).isInstanceOf[JsString]) datum(fieldName).asInstanceOf[JsString].value
@@ -37,6 +37,6 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
                 datum + (resultName -> tokens.mkString(" "))
             else
                 datum + (resultName -> tokens)
-        })
+        }
     })
 }

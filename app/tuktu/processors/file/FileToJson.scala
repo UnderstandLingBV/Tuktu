@@ -15,10 +15,10 @@ import scala.io.Source
  */
 class FileToJson(resultName: String) extends BaseProcessor(resultName) {
     /** The charset used to decode the bytes of the incoming files. */
-    var charset = ""
+    var charset: String = _
     /** The field the file is processed in. */
-    var field = ""
-    var overwrite = false
+    var field: String = _
+    var overwrite: Boolean = _
 
     override def initialize(config: JsObject) {
         charset = (config \ "charset").asOpt[String].getOrElse("utf-8")
@@ -27,7 +27,7 @@ class FileToJson(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get file contents
             val file = Source.fromFile(datum(field).asInstanceOf[Path].toFile, charset)
             val content = file.getLines.mkString
@@ -38,6 +38,6 @@ class FileToJson(resultName: String) extends BaseProcessor(resultName) {
                 datum + (field -> Json.parse(content))
             else
                 datum + (resultName -> Json.parse(content))
-        })
+        }
     })
 }

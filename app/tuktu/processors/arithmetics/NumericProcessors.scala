@@ -19,7 +19,7 @@ class NumberToNumberProcessor(resultName: String) extends BaseProcessor(resultNa
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         // Convert the field from source to target
-        new DataPacket(for (datum <- data.data) yield datum + (resultName -> converter(datum(field))))
+        for (datum <- data) yield datum + (resultName -> converter(datum(field)))
     })
     
     /**

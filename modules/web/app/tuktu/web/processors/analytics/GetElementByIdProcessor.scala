@@ -20,10 +20,10 @@ class DOMElementFetcherProcessor(resultName: String) extends BaseProcessor(resul
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             datum + (resultName -> new WebJsObject(
                     "document.getElementById(\"" + utils.evaluateTuktuString(elementName, datum) + "\")"
             ))
-        })
+        }
     })
 }

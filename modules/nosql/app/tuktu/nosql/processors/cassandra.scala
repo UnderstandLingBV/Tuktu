@@ -28,7 +28,7 @@ class CassandraProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Evaluate query
             val evalQuery = utils.evaluateTuktuString(query, datum)
 
@@ -46,7 +46,7 @@ class CassandraProcessor(resultName: String) extends BaseProcessor(resultName) {
                     datum + (resultName -> res)
                 }
             }
-        })
+        }
     }) compose Enumeratee.onEOF(() => {
         client.close
     })

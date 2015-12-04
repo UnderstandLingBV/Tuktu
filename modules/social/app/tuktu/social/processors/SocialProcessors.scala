@@ -217,7 +217,7 @@ class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName
         // URLs cannot contains spaces, as such, anything surrounded by spaces can be replaced by a value present in our data
         val components = url.split(" ")
 
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Replace all fields by their value
             val replacedUrl = (for (component <- components) yield {
                 // Only do something if this is surrounded by [ and ]
@@ -236,6 +236,6 @@ class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName
             val jsonResult = Json.parse(response.getBody)
 
             datum + (resultName -> jsonResult)
-        })
+        }
     })
 }

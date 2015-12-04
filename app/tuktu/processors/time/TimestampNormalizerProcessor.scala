@@ -52,7 +52,7 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Make string of it
             val str = datum(datetimeField) match {
                 case a: String   => a
@@ -91,6 +91,6 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
                 if (overwrite) datetimeField -> newDate
                 else resultName -> newDate
             }
-        })
+        }
     })
 }
