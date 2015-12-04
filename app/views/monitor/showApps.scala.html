@@ -61,7 +61,7 @@
         </thead>
             <tbody>
             @for((appName, appProps) <- running.drop((runningPage - 1) * 100).take(100)) {
-                <tr@if(appProps.hadErrors){ class="danger"}>
+                <tr@if(appProps.errors.nonEmpty){ class="danger"}>
                     <td style="margin-right: 25px;">
                         @if(appProps.actors.isEmpty){@appName}else{@appProps.actors.head.path.toStringWithoutAddress}
                         @if(subflows.contains(appName)) {
@@ -159,7 +159,7 @@
         </thead>
             <tbody>
             @for((appName, appProps) <- finished.drop((finishedPage - 1) * 100).take(100)) {
-                <tr@if(appProps.hadErrors){ class="danger"}>
+                <tr@if(appProps.errors.nonEmpty){ class="danger"}>
                     <td style="margin-right: 25px;">
                         @if(appProps.actors.isEmpty){@appName}else{@appProps.actors.head.path.toStringWithoutAddress}
                         @if(subflows.contains(appName)) {

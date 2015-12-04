@@ -23,7 +23,7 @@ object utils {
     def logEnumeratee[T](idString: String, configName: String = "Unknown", processorName: String = "Unknown") = Enumeratee.recover[T] {
         case (e, input) => {
             // Notify the monitor so it can kill our flow
-            Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorNotificationPacket(idString)
+            Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorNotificationPacket(idString, configName, processorName, input.toString, e)
 
             // Log the error
             Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString, on Input: " + input, e)

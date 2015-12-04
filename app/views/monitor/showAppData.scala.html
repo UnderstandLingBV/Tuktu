@@ -27,6 +27,27 @@
 } else {
     No data flow has been monitored yet.
 }
+@if(appProps.errors.nonEmpty) {
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Last Errors per Processor</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for((proc, error) <- appProps.errors.toSeq.sorted) {
+                <tr>
+                    <td>
+                        <div class="panel panel-danger">
+                            <div class="panel-heading">@proc</div>
+                            <div class="panel-body" style="white-space: pre-wrap;">@error</div>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 @if(appProps.processorDataPacketCount.nonEmpty) {
     <table class="table table-striped">
         <thead>
@@ -38,7 +59,7 @@
         </thead>
         <tbody>
             @for((id, uuid) <- appProps.processorDataPacketCount.keys.toSeq.sorted.zip(appProps.processorDataPacketCount.map(x => java.util.UUID.randomUUID.toString))) {
-                <tr>
+                <tr@if(appProps.errors.contains(id)){ class="danger"}>
                     <td>
                         <button data-flow="@flow_name" class="btn btn-primary btn-sm processor_monitor_collapse" type="button">@id</button>
                     </td>

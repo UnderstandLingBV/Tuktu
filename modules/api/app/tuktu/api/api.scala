@@ -95,7 +95,7 @@ case class AppMonitorObject(
         var finished_instances: Int = 0,
         var endTime: Option[Long] = None,
         expirationTime: Long = play.api.Play.current.configuration.getInt("tuktu.monitor.finish_expiration").getOrElse(30) * 60 * 1000,
-        var hadErrors: Boolean = false,
+        errors: collection.mutable.Map[String, String] = collection.mutable.Map.empty,
         actors: collection.mutable.Set[ActorRef] = collection.mutable.Set.empty,
         flowDataPacketCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
         flowDatumCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
@@ -142,7 +142,11 @@ case class SubflowMapPacket(
         subflows: List[ActorRef]
 )
 case class ErrorNotificationPacket(
-        uuid: String
+        uuid: String,
+        configName: String,
+        processorName: String,
+        input: String,
+        error: Throwable
 )
 /**
  * End monitoring stuff
