@@ -1,5 +1,5 @@
-### tuktu.processors.StringImploderProcessor
-Implodes arrays into a string, overwriting its top-level ancestor.
+### tuktu.processors.FieldCopyProcessor
+Copies a (nested) field to the top under a new result name.
 
   * **id** *(type: string)* `[Required]`
 
@@ -8,15 +8,15 @@ Implodes arrays into a string, overwriting its top-level ancestor.
   * **config** *(type: object)* `[Required]`
 
     * **fields** *(type: array)* `[Required]`
-    - The arrays to be imploded.
+    - The fields to be copied.
 
       * **[UNNAMED]** *(type: object)* `[Required]`
 
         * **path** *(type: array)* `[Required]`
-        - The path to the array. The result will overwrite its top-level ancestor.
+        - The path at which the value is located. Leave empty to copy the whole datum.
 
           * **[UNNAMED]** *(type: string)* `[Required]`
 
-        * **separator** *(type: string)* `[Required]`
-        - The separator character used between elements.
+        * **result** *(type: string)* `[Required]`
+        - The result name the value will be copied to.
 

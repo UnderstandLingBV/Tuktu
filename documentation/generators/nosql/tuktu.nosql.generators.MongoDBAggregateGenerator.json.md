@@ -1,5 +1,5 @@
-### tuktu.nosql.generators.MongoDBGenerator
-Executes a query on a given list of nodes.
+### tuktu.nosql.generators.MongoDBAggregateGenerator
+Executes tasks in an aggregation pipeline on a given list of nodes.
 
   * **nodes** *(type: array)* `[Optional]`
   - Optionally specify on which nodes to run and how many instances you want on each node.
@@ -28,23 +28,13 @@ Executes a query on a given list of nodes.
     - The database name.
 
     * **collection** *(type: string)* `[Required]`
-    - The name of the collection to open.
+    - The name of the collection to aggregate.
 
-    * **query** *(type: JsObject)* `[Required]`
-    - Find the documents matching these given criteria.
+    * **tasks** *(type: array)* `[Required]`
+    - A list of aggregation tasks for the pipeline.
 
-    * **filter** *(type: JsObject)* `[Optional]`
-    - Filter results by this projection.
-
-    * **sort** *(type: JsObject)* `[Optional]`
-    - Sort results by this projection.
-
-    * **limit** *(type: int)* `[Optional]`
-    - Limit results by this number.
+      * **[UNNAMED]** *(type: JsObject)* `[Required]`
 
     * **batch** *(type: boolean)* `[Optional, default = false]`
     - Are all results to be batched before pushing it on the channel.
-
-    * **batch_size** *(type: int)* `[Optional, default = 50]`
-    - The size of the batches to get from mongo.
 

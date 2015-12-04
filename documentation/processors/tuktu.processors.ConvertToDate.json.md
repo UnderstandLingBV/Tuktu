@@ -10,9 +10,9 @@ Converts a String to a Java Date.
     * **field** *(type: string)* `[Required]`
     - The field containing the date.
 
-    * **format** *(type: string)* `[Optional]`
+    * **format** *(type: string)* `[Optional, default = "EEE MMM dd HH:mm:ss zzz yyyy"]`
     - The string formatter.
 
-    * **locale** *(type: string)* `[Optional]`
+    * **locale** *(type: string)* `[Optional, default = "US"]`
     - The locale for the string formatter.
 

@@ -18,11 +18,14 @@ import akka.actor.ActorIdentity
 import scala.concurrent.Await
 import akka.util.Timeout
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.PoisonPill
+import akka.event.Logging
 
 case class TDFSWriteRequest(
         filename: String,
         filepart: Int,
-        binary: Boolean,
         blockSize: Option[Int],
         nodeSet: Boolean
 )
@@ -33,6 +36,9 @@ case class TDFSContentPacket(
         content: Array[Byte]
 )
 
+/**
+ * Daemon actor that handles write and read requests
+ */
 class TDFSDaemon extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
@@ -47,14 +53,10 @@ class TDFSDaemon extends Actor with ActorLogging {
         
         // Set up the writer actor
         val partname = twr.filename + "-part" + twr.filepart
-        val writer = if (twr.binary)
-                Akka.system.actorOf(Props(classOf[TDFSBinaryWriterActor], partname, blockSize),
-                    name = "tuktu.dfs.Writer.binary." + partname)
-            else
-                Akka.system.actorOf(Props(classOf[TDFSTextWriterActor], partname, blockSize),
-                    name = "tuktu.dfs.Writer.binary." + partname)
+        val writer = Akka.system.actorOf(Props(classOf[TDFSWriterActor], partname, blockSize),
+            name = "tuktu.dfs.Writer.binary." + partname)
         
-        // TODO: Keep track of writers per file name in Cache ?
+        // TODO: Maybe keep track of writers per file name in Cache ?
 
         // Send back the actor ref to the sender
         writer
@@ -69,7 +71,8 @@ class TDFSDaemon extends Actor with ActorLogging {
                 // Get all DFS nodes
                 val dfsNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
                 val thisNode = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
-                // Determine the node to write to
+                
+                // Determine the node to write to, based on file part
                 val node = dfsNodes.toList(nodeOffset % dfsNodes.size)
                 nodeOffset = (nodeOffset + 1) % dfsNodes.size
                 
@@ -80,28 +83,36 @@ class TDFSDaemon extends Actor with ActorLogging {
                     val otherNode = node._2
                     val location = "akka.tcp://application@" + otherNode.host  + ":" + otherNode.akkaPort + "/user/tuktu.dfs.Daemon"
                     
-                    // TODO: Create writer and send back
-                    val fut = Akka.system.actorSelection(location) ? new TDFSWriteRequest(
+                    // Create writer and send back
+                    val fut = (Akka.system.actorSelection(location) ? new TDFSWriteRequest(
                             twr.filename,
                             twr.filepart,
-                            twr.binary,
                             twr.blockSize,
                             true
-                    )
+                    )).asInstanceOf[Future[TDFSWriterReply]]
+                    fut.map(twreply => sender ! twreply)
                 }
             }
         }
     }
 }
 
-class TDFSBinaryWriterActor(filename: String, filepart: Int, blockSize: Int) extends Actor with ActorLogging {
+/**
+ * Actual writer actor, a single instance will be created for writing each block of a file
+ */
+class TDFSWriterActor(filename: String, filepart: Int, blockSize: Int) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
     // Create the file
     val writer = new FileOutputStream(filename)
     // Keep track of bytes written
     var byteCount: Long = 0
     
     def receive() = {
-        case sp: StopPacket => writer.close()
+        case sp: StopPacket => {
+            writer.close()
+            self ! PoisonPill
+        }
         case tcp: TDFSContentPacket => {
             // Write bytes
             if (byteCount + tcp.content.length > blockSize) {
@@ -114,9 +125,32 @@ class TDFSBinaryWriterActor(filename: String, filepart: Int, blockSize: Int) ext
                 
                 // Get remainder
                 val remainder = tcp.content.slice((blockSize * 1024L - byteCount).toInt, tcp.content.length)
-                // TODO: Open a new writer and send it the remainder
+                // Open a new writer
+                val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteRequest(
+                            filename,
+                            filepart + 1,
+                            Some(blockSize),
+                            false
+                    )).asInstanceOf[Future[TDFSWriterReply]]
                 
-                // TODO: Return writer actorref to the sender
+                // Send the new writer the remaining content and return writer actorref to the sender
+                fut.onSuccess {
+                    case twreply: TDFSWriterReply => {
+                        twreply.writer ! new TDFSContentPacket(remainder)
+                        sender ! twreply.writer
+                        
+                        // We can stop now
+                        self ! new StopPacket
+                    }
+                }
+                fut.onFailure {
+                    case a: Any => {
+                        log.error(a, "[TDFS] - Failed to obtain a new writer in a timely manner.")
+                        
+                        // We can stop now
+                        self ! new StopPacket
+                    }
+                }
             }
             else {
                 // First send back actor ref
@@ -125,20 +159,6 @@ class TDFSBinaryWriterActor(filename: String, filepart: Int, blockSize: Int) ext
                 writer.write(tcp.content)
                 byteCount += tcp.content.length
             }
-        }
-    }
-}
-
-class TDFSTextWriterActor(filename: String, blockSize: Int) extends Actor with ActorLogging {
-    // Create the file
-    val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename), "utf-8"))
-    // Keep track of bytes written
-    var currentByte: Long = 0
-    
-    def receive() = {
-        case sp: StopPacket => writer.close()
-        case tcp: TDFSContentPacket => {
-            
         }
     }
 }

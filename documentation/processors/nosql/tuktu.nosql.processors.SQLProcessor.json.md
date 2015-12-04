@@ -25,3 +25,6 @@ No description present.
     * **append** *(type: boolean)* `[Optional, default = false]`
     - Append the result to the data packet; otherwise the result is ignored.
 
+    * **distinct** *(type: boolean)* `[Optional, default = false]`
+    - Only execute distinct queries within each DataPacket once, and reuse results if append is true.
+

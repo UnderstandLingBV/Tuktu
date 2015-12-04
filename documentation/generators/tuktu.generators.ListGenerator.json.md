@@ -24,3 +24,6 @@ Generates a list of given values.
 
       * **[UNNAMED]** *(type: string)* `[Required]`
 
+    * **separate** *(type: boolean)* `[Optional, default = true]`
+    - Send each item separately, or as one big list.
+

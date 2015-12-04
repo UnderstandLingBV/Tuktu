@@ -10,14 +10,14 @@ Invokes a new generator via config, which can be appended by data packets.
     * **name** *(type: string)* `[Required]`
     - The name of the config file, without extension (.json).
 
-    * **add_fields** *(type: array)* `[Optional]`
-    - Fields to add to the config.
+    * **replacements** *(type: array)* `[Optional]`
+    - The replacements used to replace Tuktu config strings #{source} by target.
 
       * **[UNNAMED]** *(type: object)* `[Required]`
 
         * **source** *(type: string)* `[Required]`
-        - The field (key) whose value will be used as value for the config, with the key given below: target -> data(source)
+        - The #{key} that will be replaced by the target string below in the invoked configs: #{source} -> target. Can contain Tuktu strings to populate with first Datum.
 
         * **target** *(type: string)* `[Required]`
-        - The key used for the config with the value from the data packet at the given field provided above: target -> data(source)
+        - The replacement for the source above: #{source} -> target. Can contain Tuktu strings to populate with first Datum.
 

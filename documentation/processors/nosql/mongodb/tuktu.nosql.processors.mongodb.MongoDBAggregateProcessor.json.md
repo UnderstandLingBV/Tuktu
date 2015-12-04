@@ -1,5 +1,5 @@
-### tuktu.nosql.processors.mongodb.MongoDBFindProcessor
-Executes a query with a filter on a given list of nodes.
+### tuktu.nosql.processors.mongodb.MongoDBAggregateProcessor
+Executes MongoDB aggregation pipeline.
 
   * **id** *(type: string)* `[Required]`
 
@@ -18,15 +18,8 @@ Executes a query with a filter on a given list of nodes.
     * **collection** *(type: string)* `[Required]`
     - The name of the collection to open.
 
-    * **query** *(type: JsObject)* `[Required]`
-    - Find the documents matching these given criteria.
+    * **tasks** *(type: array)* `[Required]`
+    - A list of tasks in the aggregation pipeline.  Note that currently, only the following tasks are supported: "$skip", "$limit", "$unwind", "$out", "$sort", "$match", "$project", and "$group".
 
-    * **filter** *(type: JsObject)* `[Optional]`
-    - Filter results by this projection.
-
-    * **sort** *(type: JsObject)* `[Optional]`
-    - Sort results by this projection.
-
-    * **limit** *(type: int)* `[Optional]`
-    - Limit results by this number.
+      * **[UNNAMED]** *(type: JsObject)* `[Required]`
 

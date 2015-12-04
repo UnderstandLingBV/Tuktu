@@ -22,3 +22,9 @@ Filters data packets satisfying a number of expressions.
         * **expression** *(type: any)* `[Required]`
         - The expression itself. This can be a string that needs to be evaluated, or it can be a nested array of new expressions that follow the same structure as any top-level expression.
 
+    * **batch** *(type: boolean)* `[Optional, default = false]`
+    - Whether or not to include the entire DataPacket if one or more of the elements match the expression(s)
+
+    * **batch_min_count** *(type: int)* `[Optional, default = 1]`
+    - If batch is set to true, this number is the minimum amount of elements that should fulfill the expression(s)
+

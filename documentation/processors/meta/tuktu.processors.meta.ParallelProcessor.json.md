@@ -1,5 +1,5 @@
 ### tuktu.processors.meta.ParallelProcessor
-Starts parallel processor pipelines, which are merge upon completion.
+Starts parallel processor pipelines, which are merged upon completion.
 
   * **id** *(type: string)* `[Required]`
 
@@ -36,7 +36,8 @@ Starts parallel processor pipelines, which are merge upon completion.
             - The result of the processor.
 
             * **next** *(type: array)* `[Required]`
-            - The next processors to be composed.
+            - The next processors to be composed. Due to current limitations, if this processor is the first one in the processor flow after start with not exactly one successor, its result is used for merging, ie. no branching is supported.
 
               * **[UNNAMED]** *(type: string)* `[Required]`
+              - The next processor to be composed. Due to current limitations, if this processor is the first one in the processor flow after start with not exactly one successor, its result is used for merging, ie. no branching is supported.
 
