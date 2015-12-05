@@ -62,7 +62,7 @@ To build Tuktu from source, clone the repository. Tuktu was built against Play! 
 
 To build Tuktu (for production), run:
 
-`activator clean dist`
+`activator clean test dist`
 
 This will generate a compressed archive in the *target/universal/* folder of the root folder of the Tuktu project. This archive can be extracted and contains a startup script named *bin/tuktu(.bat)* that can be used to start Tuktu in production mode.
 

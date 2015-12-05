@@ -27,6 +27,8 @@ case class TDFSWriteRequest(
         filename: String,
         filepart: Int,
         blockSize: Option[Int],
+        binary: Boolean,
+        encoding: Option[String],
         nodeSet: Boolean
 )
 case class TDFSWriterReply(
@@ -53,8 +55,15 @@ class TDFSDaemon extends Actor with ActorLogging {
         
         // Set up the writer actor
         val partname = twr.filename + "-part" + twr.filepart
-        val writer = Akka.system.actorOf(Props(classOf[TDFSWriterActor], partname, blockSize),
-            name = "tuktu.dfs.Writer.binary." + partname)
+        val writer = {
+            if (twr.binary)
+                Akka.system.actorOf(Props(classOf[TDFSWriterActor], partname, twr.filepart, blockSize),
+                    name = "tuktu.dfs.Writer.binary." + partname)
+            else
+                Akka.system.actorOf(Props(classOf[TextTDFSWriterActor], partname, twr.encoding.getOrElse("utf-8"),
+                    twr.filepart, blockSize),
+                    name = "tuktu.dfs.Writer.text." + partname)
+        }
         
         // TODO: Maybe keep track of writers per file name in Cache ?
 
@@ -88,6 +97,8 @@ class TDFSDaemon extends Actor with ActorLogging {
                             twr.filename,
                             twr.filepart,
                             twr.blockSize,
+                            twr.binary,
+                            twr.encoding,
                             true
                     )).asInstanceOf[Future[TDFSWriterReply]]
                     fut.map(twreply => sender ! twreply)
@@ -130,6 +141,8 @@ class TDFSWriterActor(filename: String, filepart: Int, blockSize: Int) extends A
                             filename,
                             filepart + 1,
                             Some(blockSize),
+                            true,
+                            None,
                             false
                     )).asInstanceOf[Future[TDFSWriterReply]]
                 
@@ -157,6 +170,76 @@ class TDFSWriterActor(filename: String, filepart: Int, blockSize: Int) extends A
                 sender ! new TDFSWriterReply(self)
                 // Write entirely
                 writer.write(tcp.content)
+                byteCount += tcp.content.length
+            }
+        }
+    }
+}
+
+/**
+ * Writes text to a file, like the binary writer, but now as text
+ */
+class TextTDFSWriterActor(filename: String, encoding: String, filepart: Int, blockSize: Int) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    // Create the file
+    val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename), encoding))
+    // Keep track of bytes written
+    var byteCount: Long = 0
+    
+    def receive() = {
+        case sp: StopPacket => {
+            writer.close()
+            self ! PoisonPill
+        }
+        case tcp: TDFSContentPacket => {
+            // Write bytes
+            if (byteCount + tcp.content.length > blockSize) {
+                // Write the part we can still manage
+                val len = Math.floor((blockSize * 1024L - byteCount).toDouble / 8.0).toInt
+                val newContent = tcp.content.slice(0, len)
+                writer.write(new String(newContent, encoding), 0, len)
+                
+                // Close this block
+                byteCount = 0
+                writer.close()
+                
+                // Get remainder
+                val remainder = tcp.content.slice((blockSize * 1024L - byteCount).toInt, tcp.content.length)
+                // Open a new writer
+                val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteRequest(
+                            filename,
+                            filepart + 1,
+                            Some(blockSize),
+                            false,
+                            Some(encoding),
+                            false
+                    )).asInstanceOf[Future[TDFSWriterReply]]
+                
+                // Send the new writer the remaining content and return writer actorref to the sender
+                fut.onSuccess {
+                    case twreply: TDFSWriterReply => {
+                        twreply.writer ! new TDFSContentPacket(remainder)
+                        sender ! twreply.writer
+                        
+                        // We can stop now
+                        self ! new StopPacket
+                    }
+                }
+                fut.onFailure {
+                    case a: Any => {
+                        log.error(a, "[TDFS] - Failed to obtain a new writer in a timely manner.")
+                        
+                        // We can stop now
+                        self ! new StopPacket
+                    }
+                }
+            }
+            else {
+                // First send back actor ref
+                sender ! new TDFSWriterReply(self)
+                // Write entirely
+                writer.write(new String(tcp.content, encoding))
                 byteCount += tcp.content.length
             }
         }
