@@ -4,7 +4,8 @@ EclipseKeys.createSrc := EclipseCreateSrc.All
 
 lazy val appResolvers = Seq(
     "JCenter" at "http://jcenter.bintray.com/",
-    "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository"
+    "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository",
+    "Lib Folder" at "lib"
 )
 
 lazy val modellerDependencies = Seq(
