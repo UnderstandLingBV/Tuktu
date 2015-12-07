@@ -114,7 +114,7 @@ class TDFSDaemon extends Actor with ActorLogging {
                     val location = "akka.tcp://application@" + otherNode.host  + ":" + otherNode.akkaPort + "/user/tuktu.dfs.Daemon"
                     
                     // Create writer
-                    val fut = (Akka.system.actorSelection(location) ? new TDFSWriteRequest(
+                    val twreply = Await.result((Akka.system.actorSelection(location) ? new TDFSWriteRequest(
                             twr.filename,
                             twr.filepart,
                             twr.blockSize,
@@ -122,26 +122,23 @@ class TDFSDaemon extends Actor with ActorLogging {
                             twr.encoding,
                             true,
                             twr.sourceNode
-                    )).asInstanceOf[Future[TDFSWriterReply]]
+                    )).asInstanceOf[Future[TDFSWriterReply]], timeout.duration)
                     
-                    // Add to map
-                    fut.map(twreply => {
-                        // Check if we are the source node
-                        if (twr.sourceNode == homeAddress)
-                            // Add to cache
-                            Cache.getAs[collection.mutable.Map[String, ActorRef]]("tuktu.dfs.WriterMap")
-                                .getOrElse(collection.mutable.Map[String, ActorRef]()) += (twr.filename + ".part" + twr.filepart) -> twreply.writer
-                        else {
-                            val sourceNode = dfsNodes(twr.sourceNode)
-                            // Send actor ref to real source node
-                            Akka.system.actorSelection("akka.tcp://application@" + sourceNode.host + ":" + sourceNode.akkaPort
-                                    + "/user/tuktu.dfs.Daemon") ! new TDFSWriterUpdate(
-                                    twr.filename, twreply.writer
-                            )
-                        }
-                        
-                        sender ! new TDFSWriterReply(twreply.writer)
-                    })
+                    // Check if we are the source node
+                    if (twr.sourceNode == homeAddress)
+                        // Add to cache
+                        Cache.getAs[collection.mutable.Map[String, ActorRef]]("tuktu.dfs.WriterMap")
+                            .getOrElse(collection.mutable.Map[String, ActorRef]()) += twr.filename -> twreply.writer
+                    else {
+                        val sourceNode = dfsNodes(twr.sourceNode)
+                        // Send actor ref to real source node
+                        Akka.system.actorSelection("akka.tcp://application@" + sourceNode.host + ":" + sourceNode.akkaPort
+                                + "/user/tuktu.dfs.Daemon") ! new TDFSWriterUpdate(
+                                twr.filename, twreply.writer
+                        )
+                    }
+                    
+                    sender ! new TDFSWriterReply(twreply.writer)
                 }
             }
         }
@@ -229,6 +226,10 @@ class TextTDFSWriterActor(filename: String, fullname: String, encoding: String, 
     
     def receive() = {
         case sp: StopPacket => {
+            // Update cache
+            Cache.getAs[collection.mutable.Map[String, ActorRef]]("tuktu.dfs.WriterMap")
+                .getOrElse(collection.mutable.Map[String, ActorRef]()) -= filename
+            
             println("Closing writer")
             writer.close()
             self ! PoisonPill
@@ -244,10 +245,6 @@ class TextTDFSWriterActor(filename: String, fullname: String, encoding: String, 
                 // Get remainder
                 val remainder = tcp.content.slice(blockSize * 1024 * 1024 - byteCount, tcp.content.length)
                 println("Getting remainder")
-                
-                // Close this block
-                byteCount = 0
-                writer.close()
                 
                 // Open a new writer
                 val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteRequest(
@@ -267,6 +264,10 @@ class TextTDFSWriterActor(filename: String, fullname: String, encoding: String, 
                         Cache.getAs[collection.mutable.Map[String, ActorRef]]("tuktu.dfs.WriterMap")
                             .getOrElse(collection.mutable.Map[String, ActorRef]()) += filename -> twreply.writer
                         
+                        // Close this block
+                        byteCount = 0
+                        writer.close()
+                        
                         // We can stop now
                         self ! new StopPacket
                     }
@@ -274,6 +275,10 @@ class TextTDFSWriterActor(filename: String, fullname: String, encoding: String, 
                 fut.onFailure {
                     case a: Any => {
                         log.error(a, "[TDFS] - Failed to obtain a new writer in a timely manner.")
+                        
+                        // Close this block
+                        byteCount = 0
+                        writer.close()
                         
                         // We can stop now
                         self ! new StopPacket

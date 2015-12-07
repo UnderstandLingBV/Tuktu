@@ -3,8 +3,8 @@
         {
             "nodes": [
                 {
-                    "type": "AllNodes",
-                    "nodes": "",
+                    "type": "SingleNode",
+                    "nodes": "127.0.0.1",
                     "instances": 5
                 }
             ],

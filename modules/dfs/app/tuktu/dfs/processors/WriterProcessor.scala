@@ -101,7 +101,7 @@ class TDFSTextWriterProcessor(resultName: String) extends BaseProcessor(resultNa
         blockSize = (config \ "block_size").asOpt[Int]
         
         // Set TDFS writer
-        Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteRequest(
+        val writer = Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteRequest(
                 filename,
                 0,
                 blockSize: Option[Int],
@@ -110,6 +110,7 @@ class TDFSTextWriterProcessor(resultName: String) extends BaseProcessor(resultNa
                 false,
                 Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
         ), timeout.duration)
+        println(writer)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
