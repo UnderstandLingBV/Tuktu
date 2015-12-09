@@ -16,9 +16,6 @@ class DFSGlobal() extends TuktuGlobal() {
      * Load this on startup. The application is given as parameter
      */
     override def onStart(app: Application) = {
-        // Create map that keeps track of all writers on this node
-        Cache.set("tuktu.dfs.WriterMap", collection.mutable.Map[String, ActorRef]())
-        
         // Set up the DFS daemon
         val dfsActor = Akka.system.actorOf(Props[TDFSDaemon], name = "tuktu.dfs.Daemon")
         dfsActor ! new InitPacket

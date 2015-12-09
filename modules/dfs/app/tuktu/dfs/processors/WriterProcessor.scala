@@ -22,7 +22,7 @@ import akka.util.Timeout
 import play.api.Play.current
 import scala.concurrent.Await
 import tuktu.dfs.actors.TDFSContentPacket
-import tuktu.dfs.actors.TDFSWriterReply
+import tuktu.dfs.actors.TDFSInitiateRequest
 
 class WriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var writer: BufferedDFSWriter = _
@@ -101,16 +101,9 @@ class TDFSTextWriterProcessor(resultName: String) extends BaseProcessor(resultNa
         blockSize = (config \ "block_size").asOpt[Int]
         
         // Set TDFS writer
-        val writer = Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteRequest(
-                filename,
-                0,
-                blockSize: Option[Int],
-                false,
-                encoding,
-                false,
-                Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
-        ), timeout.duration)
-        println(writer)
+        writer = Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSInitiateRequest(
+            filename, blockSize, false, encoding
+        ), timeout.duration).asInstanceOf[ActorRef]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
@@ -119,9 +112,8 @@ class TDFSTextWriterProcessor(resultName: String) extends BaseProcessor(resultNa
             (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
         ).mkString(lineSep)
         
-        // Send write message
-        Cache.getAs[collection.mutable.Map[String, ActorRef]]("tuktu.dfs.WriterMap")
-                .getOrElse(collection.mutable.Map[String, ActorRef]())(filename) ! new TDFSContentPacket(output.getBytes)
+        // Send message
+        writer ! new TDFSContentPacket(output.getBytes)
         
         data
     }) compose Enumeratee.onEOF(() => {
