@@ -146,6 +146,19 @@ class TDFSDaemon extends Actor with ActorLogging {
 }
 
 /**
+ * Daemon that is always alive on the node the TDFS file is written from, to make sure there is always an endpoint. This daemon
+ * acts as a proxy to the actual (remote) writer actors
+ */
+class WriterDaemon(filename: String, fullname: String, filepart: Int, blockSize: Int, sourceNode: String) extends Actor with ActorLogging {
+    var writer: ActorRef = _
+    def receive() = {
+        case tcp: TDFSContentPacket => {
+            
+        }
+    }
+}
+
+/**
  * Actual writer actor, a single instance will be created for writing each block of a file
  */
 class TDFSWriterActor(filename: String, fullname: String, filepart: Int, blockSize: Int, sourceNode: String) extends Actor with ActorLogging {
