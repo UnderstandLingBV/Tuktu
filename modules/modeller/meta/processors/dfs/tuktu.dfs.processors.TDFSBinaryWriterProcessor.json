@@ -1,0 +1,43 @@
+{
+	"name": "TDFS Binary Writer Processor",
+	"description": "Writes a binary file to the Tuktu DFS.",
+	"class": "tuktu.dfs.processors.TDFSBinaryWriterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "file_name",
+					"description": "The file to be streamed into.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "block_size",
+					"description": "The block size in MB.",
+					"type": "int",
+					"required": false,
+					"default": 64
+				},
+				{
+					"name": "field",
+					"description": "The field to write.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

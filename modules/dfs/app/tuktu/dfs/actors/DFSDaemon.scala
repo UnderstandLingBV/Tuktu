@@ -2,270 +2,218 @@ package tuktu.dfs.actors
 
 import akka.actor.ActorLogging
 import akka.actor.Actor
-import java.io.File
-import play.api.cache.Cache
-import play.api.Play
+import akka.actor.Props
+import play.api.libs.concurrent.Akka
 import play.api.Play.current
-import java.io.IOException
-import tuktu.api._
-import scala.util.hashing.MurmurHash3
-import java.io.BufferedWriter
 import java.io.FileOutputStream
+import tuktu.api.StopPacket
+import play.api.cache.Cache
 import java.io.OutputStreamWriter
-import tuktu.dfs.util.util.getIndex
-import tuktu.api.DFSListRequest
-import tuktu.api.DFSResponse
-import tuktu.api.DFSElement
+import java.io.BufferedWriter
+import akka.actor.ActorRef
+import tuktu.api.ClusterNode
+import akka.pattern.ask
+import akka.actor.Identify
+import akka.actor.ActorIdentity
+import scala.concurrent.Await
+import akka.util.Timeout
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.PoisonPill
+import akka.event.Logging
+import java.io.File
+import tuktu.dfs.util.util
+import play.api.Play
 
+case class TDFSInitiateRequest(
+        filename: String,
+        blockSize: Option[Int],
+        binary: Boolean,
+        encoding: Option[String]
+)
+case class TDFSWriteRequest(
+        filename: String,
+        part: Int,
+        blockSize: Option[Int],
+        binary: Boolean,
+        encoding: Option[String]
+)
+case class TDFSContentPacket(
+        content: Array[Byte]
+)
 
 /**
- * Central point of communication for the DFS
+ * Daemon actor that handles write and read requests
  */
-class DFSDaemon extends Actor with ActorLogging {
-    // File map to keep in-memory. A map from a list of (sub)directories to a hashset containing the files
-    val dfsTable = collection.mutable.Map[List[String], collection.mutable.Map[String, DFSElement]]()
-    // Get the prefix
-    val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
-    
-    // Open files
-    val openWriteFiles = collection.mutable.Map[String, BufferedWriter]()
-    val openReadFiles = collection.mutable.HashSet[String]()
-    // Local files, just for reference
-    val localOpenFiles = collection.mutable.HashSet[String]()
-    
-    /**
-     * Resolves a file, gives a DFSReply
-     */
-    private def resolveFile(filename: String): Option[File] = {
-        // Get indexes
-        val (index, dirIndex) = getIndex(filename)
-        
-        // See if it exists
-        if (!dfsTable.contains(index) && !dfsTable.contains(dirIndex)) None
-        else Some(new File(prefix + "/" + filename))
-    }
-    
-    /**
-     * Creates a directory on disk and adds it to the DFS
-     */
-    private def makeDir(index: List[String], filename: String) = {
-        def makeDirsHelper(partialIndex: List[String]): Unit = {
-            if (partialIndex.size < index.size) {
-                // Check if this partial index exists or not
-                if (!dfsTable.contains(partialIndex))
-                    dfsTable += partialIndex -> collection.mutable.Map[String, DFSElement]()
-                if (!dfsTable(partialIndex).contains(index(partialIndex.size)))
-                    dfsTable(partialIndex) += index(partialIndex.size) -> new DFSElement(true)
-                
-                // Recurse if necessary
-                if (partialIndex.size < index.size - 1)
-                    makeDirsHelper(partialIndex ++ List(index(partialIndex.size)))
-            }
-        }
-        
-        val dirName = prefix + "/" + filename
-        if (!dfsTable.contains(index)) {
-            val file = new File(dirName)
-            val res = if (!file.exists) file.mkdirs else true
-                
-            // Add to our DFS Table
-            if (res) {
-                makeDirsHelper(List())
-                dfsTable += index -> collection.mutable.Map[String, DFSElement]()
-            }
-            
-            // Return success or not
-            res
-        }
-        else true // Already existed
-    }
-    
-    /**
-     * Creates a file or directory and adds it to the DFS
-     */
-    private def createFile(filename: String, isDirectory: Boolean): Option[File] = {
-        // Get indexes
-        val (index, dirIndex) = getIndex(filename)
-        
-        // See if we need to make a directory or a file
-        if (isDirectory) {
-            val success = makeDir(index, filename)
-            if (success) Some(new File(prefix + "/" + filename))
-            else None
-        }
-        else {
-            // It's a file, first see if we need to/can make a dir
-            val dirSuccess = makeDir(dirIndex, dirIndex.mkString("/"))
-            if (!dirSuccess) None
-            else {
-                // Make the file
-                val res = try {
-                    // Make file
-                    val file = new File(prefix + "/" + filename)
-                    file.createNewFile
-                    
-                    // Add to map
-                    dfsTable(dirIndex) += index.takeRight(1).head -> new DFSElement(false)
-                    
-                    Some(file)
-                } catch {
-                    case e: IOException => {
-                        log.warning("Failed to create DFS file " + filename)
-                        None
-                    }
-                }
-                
-                res
-            }
-        }
-    }
-    
-    /**
-     * Recursively deletes directories and files in it
-     */
-    private def deleteDirectory(directory: File): Boolean = {
-        // Get all files in this directory
-        val files = directory.listFiles
-        (for (file <- files) yield {
-            // Recurse or not?
-            if (file.isDirectory) deleteDirectory(file)
-            else file.delete
-        }).toList.foldLeft(true)(_ && _)
-    }
-    
-    /**
-     * Deletes a file or directory
-     */
-    private def deleteFile(filename: String, isDirectory: Boolean) = {
-        // Get indexes
-        val (index, dirIndex) = getIndex(filename)
-        
-        // See if it's a directory or a file
-        if (isDirectory) {
-            // Delete directory from our DFS Table and from disk
-            val res = deleteDirectory(new File(prefix + "/" + filename))
-            dfsTable -= index
-            
-            res
-        }
-        else {
-            // Remove the file from disk and DFS
-            val res = new File(prefix + "/" + filename).delete
-            if (dfsTable(dirIndex).size == 1) dfsTable -= dirIndex
-            else dfsTable(dirIndex) -= index.takeRight(1).head
-            
-            res
-        }
-    }
-    
-    /**
-     * On initialization, add all the current files to the in memory table store
-     */
-    private def initialize(directory: File): Unit = {     
-        val (index, dirIndex) = getIndex(directory.toString)
-        // initialize this directory
-        dfsTable += index -> collection.mutable.Map[String, DFSElement]()
-        // add files or add another directory
-        directory.listFiles.foreach { file => {
-                if(file.isDirectory) {
-                    dfsTable(index) += file.toString -> new DFSElement(true)
-                    initialize(file)
-                }
-                else
-                    dfsTable(index) += file.toString -> new DFSElement(false)
-            }
-        }        
-    }
+class TDFSDaemon extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     def receive() = {
-        case rr: DFSReadRequest => {
-            // Fetch the file and send back
-            sender ! new DFSReadReply(resolveFile(rr.filename))
+        case tir: TDFSInitiateRequest => {
+            // Set up the writer actor that will take care of the rest and return the ref to sender
+            sender ! Akka.system.actorOf(Props(classOf[WriterDaemon], tir),
+                    name = "tuktu.dfs.WriterDaemon." + tir.filename)
         }
-        case cr: DFSCreateRequest => {
-            // Create file and send back
-            sender ! new DFSCreateReply(createFile(cr.filename, cr.isDirectory))
-        }
-        case dr: DFSDeleteRequest => {
-            // Delete the file and send back
-            sender ! new DFSDeleteReply(deleteFile(dr.filename, dr.isDirectory))
-        }
-        case or: DFSOpenRequest => {
-            val filename = prefix + "/" + or.filename
-            // Create first if needed
-            if (!openWriteFiles.contains(filename)) createFile(or.filename, false)
+        case twr: TDFSWriteRequest => {
+            // Create the writer and send the actor ref back
             
-            if (!openWriteFiles.contains(filename)) {
-                // Open file
-                val file = new File(filename)
-                // Add to our list
-                openWriteFiles += filename -> new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), or.encoding))
+            // Text or binary?
+            sender ! {
+                if (twr.binary)
+                    Akka.system.actorOf(Props(classOf[BinaryTDFSWriterActor], twr),
+                            name = "tuktu.dfs.Writer.binary." + twr.filename + ".part" + twr.part)
+                else
+                    Akka.system.actorOf(Props(classOf[TextTDFSWriterActor], twr),
+                            name = "tuktu.dfs.Writer.text." + twr.filename + ".part" + twr.part)
+            }
+                
+        }
+    }
+}
+
+/**
+ * Daemon that is always alive on the node the TDFS file is written from, to make sure there is always an endpoint. This daemon
+ * acts as a proxy to the actual (remote) writer actors
+ */
+class WriterDaemon(tir: TDFSInitiateRequest) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
+    
+    // Determine initial node to write to
+    var nodeOffset = {
+        val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+        // Pick random offset
+        scala.util.Random.nextInt(clusterNodes.size)
+    }
+    
+    // Bookkeeping
+    var currentPart = 0
+    var writer: ActorRef = _
+    var byteCount: Int = 0
+    val blockSize = tir.blockSize match {
+        case Some(s) => s
+        case _ => Cache.getAs[Int]("dfs.blocksize").getOrElse(64)
+    }
+    
+    /**
+     * Creates the next writer
+     */
+    def createWriter() = {
+        // Pick node to use
+        val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+        val node = clusterNodes.toList(nodeOffset % clusterNodes.size)
+        nodeOffset = (nodeOffset + 1) % clusterNodes.size
+        
+        // Ask the TDFS Daemon for a writer
+        val otherNode = node._2
+        val location = if (otherNode.host == homeAddress) "user/tuktu.dfs.Daemon"
+            else
+                "akka.tcp://application@" + otherNode.host  + ":" + otherNode.akkaPort + "/user/tuktu.dfs.Daemon"
+        
+        // Send request
+        writer = Await.result((Akka.system.actorSelection(location) ? new TDFSWriteRequest(
+                tir.filename,
+                currentPart,
+                tir.blockSize,
+                tir.binary,
+                tir.encoding
+        )).asInstanceOf[Future[ActorRef]], timeout.duration)
+    }
+    
+    createWriter
+    
+    def receive() = {
+        case tcp: TDFSContentPacket => {
+            println("Daemon Writer received content")
+            // Check if we can still add to the current block
+            if (byteCount + tcp.content.length > blockSize * 1024 * 2014) {
+                println("-- Splitting and writing")
+                // We are going to be full after this block, make sure we forward the part that can still be written
+                writer ! new TDFSContentPacket(tcp.content.slice(0, blockSize * 1024 * 1024 - byteCount))
+                val remainder = new TDFSContentPacket(tcp.content.slice(blockSize * 1024 * 1024 - byteCount, tcp.content.length))
+                
+                // Toss away the old writer
+                writer ! new StopPacket
+                
+                // Create the new writer
+                byteCount = 0
+                currentPart = currentPart + 1
+                createWriter
+            } else {
+                println("-- Entirely writing")
+                // Just write the entire thing
+                writer ! tcp
+                byteCount += tcp.content.length
             }
         }
-        case lor: DFSLocalOpenRequest => {
-            val filename = prefix + "/" + lor.filename
-            if (!localOpenFiles.contains(filename)) localOpenFiles += filename
+        case sp: StopPacket => {
+            writer ! sp
+            self ! PoisonPill
         }
-        case cr: DFSCloseRequest => {
-            val filename = prefix + "/" + cr.filename
-            if (openWriteFiles.contains(filename)) {
-                // Close writer
-                openWriteFiles(filename).flush
-                openWriteFiles(filename).close
-                // Remove from map
-                openWriteFiles -= filename
-            }
+    }
+}
+
+/**
+ * Actual writer actor, a single instance will be created for writing each block of a file
+ */
+class BinaryTDFSWriterActor(twr: TDFSWriteRequest) extends Actor with ActorLogging {
+    val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+    
+    // Create dirs if required
+    val fullname = prefix + "/" + twr.filename + ".part-" + twr.part
+    val (dummy, dirs) = util.getIndex(fullname)
+    val dir = new File(dirs.mkString("/"))
+    if (!dir.exists)
+        dir.mkdirs
+
+    // Create the actual writer
+    val writer = new FileOutputStream(fullname)
+    
+    def receive() = {
+        case sp: StopPacket => {
+            writer.close()
+            self ! PoisonPill
         }
-        case lcr: DFSLocalCloseRequest => {
-            localOpenFiles -= lcr.filename
+        case tcp: TDFSContentPacket =>
+            // Write out
+            writer.write(tcp.content)
+    }
+}
+
+/**
+ * Writes text to a file, like the binary writer, but now as text
+ */
+class TextTDFSWriterActor(twr: TDFSWriteRequest) extends Actor with ActorLogging {
+    val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+    
+    // Create dirs if required
+    val fullname = prefix + "/" + twr.filename + ".part-" + twr.part
+    val (dummy, dirs) = util.getIndex(fullname)
+    val dir = new File(dirs.mkString("/"))
+    if (!dir.exists)
+        dir.mkdirs
+    
+    // Encoding
+    val encoding = twr.encoding.getOrElse("utf-8")
+        
+    // Create the file
+    val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fullname), encoding))
+    
+    // Keep track of bytes written
+    var byteCount: Int = 0
+    
+    def receive() = {
+        case sp: StopPacket => {
+            println("+++Text writer is closing")
+            writer.close()
+            self ! PoisonPill
         }
-        case wr: DFSWriteRequest => {
-            val filename = prefix + "/" + wr.filename
-            // Write to our file
-            if (openWriteFiles.contains(filename))
-                openWriteFiles(filename).write(wr.content)
+        case tcp: TDFSContentPacket => {
+            println("+++Text writer is writing content")
+            // Write out
+            writer.write(new String(tcp.content, encoding))
         }
-        case init: InitPacket => {
-            // Check if directory exists, if not, make it
-            val rootFolder = new File(prefix)
-            if (!rootFolder.exists)
-                rootFolder.mkdirs
-            
-            initialize(rootFolder)
-        }
-        case lr: DFSListRequest => {
-            // Send back the files in this folder, if any
-            val filename = prefix + "/" + lr.filename
-            val (index, dirIndex) = getIndex(filename)
-            
-            // Check if this is a directory or a file
-            val response = {
-                if (dfsTable.contains(index))
-                    // It's a directory
-                    Some(new DFSResponse(dfsTable(index).map(elem => elem._1.drop(prefix.size + 1) -> elem._2).toMap, true))
-                else {
-                    if (dfsTable.contains(dirIndex))
-                        // It's a file
-                        Some(new DFSResponse(Map(lr.filename.drop(prefix.size + 1) -> new DFSElement(false)), false))
-                    else
-                        // Not found
-                        None
-                }
-            }
-            
-            // Send back response
-            sender ! response
-        }
-        case oflr: DFSOpenFileListRequest => {
-            // Combine remotely opened ones and local ones
-            sender ! new DFSOpenFileListResponse(
-                    localOpenFiles toList,
-                    openWriteFiles.keys toList,
-                    openReadFiles toList
-            )
-        }
-        case orr: DFSOpenReadRequest => openReadFiles += orr.filename
-        case crr: DFSCloseReadRequest => openReadFiles -= crr.filename
-        case _ => {}
     }
 }

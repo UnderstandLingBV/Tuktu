@@ -36,7 +36,7 @@
 					"description": "The block size in MB.",
 					"type": "int",
 					"required": false,
-					"default": 128
+					"default": 64
 				},
 				{
 					"name": "field_separator",
