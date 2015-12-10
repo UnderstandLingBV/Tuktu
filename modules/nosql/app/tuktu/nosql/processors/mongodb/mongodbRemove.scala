@@ -26,7 +26,7 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
     var collection: JSONCollection = _
     var query: String = _
     var filter: String = _
-    var justOne = false
+    var justOne: Boolean = _
     var timeout: Int = _
 
     override def initialize(config: JsObject) {
@@ -56,7 +56,7 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         }).distinct
 
         // execute and wait for completion
-        val result = collection.remove[JsObject](Json.obj("$or" -> queries))
+        val result = collection.remove[JsObject](Json.obj("$or" -> queries), firstMatchOnly = justOne)
         Await.ready(result, timeout seconds)
 
         // return original data
