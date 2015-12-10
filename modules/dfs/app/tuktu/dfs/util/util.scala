@@ -2,9 +2,7 @@ package tuktu.dfs.util
 
 import play.api.cache.Cache
 import play.api.Play.current
-import tuktu.dfs.actors.DFSDaemon
 import scala.util.hashing.MurmurHash3
-import tuktu.dfs.actors.DFSDaemon
 
 object util {
     /**

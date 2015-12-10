@@ -1,9 +1,5 @@
 EclipseKeys.createSrc := EclipseCreateSrc.All
 
-//javaOptions += "-Xmax-classfile-name 100"
-
-unmanagedBase <<= baseDirectory { base => base / "lib" }
-
 lazy val appResolvers = Seq(
     "JCenter" at "http://jcenter.bintray.com/",
     "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository"
@@ -28,9 +24,6 @@ lazy val apiDependencies = Seq(
 lazy val nlpDependencies = Seq(
     cache,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
-    "nl.et4it" % "LIGA" % "1.0",
-    "nl.et4it" % "OpenNLPPOSWrapper" % "1.0",
-    "nl.et4it" % "RBEM" % "1.0",
     "org.apache.opennlp" % "opennlp-tools" % "1.5.3",
     "org.nd4j" %% "nd4s" % "0.4-rc3",
     "org.nd4j" % "nd4j-jblas" % "0.4-rc3.4"
