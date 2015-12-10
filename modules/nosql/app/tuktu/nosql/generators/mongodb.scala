@@ -23,6 +23,7 @@ import play.api.libs.json.Json
 import scala.concurrent.Future
 import play.api.Logger
 import tuktu.nosql.util.MongoPipelineTransformer
+import reactivemongo.core.nodeset.Authenticate
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -31,10 +32,26 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val hosts = (config \ "hosts").as[List[String]]
             val database = (config \ "database").as[String]
             val coll = (config \ "collection").as[String]
+            
+            // Get credentials
+            val user = (config \ "user").asOpt[String]
+            val pwd = (config \ "password").asOpt[String].getOrElse("")
+            val admin = (config \ "admin").as[Boolean]
 
             // Set up connection
             val settings = MongoSettings(hosts, database, coll)
-            val collection = MongoCollectionPool.getCollection(settings)
+            val collection = user match{
+              case None => MongoCollectionPool.getCollection(settings)
+              case Some( usr ) => {
+                val credentials = admin match
+                {
+                  case true => Authenticate( "admin", usr, pwd )
+                  case false => Authenticate( database, usr, pwd )
+                }
+                MongoCollectionPool.getCollectionWithCredentials(settings,credentials)
+              }
+            }
+              
 
             // Get query and filter
             val query = (config \ "query").as[JsObject]
