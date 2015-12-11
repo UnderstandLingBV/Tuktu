@@ -15,6 +15,7 @@ import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.InitPacket
 import tuktu.api.StopPacket
+import scala.io.Codec
 
 case class CSVReadPacket(
         reader: CSVReader
@@ -23,14 +24,15 @@ case class CSVStopPacket(
         reader: CSVReader
 )
 
-class CsvReader(parentActor: ActorRef, fileName: String, hasHeaders: Boolean, givenHeaders: List[String],
-        separator: Char, quote: Char, escape: Char) extends Actor with ActorLogging {
+class CsvReader(parentActor: ActorRef, fileName: String, encoding: String, hasHeaders: Boolean, givenHeaders: List[String],
+        separator: Char, quote: Char, escape: Char, startLine: Option[Int], endLine: Option[Int]) extends Actor with ActorLogging {
     var headers: Option[List[String]] = None
+    var lineOffset = 0
     
     def receive() = {
         case ip: InitPacket => {
             // Open CSV file for reading
-            val reader = new CSVReader(tuktu.api.file.genericReader(fileName), separator, quote, escape)
+            val reader = new CSVReader(tuktu.api.file.genericReader(fileName)(Codec.string2codec(encoding)), separator, quote, escape)
             // See if we need to fetch headers
             headers = {
                 if (hasHeaders) Some(reader.readNext.toList)
@@ -51,15 +53,40 @@ class CsvReader(parentActor: ActorRef, fileName: String, hasHeaders: Boolean, gi
         case pkt: CSVReadPacket => pkt.reader.readNext match {
             case null => self ! new CSVStopPacket(pkt.reader) // EOF, stop processing
             case line: Array[String] => {
-                // Send back to parent for pushing into channel
-                headers match {
-                    case Some(hdrs) => {
-                        parentActor ! hdrs.zip(line.toList).toMap
-                    }
-                    case None => parentActor ! line
+                val toSend = {
+                    (startLine match {
+                        case Some(sl) => lineOffset >= sl
+                        case None => true
+                    }) && (endLine match {
+                        case Some(el) => el <= lineOffset
+                        case None => true
+                    })
                 }
+                // Send back to parent for pushing into channel
+                if (toSend)
+                    headers match {
+                        case Some(hdrs) => {
+                            parentActor ! hdrs.zip(line.toList).toMap
+                        }
+                        case None => parentActor ! line
+                    }
+            
                 // Continue with next line
-                self ! pkt
+                endLine match {
+                    case Some(el) => {
+                        // Check if we need to stop
+                        if (el > lineOffset)
+                            self ! new CSVStopPacket(pkt.reader)
+                        else {
+                            lineOffset = lineOffset + 1
+                            self ! pkt
+                        }
+                    }
+                    case None => {
+                        lineOffset = lineOffset + 1
+                        self ! pkt
+                    }
+                }
             }
         }
     }
@@ -77,9 +104,13 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val separator = (config \ "separator").asOpt[String].getOrElse(";").head
             val quote = (config \ "quote").asOpt[String].getOrElse("\"").head
             val escape = (config \ "escape").asOpt[String].getOrElse("\\").head
+            val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
+            val startLine = (config \ "start_line").asOpt[Int]
+            val endLine = (config \ "end_line").asOpt[Int]
             
             // Create actor and kickstart
-            val csvGenActor = Akka.system.actorOf(Props(classOf[CsvReader], self, fileName, hasHeaders, headersGiven, separator, quote, escape))
+            val csvGenActor = Akka.system.actorOf(Props(classOf[CsvReader], self, fileName, encoding, hasHeaders,
+                    headersGiven, separator, quote, escape, startLine, endLine))
             csvGenActor ! new InitPacket()
         }
         case sp: StopPacket => cleanup

@@ -48,11 +48,18 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "filename",
-					"description": "The name of the file to read from.",
-					"type": "string",
-					"required": true
-				},
+                    "name": "filename",
+                    "description": "The name of the file to read from.",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "encoding",
+                    "description": "The characterset encoding of the file.",
+                    "type": "string",
+                    "required": false,
+                    "default": "utf-8"
+                },
 				{
 					"name": "has_headers",
 					"description": "If set to true, the first row will be considered the headers, and will be used as value names.",
@@ -94,13 +101,25 @@
 					"default": "\"",
 					"required": false
 				},
-				{
-					"name": "escape",
-					"description": "The escape character used in the given CSV file.",
-					"type": "string",
-					"default": "\\",
-					"required": false
-				}
+                {
+                    "name": "escape",
+                    "description": "The escape character used in the given CSV file.",
+                    "type": "string",
+                    "default": "\\",
+                    "required": false
+                },
+                {
+                    "name": "start_line",
+                    "description": "The line number (starting with 0) to start reading from. From beginning if not entered.",
+                    "type": "int",
+                    "required": false
+                },
+                {
+                    "name": "end_line",
+                    "description": "The last line number to read. Until the end of the file if not entered.",
+                    "type": "int",
+                    "required": false
+                }
 			]
 		}
 	]
