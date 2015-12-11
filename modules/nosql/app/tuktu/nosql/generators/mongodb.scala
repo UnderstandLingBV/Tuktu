@@ -37,6 +37,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val user = (config \ "user").asOpt[String]
             val pwd = (config \ "password").asOpt[String].getOrElse("")
             val admin = (config \ "admin").as[Boolean]
+            val scramsha1 = (config \ "ScramSha1").as[Boolean]
 
             // Set up connection
             val settings = MongoSettings(hosts, database, coll)
@@ -48,7 +49,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                   case true => Authenticate( "admin", usr, pwd )
                   case false => Authenticate( database, usr, pwd )
                 }
-                MongoCollectionPool.getCollectionWithCredentials(settings,credentials)
+                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
               }
             }
               
@@ -115,10 +116,26 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
             val database = (config \ "database").as[String]
             val coll = (config \ "collection").as[String]
 
+            // Get credentials
+            val user = (config \ "user").asOpt[String]
+            val pwd = (config \ "password").asOpt[String].getOrElse("")
+            val admin = (config \ "admin").as[Boolean]
+            val scramsha1 = (config \ "ScramSha1").as[Boolean]
+
             // Set up connection
             val settings = MongoSettings(hosts, database, coll)
-            implicit val collection = MongoCollectionPool.getCollection(settings)
-
+            implicit val collection = user match{
+              case None => MongoCollectionPool.getCollection(settings)
+              case Some( usr ) => {
+                val credentials = admin match
+                {
+                  case true => Authenticate( "admin", usr, pwd )
+                  case false => Authenticate( database, usr, pwd )
+                }
+                MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
+              }
+            }
+            
             // Get tasks
             val tasks = (config \ "tasks").as[List[JsObject]]
             

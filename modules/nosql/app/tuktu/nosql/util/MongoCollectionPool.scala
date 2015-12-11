@@ -35,14 +35,16 @@ object MongoCollectionPool {
     
         //create or get a collection with credentials
     // http://reactivemongo.org/releases/0.11/documentation/tutorial/connect-database.html
-    def getCollectionWithCredentials(settings: MongoSettings, credentials: Authenticate): JSONCollection = {
+    def getCollectionWithCredentials(settings: MongoSettings, credentials: Authenticate, scramsha1: Boolean): JSONCollection = {
         map.getOrElseUpdate(settings.hosts, {
             HashMap[String,HashMap[String, JSONCollection]]()
         }).getOrElseUpdate(settings.database, {
             HashMap[String, JSONCollection]()
         }).getOrElseUpdate(settings.collection, {
-           val conOpts = MongoConnectionOptions( authMode = ScramSha1Authentication )
-           //val conOpts = MongoConnectionOptions(authMode = CrAuthentication)
+           val conOpts = scramsha1 match{
+             case true => MongoConnectionOptions( authMode = ScramSha1Authentication )
+             case false => MongoConnectionOptions( authMode = CrAuthentication )
+           }
            val connection = connections.getOrElseUpdate(settings.hosts, driver.connection(settings.hosts, options = conOpts, authentications = List(credentials)))
            val db = connection(settings.database)
            db(settings.collection)
