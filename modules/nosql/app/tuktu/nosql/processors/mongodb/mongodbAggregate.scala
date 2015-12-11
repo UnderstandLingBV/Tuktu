@@ -6,6 +6,7 @@ import play.modules.reactivemongo.json._
 import play.modules.reactivemongo.json.collection._
 import reactivemongo.api._
 import reactivemongo.api.commands.AggregationFramework
+import reactivemongo.core.nodeset.Authenticate
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import tuktu.api._
@@ -18,12 +19,22 @@ import tuktu.nosql.util._
 class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(resultName) {
     var settings: MongoSettings = _
     var tasks: List[JsObject] = _
+    var user: Option[String] = _
+    var pwd: String = _
+    var admin: Boolean = _
+    var scramsha1: Boolean = _     
 
     override def initialize(config: JsObject) {
-        // Set up MongoDB client
+        // Get hosts, database and collection
         val hosts = (config \ "hosts").as[List[String]]
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
+        
+        // Get credentials
+        user = (config \ "user").asOpt[String]
+        pwd = (config \ "password").asOpt[String].getOrElse("")
+        admin = (config \ "admin").as[Boolean]
+        scramsha1 = (config \ "ScramSha1").as[Boolean]
 
         // Prepare connection settings
         settings = MongoSettings(hosts, database, coll)
@@ -33,7 +44,19 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        implicit val collection: JSONCollection = MongoCollectionPool.getCollection(settings)
+        implicit val collection: JSONCollection = user match{
+              case None => MongoCollectionPool.getCollection(settings)
+              case Some( usr ) => {
+                val credentials = admin match
+                {
+                  case true => Authenticate( "admin", usr, pwd )
+                  case false => Authenticate( settings.database, usr, pwd )
+                }
+                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
+              }
+            }
+        
+        
         import collection.BatchCommands.AggregationFramework.PipelineOperator
         // Prepare aggregation pipeline
         val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
