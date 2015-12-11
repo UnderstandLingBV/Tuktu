@@ -63,7 +63,12 @@ class ChartingActor(name: String, parent: ActorRef, expiration: Long, isHistoric
                 // Add to history, then push
                 if (historical)
                     history += packet.toString
-                channel.push(packet.toString)
+                try {
+                    channel.push(packet.toString)
+                }
+                catch {
+                    case e: ClosedChannelException => {}
+                }
             }
             catch {
                 case e: ClosedChannelException => {}
