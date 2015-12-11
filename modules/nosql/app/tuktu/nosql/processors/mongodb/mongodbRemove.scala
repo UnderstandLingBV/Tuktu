@@ -11,6 +11,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.modules.reactivemongo.json._
 import play.modules.reactivemongo.json.collection._
+import reactivemongo.core.nodeset.Authenticate
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.nosql.util.MongoCollectionPool
@@ -35,9 +36,25 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
 
+        // Get credentials
+        val user = (config \ "user").asOpt[String]
+        val pwd = (config \ "password").asOpt[String].getOrElse("")
+        val admin = (config \ "admin").as[Boolean]
+        val scramsha1 = (config \ "ScramSha1").as[Boolean]
+
         // Set up connection
         val settings = MongoSettings(hosts, database, coll)
-        collection = MongoCollectionPool.getCollection(settings)
+        collection = user match{
+            case None => MongoCollectionPool.getCollection(settings)
+            case Some( usr ) => {
+                val credentials = admin match
+                {
+                  case true => Authenticate( "admin", usr, pwd )
+                  case false => Authenticate( database, usr, pwd )
+                }
+                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
+              }
+          }
 
         // Get query and filter
         query = (config \ "query").as[String]

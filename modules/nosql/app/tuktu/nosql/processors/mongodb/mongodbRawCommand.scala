@@ -5,6 +5,7 @@ import play.api.libs.json.JsObject
 import play.modules.reactivemongo.json._
 import reactivemongo.api._
 import reactivemongo.api.commands.Command
+import reactivemongo.core.nodeset.Authenticate
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import tuktu.api._

@@ -12,6 +12,7 @@ import play.api.libs.iteratee.Iteratee
 import play.modules.reactivemongo.json._
 import play.modules.reactivemongo.json.collection._
 import reactivemongo.api.MongoDriver
+import reactivemongo.core.nodeset.Authenticate
 import scala.concurrent.Await
 import play.api.cache.Cache
 import scala.concurrent.duration.DurationInt
@@ -20,6 +21,7 @@ import tuktu.nosql.util.sql
 import tuktu.nosql.util.stringHandler
 import tuktu.nosql.util.MongoCollectionPool
 import tuktu.nosql.util.MongoSettings
+
 
 /**
  * Queries MongoDB for data
@@ -37,11 +39,27 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         val hosts = (config \ "hosts").as[List[String]]
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
+        
+        // Get credentials
+        val user = (config \ "user").asOpt[String]
+        val pwd = (config \ "password").asOpt[String].getOrElse("")
+        val admin = (config \ "admin").as[Boolean]
+        val scramsha1 = (config \ "ScramSha1").as[Boolean]
 
         // Set up connection
         val settings = MongoSettings(hosts, database, coll)
-        collection = MongoCollectionPool.getCollection(settings)
-
+        collection = user match{
+            case None => MongoCollectionPool.getCollection(settings)
+            case Some( usr ) => {
+                val credentials = admin match
+                {
+                  case true => Authenticate( "admin", usr, pwd )
+                  case false => Authenticate( database, usr, pwd )
+                }
+                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
+              }
+          }
+        
         // Get query and filter
         query = (config \ "query").as[String]
         filter = (config \ "filter").asOpt[String].getOrElse("{}")

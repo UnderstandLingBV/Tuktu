@@ -44,6 +44,32 @@
 					"required": true
 				},
 				{
+					"name": "user",
+					"description": "The name of the user (if authentication is required).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "password",
+					"description": "The password of the user (if authentication is required).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "admin",
+					"description": "Does authentication use the admin database?",
+					"type": "boolean",
+					"required": true,
+					"default": true
+				},
+				{
+				    "name": "ScramSha1",
+				    "description" : "Use the ScramSha1 authentication method (instead of CrAuth)?",
+				    "type": "boolean",
+				    "required": true,
+				    "default": true
+				},
+				{
 					"name": "fields",
 					"description": "The fields to be inserted: Leave empty to insert all fields.",
 					"type": "array",

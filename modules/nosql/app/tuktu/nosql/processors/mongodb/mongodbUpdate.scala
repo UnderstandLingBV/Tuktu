@@ -6,6 +6,7 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.modules.reactivemongo.json._
 import play.modules.reactivemongo.json.collection.JSONCollection
+import reactivemongo.core.nodeset.Authenticate
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.nosql.util.MongoCollectionPool
@@ -41,10 +42,25 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         update = (config \ "update").as[String]
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
         multi = (config \ "multi").asOpt[Boolean].getOrElse(false)
+        // Get credentials
+        val user = (config \ "user").asOpt[String]
+        val pwd = (config \ "password").asOpt[String].getOrElse("")
+        val admin = (config \ "admin").as[Boolean]
+        val scramsha1 = (config \ "ScramSha1").as[Boolean]
 
-        // create connectionPool
+        // Set up connection
         val settings = MongoSettings(hosts, database, coll)
-        collection = MongoCollectionPool.getCollection(settings)
+        collection = user match{
+            case None => MongoCollectionPool.getCollection(settings)
+            case Some( usr ) => {
+                val credentials = admin match
+                {
+                  case true => Authenticate( "admin", usr, pwd )
+                  case false => Authenticate( database, usr, pwd )
+                }
+                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
+              }
+          }
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
