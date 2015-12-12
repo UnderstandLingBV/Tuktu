@@ -18,6 +18,8 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import play.api.libs.json.Json
 import play.api.libs.json.JsObject
+import akka.routing.SmallestMailboxPool
+import tuktu.dfs.actors.DFSPersister
 
 class DFSGlobal() extends TuktuGlobal() {
     def loadFileTable() = {
@@ -60,11 +62,15 @@ class DFSGlobal() extends TuktuGlobal() {
         loadFileTable()
         
         // Set up the DFS daemon
-        val dfsActor = Akka.system.actorOf(Props[TDFSDaemon], name = "tuktu.dfs.Daemon")
+        val dfsActor = Akka.system.actorOf(
+            SmallestMailboxPool(Play.current.configuration.getInt("tuktu.dfs.daemons").getOrElse(10))
+                .props(Props[TDFSDaemon]), name = "tuktu.dfs.Daemon")
         dfsActor ! new InitPacket
         
         // Set up the file persister
-        val persistActor = Akka.system.actorOf(Props[TDFSDaemon], name = "tuktu.dfs.Daemon.persist")
+        val persistActor =Akka.system.actorOf(
+            SmallestMailboxPool(Play.current.configuration.getInt("tuktu.dfs.daemons").getOrElse(10))
+                .props(Props[DFSPersister]), name = "tuktu.dfs.Daemon.persist")
         persistActor ! new InitPacket
     }
 }

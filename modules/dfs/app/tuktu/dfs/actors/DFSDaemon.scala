@@ -191,6 +191,9 @@ class WriterDaemon(tir: TDFSWriteInitiateRequest) extends Actor with ActorLoggin
                 byteCount = 0
                 currentPart = currentPart + 1
                 createWriter
+                
+                // Send remainder
+                writer ! remainder
             } else {
                 // Just write the entire thing
                 writer ! tcp
@@ -388,7 +391,7 @@ class TextTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends Act
             else {
                 val nextLine = reader.readLine
                 // Send it to the requester
-                requester ! new TDFSTextReadContentPacket(lrc.previous, nextLine == null)
+                requester ! new TDFSTextReadContentPacket(lrc.previous, lrc.current == null)
                 // Continue with next line
                 self ! new LineReaderContent(lrc.current, nextLine)
             }
