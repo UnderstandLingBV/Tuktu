@@ -32,7 +32,7 @@ class CsvReader(parentActor: ActorRef, fileName: String, encoding: String, hasHe
     def receive() = {
         case ip: InitPacket => {
             // Open CSV file for reading
-            val reader = new CSVReader(tuktu.api.file.genericReader(fileName)(Codec.string2codec(encoding)), separator, quote, escape)
+            val reader = new CSVReader(tuktu.api.file.genericReader(fileName)(Codec(encoding)), separator, quote, escape)
             // See if we need to fetch headers
             headers = {
                 if (hasHeaders) Some(reader.readNext.toList)

@@ -17,7 +17,7 @@ import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.StopPacket
 import tuktu.dfs.actors.TDFSContentPacket
-import tuktu.dfs.actors.TDFSInitiateRequest
+import tuktu.dfs.actors.TDFSWriteInitiateRequest
 
 /**
  * Writes out text to a TDFS
@@ -47,7 +47,7 @@ class TDFSTextWriterProcessor(resultName: String) extends BaseProcessor(resultNa
         blockSize = (config \ "block_size").asOpt[Int]
         
         // Set TDFS writer
-        writer = Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSInitiateRequest(
+        writer = Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteInitiateRequest(
             filename, blockSize, false, encoding
         ), timeout.duration).asInstanceOf[ActorRef]
     }
@@ -56,7 +56,7 @@ class TDFSTextWriterProcessor(resultName: String) extends BaseProcessor(resultNa
         // Collect ouptut first
         val output = data.data.map(datum =>
             (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
-        ).mkString(lineSep)
+        ).mkString(lineSep) + lineSep
         
         // Send message
         writer ! new TDFSContentPacket(output.getBytes)
@@ -89,14 +89,14 @@ class TDFSBinaryWriterProcessor(resultName: String) extends BaseProcessor(result
         blockSize = (config \ "block_size").asOpt[Int]
         
         // Set TDFS writer
-        writer = Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSInitiateRequest(
+        writer = Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteInitiateRequest(
             filename, blockSize, false, None
         ), timeout.duration).asInstanceOf[ActorRef]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Collect ouptut first
-        // TODO: Support more types and make sure 
+        // TODO: Support more types and make sure its the right conversion
         val output = data.data.map(datum =>
             datum(field) match {
                 case a: Byte => Array(a)
