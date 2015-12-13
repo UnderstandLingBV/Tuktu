@@ -23,8 +23,25 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
         // Prepare db connection
         val dbHosts = (config \ "hosts").as[List[String]]
         val dbName = (config \ "database").as[String]
+        
+        // Get credentials
+        // http://reactivemongo.org/releases/0.11/documentation/tutorial/connect-database.html
+        val user = (config \ "user").asOpt[String]
+        val pwd = (config \ "password").asOpt[String].getOrElse("")
+        val admin = (config \ "admin").as[Boolean]
+        // val scramsha1 = (config \ "ScramSha1").as[Boolean]
+        
         val driver = new MongoDriver
-        val connection = driver.connection(dbHosts)
+        val connection = user match{
+            case None => driver.connection(dbHosts)
+            case Some( usr ) => {
+                val credentials = admin match{
+                    case true => Seq(Authenticate("admin", usr, pwd))
+                    case false => Seq(Authenticate(dbName, usr, pwd))
+                }
+                driver.connection(dbHosts,authentications = credentials)  
+            }
+        }
         db = connection(dbName)
 
         // Get command

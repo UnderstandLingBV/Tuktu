@@ -38,6 +38,25 @@
 					"required": true
 				},
 				{
+					"name": "user",
+					"description": "The name of the user (if authentication is required).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "password",
+					"description": "The password of the user (if authentication is required).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "admin",
+					"description": "Does authentication require the admin database?",
+					"type": "boolean",
+					"required": true,
+					"default": true
+				},
+				{
 					"name": "command",
 					"description": "The command to run on the database.",
 					"type": "JsObject",
