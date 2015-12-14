@@ -12,7 +12,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import tuktu.api._
-import play.api.libs.json.JsObject
+import play.api.libs.json._
 import play.api.cache.Cache
 import scala.collection.mutable.ListBuffer
 
@@ -44,33 +44,20 @@ class FieldUnwindProcessor(genActor: ActorRef, resultName: String) extends Buffe
         }
     }) compose Enumeratee.onEOF(() => unwindActor ! new StopPacket)
     
-/*    
     def unwind( list: List[Map[String,Any]] ): List[Map[String,Any]] =
     {
         val buf = scala.collection.mutable.ListBuffer.empty[Map[String,Any]]
       
         for (map <- list)
         {
-            val stream: Stream[Any] = map( field ).asInstanceOf[Stream[Any]]
-            for ( elem <- stream )
-            {
-                buf += map + ( field -> elem )
-            }  
-              
-        }
-        return buf.toList
-    }
-*/    
-    def unwind( list: List[Map[String,Any]] ): List[Map[String,Any]] =
-    {
-        val buf = scala.collection.mutable.ListBuffer.empty[Map[String,Any]]
-      
-        for (map <- list)
-        {
+          if (map.contains( field ))
+          {
             map( field ) match{
               case seq: Seq[Any] => for ( elem <- seq ) { buf += map + ( field -> elem ) }
+              case jarray: JsArray => for ( jvalue <- jarray.as[List[JsValue]] ) { buf += map + ( field -> jvalue ) }
               case elem: Any => buf += map + ( field -> elem )
-            }   
+            }
+          }
         }
         return buf.toList
     }
