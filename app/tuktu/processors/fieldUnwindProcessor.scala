@@ -58,6 +58,10 @@ class FieldUnwindProcessor(genActor: ActorRef, resultName: String) extends Buffe
               case elem: Any => buf += map + ( field -> elem )
             }
           }
+          else 
+          {
+            buf += map
+          }
         }
         return buf.toList
     }
