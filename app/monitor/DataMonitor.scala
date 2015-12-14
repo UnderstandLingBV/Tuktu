@@ -42,16 +42,22 @@ class DataMonitor extends Actor with ActorLogging {
             // Initialize monitor
         }
         case "clearFinished" => {
-            appMonitor = appMonitor.filter(_._2.endTime == None)
+            appMonitor = appMonitor.filterNot(app => app._2.errors.isEmpty && app._2.endTime != None)
+        }
+        case "clearErrors" => {
+            appMonitor = appMonitor.filterNot(app => app._2.errors.nonEmpty && app._2.endTime != None)
+        }
+        case cfp: ClearFlowPacket => {
+            appMonitor = appMonitor - cfp.uuid
         }
         case fmp: SubflowMapPacket => {
             // Add to our map
-            fmp.subflows.foreach(subflow => subflowMap +=
-                subflow.path.toStringWithoutAddress -> fmp.mailbox.path.toStringWithoutAddress)
+            for (subflow <- fmp.subflows)
+                subflowMap += subflow.path.toStringWithoutAddress -> fmp.mailbox.path.toStringWithoutAddress
         }
         case aip: AppInitPacket => {
             if (!appMonitor.contains(aip.uuid))
-                appMonitor = appMonitor.filterNot(_._2.is_expired(System.currentTimeMillis)) + (aip.uuid -> new AppMonitorObject(aip.uuid, aip.instanceCount, aip.timestamp))
+                appMonitor = appMonitor.filterNot(_._2.is_expired) + (aip.uuid -> new AppMonitorObject(aip.uuid, aip.instanceCount, aip.timestamp))
             aip.mailbox.collect {
                 case mailbox => {
                     appMonitor(aip.uuid).actors += mailbox
@@ -77,7 +83,7 @@ class DataMonitor extends Actor with ActorLogging {
             // Get the actors and stop them
             appMonitor.get(enp.uuid) collect {
                 case app => {
-                    app.errors += enp.processorName -> ("Error happened at flow: " + enp.configName + ", processor: " + enp.processorName + ", id: " + enp.uuid + ", on Input:\n" + enp.input + "\n" + enp.error.toString)
+                    app.errors += enp.processorName -> ("Error happened at flow: " + enp.configName + ", processor: " + enp.processorName + ", id: " + enp.uuid + ", on Input:\n" + enp.input.take(1000) + { if (enp.input.size > 1000) " [...]" else "" } + "\n" + enp.error.toString)
                     app.actors.foreach(_ ! new StopPacket)
                 }
             }
@@ -85,7 +91,6 @@ class DataMonitor extends Actor with ActorLogging {
         case amel: AddMonitorEventListener    => eventListeners += sender
         case rmel: RemoveMonitorEventListener => eventListeners -= sender
         case amp: AppMonitorPacket => {
-            implicit val current = amp.timestamp
             val uuid = uuidMap.get(amp.getParentName) match {
                 case Some(id) => id
                 case None => {
@@ -102,7 +107,7 @@ class DataMonitor extends Actor with ActorLogging {
 
                             if (app.instances == app.finished_instances)
                                 // Update end time and start expiration
-                                app.expire(current)
+                                app.expire(amp.timestamp)
                         }
                         case None => {
                             Logger.warn("DataMonitor received 'done' for unknown app: " + amp.getName)
@@ -114,7 +119,7 @@ class DataMonitor extends Actor with ActorLogging {
                     appMonitor.get(uuid) match {
                         case Some(app) => {
                             // Update end time and start expiration
-                            app.expire(current)
+                            app.expire(amp.timestamp)
                         }
                         case None => {
                             Logger.warn("DataMonitor received 'kill' for unknown app: " + amp.getName)
@@ -128,11 +133,10 @@ class DataMonitor extends Actor with ActorLogging {
             eventListeners.foreach(listener => listener ! amp)
         }
         case pmp: ProcessorMonitorPacket => {
-            implicit val current = pmp.timestamp
             appMonitor.get(pmp.uuid) match {
                 case Some(app) => {
                     // Renew expiration and update maps
-                    app.expire(current, false)
+                    app.expire(pmp.timestamp, false)
 
                     val latest = app.processorDataPackets.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty)
                     latest(pmp.typeOf) = pmp.data
@@ -163,11 +167,10 @@ class DataMonitor extends Actor with ActorLogging {
             }
         }
         case mp: MonitorPacket => {
-            implicit val current = mp.timestamp
             appMonitor.get(mp.uuid) match {
                 case Some(app) => {
                     // Renew expiration and update maps
-                    app.expire(current, false)
+                    app.expire(mp.timestamp, false)
 
                     val count = app.flowDatumCount.getOrElseUpdate(mp.branch, collection.mutable.Map.empty.withDefaultValue(0))
                     count(mp.typeOf) += mp.amount
@@ -181,7 +184,7 @@ class DataMonitor extends Actor with ActorLogging {
             }
         }
         case mop: MonitorOverviewRequest => {
-            appMonitor = appMonitor.filterNot(_._2.is_expired(System.currentTimeMillis))
+            appMonitor = appMonitor.filterNot(_._2.is_expired)
             val partitions = appMonitor.groupBy(_._2.endTime == None)
             sender ! new MonitorOverviewResult(
                 partitions.getOrElse(true, Map.empty),
@@ -189,7 +192,6 @@ class DataMonitor extends Actor with ActorLogging {
                 subflowMap toMap)
         }
         case mldp: MonitorLastDataPacketRequest => {
-            implicit val current = System.currentTimeMillis
             val result = appMonitor.get(mldp.flow_name) match {
                 case None => ("Nothing recorded for this flow yet.", "Nothing recorded for this flow yet.")
                 case Some(appData) => {

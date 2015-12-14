@@ -55,7 +55,23 @@ object Monitor extends Controller {
      */
     def clearFinished(runningPage: Int = 1, finishedPage: Int = 1) = Action { implicit request =>
         Akka.system.actorSelection("user/TuktuMonitor") ! "clearFinished"
-        Redirect(routes.Monitor.fetchLocalInfo(runningPage, 1))
+        Redirect(routes.Monitor.fetchLocalInfo(runningPage, finishedPage))
+    }
+
+    /**
+     * Clears the monitor's info about flows that encountered errors 
+     */
+    def clearErrors(runningPage: Int = 1, finishedPage: Int = 1) = Action { implicit request =>
+        Akka.system.actorSelection("user/TuktuMonitor") ! "clearErrors"
+        Redirect(routes.Monitor.fetchLocalInfo(runningPage, finishedPage))
+    }
+
+    /**
+     * Clears the monitor's info about a flow given by uuid 
+     */
+    def clear(id: String, runningPage: Int = 1, finishedPage: Int = 1) = Action { implicit request =>
+        Akka.system.actorSelection("user/TuktuMonitor") ! ClearFlowPacket(id)
+        Redirect(routes.Monitor.fetchLocalInfo(runningPage, finishedPage))
     }
 
     /**

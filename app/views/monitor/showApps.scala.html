@@ -96,8 +96,11 @@
     <h2>
         The following jobs are finished
         @if(finished.nonEmpty) {
-            <form class="pull-right" action="@routes.Monitor.clearFinished(runningPage, finishedPage)" method="POST">
-                <input class="btn btn-primary" type="submit" value="Clear">
+            <form class="pull-right" action="@routes.Monitor.clearErrors(runningPage, finishedPage)" method="POST">
+                <input class="btn btn-primary" type="submit" value="Clear Errors">
+            </form>
+            <form class="pull-right" action="@routes.Monitor.clearFinished(runningPage, finishedPage)" method="POST" style="margin: 0 10px;">
+                <input class="btn btn-primary" type="submit" value="Clear Finished">
             </form>
         }
     </h2>
@@ -230,7 +233,10 @@
                         @showAppData(appProps, appName)
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Close</button>
+                        <form class="pull-right" action="@routes.Monitor.clear(appName, runningPage, finishedPage)" method="POST" style="margin: 0 10px;">
+                            <input class="btn btn-primary" type="submit" value="Clear">
+                        </form>
                     </div>
                 </div>
             </div>

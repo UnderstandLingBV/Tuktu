@@ -25,6 +25,8 @@ POST    /newDirectory                       controllers.Monitor.newDirectory
 POST    /deleteFile                         controllers.Monitor.deleteFile
 POST    /batchStarter                       controllers.Monitor.batchStarter
 POST    /clearFinished/:r/:f                controllers.Monitor.clearFinished(r: Int, f: Int)
+POST    /clearErrors/:r/:f                  controllers.Monitor.clearErrors(r: Int, f: Int)
+POST    /clear/:id/:r/:f                    controllers.Monitor.clear(id: String, r: Int, f: Int)
 
 # Cluster management
 GET     /cluster                            controllers.Cluster.overview

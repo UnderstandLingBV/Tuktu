@@ -101,7 +101,8 @@ case class AppMonitorObject(
         startTime: Long,
         var finished_instances: Int = 0,
         var endTime: Option[Long] = None,
-        expirationTime: Long = play.api.Play.current.configuration.getInt("tuktu.monitor.finish_expiration").getOrElse(30) * 60 * 1000,
+        expirationTime: Long = play.api.Play.current.configuration.getLong("tuktu.monitor.finish_expiration").getOrElse(30L) * 60 * 1000,
+        errorExpirationTime: Long = play.api.Play.current.configuration.getLong("tuktu.monitor.error_expiration").getOrElse(40320L) * 60 * 1000,
         errors: collection.mutable.Map[String, String] = collection.mutable.Map.empty,
         actors: collection.mutable.Set[ActorRef] = collection.mutable.Set.empty,
         flowDataPacketCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
@@ -117,9 +118,10 @@ case class AppMonitorObject(
             endTime = Some(current)
     }
     def is_expired(current: Long = System.currentTimeMillis): Boolean = endTime match {
-        case None            => false
-        case Some(timestamp) => timestamp + expirationTime <= current
+        case None      => false
+        case Some(end) => end + { if (errors.isEmpty) expirationTime else errorExpirationTime } <= current
     }
+    def is_expired: Boolean = is_expired()
 }
 
 case class AppMonitorPacket(
@@ -154,6 +156,9 @@ case class ErrorNotificationPacket(
         processorName: String,
         input: String,
         error: Throwable
+)
+case class ClearFlowPacket(
+    uuid: String
 )
 /**
  * End monitoring stuff
