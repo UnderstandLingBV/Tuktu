@@ -55,7 +55,7 @@ class FieldUnwindProcessor(genActor: ActorRef, resultName: String) extends Buffe
             map( field ) match{
               case seq: Seq[Any] => for ( elem <- seq ) { buf += map + ( field -> elem ) }
               case jarray: JsArray => for ( jvalue <- jarray.as[List[JsValue]] ) { buf += map + ( field -> jvalue ) }
-              case elem: Any => buf += map + ( field -> elem )
+              case _ => buf += map
             }
           }
           else 
