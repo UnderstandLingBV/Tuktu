@@ -110,9 +110,6 @@ class DataMonitor extends Actor with ActorLogging {
                             app.expire(amp.timestamp)
                     }
                     case "stop" => {
-                        // Update end time and start expiration
-                        app.expire(amp.timestamp)
-
                         // Broadcast to all actors to stop
                         app.actors.foreach(_ ! Broadcast(new StopPacket))
                     }
