@@ -56,7 +56,7 @@
 					"type": "string",
 					"description": "The separator character.",
 					"required": false,
-					"default": ";"
+					"default": ","
 				},
 				{
 					"name": "quote",

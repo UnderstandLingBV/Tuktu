@@ -115,6 +115,8 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
                 case _ => 0
             })
         })
+    }) compose Enumeratee.filter((data: DataPacket) => {
+        !data.data.isEmpty
     })
 }
 
