@@ -1,0 +1,88 @@
+{
+	"name": "MongoDB Field Insert Processor",
+	"description": "Insert the JSON Object contained in a field into MongoDB.",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBFieldInsertProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"description": "The database name.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"description": "The name of the collection to open.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "user",
+					"description": "The name of the user (if authentication is required).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "password",
+					"description": "The password of the user (if authentication is required).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "admin",
+					"description": "Does authentication use the admin database?",
+					"type": "boolean",
+					"required": true,
+					"default": true
+				},
+				{
+				    "name": "ScramSha1",
+				    "description" : "Use the ScramSha1 authentication method (instead of CrAuth)?",
+				    "type": "boolean",
+				    "required": true,
+				    "default": true
+				},
+				{
+					"name": "field",
+					"description": "The field to be inserted.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "timeout",
+					"description": "Overwrite the Tuktu default timeout.",
+					"type": "int",
+					"required": false,
+					"default": 5
+				}
+			]
+		}
+	]
+}
