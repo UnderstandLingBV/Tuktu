@@ -7,7 +7,7 @@ import akka.actor.Cancellable
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json.JsValue
+import play.api.libs.json._
 import akka.actor.Props
 import akka.actor.ActorLogging
 import akka.actor.Actor
@@ -75,7 +75,7 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
 }
 
 class RandomActor(maxNum: Int) extends Actor with ActorLogging {
-    val r = util.Random
+    val r = scala.util.Random
     def receive() = {
         case _ => sender ! r.nextInt(maxNum)
     }
@@ -150,5 +150,64 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                 self ! new StopPacket
             }
         }
+    }
+}
+
+/**
+ * Generates a custom data packet every tick
+ */
+class CustomPacketGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var schedulerActor: Cancellable = null
+    var packet: DataPacket = _
+    var maxAmount: Option[Int] = _
+    var amountSent = new AtomicInteger(0)
+    
+    override def receive() = {
+        case ip: InitPacket => setup
+        case config: JsValue => {
+            // Get the ticking frequency
+            val tickInterval = (config \ "interval").as[Int]
+            // Get the packet to send
+            val tpkt = (config \ "packet").as[String]
+            val jpkt = Json.parse( tpkt ).as[List[JsObject]]
+            packet = new DataPacket(jpkt.map{ jobj => jobj.as[Map[String,JsValue]]} )
+            
+            // See if we need to stop at some point
+            maxAmount = (config \ "max_amount").asOpt[Int]
+            
+            // Determine initial waiting time before sending
+            val initialDelay = {
+              if((config \ "send_immediately").asOpt[Boolean].getOrElse(false))
+                Duration.Zero
+              else
+                tickInterval milliseconds
+            }
+            
+            // Set up the scheduler
+            schedulerActor = Akka.system.scheduler.schedule(
+                    initialDelay,
+                    tickInterval milliseconds,
+                    self,
+                    packet)
+        }
+        case sp: StopPacket => {
+            schedulerActor.cancel
+            cleanup
+        }
+        case pkt: DataPacket => {
+            maxAmount match {
+                // check if we need to stop
+                case Some(amnt) => {
+                    if (amountSent.getAndIncrement >= amnt)
+                            self ! new StopPacket
+                    else
+                        channel.push(pkt)
+                }
+                case None => {
+                    channel.push(pkt)
+                }
+            }
+        }
+        case x => Logger.error("Dummy generator got unexpected packet " + x + "\r\n")
     }
 }
