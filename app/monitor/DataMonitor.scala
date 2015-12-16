@@ -100,7 +100,7 @@ class DataMonitor extends Actor with ActorLogging {
         case amp: AppMonitorUUIDPacket => {
             // Get app from appMonitor 
             appMonitor.get(amp.uuid) match {
-                case None => Logger.warn("DataMonitor received 'done' for unknown app: " + amp.uuid)
+                case None => Logger.warn("DataMonitor received AppMonitorUUIDPacket for unknown app: " + amp.uuid)
                 case Some(app) => amp.status match {
                     case "done" => {
                         app.finished_instances += 1
@@ -123,7 +123,7 @@ class DataMonitor extends Actor with ActorLogging {
                         // Broadcast to all actors to kill themselves
                         app.actors.foreach(_ ! Broadcast(PoisonPill))
                     }
-                    case _ => Logger.warn("Unknown status: " + amp.status)
+                    case _ => Logger.warn("DataMonitor received AppMonitorUUIDPacket for unknown status: " + amp.status)
                 }
             }
         }
