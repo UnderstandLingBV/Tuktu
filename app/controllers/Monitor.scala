@@ -8,7 +8,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import akka.actor._
 import akka.pattern.ask
-import akka.routing.Broadcast
 import akka.util.Timeout
 import play.api.Play
 import play.api.Play.current
@@ -87,31 +86,19 @@ object Monitor extends Controller {
     /**
      * Terminates a Tuktu job
      */
-    def terminate(name: String, force: Boolean, runningPage: Int = 1, finishedPage: Int = 1) = Action {
-        // Send stop packet to actor
-        if (force) {
-            Akka.system.actorSelection(name) ! Broadcast(PoisonPill)
-
-            // Inform the monitor since the generator won't do it itself
-            val generatorName = Akka.system.actorSelection(name) ? Identify(None)
-            generatorName.onSuccess {
-                case generator: ActorRef => {
-                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                            generator,
-                            "kill"
-                    )
-                } 
-            }
-        }
-        else 
-            Akka.system.actorSelection(name) ! Broadcast(new StopPacket)
+    def terminate(uuid: String, force: Boolean, runningPage: Int = 1, finishedPage: Int = 1) = Action {
+        // Inform the monitor since the generator won't do it itself
+        Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(
+            uuid,
+            if (force) "kill" else "stop"
+        )
 
         Redirect(routes.Monitor.fetchLocalInfo(runningPage, finishedPage)).flashing("success" -> ("Successfully " + {
             force match {
                 case true => "terminated"
                 case _ => "stopped"
             }
-        } + " job " + name))
+        } + " job " + uuid))
     }
 
     /**

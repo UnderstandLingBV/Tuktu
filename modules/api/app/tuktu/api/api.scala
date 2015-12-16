@@ -132,6 +132,11 @@ case class AppMonitorPacket(
     def getName = actor.path.toStringWithoutAddress
     def getParentName = actor.path.parent.toStringWithoutAddress 
 }
+case class AppMonitorUUIDPacket(
+        uuid: String,
+        status: String,
+        timestamp: Long = System.currentTimeMillis
+)
 
 case class AddMonitorEventListener()
 case class RemoveMonitorEventListener()
@@ -185,7 +190,7 @@ abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends B
 abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
-    
+
     // Add our parent (the Router of this Routee) to cache
     Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
         .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) += self -> context.parent
@@ -207,10 +212,10 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     def cleanup() = {
         // Send message to the monitor actor
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                self,                
+                self,
                 "done"
         )
-        
+
         // Remove parent relationship from Cache
         Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
             .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) -= self

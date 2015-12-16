@@ -5,13 +5,14 @@ import scala.concurrent.duration.DurationInt
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
+import akka.actor.PoisonPill
+import akka.routing.Broadcast
 import akka.util.Timeout
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.Logger
 import tuktu.api._
 import tuktu.api.utils.MapToJsObject
-import java.util.Date
 import play.api.Play
 import play.api.libs.json.Json
 
@@ -91,46 +92,40 @@ class DataMonitor extends Actor with ActorLogging {
         case amel: AddMonitorEventListener    => eventListeners += sender
         case rmel: RemoveMonitorEventListener => eventListeners -= sender
         case amp: AppMonitorPacket => {
-            val uuid = uuidMap.get(amp.getParentName) match {
-                case Some(id) => id
-                case None => {
-                    Logger.warn("DataMonitor received AppMonitorPacket for unknown app: " + amp.getName)
-                    ""
-                }
+            uuidMap.get(amp.getParentName) match {
+                case Some(id) => self ! new AppMonitorUUIDPacket(id, amp.status, amp.timestamp)
+                case None     => Logger.warn("DataMonitor received AppMonitorPacket for unknown app: " + amp.getName)
             }
-            amp.status match {
-                case "done" => {
-                    // Get app from appMonitor  
-                    appMonitor.get(uuid) match {
-                        case Some(app) => {
-                            app.finished_instances += 1
+        }
+        case amp: AppMonitorUUIDPacket => {
+            // Get app from appMonitor 
+            appMonitor.get(amp.uuid) match {
+                case None => Logger.warn("DataMonitor received 'done' for unknown app: " + amp.uuid)
+                case Some(app) => amp.status match {
+                    case "done" => {
+                        app.finished_instances += 1
 
-                            if (app.instances == app.finished_instances)
-                                // Update end time and start expiration
-                                app.expire(amp.timestamp)
-                        }
-                        case None => {
-                            Logger.warn("DataMonitor received 'done' for unknown app: " + amp.getName)
-                        }
-                    }
-                }
-                case "kill" => {
-                    // Get app from appMonitor  
-                    appMonitor.get(uuid) match {
-                        case Some(app) => {
+                        if (app.instances == app.finished_instances)
                             // Update end time and start expiration
                             app.expire(amp.timestamp)
-                        }
-                        case None => {
-                            Logger.warn("DataMonitor received 'kill' for unknown app: " + amp.getName)
-                        }
                     }
-                }
-                case _ => { Logger.warn("Unknown status: " + amp.status) }
-            }
+                    case "stop" => {
+                        // Update end time and start expiration
+                        app.expire(amp.timestamp)
 
-            // Forward packet to all listeners
-            eventListeners.foreach(listener => listener ! amp)
+                        // Broadcast to all actors to stop
+                        app.actors.foreach(_ ! Broadcast(new StopPacket))
+                    }
+                    case "kill" => {
+                        // Update end time and start expiration
+                        app.expire(amp.timestamp)
+
+                        // Broadcast to all actors to kill themselves
+                        app.actors.foreach(_ ! Broadcast(PoisonPill))
+                    }
+                    case _ => Logger.warn("Unknown status: " + amp.status)
+                }
+            }
         }
         case pmp: ProcessorMonitorPacket => {
             appMonitor.get(pmp.uuid) match {
