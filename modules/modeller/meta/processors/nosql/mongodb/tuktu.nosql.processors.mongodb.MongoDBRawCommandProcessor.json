@@ -59,7 +59,7 @@
 				{
 					"name": "command",
 					"description": "The command to run on the database.",
-					"type": "JsObject",
+					"type": "string",
 					"required": true
 				},
 				{

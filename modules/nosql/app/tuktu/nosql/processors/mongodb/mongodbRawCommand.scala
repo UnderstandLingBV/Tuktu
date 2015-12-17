@@ -1,7 +1,7 @@
 package tuktu.nosql.processors.mongodb
 
 import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json.JsObject
+import play.api.libs.json._
 import play.modules.reactivemongo.json._
 import reactivemongo.api._
 import reactivemongo.api.commands.Command
@@ -9,13 +9,14 @@ import reactivemongo.core.nodeset.Authenticate
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import tuktu.api._
+import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString }
 
 /**
  * Provides a helper to run specified database commands (as long as the command result is less than 16MB in size).
  */
 
 class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var command: JsObject = _
+    var command: String = _
     var db: DefaultDB = _
     var resultOnly: Boolean = _
 
@@ -45,7 +46,7 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
         db = connection(dbName)
 
         // Get command
-        command = (config \ "command").as[JsObject]
+        command = (config \ "command").as[String]
 
         // Get result format
         resultOnly = (config \ "resultOnly").asOpt[Boolean].getOrElse(false)
@@ -53,15 +54,22 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+      val temp: List[Future[Map[String,Any]]] = data.data.map{ datum =>
         val runner = Command.run(JSONSerializationPack)
-        val futureResult = runner.apply(db, runner.rawCommand(command)).one[JsObject]
-        futureResult.map { result =>
+        val jcommand = Json.parse( evaluateTuktuString(command, datum) ).as[JsObject]
+        val futureResult = runner.apply(db, runner.rawCommand(jcommand)).one[JsObject]
+        futureResult.map{ result =>
             if (resultOnly) {
-                for (datum <- data) yield datum + (resultName -> (result \ "result"))
+                datum + (resultName -> (result \ "result"))
             } else {
-                for (datum <- data) yield datum + (resultName -> result)
+                datum + (resultName -> result)
             }
         }
+        
+      }
+      val tmp = Future.sequence( temp )
+      tmp.map{ l => new DataPacket( l ) }
+
     })
 
 }
