@@ -11,13 +11,13 @@ import tuktu.nosql.util.sql._
 import tuktu.nosql.util.stringHandler
 
 class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var url = ""
-    var user = ""
-    var password = ""
-    var driver = ""
-    var query = ""
-    var append = false
-    var distinct = false
+    var url: String = _
+    var user: String = _
+    var password: String = _
+    var driver: String = _
+    var query: String = _
+    var append: Boolean = _
+    var distinct: Boolean = _
 
     var client: client = _
 
@@ -62,11 +62,15 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                 // See if we need to append or not
                 if (append) {
                     val res = client.queryResult(evalQuery).map(row => rowToMap(row))
-                    query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> res
+                    // Add to query results, only if distinct
+                    if (distinct)
+                        query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> res
                     res
                 } else {
                     client.query(evalQuery)
-                    query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> Nil
+                    // Add to query results, only if distinct
+                    if (distinct)
+                        query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> Nil
                     Nil
                 }
             }
