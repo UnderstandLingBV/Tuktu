@@ -43,13 +43,16 @@ class ModellerEventListener(out: ActorRef) extends Actor {
                     if (ar.isInstanceOf[ActorRef]) {
                         // Set mailbox and dequeue queue
                         mailbox = Some(ar.asInstanceOf[ActorRef])
+                        out ! JsBoolean(true)
                     } else {
                         Logger.error("Modeller Websocket: Unexpected Dispatch Result - Closing WebSocket")
+                        out ! JsBoolean(false)
                         self ! PoisonPill
                     }
                 }
                 case Failure(e) => {
                     Logger.error("Modeller Websocket: Dispatch Request failed - Closing WebSocket", e)
+                    out ! JsBoolean(false)
                     self ! PoisonPill
                 }
             }

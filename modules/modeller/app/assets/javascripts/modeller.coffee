@@ -734,24 +734,35 @@ $('a[href="#RunConfig"]').on('click', (e) ->
 	ws.onopen = ->
 		# Send config to run
 		ws.send(JSON.stringify(getConfig()))
-	ws.onmessage = (e) ->
-		data = JSON.parse(e.data)
-		processor = _.find(allNodes.processors, (pro) -> pro.config.id is data.processor_id)
-		if processor isnt undefined
-			if data.type is 'EndType'
-				$(processor.circle.node)
-					.attr('title', JSON.stringify(data.data, null, '    '))
-					.tooltip({
-						container: 'body'
-						placement: 'bottom'
-					})
-					.tooltip('fixTitle')
-			else if data.type is 'BeginType'
-				$([processor.targetInner.node, processor.targetOuter.node])
-					.attr('title', JSON.stringify(data.data, null, '    '))
-					.tooltip({
-						container: 'body'
-						placement: 'bottom'
-					})
-					.tooltip('fixTitle')
+	ws.onmessage = (msg) ->
+		data = JSON.parse(msg.data)
+		if data is true
+			resultSymbol = document.createElement('span')
+			resultSymbol.className = "glyphicon glyphicon-ok-circle"
+			e.target.parentNode.insertBefore(resultSymbol, e.target.nextSibling)
+			$(resultSymbol).fadeOut(5000, -> e.target.parentNode.removeChild(resultSymbol))
+		else if data is false
+			resultSymbol = document.createElement('span')
+			resultSymbol.className = "glyphicon glyphicon-remove-circle"
+			e.target.parentNode.insertBefore(resultSymbol, e.target.nextSibling)
+			$(resultSymbol).fadeOut(5000, -> e.target.parentNode.removeChild(resultSymbol))
+		else
+			processor = _.find(allNodes.processors, (pro) -> pro.config.id is data.processor_id)
+			if processor isnt undefined
+				if data.type is 'EndType'
+					$(processor.circle.node)
+						.attr('title', JSON.stringify(data.data, null, '    '))
+						.tooltip({
+							container: 'body'
+							placement: 'bottom'
+						})
+						.tooltip('fixTitle')
+				else if data.type is 'BeginType'
+					$([processor.targetInner.node, processor.targetOuter.node])
+						.attr('title', JSON.stringify(data.data, null, '    '))
+						.tooltip({
+							container: 'body'
+							placement: 'bottom'
+						})
+						.tooltip('fixTitle')
 )
