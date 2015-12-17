@@ -58,7 +58,7 @@ class CsvReader(parentActor: ActorRef, fileName: String, encoding: String, hasHe
                         case Some(sl) => lineOffset >= sl
                         case None => true
                     }) && (endLine match {
-                        case Some(el) => el <= lineOffset
+                        case Some(el) => lineOffset <= el
                         case None => true
                     })
                 }
