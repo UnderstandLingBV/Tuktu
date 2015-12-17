@@ -19,8 +19,8 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "ipfield",
-					"description": "The field that contains the IP address(es) to lookup.",
+					"name": "ip",
+					"description": "The IP address to lookup.",
 					"type": "string",
 					"required": true
 				},
@@ -37,12 +37,6 @@
 					"type": "string",
 					"required": false,
 					"default": "json"
-				},
-				{
-					"name": "timeout",
-					"description": "The time, expressed in seconds, after which an unsuccessful request times out",
-					"type": "int",
-					"required": false
 				}
 			]
 		}
