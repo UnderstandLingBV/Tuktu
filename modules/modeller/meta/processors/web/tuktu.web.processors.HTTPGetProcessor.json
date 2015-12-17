@@ -19,16 +19,10 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "field",
-					"description": "The field that contains the URL(s) to get.",
+					"name": "url",
+					"description": "The URL to get.",
 					"type": "string",
 					"required": true
-				},
-				{
-					"name": "timeout",
-					"description": "The time, expressed in seconds, after which an unsuccessful request times out",
-					"type": "int",
-					"required": false
 				}
 			]
 		}

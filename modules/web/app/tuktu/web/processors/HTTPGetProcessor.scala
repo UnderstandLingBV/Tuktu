@@ -15,42 +15,32 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 import tuktu.api._
+import tuktu.api.utils.evaluateTuktuString
 
 /**
  * @author dmssrt
  */
 class HTTPGetProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var field: String = _
-    var timeout: Int = _
+    var url: String = _
 
     override def initialize(config: JsObject) {
         // Get the name of the field containing the URL to request and the request timeout        
-        field = (config \ "field").as[String]
-        timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
+        url = (config \ "url").as[String]
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        for (datum <- data) yield {
-            val urls: Stream[String] = datum(field) match {
-                case u: String      => Stream(u)
-                case u: JsString    => Stream(u.value)
-                case s: Stream[Any] => s.map(anyToString(_))
-                case a: Any         => Stream(a.toString)
-            }
-            datum + (resultName -> urls.map(callService(_)))
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) =>{
+        val listfuture = data.data.map{ datum => 
+            val query = evaluateTuktuString(url, datum)
+            val futureresult = callService( query )
+            futureresult.map{ result => datum + (resultName -> result) }
         }
+        val futurelist = Future.sequence( listfuture )
+        futurelist.map{ fl => new DataPacket( fl ) }
     })
 
-    private def anyToString(any: Any): String = any match {
-        case s: String   => s
-        case s: JsString => s.value
-        case s: Any      => s.toString
-    }
-
-    def callService(url: String): JsValue = {
+    def callService(url: String): Future[JsValue] = {
         val future = WS.url(url).get
         val body = future.map(response => response.body)
-        val result = Await.result(body, timeout seconds)
-        Json.parse(result)
+        body.map{ result => Json.parse(result) }
     }
 }
