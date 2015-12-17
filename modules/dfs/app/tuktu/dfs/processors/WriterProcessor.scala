@@ -54,9 +54,11 @@ class TDFSTextWriterProcessor(resultName: String) extends BaseProcessor(resultNa
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Collect ouptut first
-        val output = data.data.map(datum =>
-            (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
-        ).mkString(lineSep) + lineSep
+        val output = data.data.map(datum => {
+            (for (field <- ({
+                if (fields.size > 0) fields else datum.keys
+            }) if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
+        }).mkString(lineSep) + lineSep
         
         // Send message
         writer ! new TDFSContentPacket(output.getBytes)
