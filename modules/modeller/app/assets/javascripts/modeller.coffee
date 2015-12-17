@@ -728,8 +728,7 @@ $('#filterGenerators,#filterProcessors').each( (i, el) ->
 # Web Socket
 $('a[href="#RunConfig"]').on('click', (e) ->
 	e.preventDefault()
-	$(@).attr('disabled', 'disabled')
-	
+
 	# Open WebSocket
 	ws = new WebSocket(webSocketUrl)
 	ws.onopen = ->
