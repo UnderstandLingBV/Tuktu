@@ -1,122 +1,105 @@
 package tuktu.csv.generators
 
 import scala.io.Codec
-import akka.actor.Actor
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
-import akka.actor.PoisonPill
-import akka.actor.Props
-import akka.actor.actorRef2Scala
+import akka.actor._
 import au.com.bytecode.opencsv.CSVReader
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import play.api.libs.iteratee.Enumeratee
+import play.api.libs.iteratee._
 import play.api.libs.json.JsValue
-import tuktu.api.BaseGenerator
-import tuktu.api.DataPacket
-import tuktu.api.InitPacket
-import tuktu.api.StopPacket
+import tuktu.api._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.iteratee.Iteratee
-
-case class CSVReadPacket(
-        reader: CSVReader
-)
-case class CSVStopPacket(
-        reader: CSVReader
-)
 
 /**
  * Reads a CSV file in batches of lines
  */
-class BatchedCsvReader(parentActor: ActorRef, fileName: String, encoding: String, hasHeaders: Boolean, givenHeaders: List[String],
-        separator: Char, quote: Char, escape: Char, batchSize: Integer, flattened: Boolean, resultName: String,
-        startLine: Option[Int], endLine: Option[Int]) extends Actor with ActorLogging {
-    var batch = collection.mutable.Queue[Map[String, Any]]()
-    var headers: Option[List[String]] = None
+class BatchedCSVReader(parentActor: ActorRef, fileName: String, encoding: String, hasHeaders: Boolean, givenHeaders: List[String],
+                       separator: Char, quote: Char, escape: Char, batchSize: Integer, flattened: Boolean, resultName: String,
+                       startLine: Option[Int], endLine: Option[Int]) extends Actor with ActorLogging {
+    case class ReadLinePacket()
+
+    var batch = collection.mutable.Queue[Array[String]]()
+    var headers: Option[List[String]] = _
     var lineOffset = 0
-    
+    var reader: CSVReader = _
+
     def receive() = {
         case ip: InitPacket => {
             // Open CSV file for reading
-            val reader = new CSVReader(tuktu.api.file.genericReader(fileName)(Codec(encoding)), separator, quote, escape)
+            reader = new CSVReader(tuktu.api.file.genericReader(fileName)(Codec(encoding)), separator, quote, escape)
             // See if we need to fetch headers
             headers = {
                 if (hasHeaders) Some(reader.readNext.toList)
                 else {
-                    if (givenHeaders != List()) Some(givenHeaders)
+                    if (givenHeaders.nonEmpty) Some(givenHeaders)
                     else None
                 }
             }
+            // Drop first startLine lines
+            while (lineOffset < startLine.getOrElse(0) && reader.readNext != null) lineOffset += 1
+
             // Start processing
-            self ! new CSVReadPacket(reader)
+            self ! new ReadLinePacket
         }
-        case sp: CSVStopPacket => {
-            // Send last batch
-            val data = (for (item <- batch) yield {
-                headers match {
-                    case Some(hdrs) => flattened match {
-                        case false => Map(resultName -> hdrs.zip(item).toMap)
-                        case true => hdrs.zip(item).toMap
-                    }
-                    case None => Map(resultName -> item)
-                }
-            }).toList
-            
-            // Send data
-            sender ! new DataPacket(data)
-            
-            // Clear batch
-            batch.clear
-                    
-            // Close CSV reader, kill parent and self
-            sp.reader.close
-            parentActor ! new StopPacket
-            self ! PoisonPill
-        }
-        case pkt: CSVReadPacket => pkt.reader.readNext match {
-            case null => self ! new CSVStopPacket(pkt.reader) // EOF, stop processing
-            case line: Array[String] => {
-                // Check if we need to send
-                val toSend = {
-                    (startLine match {
-                        case Some(sl) => lineOffset >= sl
-                        case None => true
-                    }) && (endLine match {
-                        case Some(el) => lineOffset <= el
-                        case None => true
-                    })
-                }
-                
-                if (toSend) {
-                    // Add this to our batch
-                    batch += {
-                        headers match {
-                            case Some(hdrs) => flattened match {
-                                case false => Map(resultName -> hdrs.zip(line).toMap)
-                                case true => hdrs.zip(line).toMap
-                            }
-                            case None => Map(resultName -> line.toList)
+        case sp: StopPacket => {
+            if (batch.nonEmpty) {
+                // Send last batch
+                val data = (for (item <- batch) yield {
+                    headers match {
+                        case Some(hdrs) => flattened match {
+                            case false => Map(resultName -> hdrs.zip(item).toMap)
+                            case true  => hdrs.zip(item).toMap
                         }
+                        case None => Map(resultName -> item)
                     }
-                    
+                }).toList
+
+                // Send data
+                sender ! new DataPacket(data)
+
+                // Clear batch
+                batch.clear
+            }
+
+            // Close CSV reader, kill parent and self
+            reader.close
+            parentActor ! sp
+        }
+        case pkt: ReadLinePacket => reader.readNext match {
+            case null => self ! new StopPacket // EOF, stop processing
+            case line: Array[String] => {
+                // Have we reached endLine yet or not
+                if (endLine.map(endLine => lineOffset <= endLine).getOrElse(true)) {
+                    // Add line to our batch
+                    batch += line
+
                     // Flush if we have to
                     if (batch.size == batchSize) {
+                        // Send it back
+                        val data = (for (item <- batch) yield {
+                            headers match {
+                                case Some(hdrs) => flattened match {
+                                    case false => Map(resultName -> hdrs.zip(item).toMap)
+                                    case true  => hdrs.zip(item).toMap
+                                }
+                                case None => Map(resultName -> item.toList)
+                            }
+                        }).toList
+
                         // Send data
-                        parentActor ! batch.toList
-                        
+                        parentActor ! data
+
                         // Clear batch
                         batch.clear
                     }
-                    
+
                     // Continue with next line
+                    lineOffset += 1
                     self ! pkt
-                }
-                else
+                } else
                     // Stop reading
-                    self ! new CSVStopPacket(pkt.reader)
+                    self ! new StopPacket
             }
         }
     }
@@ -124,8 +107,7 @@ class BatchedCsvReader(parentActor: ActorRef, fileName: String, encoding: String
 
 class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var csvGenActor: ActorRef = _
-    var headers: Option[List[String]] = null
-    
+
     override def receive() = {
         case config: JsValue => {
             // Get filename
@@ -141,60 +123,64 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val endLine = (config \ "end_line").asOpt[Int]
             val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(1000)
             val batched = (config \ "batched").asOpt[Boolean].getOrElse(false)
-            
+
             if (batched) {
                 // Batched uses batching actor
-                csvGenActor = Akka.system.actorOf(Props(classOf[BatchedCsvReader], self, fileName, encoding, hasHeaders, headersGiven,
-                        separator, quote, escape, batchSize, flattened, resultName, startLine, endLine))
-                csvGenActor ! new InitPacket()
-            }
-            else {
+                csvGenActor = Akka.system.actorOf(Props(classOf[BatchedCSVReader], self, fileName, encoding, hasHeaders, headersGiven,
+                    separator, quote, escape, batchSize, flattened, resultName, startLine, endLine))
+                csvGenActor ! new InitPacket
+            } else {
                 // Use Iteratee lib for proper back pressure handling
-                lazy val reader =  new CSVReader(tuktu.api.file.genericReader(fileName)(Codec(encoding)), separator, quote, escape)
+                val reader = new CSVReader(tuktu.api.file.genericReader(fileName)(Codec(encoding)), separator, quote, escape)
                 // Headers
-                var headers: Option[List[String]] = None
-     
-                val fileStream : Enumerator[Map[String, Any]] = Enumerator.generateM[Map[String, Any]] {
-                    scala.concurrent.Future {
-                        val line: Array[String] = reader.readNext
-                        
-                        // Set headers if we need to
-                        if (headers == null) {
-                            headers = {
-                                if (hasHeaders) Some(line.toList)
-                                else {
-                                    if (headersGiven != List()) Some(headersGiven)
-                                    else None
-                                }
-                            }
-                        }
-                        
-                        // Turn the array of unnamed columns into a named map, if required
-                        val res = headers match {
-                            case Some(hdrs) => flattened match {
-                                case false => Map(resultName -> hdrs.zip(line).toMap)
-                                case true => hdrs.zip(line).toMap
-                            }
-                            case None => Map(resultName -> line.toList)
-                        }
-                        Option(res)
+                val headers: Option[List[String]] = {
+                    if (hasHeaders) Some(reader.readNext.toList)
+                    else {
+                        if (headersGiven.nonEmpty) Some(headersGiven)
+                        else None
                     }
                 }
-                
+
+                val fileStream: Enumerator[Map[String, Any]] = Enumerator.generateM[Map[String, Any]] {
+                    Future {
+                        // Turn the array of unnamed columns into a named map, if required
+                        Option(reader.readNext).map(line => {
+                            headers match {
+                                case Some(hdrs) => flattened match {
+                                    case false => Map(resultName -> hdrs.zip(line).toMap)
+                                    case true  => hdrs.zip(line).toMap
+                                }
+                                case None => Map(resultName -> line.toList)
+                            }
+                        })
+                    }
+                }.andThen(Enumerator.eof)
+
+                // onEOF close the reader and send StopPacket
+                val onEOF = Enumeratee.onEOF[Map[String, Any]](() => {
+                    reader.close
+                    self ! new StopPacket
+                })
+                // If endLine is defined, take at most endLine - startLine + 1 lines
+                val endEnumeratee = endLine match {
+                    case None          => onEOF
+                    case Some(endLine) => Enumeratee.take[Map[String, Any]](endLine - math.max(startLine.getOrElse(0), 0) + 1) compose onEOF
+                }
+                // If startLine is positive, drop that many lines
+                val startEnumeratee = startLine match {
+                    case None            => endEnumeratee
+                    case Some(startLine) => Enumeratee.drop[Map[String, Any]](startLine) compose endEnumeratee
+                }
+
                 // Stream the whole thing together now
-                fileStream |>> ({
-                    val enum: Enumeratee[Map[String, Any], Map[String, Any]] =
-                        if (hasHeaders) (Enumeratee.drop(1) compose Enumeratee.onEOF(() => reader.close))
-                        else Enumeratee.onEOF(() => reader.close)
-                    enum
-                }) &>> Iteratee.foreach[Map[String, Any]](data => channel.push(new DataPacket(List(data))))
+                fileStream |>> startEnumeratee &>> Iteratee.foreach[Map[String, Any]](data => channel.push(new DataPacket(List(data))))
             }
         }
         case sp: StopPacket => {
-            csvGenActor ! PoisonPill
+            Option(csvGenActor) collect { case actor => actor ! PoisonPill }
             cleanup
         }
-        case ip: InitPacket => setup
+        case ip: InitPacket               => setup
         case data: List[Map[String, Any]] => channel.push(new DataPacket(data))
     }
 }

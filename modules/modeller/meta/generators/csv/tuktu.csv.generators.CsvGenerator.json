@@ -110,7 +110,7 @@
                 },
                 {
                     "name": "start_line",
-                    "description": "The line number (starting with 0) to start reading from. From beginning if not entered.",
+                    "description": "The line number (starting with 0) to start reading from. From beginning if not entered. Does not include the header.",
                     "type": "int",
                     "required": false
                 },
