@@ -74,6 +74,13 @@
 					"required": false
 				},
 				{
+					"name": "batched",
+					"description": "Will DataPackets contain 'batch size' datums each, or will 'batch size' datums be read from the file, but then pushed in separate DataPackets.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
 					"name": "batch_size",
 					"description": "While lines are processed one by one, the buffered reader takes them in batches. Tweak for best performance.",
 					"type": "int",
