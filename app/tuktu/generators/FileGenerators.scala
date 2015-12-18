@@ -3,7 +3,6 @@ package tuktu.generators
 import java.io._
 import java.nio.file._
 import akka.actor._
-import akka.actor.Props
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
@@ -15,42 +14,42 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
 
-case class LinePacket(reader: BufferedReader, line: Int)
-case class LineStopPacket(reader: BufferedReader)
-
 /**
  * Actor that reads file immutably and non-blocking
  */
 class LineReader(parentActor: ActorRef, resultName: String, fileName: String, encoding: String, batchSize: Int, startLine: Int, endLine: Option[Int]) extends Actor with ActorLogging {
-    var headers: Option[List[String]] = None
+    case class ReadLinePacket()
+
     var batch = collection.mutable.Queue.empty[Map[String, Any]]
+    var reader: BufferedReader = _
+    var lineOffset = 0
 
     def receive() = {
         case ip: InitPacket => {
             // Open the file in reader
-            val reader = file.genericReader(fileName)(Codec.apply(encoding))
+            reader = file.genericReader(fileName)(Codec(encoding))
+
+            // Drop first startLine lines
+            while (lineOffset < startLine && reader.readLine != null) lineOffset += 1
 
             // Start processing
-            self ! new LinePacket(reader, 0)
+            self ! new ReadLinePacket
         }
-        case lsp: LineStopPacket => {
-            // Close reader and stop
-            lsp.reader.close
-            parentActor ! new StopPacket
-            self ! PoisonPill
+        case sp: StopPacket => {
+            // Close reader, send back the rest, and stop
+            reader.close
+            if (batch.nonEmpty) {
+                parentActor ! batch.toList
+                batch.clear
+            }
+            parentActor ! sp
         }
-        case pkt: LinePacket => pkt.reader.readLine match {
-            case null => self ! new LineStopPacket(pkt.reader) // EOF, stop processing
+        case pkt: ReadLinePacket => reader.readLine match {
+            case null => self ! new StopPacket // EOF, stop processing
             case line: String => {
-                // Send back to parent for pushing into channel
-                val toSend = if (pkt.line >= startLine) endLine match {
-                    case None => true
-                    case Some(el) => if (pkt.line <= el) true else false
-                } else false
-
-                // Buffer if we need to
-                if (toSend) {
-                    // Buffer it
+                // Have we reached endLine yet or not
+                if (endLine.map(endLine => lineOffset <= endLine).getOrElse(true)) {
+                    // Buffer line
                     batch += Map(resultName -> line)
                     // Send only if required
                     if (batch.size == batchSize) {
@@ -59,9 +58,12 @@ class LineReader(parentActor: ActorRef, resultName: String, fileName: String, en
                     }
 
                     // Continue with next line
-                    self ! new LinePacket(pkt.reader, pkt.line + 1)
+                    lineOffset += 1
+                    self ! pkt
+                } else {
+                    // We are past the endLine, stop
+                    self ! new StopPacket
                 }
-                else self ! new LineStopPacket(pkt.reader)
             }
         }
     }
@@ -72,7 +74,7 @@ class LineReader(parentActor: ActorRef, resultName: String, fileName: String, en
  */
 class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var lineGenActor: ActorRef = _
-    
+
     override def receive() = {
         case config: JsValue => {
             // Get filename
@@ -86,27 +88,38 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             if (batched) {
                 // Batching is done using the actor
                 lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, resultName, fileName, encoding, batchSize, startLine, endLine))
-                lineGenActor ! new InitPacket()
-            }
-            else {
+                lineGenActor ! new InitPacket
+            } else {
                 // Use Iteratee lib for proper back pressure handling
-                lazy val bufferedReader =  file.genericReader(fileName)(Codec.apply(encoding))
-     
-                val fileStream : Enumerator[String] = Enumerator.generateM[String] {
-                    scala.concurrent.Future{
-                        val line: String = bufferedReader.readLine()
-                        Option(line)
-                    }
+                lazy val bufferedReader = file.genericReader(fileName)(Codec(encoding))
+
+                val fileStream: Enumerator[String] = Enumerator.generateM[String] {
+                    Future { Option(bufferedReader.readLine) }
+                }.andThen(Enumerator.eof)
+
+                // onEOF close the reader and send StopPacket
+                val onEOF = Enumeratee.onEOF[String](() => {
+                    bufferedReader.close
+                    self ! new StopPacket
+                })
+                // If endLine is defined, take at most endLine - startLine + 1 lines
+                val endEnumeratee = endLine match {
+                    case None          => onEOF
+                    case Some(endLine) => Enumeratee.take[String](endLine - math.max(startLine, 0) + 1) compose onEOF
                 }
-                
-                fileStream |>> Enumeratee.onEOF(() => bufferedReader.close) &>> Iteratee.foreach[String](line => channel.push(new DataPacket(List(Map(resultName -> line)))))
+                // If startLine is positive, drop that many lines
+                val startEnumeratee =
+                    if (startLine <= 0) endEnumeratee
+                    else Enumeratee.drop[String](startLine) compose endEnumeratee
+
+                fileStream |>> startEnumeratee &>> Iteratee.foreach[String](line => channel.push(new DataPacket(List(Map(resultName -> line)))))
             }
         }
         case sp: StopPacket => {
-            lineGenActor ! PoisonPill
+            Option(lineGenActor) collect { case actor => actor ! PoisonPill }
             cleanup
         }
-        case ip: InitPacket => setup
+        case ip: InitPacket               => setup
         case data: List[Map[String, Any]] => channel.push(new DataPacket(data))
     }
 }
@@ -132,23 +145,20 @@ class FileDirectoryReader(parentActor: ActorRef, pathMatcher: PathMatcher, recur
                         self ! new PathsPacket(path :: pp.paths, pp.iterator)
                     else
                         self ! pp
-                }
-                else {
+                } else {
                     // If we have a regular file that matches our pathMatcher, send it to parentActor
                     if (Files.isRegularFile(path) && pathMatcher.matches(path))
                         parentActor ! path
                     self ! pp
                 }
-            }
-            else {
+            } else {
                 // Iterator is empty
                 pp.paths match {
                     case path :: paths => {
                         if (Files.isDirectory(path)) {
                             // Instantiate iterator with new directory
                             self ! new PathsPacket(paths, Files.newDirectoryStream(path).iterator)
-                        }
-                        else {
+                        } else {
                             // Send regular file to parentActor if it matches our pathMatcher
                             if (Files.isRegularFile(path) && pathMatcher.matches(path))
                                 parentActor ! path
@@ -184,6 +194,6 @@ class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
         }
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
-        case path: Path => channel.push(new DataPacket(List(Map(resultName -> path))))
+        case path: Path     => channel.push(new DataPacket(List(Map(resultName -> path))))
     }
 }
