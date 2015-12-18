@@ -141,19 +141,8 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                     }
                 }
 
-                val fileStream: Enumerator[Map[String, Any]] = Enumerator.generateM[Map[String, Any]] {
-                    Future {
-                        // Turn the array of unnamed columns into a named map, if required
-                        Option(reader.readNext).map(line => {
-                            headers match {
-                                case Some(hdrs) => flattened match {
-                                    case false => Map(resultName -> hdrs.zip(line).toMap)
-                                    case true  => hdrs.zip(line).toMap
-                                }
-                                case None => Map(resultName -> line.toList)
-                            }
-                        })
-                    }
+                val fileStream: Enumerator[Array[String]] = Enumerator.generateM[Array[String]] {
+                    Future { Option(reader.readNext) }
                 }.andThen(Enumerator.eof)
 
                 // onEOF close the reader and send StopPacket
@@ -161,15 +150,25 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                     reader.close
                     self ! new StopPacket
                 })
+                // Zip the lines with the header
+                val zipEnumeratee: Enumeratee[Array[String], Map[String, Any]] = Enumeratee.mapM[Array[String]](line => Future {
+                    headers match {
+                        case Some(hdrs) => flattened match {
+                            case false => Map(resultName -> hdrs.zip(line).toMap)
+                            case true  => hdrs.zip(line).toMap
+                        }
+                        case None => Map(resultName -> line.toList)
+                    }
+                })
                 // If endLine is defined, take at most endLine - startLine + 1 lines
                 val endEnumeratee = endLine match {
-                    case None          => onEOF
-                    case Some(endLine) => Enumeratee.take[Map[String, Any]](endLine - math.max(startLine.getOrElse(0), 0) + 1) compose onEOF
+                    case None          => zipEnumeratee compose onEOF
+                    case Some(endLine) => Enumeratee.take[Array[String]](endLine - math.max(startLine.getOrElse(0), 0) + 1) compose zipEnumeratee compose onEOF
                 }
                 // If startLine is positive, drop that many lines
                 val startEnumeratee = startLine match {
                     case None            => endEnumeratee
-                    case Some(startLine) => Enumeratee.drop[Map[String, Any]](startLine) compose endEnumeratee
+                    case Some(startLine) => Enumeratee.drop[Array[String]](startLine) compose endEnumeratee
                 }
 
                 // Stream the whole thing together now
