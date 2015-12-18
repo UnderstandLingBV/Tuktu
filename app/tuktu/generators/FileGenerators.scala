@@ -22,12 +22,12 @@ case class LineStopPacket(reader: BufferedReader)
 class LineReader(parentActor: ActorRef, resultName: String, fileName: String, encoding: String, batchSize: Int, startLine: Int, endLine: Option[Int]) extends Actor with ActorLogging {
     var headers: Option[List[String]] = None
     var batch = collection.mutable.Queue.empty[Map[String, Any]]
-    
+
     def receive() = {
         case ip: InitPacket => {
-            // Open the file in reader            
+            // Open the file in reader
             val reader = file.genericReader(fileName)(Codec.apply(encoding))
-            
+
             // Start processing
             self ! new LinePacket(reader, 0)
         }
@@ -45,15 +45,17 @@ class LineReader(parentActor: ActorRef, resultName: String, fileName: String, en
                     case None => true
                     case Some(el) => if (pkt.line <= el) true else false
                 } else false
-                
+
                 // Buffer if we need to
                 if (toSend) {
                     // Buffer it
                     batch += Map(resultName -> line)
                     // Send only if required
-                    if (batch.size == batchSize)
+                    if (batch.size == batchSize) {
                         parentActor ! batch.toList
-                    
+                        batch.clear
+                    }
+
                     // Continue with next line
                     self ! new LinePacket(pkt.reader, pkt.line + 1)
                 }
@@ -78,7 +80,7 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             val endLine = (config \ "end_line").asOpt[Int]
             val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(1000)
             batched = (config \ "batched").asOpt[Boolean].getOrElse(false)
-            
+
             // Create actor and kickstart
             lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, resultName, fileName, encoding, batchSize, startLine, endLine))
             lineGenActor ! new InitPacket()
