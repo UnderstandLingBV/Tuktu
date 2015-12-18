@@ -13,7 +13,7 @@
       </rollingPolicy>
       <encoder>
          <pattern>%date ---- [%level] -- %X{akkaSource} %n%message%n%xException%n</pattern>
-         <immediateFlush>false</immediateFlush>
+         <immediateFlush>true</immediateFlush>
       </encoder>
    </appender>
    
@@ -36,7 +36,7 @@
       </rollingPolicy>
       <encoder>
          <pattern>%date ---- %X{akkaSource} %n%message%n%xException%n</pattern>
-         <immediateFlush>false</immediateFlush>
+         <immediateFlush>true</immediateFlush>
       </encoder>
    </appender>
    
@@ -59,7 +59,7 @@
       </rollingPolicy>
       <encoder>
          <pattern>%date ---- %X{akkaSource} %n%message%n%xException%n</pattern>
-         <immediateFlush>false</immediateFlush>
+         <immediateFlush>true</immediateFlush>
       </encoder>
    </appender>
    
@@ -82,7 +82,7 @@
       </rollingPolicy>
       <encoder>
          <pattern>%date ---- %X{akkaSource} %n%message%n%xException%n</pattern>
-         <immediateFlush>false</immediateFlush>
+         <immediateFlush>true</immediateFlush>
       </encoder>
    </appender>
    
