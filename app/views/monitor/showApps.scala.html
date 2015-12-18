@@ -234,9 +234,11 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default pull-right" data-dismiss="modal">Close</button>
-                        <form class="pull-right" action="@routes.Monitor.clear(appName, runningPage, finishedPage)" method="POST" style="margin: 0 10px;">
-                            <input class="btn btn-primary" type="submit" value="Clear">
-                        </form>
+                        @if(appProps.endTime != None) {
+                            <form class="pull-right" action="@routes.Monitor.clear(appName, runningPage, finishedPage)" method="POST" style="margin: 0 10px;">
+                                <input class="btn btn-danger" type="submit" value="Remove from monitor">
+                            </form>
+                        }
                     </div>
                 </div>
             </div>
