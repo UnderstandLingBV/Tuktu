@@ -1,5 +1,6 @@
 package tuktu.csv.generators
 
+import scala.io.Codec
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -15,7 +16,8 @@ import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.InitPacket
 import tuktu.api.StopPacket
-import scala.io.Codec
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class CSVReadPacket(
         reader: CSVReader
@@ -24,8 +26,13 @@ case class CSVStopPacket(
         reader: CSVReader
 )
 
-class CsvReader(parentActor: ActorRef, fileName: String, encoding: String, hasHeaders: Boolean, givenHeaders: List[String],
-        separator: Char, quote: Char, escape: Char, startLine: Option[Int], endLine: Option[Int]) extends Actor with ActorLogging {
+/**
+ * Reads a CSV file in batches of lines
+ */
+class BatchedCsvReader(parentActor: ActorRef, fileName: String, encoding: String, hasHeaders: Boolean, givenHeaders: List[String],
+        separator: Char, quote: Char, escape: Char, batchSize: Integer, flattened: Boolean, resultName: String,
+        startLine: Option[Int], endLine: Option[Int]) extends Actor with ActorLogging {
+    var batch = collection.mutable.Queue[Array[String]]()
     var headers: Option[List[String]] = None
     var lineOffset = 0
     
@@ -45,6 +52,23 @@ class CsvReader(parentActor: ActorRef, fileName: String, encoding: String, hasHe
             self ! new CSVReadPacket(reader)
         }
         case sp: CSVStopPacket => {
+            // Send last batch
+            val data = (for (item <- batch) yield {
+                headers match {
+                    case Some(hdrs) => flattened match {
+                        case false => Map(resultName -> hdrs.zip(item).toMap)
+                        case true => hdrs.zip(item).toMap
+                    }
+                    case None => Map(resultName -> item)
+                }
+            }).toList
+            
+            // Send data
+            sender ! new DataPacket(data)
+            
+            // Clear batch
+            batch.clear
+                    
             // Close CSV reader, kill parent and self
             sp.reader.close
             parentActor ! new StopPacket
@@ -53,6 +77,7 @@ class CsvReader(parentActor: ActorRef, fileName: String, encoding: String, hasHe
         case pkt: CSVReadPacket => pkt.reader.readNext match {
             case null => self ! new CSVStopPacket(pkt.reader) // EOF, stop processing
             case line: Array[String] => {
+                // Check if we need to send
                 val toSend = {
                     (startLine match {
                         case Some(sl) => lineOffset >= sl
@@ -62,38 +87,47 @@ class CsvReader(parentActor: ActorRef, fileName: String, encoding: String, hasHe
                         case None => true
                     })
                 }
-                // Send back to parent for pushing into channel
-                if (toSend)
-                    headers match {
-                        case Some(hdrs) => {
-                            parentActor ! hdrs.zip(line.toList).toMap
-                        }
-                        case None => parentActor ! line
+                
+                if (toSend) {
+                    // Add this to our batch
+                    batch += line
+                    
+                    // Flush if we have to
+                    if (batch.size == batchSize) {
+                        // Send it back
+                        val data = (for (item <- batch) yield {
+                            headers match {
+                                case Some(hdrs) => flattened match {
+                                    case false => Map(resultName -> hdrs.zip(item).toMap)
+                                    case true => hdrs.zip(item).toMap
+                                }
+                                case None => Map(resultName -> item.toList)
+                            }
+                        }).toList
+                        
+                        // Send data
+                        parentActor ! data
+                        
+                        // Clear batch
+                        batch.clear
                     }
-            
-                // Continue with next line
-                endLine match {
-                    case Some(el) => {
-                        // Check if we need to stop
-                        if (el > lineOffset)
-                            self ! new CSVStopPacket(pkt.reader)
-                        else {
-                            lineOffset = lineOffset + 1
-                            self ! pkt
-                        }
-                    }
-                    case None => {
-                        lineOffset = lineOffset + 1
-                        self ! pkt
-                    }
+                    
+                    // Continue with next line
+                    self ! pkt
                 }
+                else
+                    // Stop reading
+                    self ! new CSVStopPacket(pkt.reader)
             }
         }
     }
 }
 
 class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var csvGenActor: ActorRef = _
     private var flattened = false
+    private var batched = false
+    
     override def receive() = {
         case config: JsValue => {
             // Get filename
@@ -107,18 +141,24 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
             val startLine = (config \ "start_line").asOpt[Int]
             val endLine = (config \ "end_line").asOpt[Int]
+            val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(1000)
+            batched = (config \ "batched").asOpt[Boolean].getOrElse(false)
             
             // Create actor and kickstart
-            val csvGenActor = Akka.system.actorOf(Props(classOf[CsvReader], self, fileName, encoding, hasHeaders,
-                    headersGiven, separator, quote, escape, startLine, endLine))
+            csvGenActor = Akka.system.actorOf(Props(classOf[BatchedCsvReader], self, fileName, encoding, hasHeaders, headersGiven,
+                    separator, quote, escape, batchSize, flattened, resultName, startLine, endLine))
             csvGenActor ! new InitPacket()
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => {
+            csvGenActor ! PoisonPill
+            cleanup
+        }
         case ip: InitPacket => setup
-        case headerlessLine: Array[String] => channel.push(new DataPacket(List(Map(resultName -> headerlessLine.toList))))
-        case headerfullLine: Map[String, String] => flattened match {
-            case false => channel.push(new DataPacket(List(Map(resultName -> headerfullLine))))
-            case true => channel.push(new DataPacket(List(headerfullLine)))
+        case data: List[Map[String, Any]] => {
+            if (batched)
+                channel.push(new DataPacket(data))
+            else
+                data.foreach(datum => Future { channel.push(new DataPacket(List(datum))) })
         }
     }
 }

@@ -72,6 +72,13 @@
 					"description": "The end line to stop streaming on, inclusively. Streamed until end of file if omitted.",
 					"type": "int",
 					"required": false
+				},
+				{
+					"name": "batch_size",
+					"description": "While lines are processed one by one, the buffered reader takes them in batches. Tweak for best performance.",
+					"type": "int",
+					"default": 1000,
+					"required": false
 				}
 			]
 		}

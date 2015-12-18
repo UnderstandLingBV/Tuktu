@@ -10,6 +10,8 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsValue
 import tuktu.api._
 import scala.io.Codec
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class LinePacket(reader: BufferedReader, line: Int)
 case class LineStopPacket(reader: BufferedReader)
@@ -17,8 +19,9 @@ case class LineStopPacket(reader: BufferedReader)
 /**
  * Actor that reads file immutably and non-blocking
  */
-class LineReader(parentActor: ActorRef, fileName: String, encoding: String, startLine: Int, endLine: Option[Int]) extends Actor with ActorLogging {
+class LineReader(parentActor: ActorRef, resultName: String, fileName: String, encoding: String, batchSize: Int, startLine: Int, endLine: Option[Int]) extends Actor with ActorLogging {
     var headers: Option[List[String]] = None
+    var batch = collection.mutable.Queue.empty[Map[String, Any]]
     
     def receive() = {
         case ip: InitPacket => {
@@ -38,13 +41,23 @@ class LineReader(parentActor: ActorRef, fileName: String, encoding: String, star
             case null => self ! new LineStopPacket(pkt.reader) // EOF, stop processing
             case line: String => {
                 // Send back to parent for pushing into channel
-                if (pkt.line >= startLine) endLine match {
-                    case None => parentActor ! line
-                    case Some(el) => if (pkt.line <= el) parentActor ! line
+                val toSend = if (pkt.line >= startLine) endLine match {
+                    case None => true
+                    case Some(el) => if (pkt.line <= el) true else false
+                } else false
+                
+                // Buffer if we need to
+                if (toSend) {
+                    // Buffer it
+                    batch += Map(resultName -> line)
+                    // Send only if required
+                    if (batch.size == batchSize)
+                        parentActor ! batch.toList
+                    
+                    // Continue with next line
+                    self ! new LinePacket(pkt.reader, pkt.line + 1)
                 }
-
-                // Continue with next line
-                self ! new LinePacket(pkt.reader, pkt.line + 1)
+                else self ! new LineStopPacket(pkt.reader)
             }
         }
     }
@@ -54,6 +67,8 @@ class LineReader(parentActor: ActorRef, fileName: String, encoding: String, star
  * Streams a file line by line
  */
 class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var lineGenActor: ActorRef = _
+    private var batched = false
     override def receive() = {
         case config: JsValue => {
             // Get filename
@@ -61,18 +76,26 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             val encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
             val startLine = (config \ "start_line").asOpt[Int].getOrElse(0)
             val endLine = (config \ "end_line").asOpt[Int]
+            val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(1000)
+            batched = (config \ "batched").asOpt[Boolean].getOrElse(false)
             
             // Create actor and kickstart
-            val lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, fileName, encoding, startLine, endLine))
+            lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, resultName, fileName, encoding, batchSize, startLine, endLine))
             lineGenActor ! new InitPacket()
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => {
+            lineGenActor ! PoisonPill
+            cleanup
+        }
         case ip: InitPacket => setup
-        case line: String => channel.push(new DataPacket(List(Map(resultName -> line))))
+        case data: List[Map[String, Any]] => {
+            if (batched)
+                channel.push(new DataPacket(data))
+            else
+                data.foreach(datum => channel.push(new DataPacket(List(datum))))
+        }
     }
 }
-
-
 
 case class PathsPacket(paths: List[Path], iterator: java.util.Iterator[Path])
 

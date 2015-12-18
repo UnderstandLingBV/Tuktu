@@ -119,7 +119,21 @@
                     "description": "The last line number to read. Until the end of the file if not entered.",
                     "type": "int",
                     "required": false
-                }
+                },
+				{
+					"name": "batch_size",
+					"description": "While lines are processed one by one, the buffered reader takes them in batches. Tweak for best performance.",
+					"type": "int",
+					"default": 1000,
+					"required": false
+				},
+				{
+					"name": "batched",
+					"description": "Whether or not to send the buffered lines all at once or line by line.",
+					"type": "boolean",
+					"default": false,
+					"required": false
+				}
 			]
 		}
 	]
