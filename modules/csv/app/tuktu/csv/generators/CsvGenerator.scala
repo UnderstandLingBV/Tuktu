@@ -151,33 +151,31 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             else {
                 // Use Iteratee lib for proper back pressure handling
                 lazy val reader =  new CSVReader(tuktu.api.file.genericReader(fileName)(Codec(encoding)), separator, quote, escape)
-                // Headers
-                var headers: Option[List[String]] = None
-     
+                
+                // Set the headers
+                val headers = { 
+                  if (hasHeaders) { 
+                    Some(reader.readNext.toList) 
+                  }
+                  else {
+                    if (headersGiven != List()) Some(headersGiven)
+                    else None                  
+                  }
+                }
+                     
+                // Setup a fileStream to iterate over
                 val fileStream : Enumerator[Map[String, Any]] = Enumerator.generateM[Map[String, Any]] {
-                    scala.concurrent.Future {
+                    Future {
                         val line: Array[String] = reader.readNext
                         
-                        // Set headers if we need to
-                        if (headers == null) {
-                            headers = {
-                                if (hasHeaders) Some(line.toList)
-                                else {
-                                    if (headersGiven != List()) Some(headersGiven)
-                                    else None
-                                }
-                            }
-                        }
-                        
                         // Turn the array of unnamed columns into a named map, if required
-                        val res = headers match {
+                        Option(headers match {
                             case Some(hdrs) => flattened match {
                                 case false => Map(resultName -> hdrs.zip(line).toMap)
                                 case true => hdrs.zip(line).toMap
                             }
                             case None => Map(resultName -> line.toList)
-                        }
-                        Option(res)
+                        })
                     }
                 }
                 
