@@ -12,6 +12,8 @@ import tuktu.api._
 import scala.io.Codec
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.Iteratee
 
 case class LinePacket(reader: BufferedReader, line: Int)
 case class LineStopPacket(reader: BufferedReader)
@@ -70,7 +72,7 @@ class LineReader(parentActor: ActorRef, resultName: String, fileName: String, en
  */
 class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var lineGenActor: ActorRef = _
-    private var batched = false
+    
     override def receive() = {
         case config: JsValue => {
             // Get filename
@@ -79,23 +81,33 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             val startLine = (config \ "start_line").asOpt[Int].getOrElse(0)
             val endLine = (config \ "end_line").asOpt[Int]
             val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(1000)
-            batched = (config \ "batched").asOpt[Boolean].getOrElse(false)
+            val batched = (config \ "batched").asOpt[Boolean].getOrElse(false)
 
-            // Create actor and kickstart
-            lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, resultName, fileName, encoding, batchSize, startLine, endLine))
-            lineGenActor ! new InitPacket()
+            if (batched) {
+                // Batching is done using the actor
+                lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, resultName, fileName, encoding, batchSize, startLine, endLine))
+                lineGenActor ! new InitPacket()
+            }
+            else {
+                // Use Iteratee lib for proper back pressure handling
+                lazy val bufferedReader =  file.genericReader(fileName)(Codec.apply(encoding))
+     
+                val fileStream : Enumerator[String] = Enumerator.generateM[String] {
+                    scala.concurrent.Future{
+                        val line: String = bufferedReader.readLine()
+                        Option(line)
+                    }
+                }
+                
+                fileStream |>> Enumeratee.onEOF(() => bufferedReader.close) &>> Iteratee.foreach[String](line => channel.push(new DataPacket(List(Map(resultName -> line)))))
+            }
         }
         case sp: StopPacket => {
             lineGenActor ! PoisonPill
             cleanup
         }
         case ip: InitPacket => setup
-        case data: List[Map[String, Any]] => {
-            if (batched)
-                channel.push(new DataPacket(data))
-            else
-                data.foreach(datum => channel.push(new DataPacket(List(datum))))
-        }
+        case data: List[Map[String, Any]] => channel.push(new DataPacket(data))
     }
 }
 
