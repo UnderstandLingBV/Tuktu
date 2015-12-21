@@ -19,7 +19,7 @@ class BatchedCSVReader(parentActor: ActorRef, fileName: String, encoding: String
                        startLine: Option[Int], endLine: Option[Int]) extends Actor with ActorLogging {
     case class ReadLinePacket()
 
-    var batch = collection.mutable.Queue[Array[String]]()
+    var batch = collection.mutable.Queue[Map[String, Any]]()
     var headers: Option[List[String]] = _
     var lineOffset = 0
     var reader: CSVReader = _
@@ -44,19 +44,8 @@ class BatchedCSVReader(parentActor: ActorRef, fileName: String, encoding: String
         }
         case sp: StopPacket => {
             if (batch.nonEmpty) {
-                // Send last batch
-                val data = (for (item <- batch) yield {
-                    headers match {
-                        case Some(hdrs) => flattened match {
-                            case false => Map(resultName -> hdrs.zip(item).toMap)
-                            case true  => hdrs.zip(item).toMap
-                        }
-                        case None => Map(resultName -> item)
-                    }
-                }).toList
-
                 // Send data
-                sender ! new DataPacket(data)
+                parentActor ! batch.toList
 
                 // Clear batch
                 batch.clear
@@ -72,23 +61,20 @@ class BatchedCSVReader(parentActor: ActorRef, fileName: String, encoding: String
                 // Have we reached endLine yet or not
                 if (endLine.map(endLine => lineOffset <= endLine).getOrElse(true)) {
                     // Add line to our batch
-                    batch += line
+                    batch += {
+                        headers match {
+                            case Some(hdrs) => flattened match {
+                                case false => Map(resultName -> hdrs.zip(line).toMap)
+                                case true  => hdrs.zip(line).toMap
+                            }
+                            case None => Map(resultName -> line.toList)
+                        }
+                    }
 
                     // Flush if we have to
                     if (batch.size == batchSize) {
-                        // Send it back
-                        val data = (for (item <- batch) yield {
-                            headers match {
-                                case Some(hdrs) => flattened match {
-                                    case false => Map(resultName -> hdrs.zip(item).toMap)
-                                    case true  => hdrs.zip(item).toMap
-                                }
-                                case None => Map(resultName -> item.toList)
-                            }
-                        }).toList
-
                         // Send data
-                        parentActor ! data
+                        parentActor ! batch.toList
 
                         // Clear batch
                         batch.clear
