@@ -89,7 +89,7 @@ class GroupedBufferActor(remoteGenerator: ActorRef, fields: List[String]) extend
 /**
  * Buffers datapackets until we have a specific amount of them
  */
-class SizeBufferProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+class SizeBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
     var maxSize: Int = _
 
     override def initialize(config: JsObject) {
