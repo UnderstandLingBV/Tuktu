@@ -63,11 +63,11 @@
 					"default": true
 				},
 				{
-				    "name": "ScramSha1",
-				    "description" : "Use the ScramSha1 authentication method (instead of CrAuth)?",
-				    "type": "boolean",
-				    "required": true,
-				    "default": true
+					"name": "ScramSha1",
+					"description" : "Use the ScramSha1 authentication method (instead of CrAuth)?",
+					"type": "boolean",
+					"required": true,
+					"default": true
 				},
 				{
 					"name": "fields",

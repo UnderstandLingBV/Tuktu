@@ -1,75 +1,75 @@
 {
-    "name": "ARIMA Train Processor",
-    "description": "Trains a model using ARIMA (Autoregressive Integrated Moving Average) using Conditional Sum of Squares",
-    "class": "tuktu.ml.processors.timeseries.ARIMATrainProcessor",
-    "parameters": [
-        {
-            "name": "id",
-            "type": "string",
-            "required": true
-        },
-        {
-            "name": "result",
-            "type": "string",
-            "required": true
-        },
-        {
-            "name": "config",
-            "type": "object",
-            "required": true,
-            "parameters": [
-                {
-                    "name": "model_name",
-                    "description": "Name of the model to be trained. If a model with that name is already available, that model will be used for additional training. Otherwise a new model with this name will be instantiated.",
-                    "type": "string",
-                    "required": true
-                },
-                {
-                    "name": "destroy_on_eof",
-                    "description": "Will this model be cleaned up once EOF is reached.",
-                    "type": "boolean",
-                    "required": false,
-                    "default": true
-                },
-                {
-                    "name": "wait_for_store",
-                    "description": "Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.",
-                    "type": "boolean",
-                    "required": false,
-                    "default": false
-                },
-                {
-                    "name": "p",
-                    "type": "int",
-                    "required": true,
-                    "description": "p-parameter, the order of the autoregressive model."
-                },
-                {
-                    "name": "d",
-                    "type": "int",
-                    "required": true,
-                    "description": "d-parameter, the degree of differencing."
-                },
-                {
-                    "name": "q",
-                    "type": "int",
-                    "required": true,
-                    "description": "q-parameter, the order of the moving-average model."
-                },
-                {
-                    "name": "data_field",
-                    "type": "string",
-                    "required": true,
-                    "description": "The field the data resides in. Data must be of type Seq[Double]."
-                },
-                {
-                    "name": "include_intercept",
-                    "type": "boolean",
-                    "required": false,
-                    "description": "Whether or not to include the intercept.",
-                    "default": true
-                }
-            ]
-        }
-    ]
+	"name": "ARIMA Train Processor",
+	"description": "Trains a model using ARIMA (Autoregressive Integrated Moving Average) using Conditional Sum of Squares",
+	"class": "tuktu.ml.processors.timeseries.ARIMATrainProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be trained. If a model with that name is already available, that model will be used for additional training. Otherwise a new model with this name will be instantiated.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "wait_for_store",
+					"description": "Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "p",
+					"type": "int",
+					"required": true,
+					"description": "p-parameter, the order of the autoregressive model."
+				},
+				{
+					"name": "d",
+					"type": "int",
+					"required": true,
+					"description": "d-parameter, the degree of differencing."
+				},
+				{
+					"name": "q",
+					"type": "int",
+					"required": true,
+					"description": "q-parameter, the order of the moving-average model."
+				},
+				{
+					"name": "data_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the data resides in. Data must be of type Seq[Double]."
+				},
+				{
+					"name": "include_intercept",
+					"type": "boolean",
+					"required": false,
+					"description": "Whether or not to include the intercept.",
+					"default": true
+				}
+			]
+		}
+	]
 }
