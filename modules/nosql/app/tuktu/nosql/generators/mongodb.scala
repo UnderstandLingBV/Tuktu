@@ -32,52 +32,52 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val hosts = (config \ "hosts").as[List[String]]
             val database = (config \ "database").as[String]
             val coll = (config \ "collection").as[String]
-            
+
             // Get credentials
             val user = (config \ "user").asOpt[String]
             val pwd = (config \ "password").asOpt[String].getOrElse("")
-            val admin = (config \ "admin").as[Boolean]
-            val scramsha1 = (config \ "ScramSha1").as[Boolean]
+            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
+            val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
             // Set up connection
             val settings = MongoSettings(hosts, database, coll)
-            val collection = user match{
-              case None => MongoCollectionPool.getCollection(settings)
-              case Some( usr ) => {
-                val credentials = admin match
-                {
-                  case true => Authenticate( "admin", usr, pwd )
-                  case false => Authenticate( database, usr, pwd )
+            val collection = user match {
+                case None => MongoCollectionPool.getCollection(settings)
+                case Some(usr) => {
+                    val credentials = admin match {
+                        case true  => Authenticate("admin", usr, pwd)
+                        case false => Authenticate(database, usr, pwd)
+                    }
+                    MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
                 }
-                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
-              }
             }
-              
 
             // Get query and filter
             val query = (config \ "query").as[JsObject]
-            val filter = (config \ "filter").asOpt[JsObject].getOrElse( Json.obj() )
-            val sort = (config \ "sort").asOpt[JsObject].getOrElse( Json.obj() )
-            
+            val filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
+            val sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
+
             // Batch all the results before pushing it on the channel
             val batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
             val limit = (config \ "limit").asOpt[Int]
             val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(50)
-            
+
             val resultFuture = {
                 // Get data based on query and filter
                 val resultData = limit match {
-                    case Some(s) => collection.find(query,filter).sort(sort)
+                    case Some(s) => collection.find(query, filter).sort(sort)
                         .options(QueryOpts().batchSize(s)).cursor[JsObject].collect[List](s)
-                    case None => collection.find(query,filter).sort(sort)
+                    case None => collection.find(query, filter).sort(sort)
                         .options(QueryOpts().batchSize(batchSize)).cursor[JsObject].collect[List]()
                 }
                 // Get futures into JSON
-                resultData.map { resultList => {
-                    for (resultRow <- resultList) yield {
-                        tuktu.api.utils.JsObjectToMap(resultRow)
+                resultData.map { resultList =>
+                    {
+                        for (resultRow <- resultList) yield {
+                            tuktu.api.utils.JsObjectToMap(resultRow)
+                        }
                     }
-                }}  
+                }
             }
 
             // Handle results
@@ -88,14 +88,14 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                         channel.push(new DataPacket(res))
                     else
                         res.foreach(row => channel.push(new DataPacket(List(row))))
-                        
+
                     self ! new StopPacket()
                 }
                 case _ => self ! new StopPacket()
             }
             resultFuture.onFailure {
                 case e: Throwable => {
-                    Logger.error("Error executing MongoDB Query",e)                    
+                    Logger.error("Error executing MongoDB Query", e)
                     self ! new StopPacket
                 }
             }
@@ -119,44 +119,45 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
             // Get credentials
             val user = (config \ "user").asOpt[String]
             val pwd = (config \ "password").asOpt[String].getOrElse("")
-            val admin = (config \ "admin").as[Boolean]
-            val scramsha1 = (config \ "ScramSha1").as[Boolean]
+            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
+            val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
             // Set up connection
             val settings = MongoSettings(hosts, database, coll)
-            implicit val collection = user match{
-              case None => MongoCollectionPool.getCollection(settings)
-              case Some( usr ) => {
-                val credentials = admin match
-                {
-                  case true => Authenticate( "admin", usr, pwd )
-                  case false => Authenticate( database, usr, pwd )
+            implicit val collection = user match {
+                case None => MongoCollectionPool.getCollection(settings)
+                case Some(usr) => {
+                    val credentials = admin match {
+                        case true  => Authenticate("admin", usr, pwd)
+                        case false => Authenticate(database, usr, pwd)
+                    }
+                    MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
                 }
-                MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
-              }
             }
-            
+
             // Get tasks
             val tasks = (config \ "tasks").as[List[JsObject]]
-            
+
             // Batch all the results before pushing it on the channel
             val batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
-            
+
             // prepare aggregation pipeline
             import collection.BatchCommands.AggregationFramework.PipelineOperator
-            val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()( collection )
-            val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task( x ) }
-      
+            val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
+            val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x) }
+
             val resultFuture = {
                 // Get data based on the aggregation pipeline
                 import collection.BatchCommands.AggregationFramework.AggregationResult
-                val resultData: Future[List[JsObject]] = collection.aggregate( pipeline.head, pipeline.tail ).map(_.result[JsObject])
+                val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
                 // Get futures into JSON
-                resultData.map { resultList => {
-                    for (resultRow <- resultList) yield {
-                        tuktu.api.utils.JsObjectToMap(resultRow)
+                resultData.map { resultList =>
+                    {
+                        for (resultRow <- resultList) yield {
+                            tuktu.api.utils.JsObjectToMap(resultRow)
+                        }
                     }
-                }}  
+                }
             }
 
             // Handle results
