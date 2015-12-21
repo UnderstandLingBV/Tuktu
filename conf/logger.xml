@@ -3,7 +3,7 @@
       <file>${application.home}/logs/application.log</file>
       <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
          <!-- rollover daily -->
-         <fileNamePattern>application-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+         <fileNamePattern>${application.home}/logs/application-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
 		 <!-- keep 30 days' worth of history -->
          <maxHistory>30</maxHistory>
          <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
@@ -26,7 +26,7 @@
       </filter>
       <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
          <!-- rollover daily -->
-         <fileNamePattern>application-info-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+         <fileNamePattern>${application.home}/logs/application-info-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
 		 <!-- keep 30 days' worth of history -->
          <maxHistory>30</maxHistory>
          <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
@@ -49,7 +49,7 @@
       </filter>
       <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
          <!-- rollover daily -->
-         <fileNamePattern>application-warn-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+         <fileNamePattern>${application.home}/logs/application-warn-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
 		 <!-- keep 30 days' worth of history -->
          <maxHistory>30</maxHistory>
          <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
@@ -72,7 +72,7 @@
       </filter>
       <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
          <!-- rollover daily -->
-         <fileNamePattern>application-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+         <fileNamePattern>${application.home}/logs/application-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
 		 <!-- keep 30 days' worth of history -->
          <maxHistory>30</maxHistory>
          <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
