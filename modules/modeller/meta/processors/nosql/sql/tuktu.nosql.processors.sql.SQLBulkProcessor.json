@@ -1,0 +1,89 @@
+{
+	"name": "SQL Bulk Processor",
+	"description": "Inserts data into SQL in bulks (for efficiency). The entire DataPacket is inserted in one query.",
+	"class": "tuktu.nosql.processors.sql.SQLBulkProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"description": "A database url of the form jdbc:subprotocol:subname.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "user",
+					"description": "The database user on whose behalf the connection is being made.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "password",
+					"description": "The user's password.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "driver",
+					"description": "The driver to be used, for example org.h2.Driver.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "table",
+					"description": "The name of the table to insert into.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "columns",
+					"description": "The (SQL) column names matching the data that is inserted.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"description": "The name of the column.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "fields",
+					"description": "The names of the fields of the DataPacket from which data are read to be inserted.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"description": "The name of the field.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "query_trail",
+					"description": "A trail of the insert query that can optionally be given. Use for for example for ON DUPLICATE KEY strategy statements.",
+					"type": "string",
+					"required": false,
+					"default": ""
+				}
+			]
+		}
+	]
+}

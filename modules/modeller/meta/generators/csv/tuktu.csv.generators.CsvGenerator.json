@@ -133,6 +133,13 @@
 					"type": "boolean",
 					"default": false,
 					"required": false
+				},
+				{
+					"name": "ignore_error_lines",
+					"description": "If set to true, a line that cannot be parsed will be ignored. Note that this can be dangerous if the error spans more than one (CSV) line.",
+					"type": "boolean",
+					"default": false,
+					"required": false
 				}
 			]
 		}

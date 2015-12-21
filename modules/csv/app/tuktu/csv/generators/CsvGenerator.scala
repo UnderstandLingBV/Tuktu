@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 class BatchedCSVReader(parentActor: ActorRef, fileName: String, encoding: String, hasHeaders: Boolean, givenHeaders: List[String],
                        separator: Char, quote: Char, escape: Char, batchSize: Integer, flattened: Boolean, resultName: String,
-                       startLine: Option[Int], endLine: Option[Int]) extends Actor with ActorLogging {
+                       startLine: Option[Int], endLine: Option[Int], ignoreErrors: Boolean) extends Actor with ActorLogging {
     case class ReadLinePacket()
 
     var batch = collection.mutable.Queue[Map[String, Any]]()
@@ -55,38 +55,58 @@ class BatchedCSVReader(parentActor: ActorRef, fileName: String, encoding: String
             reader.close
             parentActor ! sp
         }
-        case pkt: ReadLinePacket => reader.readNext match {
-            case null => self ! new StopPacket // EOF, stop processing
-            case line: Array[String] => {
-                // Have we reached endLine yet or not
-                if (endLine.map(endLine => lineOffset <= endLine).getOrElse(true)) {
-                    // Add line to our batch
-                    batch += {
-                        headers match {
-                            case Some(hdrs) => flattened match {
-                                case false => Map(resultName -> hdrs.zip(line).toMap)
-                                case true  => hdrs.zip(line).toMap
-                            }
-                            case None => Map(resultName -> line.toList)
+        case pkt: ReadLinePacket => {
+            val (nextRead, doRead): (Array[String], Boolean) = {
+                if (ignoreErrors) {
+                    try {
+                        (reader.readNext, true)
+                    }
+                    catch {
+                        case e: Exception => {
+                            // Ignore this erroneous line and continue with the next
+                            (Array(), false)
                         }
                     }
-
-                    // Flush if we have to
-                    if (batch.size == batchSize) {
-                        // Send data
-                        parentActor ! batch.toList
-
-                        // Clear batch
-                        batch.clear
-                    }
-
-                    // Continue with next line
-                    lineOffset += 1
-                    self ! pkt
-                } else
-                    // Stop reading
-                    self ! new StopPacket
+                }
+                else (reader.readNext, true)
             }
+            if (doRead) {
+                nextRead match {
+                    case null => self ! new StopPacket // EOF, stop processing
+                    case line: Array[String] => {
+                        // Have we reached endLine yet or not
+                        if (endLine.map(endLine => lineOffset <= endLine).getOrElse(true)) {
+                            // Add line to our batch
+                            batch += {
+                                headers match {
+                                    case Some(hdrs) => flattened match {
+                                        case false => Map(resultName -> hdrs.zip(line).toMap)
+                                        case true  => hdrs.zip(line).toMap
+                                    }
+                                    case None => Map(resultName -> line.toList)
+                                }
+                            }
+        
+                            // Flush if we have to
+                            if (batch.size == batchSize) {
+                                // Send data
+                                parentActor ! batch.toList
+        
+                                // Clear batch
+                                batch.clear
+                            }
+        
+                            // Continue with next line
+                            lineOffset += 1
+                            self ! pkt
+                        } else
+                            // Stop reading
+                            self ! new StopPacket
+                    }
+                }
+            }
+            else
+                self ! pkt
         }
     }
 }
@@ -109,11 +129,12 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val endLine = (config \ "end_line").asOpt[Int]
             val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(1000)
             val batched = (config \ "batched").asOpt[Boolean].getOrElse(false)
+            val ignoreErrors = (config \ "ignore_error_lines").asOpt[Boolean].getOrElse(false)
 
             if (batched) {
                 // Batched uses batching actor
                 csvGenActor = Akka.system.actorOf(Props(classOf[BatchedCSVReader], self, fileName, encoding, hasHeaders, headersGiven,
-                    separator, quote, escape, batchSize, flattened, resultName, startLine, endLine))
+                    separator, quote, escape, batchSize, flattened, resultName, startLine, endLine, ignoreErrors))
                 csvGenActor ! new InitPacket
             } else {
                 // Use Iteratee lib for proper back pressure handling

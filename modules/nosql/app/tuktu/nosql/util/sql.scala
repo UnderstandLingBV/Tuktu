@@ -5,15 +5,12 @@ import java.sql.Driver
 import java.sql.DriverManager
 import java.sql.Savepoint
 import java.sql.Statement
-
 import scala.language.reflectiveCalls
 import scala.util.control.NonFatal
-
 import com.jolbox.bonecp.BoneCPDataSource
 import com.jolbox.bonecp.ConnectionHandle
 import com.jolbox.bonecp.PoolUtil
 import com.jolbox.bonecp.hooks.AbstractConnectionHook
-
 import anorm.Row
 import anorm.SQL
 import javax.sql.DataSource
@@ -21,6 +18,8 @@ import play.api.Logger
 import play.api.Mode
 import play.api.Play
 import play.api.db.HasInternalConnection
+import anorm.NamedParameter
+import anorm.SqlParser._
 
 object sql {
     case class connection(
@@ -45,6 +44,12 @@ object sql {
         
         def query(query: String) = withConnection { conn => 
             SQL(query).execute()(conn) 
+        }
+        
+        def bulkQuery(query: String, parameters: List[NamedParameter]) = withConnection { conn =>
+            SQL(query)
+                .on(parameters: _ *)
+                .executeUpdate()(conn)
         }
 
         def close() = {

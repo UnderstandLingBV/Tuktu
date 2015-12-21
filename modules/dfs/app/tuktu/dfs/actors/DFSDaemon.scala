@@ -79,7 +79,7 @@ class TDFSDaemon extends Actor with ActorLogging {
         case tir: TDFSWriteInitiateRequest => {
             // Set up the writer actor that will take care of the rest and return the ref to sender
             sender ! Akka.system.actorOf(Props(classOf[WriterDaemon], tir),
-                    name = "tuktu.dfs.WriterDaemon." + tir.filename + "_" + System.currentTimeMillis)
+                    name = "tuktu.dfs.WriterDaemon." + tir.filename.replaceAll("/", "_") + "_" + System.currentTimeMillis)
         }
         case twr: TDFSWriteRequest => {
             // We are asked to make a writer for a partfile, keep track of it
@@ -94,16 +94,16 @@ class TDFSDaemon extends Actor with ActorLogging {
             sender ! {
                 if (twr.binary)
                     Akka.system.actorOf(Props(classOf[BinaryTDFSWriterActor], twr),
-                            name = "tuktu.dfs.Writer.binary." + twr.filename + ".part" + twr.part + "_" + System.currentTimeMillis)
+                            name = "tuktu.dfs.Writer.binary." + twr.filename.replaceAll("/", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
                 else
                     Akka.system.actorOf(Props(classOf[TextTDFSWriterActor], twr),
-                            name = "tuktu.dfs.Writer.text." + twr.filename + ".part" + twr.part + "_" + System.currentTimeMillis)
+                            name = "tuktu.dfs.Writer.text." + twr.filename.replaceAll("/", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
             }
         }
         case trr: TDFSReadInitiateRequest => {
             // Create the reader daemon and send back the ref
             Akka.system.actorOf(Props(classOf[ReaderDaemon], trr, sender),
-                    name = "tuktu.dfs.ReaderDaemon." + trr.filename + "_" + System.currentTimeMillis)
+                    name = "tuktu.dfs.ReaderDaemon." + trr.filename.replaceAll("/", "_") + "_" + System.currentTimeMillis)
         }
         case tcr: TDFSReadRequest => {
             // Check if we have the request part, or need to cache
@@ -115,10 +115,10 @@ class TDFSDaemon extends Actor with ActorLogging {
                     // Set up the actual reader
                     if (tcr.binary)
                         Akka.system.actorOf(Props(classOf[BinaryTDFSReaderActor], tcr, sender),
-                                name = "tuktu.dfs.Reader.binary." + tcr.filename + ".part" + tcr.part + "_" + System.currentTimeMillis)
+                                name = "tuktu.dfs.Reader.binary." + tcr.filename.replaceAll("/", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
                     else
                         Akka.system.actorOf(Props(classOf[TextTDFSReaderActor], tcr, sender),
-                                name = "tuktu.dfs.Reader.text." + tcr.filename + ".part" + tcr.part + "_" + System.currentTimeMillis)
+                                name = "tuktu.dfs.Reader.text." + tcr.filename.replaceAll("/", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
                 }
             }
         }
