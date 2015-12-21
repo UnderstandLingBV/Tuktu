@@ -4,6 +4,15 @@ papery = 0
 paperdx = 0
 paperdy = 0
 
+# To deal with numbers containing Tuktu Strings, we need some number inputs
+intInputTester = document.createElement('input')
+intInputTester.type = 'number'
+intInputTester.step = '1'
+floatInputTester = document.createElement('input')
+floatInputTester.type = 'number'
+floatInputTester.step = 'any'
+containsTuktuString = /#\{.*?\}/
+
 # Unfortunately the svg element doesn't have clientWidth, clientHeight
 # So we have to take it from its parent and deduct div-padding and svg-border
 # This means the following values have to be changed if the layout changes!
@@ -277,7 +286,7 @@ class Generator
 	# Get config and populate inputs recursively
 	getConfig: (config, elem, depth, array = false) ->
 		switch elem.dataset.type
-			when 'string', 'number'
+			when 'string', 'int', 'long', 'float', 'double'
 				if array and config?
 					$(elem).val(config)
 				else if config[elem.dataset.key]?
@@ -354,9 +363,33 @@ class Generator
 						try
 							JSON.parse($(data).val()) if $(data).prop('required') is true or ($(data).val() isnt '' and not _.isEqual(JSON.parse($(data).val()), myDefault))
 
-					when 'number'
-						try
-							parseFloat($(data).val()) if data.validity.valid is true
+					when 'int', 'long'
+						if containsTuktuString.test($(data).val())
+							if $(data).val().startsWith("%{") && $(data).val().endsWith("}")
+								$(data).val()
+							else 
+								"%{" + $(data).val() + "}"
+						else
+							$(intInputTester).prop('required', $(data).prop('required'))
+							$(intInputTester).val($(data).val())
+							if not intInputTester.validity.valid or $(intInputTester).val() is ''
+								null
+							else
+								parseFloat($(intInputTester).val())
+
+					when 'float', 'double'
+						if containsTuktuString.test($(data).val())
+							if $(data).val().startsWith("%{") && $(data).val().endsWith("}")
+								$(data).val()
+							else 
+								"%{" + $(data).val() + "}"
+						else
+							$(floatInputTester).prop('required', $(data).prop('required'))
+							$(floatInputTester).val($(data).val())
+							if not floatInputTester.validity.valid or $(floatInputTester).val() is ''
+								null
+							else
+								parseFloat($(floatInputTester).val())
 
 					when 'boolean'
 						$(data).prop('checked') if $(data).prop('required') is true or $(data).prop('checked').toString() isnt data.dataset.default
@@ -633,11 +666,27 @@ checkValidity = (elem) ->
 			else
 				$(elem).closest('.form-group').removeClass('has-warning')
 
-		when 'number'
-			if elem.validity.valid is false
-				$(elem).closest('.form-group').addClass('has-error')
-			else
+		when 'int', 'long'
+			if containsTuktuString.test($(elem).val())
 				$(elem).closest('.form-group').removeClass('has-error')
+			else
+				$(intInputTester).prop('required', $(elem).prop('required'))
+				$(intInputTester).val($(elem).val())
+				if not intInputTester.validity.valid or ($(intInputTester).val() is '' and ($(elem).val() isnt '' or $(elem).prop('required')))
+					$(elem).closest('.form-group').addClass('has-error')
+				else
+					$(elem).closest('.form-group').removeClass('has-error')
+
+		when 'float', 'double'
+			if containsTuktuString.test($(elem).val())
+				$(elem).closest('.form-group').removeClass('has-error')
+			else
+				$(floatInputTester).prop('required', $(elem).prop('required') is true)
+				$(floatInputTester).val($(elem).val())
+				if not floatInputTester.validity.valid or ($(floatInputTester).val() is '' and ($(elem).val() isnt '' or $(elem).prop('required') is true))
+					$(elem).closest('.form-group').addClass('has-error')
+				else
+					$(elem).closest('.form-group').removeClass('has-error')
 
 		when 'JsObject'
 			try
@@ -657,12 +706,18 @@ checkValidity = (elem) ->
 					$(elem).closest('.form-group').removeClass('has-error')
 				catch
 					$(elem).closest('.form-group').addClass('has-error')
+	return
 
 # Bind respective input types to check validity
-$('#preferences input[data-type="string"]').on('input', -> checkValidity(this))
-$('#preferences input[data-type="number"]').on('input', -> checkValidity(this))
-$('#preferences textarea[data-type="JsObject"]').on('input', -> checkValidity(this))
-$('#preferences textarea[data-type="any"]').on('input', -> checkValidity(this))
+$('#preferences').find('
+	input[data-type="string"],
+	input[data-type="int"],
+	input[data-type="long"],
+	input[data-type="float"],
+	input[data-type="double"],
+	textarea[data-type="JsObject"],
+	textarea[data-type="any"]
+').on('input', -> checkValidity(this))
 
 $('#generatorName,#processorName').on('change', ->
 	selected.deactivateForm()

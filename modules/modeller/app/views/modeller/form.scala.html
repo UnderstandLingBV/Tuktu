@@ -27,7 +27,7 @@
 @if((json \ "type").as[String] == "int" || (json \ "type").as[String] == "long") {
 	@form_group(json, array) {
 		<div class="col-xs-6">
-			<input data-key="@{(json \ "name").as[String]}" class="form-control" type="number" step="1" @if((json \ "required").as[Boolean]){required="required"} data-type="number" data-depth="@depth" data-default="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}" value="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}">
+			<input data-key="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]){required="required"} data-type="@{(json \ "type").as[String]}" data-depth="@depth" data-default="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}" value="@{(json \ "default").asOpt[Int].map(_.toString).getOrElse("")}">
 		</div>
 	}
 } else {
@@ -35,7 +35,7 @@
 @if((json \ "type").as[String] == "float" || (json \ "type").as[String] == "double") {
 	@form_group(json, array) {
 		<div class="col-xs-6">
-			<input data-key="@{(json \ "name").as[String]}" class="form-control" type="number" step="any" @if((json \ "required").as[Boolean]){required="required"} data-type="number" data-depth="@depth" data-default="@{(json \ "default").asOpt[Double].map(_.toString).getOrElse("")}" value="@{(json \ "default").asOpt[Double].map(_.toString).getOrElse("")}">
+			<input data-key="@{(json \ "name").as[String]}" class="form-control" type="text" @if((json \ "required").as[Boolean]){required="required"} data-type="@{(json \ "type").as[String]}" data-depth="@depth" data-default="@{(json \ "default").asOpt[Double].map(_.toString).getOrElse("")}" value="@{(json \ "default").asOpt[Double].map(_.toString).getOrElse("")}">
 		</div>
 	}
 } else {
