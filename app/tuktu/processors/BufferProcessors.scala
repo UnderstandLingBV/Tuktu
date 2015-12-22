@@ -53,41 +53,6 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
 }
 
 /**
- * This actor is used to buffer grouped stuff in
- */
-class GroupedBufferActor(remoteGenerator: ActorRef, fields: List[String]) extends Actor with ActorLogging {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-
-    val buffer = collection.mutable.Map[List[Any], ListBuffer[Map[String, Any]]]()
-
-    remoteGenerator ! new InitPacket
-
-    def receive() = {
-        case "release" => {
-            // Create datapackets and clear buffer
-            buffer.foreach(item => remoteGenerator ! new DataPacket(item._2.toList))
-            buffer.clear
-
-            sender ! "ok"
-        }
-        case sp: StopPacket => {
-            remoteGenerator ! sp
-            self ! PoisonPill
-        }
-        case item: Map[String, Any] => {
-            val key = fields.map(field => item(field))
-
-            // make sure a ListBuffer exists for this key
-            if (!buffer.contains(key)) buffer += (key -> ListBuffer[Map[String, Any]]())
-
-            buffer(key) += item
-            sender ! "ok"
-        }
-    }
-
-}
-
-/**
  * Buffers datapackets until we have a specific amount of them
  */
 class SizeBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
@@ -157,32 +122,27 @@ class EOFBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
 /**
  * Buffers and Groups data
  */
-class GroupByBuffer(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-
-    // Set up the buffering actor
-    var bufferActor: ActorRef = _
-
+class GroupByBuffer(resultName: String) extends BaseProcessor(resultName) {
     var fields: List[String] = _
 
     override def initialize(config: JsObject) {
         // Get the field to group on
         fields = (config \ "fields").as[List[String]]
-        bufferActor = Akka.system.actorOf(Props(classOf[GroupedBufferActor], genActor, fields))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        // Iterate over our data and add to the buffer
-        val fut = Future.sequence(for (datum <- data.data) yield bufferActor ? datum)
+    // Iteratee that acts like EOF buffer
+    def groupPackets: Iteratee[DataPacket, List[Map[String, Any]]] = for (
+            dps <- Enumeratee.takeWhile[DataPacket](_ != Input.EOF) &>> Iteratee.getChunks
+    ) yield dps.flatMap(data => data.data)
 
-        // Wait for all of them to finish
-        Await.result(fut, Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-
-        data
-    }) compose Enumeratee.onEOF(() => {
-        Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-        bufferActor ! new StopPacket
-    })
+    // Group the data by keys
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets) compose
+        Enumeratee.mapFlatten((data: List[Map[String, Any]]) => {
+            Enumerator.enumerate(
+                    for (d <- data.groupBy(datum => fields.map(field => datum(field))).values) yield
+                        new DataPacket(d)
+            )
+        })
 }
 
 /**
