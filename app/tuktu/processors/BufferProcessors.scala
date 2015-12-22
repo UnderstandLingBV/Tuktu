@@ -120,32 +120,6 @@ class EOFBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
 }
 
 /**
- * Buffers and Groups data
- */
-class GroupByBuffer(resultName: String) extends BaseProcessor(resultName) {
-    var fields: List[String] = _
-
-    override def initialize(config: JsObject) {
-        // Get the field to group on
-        fields = (config \ "fields").as[List[String]]
-    }
-
-    // Iteratee that acts like EOF buffer
-    def groupPackets: Iteratee[DataPacket, List[Map[String, Any]]] = for (
-            dps <- Enumeratee.takeWhile[DataPacket](_ != Input.EOF) &>> Iteratee.getChunks
-    ) yield dps.flatMap(data => data.data)
-
-    // Group the data by keys
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets) compose
-        Enumeratee.mapFlatten((data: List[Map[String, Any]]) => {
-            Enumerator.enumerate(
-                    for (d <- data.groupBy(datum => fields.map(field => datum(field))).values) yield
-                        new DataPacket(d)
-            )
-        })
-}
-
-/**
  * Hybrid processor that either buffers data until a signal is received, or sends the signal.
  * This means that you MUST always have 2 instances of this processor active, in separate
  * branches.

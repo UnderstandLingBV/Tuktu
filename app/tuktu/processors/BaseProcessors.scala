@@ -22,6 +22,7 @@ import tuktu.nosql.util.stringHandler
 import tuktu.api.utils.evaluateTuktuString
 import play.api.Logger
 import scala.collection.GenTraversableOnce
+import play.api.libs.iteratee.Enumerator
 
 /**
  * Filters specific fields from the data tuple
@@ -821,4 +822,24 @@ class ZipExplodeProcessor(resultName: String) extends BaseProcessor(resultName) 
             for ((any1, any2) <- zipped) yield datum + (field1 -> any1) + (field2 -> any2)
         })
     })
+}
+
+/**
+ * Groups data in a DataPacket by a list of fields as key
+ */
+class GroupByProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var fields: List[String] = _
+
+    override def initialize(config: JsObject) {
+        // Get the field to group on
+        fields = (config \ "fields").as[List[String]]
+    }
+
+    // Group the data by keys
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapFlatten(data => {
+            Enumerator.enumerate(
+                    for (d <- data.data.groupBy(datum => fields.map(field => datum(field))).values) yield
+                        new DataPacket(d)
+            )
+        })
 }
