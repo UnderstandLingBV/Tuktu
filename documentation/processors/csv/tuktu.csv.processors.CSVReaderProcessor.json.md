@@ -21,7 +21,7 @@ Reads out values as CSV from a field.
     * **remove_original** *(type: boolean)* `[Optional, default = false]`
     - Whether to remove the original field.
 
-    * **separator** *(type: string)* `[Optional, default = ";"]`
+    * **separator** *(type: string)* `[Optional, default = ","]`
     - The separator character.
 
     * **quote** *(type: string)* `[Optional, default = "\""]`

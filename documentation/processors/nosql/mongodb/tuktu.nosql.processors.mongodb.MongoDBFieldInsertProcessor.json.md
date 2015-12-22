@@ -1,5 +1,5 @@
-### tuktu.nosql.processors.mongodb.MongoDBInsertProcessor
-Inserts data into MongoDB.
+### tuktu.nosql.processors.mongodb.MongoDBFieldInsertProcessor
+Insert the JSON Object contained in a field into MongoDB.
 
   * **id** *(type: string)* `[Required]`
 
@@ -30,10 +30,8 @@ Inserts data into MongoDB.
     * **ScramSha1** *(type: boolean)* `[Required]`
     - Use the ScramSha1 authentication method (instead of CrAuth)?
 
-    * **fields** *(type: array)* `[Required]`
-    - The fields to be inserted: Leave empty to insert all fields.
-
-      * **[UNNAMED]** *(type: string)* `[Required]`
+    * **field** *(type: string)* `[Required]`
+    - The field to be inserted.
 
     * **timeout** *(type: int)* `[Optional, default = 5]`
     - Overwrite the Tuktu default timeout.

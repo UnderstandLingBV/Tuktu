@@ -1,5 +1,5 @@
-### tuktu.nosql.processors.mongodb.MongoDBInsertProcessor
-Inserts data into MongoDB.
+### tuktu.nosql.processors.mongodb.MongoDBUpdatumProcessor
+Updates data initially found in MongoDB with the content of the current tuktu datum.
 
   * **id** *(type: string)* `[Required]`
 
@@ -30,11 +30,6 @@ Inserts data into MongoDB.
     * **ScramSha1** *(type: boolean)* `[Required]`
     - Use the ScramSha1 authentication method (instead of CrAuth)?
 
-    * **fields** *(type: array)* `[Required]`
-    - The fields to be inserted: Leave empty to insert all fields.
-
-      * **[UNNAMED]** *(type: string)* `[Required]`
-
-    * **timeout** *(type: int)* `[Optional, default = 5]`
-    - Overwrite the Tuktu default timeout.
+    * **upsert** *(type: boolean)* `[Optional]`
+    - If set to true, creates a new document when no document matches the query criteria. If set to false, does not insert a new document when no match is found.
 

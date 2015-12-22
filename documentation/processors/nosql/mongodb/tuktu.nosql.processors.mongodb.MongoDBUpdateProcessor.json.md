@@ -18,6 +18,18 @@ Updates data into MongoDB.
     * **collection** *(type: string)* `[Required]`
     - The name of the collection to open.
 
+    * **user** *(type: string)* `[Optional]`
+    - The name of the user (if authentication is required).
+
+    * **password** *(type: string)* `[Optional]`
+    - The password of the user (if authentication is required).
+
+    * **admin** *(type: boolean)* `[Required]`
+    - Does authentication use the admin database?
+
+    * **ScramSha1** *(type: boolean)* `[Required]`
+    - Use the ScramSha1 authentication method (instead of CrAuth)?
+
     * **query** *(type: string)* `[Required]`
     - The selection criteria for the update. 
 

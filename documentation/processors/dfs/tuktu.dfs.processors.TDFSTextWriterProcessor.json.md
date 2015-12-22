@@ -1,5 +1,5 @@
-### tuktu.dfs.processors.WriterProcessor
-Writes a file to the Tuktu DFS.
+### tuktu.dfs.processors.TDFSTextWriterProcessor
+Writes a text file to the Tuktu DFS.
 
   * **id** *(type: string)* `[Required]`
 
@@ -13,8 +13,8 @@ Writes a file to the Tuktu DFS.
     * **encoding** *(type: string)* `[Optional, default = "utf-8"]`
     - The encoding used for writing.
 
-    * **replication** *(type: int)* `[Optional]`
-    - The replication factor. If left out, set to number of nodes.
+    * **block_size** *(type: int)* `[Optional, default = 64]`
+    - The block size in MB.
 
     * **field_separator** *(type: string)* `[Optional, default = ","]`
     - The field separator character.

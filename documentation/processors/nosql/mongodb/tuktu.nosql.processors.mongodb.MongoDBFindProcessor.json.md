@@ -18,13 +18,25 @@ Executes a query with a filter on a given list of nodes.
     * **collection** *(type: string)* `[Required]`
     - The name of the collection to open.
 
-    * **query** *(type: JsObject)* `[Required]`
+    * **user** *(type: string)* `[Optional]`
+    - The name of the user (if authentication is required).
+
+    * **password** *(type: string)* `[Optional]`
+    - The password of the user (if authentication is required).
+
+    * **admin** *(type: boolean)* `[Required]`
+    - Does authentication use the admin database?
+
+    * **ScramSha1** *(type: boolean)* `[Required]`
+    - Use the ScramSha1 authentication method (instead of CrAuth)?
+
+    * **query** *(type: string)* `[Required]`
     - Find the documents matching these given criteria.
 
-    * **filter** *(type: JsObject)* `[Optional]`
+    * **filter** *(type: string)* `[Optional]`
     - Filter results by this projection.
 
-    * **sort** *(type: JsObject)* `[Optional]`
+    * **sort** *(type: string)* `[Optional]`
     - Sort results by this projection.
 
     * **limit** *(type: int)* `[Optional]`

@@ -15,7 +15,16 @@ Runs a command on the specified database on a given list of nodes.
     * **database** *(type: string)* `[Required]`
     - The database name.
 
-    * **command** *(type: JsObject)* `[Required]`
+    * **user** *(type: string)* `[Optional]`
+    - The name of the user (if authentication is required).
+
+    * **password** *(type: string)* `[Optional]`
+    - The password of the user (if authentication is required).
+
+    * **admin** *(type: boolean)* `[Required]`
+    - Does authentication require the admin database?
+
+    * **command** *(type: string)* `[Required]`
     - The command to run on the database.
 
     * **resultOnly** *(type: boolean)* `[Optional, default = false]`

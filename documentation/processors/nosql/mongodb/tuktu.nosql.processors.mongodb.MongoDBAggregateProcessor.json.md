@@ -18,6 +18,18 @@ Executes MongoDB aggregation pipeline.
     * **collection** *(type: string)* `[Required]`
     - The name of the collection to open.
 
+    * **user** *(type: string)* `[Optional]`
+    - The name of the user (if authentication is required).
+
+    * **password** *(type: string)* `[Optional]`
+    - The password of the user (if authentication is required).
+
+    * **admin** *(type: boolean)* `[Required]`
+    - Does authentication use the admin database?
+
+    * **ScramSha1** *(type: boolean)* `[Required]`
+    - Use the ScramSha1 authentication method (instead of CrAuth)?
+
     * **tasks** *(type: array)* `[Required]`
     - A list of tasks in the aggregation pipeline.  Note that currently, only the following tasks are supported: "$skip", "$limit", "$unwind", "$out", "$sort", "$match", "$project", and "$group".
 

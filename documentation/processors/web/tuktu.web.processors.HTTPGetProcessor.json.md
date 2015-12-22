@@ -7,9 +7,6 @@ Makes a HTTP get request to a specific URL.
 
   * **config** *(type: object)* `[Required]`
 
-    * **field** *(type: string)* `[Required]`
-    - The field that contains the URL(s) to get.
-
-    * **timeout** *(type: int)* `[Optional]`
-    - The time, expressed in seconds, after which an unsuccessful request times out
+    * **url** *(type: string)* `[Required]`
+    - The URL to get.
 
