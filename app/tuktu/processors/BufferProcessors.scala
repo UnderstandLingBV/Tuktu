@@ -17,6 +17,7 @@ import play.api.cache.Cache
 import scala.collection.mutable.ListBuffer
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Input
+import play.api.libs.iteratee.Enumerator
 
 /**
  * This actor is used to buffer stuff in
@@ -275,36 +276,12 @@ class SignalBufferActor(remoteGenerator: ActorRef) extends Actor with ActorLoggi
 /**
  * Splits the elements of a single data packet into separate data packets (one per element)
  */
-class DataPacketSplitterProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-
-    // Set up the splitting actor
-    val splitActor = Akka.system.actorOf(Props(classOf[SplitterActor], genActor))
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        val futures = Future.sequence(for (datum <- data.data) yield splitActor ? datum)
-
-        futures.map {
-            case _ => data
-        }
-    }) compose Enumeratee.onEOF(() => splitActor ! new StopPacket)
-}
-
-/**
- * Actor for forwarding the split data packets
- */
-class SplitterActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
-    remoteGenerator ! new InitPacket
-
-    def receive() = {
-        case sp: StopPacket => {
-            remoteGenerator ! sp
-            self ! PoisonPill
-        }
-        case item: Map[String, Any] => {
-            // Directly forward
-            remoteGenerator ! new DataPacket(List(item))
-            sender ! "ok"
-        }
-    }
+class DataPacketSplitterProcessor(resultName: String) extends BaseProcessor(resultName) {
+    // Split the data from our DataPacket into separate data packets
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapFlatten((data: DataPacket) => {
+        Enumerator.enumerate(
+                for (datum <- data.data) yield
+                    new DataPacket(List(datum))
+        )
+    })
 }
