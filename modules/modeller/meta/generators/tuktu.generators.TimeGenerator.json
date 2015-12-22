@@ -1,0 +1,90 @@
+{
+    "name":"Time Generator",
+    "description":"Generates points of time by adding (or subtracting) a certain amount of time to a starting time until a ending time is reached.",
+    "class":"tuktu.generators.TimeGenerator",
+    "parameters":[
+        {
+            "name":"id",
+            "type":"string",
+            "required":true
+        },
+        {
+            "name":"result",
+            "type":"string",
+            "required":true
+        },
+        {
+            "name":"config",
+            "type":"object",
+            "required":true,
+            "parameters":[
+                {
+                    "name":"starting_time",
+                    "description":"The starting time. Use now() to get current time.",
+                    "type":"string",
+                    "required":true
+                },
+                {
+                    "name":"ending_time",
+                    "description":"The ending time. Use now() to get current time.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"format",
+                    "description":"The format in which the starting and ending times are expressed.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"locale",
+                    "description":"The locale for the starting and ending times.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"years",
+                    "description":"Adds or substracts this amount of years to the starting time until the ending time is reached.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"months",
+                    "description":"Adds or substracts this amount of months to the starting time until the ending time is reached.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"weeks",
+                    "description":"Adds or substracts this amount of weeks to the starting time until the ending time is reached.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"days",
+                    "description":"Adds or substracts this amount of days to the starting time until the ending time is reached.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"hours",
+                    "description":"Adds or substracts this amount of hours to the starting time until the ending time is reached.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"minutes",
+                    "description":"Adds or substracts this amount of minutes to the starting time until the ending time is reached.",
+                    "type":"string",
+                    "required":false
+                },
+                {
+                    "name":"seconds",
+                    "description":"Adds or substracts this amount of seconds to the starting time until the ending time is reached.",
+                    "type":"string",
+                    "required":false
+                }
+            ]
+        }
+    ]
+}
