@@ -1,16 +1,24 @@
 package controllers
 
-import play.api.mvc.Controller
-import play.api.mvc.Action
-import play.api.cache.Cache
+import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import akka.pattern.ask
+import akka.util.Timeout
+import monitor.AddNode
+import play.api.Play
 import play.api.Play.current
+import play.api.cache.Cache
+import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
-import play.api.data.Form
-import play.api.Play
+import play.api.mvc.Action
+import play.api.mvc.Controller
 import tuktu.api.ClusterNode
 import tuktu.utils.util
-import scala.collection.JavaConverters.asScalaBufferConverter
+import play.api.libs.concurrent.Akka
+import play.api.Logger
 
 object Cluster extends Controller {
     /**
@@ -99,18 +107,43 @@ object Cluster extends Controller {
             "UIPort" -> number
         ) (ClusterNode.apply)(ClusterNode.unapply)
     )
-    def addNodePost() = Action { implicit request => {
+    def addNodePost() = Action.async { implicit request => {
+        implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+        
         addNodeForm.bindFromRequest.fold(
-            formWithErrors => {
+            formWithErrors => Future {
                 Redirect(routes.Cluster.overview).flashing("error" -> "Address or port number incorrect.")
             },
             node => {
-                // Update cache
+                // Inform the added node about our cluster
                 val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
-                clusterNodes += node.host -> node
-
-                // Redirect back to overview
-                Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully added node " + node.host + ":" + node.akkaPort + " to the cluster."))
+                val addFut = Future.sequence(for (cNode <- clusterNodes.values) yield {
+                    Akka.system.actorSelection(
+                            "akka.tcp://application@" + node.host  + ":" + node.akkaPort + "/user/TuktuHealthChecker"
+                    ) ? new AddNode(cNode)
+                })
+                
+                // Only add stuff if we succeeded
+                addFut.map(_ => {
+                    // Update cache
+                    val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+                    clusterNodes += node.host -> node
+                    
+                    // Inform the other nodes in our current cluster
+                    for (cNode <- clusterNodes.values) yield {
+                        Akka.system.actorSelection(
+                                "akka.tcp://application@" + cNode.host  + ":" + cNode.akkaPort + "/user/TuktuHealthChecker"
+                        ) ? new AddNode(node)
+                    }
+                    
+                    Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully added node " + node.host + ":" + node.akkaPort + " to the cluster."))
+                }).recover {
+                    case a: Any => {
+                        Logger.error("Failed to add node: " + node.host)
+                        // Redirect back to overview
+                        Redirect(routes.Cluster.overview).flashing("error" -> ("Failed to add node " + node.host + ":" + node.akkaPort + " to the cluster."))
+                    }
+                }
             }
         )
     }}

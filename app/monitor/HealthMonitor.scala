@@ -16,6 +16,9 @@ import tuktu.api.HealthReply
 import play.api.Play
 
 case class HealthRound()
+case class AddNode(
+        node: ClusterNode
+)
 
 /**
  * Checks the health of the cluster; pings all dispatchers every now and then to see if they
@@ -26,7 +29,7 @@ class HealthMonitor() extends Actor with ActorLogging {
     
     // Keep track of how many times we sent a failed message to each node
     val healthChecks = collection.mutable.Map[String, Int]()
-    val cNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+    var cNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
     val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
     cNodes.foreach(node => {
         if (node._1 != homeAddress)
@@ -47,6 +50,8 @@ class HealthMonitor() extends Actor with ActorLogging {
     
     def receive() = {
         case hr: HealthRound => {
+            cNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+            
             // Send out health checks to all nodes
             val clusterNodes = cNodes - homeAddress
             val futures = for ((hostname, node) <- clusterNodes) yield {
@@ -76,6 +81,12 @@ class HealthMonitor() extends Actor with ActorLogging {
                     }
                 }
             })
+        }
+        case an: AddNode => {
+            Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map()) +=
+                an.node.host -> an.node
+                
+            sender ! "ok"
         }
         case _ => {}
     }
