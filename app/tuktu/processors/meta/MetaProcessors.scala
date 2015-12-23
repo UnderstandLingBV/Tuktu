@@ -133,10 +133,10 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
                 "config" -> Json.obj(),
                 "next" -> next) ++
                 (nodes match {
-                    case Some(n) => Json.obj("nodes" -> Json.obj(
+                    case Some(n) => Json.obj("nodes" -> Json.arr(Json.obj(
                         "type" -> "SingleNode",
                         "nodes" -> n,
-                        "instances" -> 1))
+                        "instances" -> 1)))
                     case None => Json.obj()
                 }))),
             "processors" -> processors)
