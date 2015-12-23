@@ -19,6 +19,9 @@ case class HealthRound()
 case class AddNode(
         node: ClusterNode
 )
+case class DeleteNode(
+        node: String
+)
 
 /**
  * Checks the health of the cluster; pings all dispatchers every now and then to see if they
@@ -88,6 +91,8 @@ class HealthMonitor() extends Actor with ActorLogging {
                 
             sender ! "ok"
         }
+        case dn: DeleteNode =>
+            Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map()) -= dn.node
         case _ => {}
     }
 }

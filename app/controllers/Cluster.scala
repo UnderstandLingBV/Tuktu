@@ -19,6 +19,8 @@ import tuktu.api.ClusterNode
 import tuktu.utils.util
 import play.api.libs.concurrent.Akka
 import play.api.Logger
+import monitor.DeleteNode
+import monitor.DeleteNode
 
 object Cluster extends Controller {
     /**
@@ -84,6 +86,15 @@ object Cluster extends Controller {
                 Redirect(routes.Cluster.overview).flashing("error" -> ("No node at address " + address + " registered in cluster."))
             case Some(node) => {
                 clusterNodes -= address
+                
+                // Notify all other cluster nodes too
+                clusterNodes.values.foreach(node => {
+                    if (node.host != address) {
+                        Akka.system.actorSelection(
+                                "akka.tcp://application@" + node.host  + ":" + node.akkaPort + "/user/TuktuHealthChecker"
+                        ) ! new DeleteNode(node.host)
+                    }
+                })
 
                 // Redirect back to overview
                 Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully removed node " + address + ":" + node.akkaPort + " from the cluster."))                
