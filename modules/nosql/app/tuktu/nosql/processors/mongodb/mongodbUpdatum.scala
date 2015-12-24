@@ -36,8 +36,8 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
         // Get credentials
         val user = (config \ "user").asOpt[String]
         val pwd = (config \ "password").asOpt[String].getOrElse("")
-        val admin = (config \ "admin").as[Boolean]
-        val scramsha1 = (config \ "ScramSha1").as[Boolean]
+        val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
+        val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
         // Set up connection
         val settings = MongoSettings(hosts, database, coll)

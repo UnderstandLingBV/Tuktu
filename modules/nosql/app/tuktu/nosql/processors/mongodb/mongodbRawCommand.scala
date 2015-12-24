@@ -29,7 +29,7 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
         // http://reactivemongo.org/releases/0.11/documentation/tutorial/connect-database.html
         val user = (config \ "user").asOpt[String]
         val pwd = (config \ "password").asOpt[String].getOrElse("")
-        val admin = (config \ "admin").as[Boolean]
+        val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
         // val scramsha1 = (config \ "ScramSha1").as[Boolean]
         
         val driver = new MongoDriver

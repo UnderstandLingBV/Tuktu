@@ -33,8 +33,8 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
         // Get credentials
         user = (config \ "user").asOpt[String]
         pwd = (config \ "password").asOpt[String].getOrElse("")
-        admin = (config \ "admin").as[Boolean]
-        scramsha1 = (config \ "ScramSha1").as[Boolean]
+        admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
+        scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
         // Prepare connection settings
         settings = MongoSettings(hosts, database, coll)

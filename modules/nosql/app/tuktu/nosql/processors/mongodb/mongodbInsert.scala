@@ -41,8 +41,8 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         // Get credentials
         user = (config \ "user").asOpt[String]
         pwd = (config \ "password").asOpt[String].getOrElse("")
-        admin = (config \ "admin").as[Boolean]
-        scramsha1 = (config \ "ScramSha1").as[Boolean]
+        admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
+        scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
         
         // What fields to write?
         fields = (config \ "fields").as[List[String]]
