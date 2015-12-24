@@ -1,0 +1,42 @@
+{
+	"name": "Europeana Query Processor",
+	"description": "Queries the Europeana API and returns pointers to the resulting records.",
+	"class": "tuktu.dlib.processors.EuropeanaQueryProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "query",
+					"description": "A Europeana API query.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "apikey",
+					"description": "A Europeana API key.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "maxresult",
+					"description": "The maximum number of results to be returned by each query.",
+					"type": "int",
+					"required": false
+				}
+			]
+		}
+	]
+}

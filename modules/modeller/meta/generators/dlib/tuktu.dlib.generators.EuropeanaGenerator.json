@@ -1,0 +1,71 @@
+{
+	"name": "Europeana Generator",
+	"description": "Queries the Europeana API and returns pointers to the resulting records.",
+	"class": "tuktu.dlib.generators.EuropeanaGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "query",
+					"description": "A Europeana API query.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "apikey",
+					"description": "A Europeana API key.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "maxresult",
+					"description": "The maximum number of results to be returned by each query.",
+					"type": "int",
+					"required": false
+				}
+			]
+		}
+	]
+}
