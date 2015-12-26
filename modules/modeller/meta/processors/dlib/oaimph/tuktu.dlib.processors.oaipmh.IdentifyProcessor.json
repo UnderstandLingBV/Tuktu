@@ -1,0 +1,37 @@
+{
+	"name": "Identify Processor",
+	"description": "Retrieves information about a repository.",
+	"class": "tuktu.dlib.processors.oaipmh.IdentifyProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "target",
+					"description": "The OAI-PMH repository target to identify.",
+					"type": "string",
+					"required": true
+				},
+			    {
+					"name": "toJSON",
+					"description": "Converts XML description to JSON?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

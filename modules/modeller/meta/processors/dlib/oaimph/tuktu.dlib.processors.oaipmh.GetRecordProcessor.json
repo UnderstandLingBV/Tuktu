@@ -1,0 +1,49 @@
+{
+	"name": "GetRecord Processor",
+	"description": "Retrieves an individual metadata record from a repository. Required arguments specify the identifier of the item from which the record is requested and the format of the metadata that should be included in the record.",
+	"class": "tuktu.dlib.processors.oaipmh.GetRecordProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "target",
+					"description": "The OAI-PMH target repository.",
+					"type": "string",
+					"required": true
+				},
+			    {
+					"name": "identifier",
+					"description": "A required argument that specifies the unique identifier of the item in the repository from which the record must be disseminated.",
+					"type": "string",
+					"required": true
+				},
+			    {
+					"name": "metadataPrefix",
+					"description": "A required argument that specifies the metadataPrefix of the format that should be included in the metadata part of the returned record.",
+					"type": "string",
+					"required": true
+				},
+			    {
+					"name": "toJSON",
+					"description": "Converts XML description to JSON?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}
