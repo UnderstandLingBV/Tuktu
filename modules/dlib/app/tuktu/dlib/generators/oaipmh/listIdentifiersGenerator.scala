@@ -13,15 +13,12 @@ import tuktu.api._
 import scala.xml._
 import tuktu.dlib.utils.oaipmh
 
-case class OAIRequestPacket( request: String )
-case class OAIResponsePacket( response: Elem )
-case class OAIErrorPacket( error: Elem )
-case class OAIRecordsPacket( records: Seq[Node] )
+case class OAIIdentifiersPacket( ids: Seq[Node] )
 
 /**
  * Actor that harvests an OAI-PMH target
  */
-class HarvesterActor(parentActor: ActorRef, verb: String, params: String) extends Actor with ActorLogging 
+class ListIdentifiersActor(parentActor: ActorRef, verb: String, params: String) extends Actor with ActorLogging 
 {
     
     def receive() = 
@@ -29,10 +26,13 @@ class HarvesterActor(parentActor: ActorRef, verb: String, params: String) extend
         case ip: InitPacket => self ! OAIRequestPacket( verb + params )
         
         case request: OAIRequestPacket => {
+          // println( "requested URL: " + request.request )
           val response = oaipmh.harvest( request.request )
+          // println( "response received: " + response.toString )
           (response \\ "error").headOption match{
               case None => self ! OAIResponsePacket( response )
               case Some( err ) => {
+                // Send back to parent for pushing into channel
                 parentActor ! OAIErrorPacket( response )
                 self ! new StopPacket
               }
@@ -49,25 +49,27 @@ class HarvesterActor(parentActor: ActorRef, verb: String, params: String) extend
         case rpacket: OAIResponsePacket => 
         {
             // send records to parent
-            val records = (rpacket.response \ "ListRecords" \ "record" \ "metadata" ).flatMap( _.child ).toSeq
+            val headers = (rpacket.response \ "ListIdentifiers" \ "header" ).toSeq
             // println( records.toString )
             // Send back to parent for pushing into channel
-            parentActor ! OAIRecordsPacket( records )
+            parentActor ! OAIIdentifiersPacket( headers )
             // check for resumptionToken
-            val rToken = (rpacket.response \ "ListRecords" \ "resumptionToken" ).headOption
+            val rToken = (rpacket.response \ "ListIdentifiers" \ "resumptionToken" ).headOption
             rToken match
             {
               case Some( resumptionToken ) => self ! OAIRequestPacket( verb + "&resumptionToken=" + resumptionToken.text ) // keep harvesting
               case None => self ! new StopPacket // harvesting completed
-            }             
+            }
+             
         }
     }
+
 }
 
 /**
- * Harvests metadata records from an OAI-PMH target repository.
+ * Harvests metadata record identifiers from an OAI-PMH target repository.
  */
-class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef] ) 
+class ListIdentifiersGenerator( resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef] ) 
     extends BaseGenerator(resultName, processors, senderActor) 
 {
     var toj: Boolean = _
@@ -86,7 +88,7 @@ class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[Data
           toj = (config \ "toJSON").asOpt[Boolean].getOrElse(false)
           flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
          
-          val verb = target + "?verb=ListRecords" 
+          val verb = target + "?verb=ListIdentifiers" 
           val params = "&metadataPrefix=" + metadataPrefix + (from match{
             case None => ""
             case Some(f) => "&from=" + f
@@ -96,8 +98,8 @@ class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[Data
           })
             
           sets match{
-            case None => val harvester = Akka.system.actorOf(Props(classOf[HarvesterActor], self, verb, params)); harvester ! new InitPacket()
-            case Some( s ) => for ( set <- s ) { val harvester = Akka.system.actorOf(Props(classOf[HarvesterActor], self, verb, params + "&set=" + set)); harvester ! new InitPacket() } 
+            case None => val harvester = Akka.system.actorOf(Props(classOf[ListIdentifiersActor], self, verb, params)); harvester ! new InitPacket()
+            case Some( s ) => for ( set <- s ) { val harvester = Akka.system.actorOf(Props(classOf[ListIdentifiersActor], self, verb, params + "&set=" + set)); harvester ! new InitPacket() } 
           }  
         }
         case sp: StopPacket => cleanup
@@ -116,8 +118,8 @@ class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[Data
             }
           }
         } 
-        case records: OAIRecordsPacket =>{
-          val recs = (records.records map { rec => rec.toString.trim })
+        case ids: OAIIdentifiersPacket =>{
+          val recs = (ids.ids map { id => id.toString.trim })
           for (record <- recs; if (!record.isEmpty))
           {
             toj match{
@@ -135,8 +137,7 @@ class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[Data
           }
         }
         
-        case x => Logger.error("OAI-PMH ListRecords generator got unexpected packet " + x + "\r\n")
+        case x => Logger.error("OAI-PMH ListIdentifiers generator got unexpected packet " + x + "\r\n")
     }
 
 }
-
