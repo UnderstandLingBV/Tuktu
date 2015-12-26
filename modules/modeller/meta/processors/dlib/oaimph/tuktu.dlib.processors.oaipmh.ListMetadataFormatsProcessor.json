@@ -1,0 +1,43 @@
+{
+    "name": "ListMetadataFormats Processor",
+    "description": "Retrieves the metadata formats available from a repository. An optional argument restricts the request to the formats available for a specific item.",
+    "class": "tuktu.dlib.processors.oaipmh.ListMetadataFormatsProcessor",
+    "parameters": [
+        {
+            "name": "id",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "result",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "config",
+            "type": "object",
+            "required": true,
+            "parameters": [
+                {
+                    "name": "target",
+                    "description": "The URL of the OAI-PMH target repository.",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "identifier",
+                    "description": "An optional argument that specifies the unique identifier of the item for which available metadata formats are being requested. If this argument is omitted, then the response includes all metadata formats supported by the target repository.",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "name": "toJSON",
+                    "description": "Converts XML set descriptions to JSON?",
+                    "type": "boolean",
+                    "required": false,
+                    "default": false
+                }
+            ]
+        }
+    ]
+}
