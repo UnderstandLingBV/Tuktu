@@ -1,0 +1,79 @@
+{
+	"name": "ListMetadataFormats Generator",
+	"description": "Retrieves the metadata formats available from a repository. An optional argument restricts the request to the formats available for a specific item.",
+	"class": "tuktu.dlib.generators.oaipmh.ListMetadataFormatsGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "target",
+					"description": "The URL of the OAI-PMH target repository.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "identifier",
+					"description": "An optional argument that specifies the unique identifier of the item for which available metadata formats are being requested. If this argument is omitted, then the response includes all metadata formats supported by the target repository.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "toJSON",
+					"description": "Converts XML set descriptions to JSON?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "flatten",
+					"description": "Flattens JSON set descriptions?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

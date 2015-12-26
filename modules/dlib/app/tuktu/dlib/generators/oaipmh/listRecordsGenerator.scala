@@ -106,9 +106,7 @@ class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[Data
           toj match{
             case false => channel.push( new DataPacket( List( Map( resultName -> error.error ) ) ) )
             case true => {
-              val xmlText = error.error.toString
-              val jsonText = org.json.XML.toJSONObject( xmlText ).toString( 4 )
-              val jsobj: JsObject = Json.parse( jsonText ).as[JsObject]
+              val jsobj: JsObject = oaipmh.xml2jsObject( error.error.toString )
               flatten match{
                 case true => channel.push( new DataPacket( List( tuktu.api.utils.JsObjectToMap( jsobj ) ) ) )
                 case false => channel.push( new DataPacket( List( Map( resultName -> jsobj ) ) ) )
@@ -123,9 +121,7 @@ class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[Data
             toj match{
               case false => channel.push( new DataPacket( List( Map( resultName -> record ) ) ) )
               case true => {
-                val jsonText = org.json.XML.toJSONObject( record ).toString( 4 )
-                val jsobj: JsObject = Json.parse( jsonText ).as[JsObject]
-                val jo = (jsobj \ jsobj.keys.head).as[JsObject]
+                val jo = oaipmh.xml2jsObject( record )
                 flatten match{
                   case true => channel.push( new DataPacket( List( tuktu.api.utils.JsObjectToMap( jo ) ) ) )
                   case false => channel.push( new DataPacket( List( Map( resultName -> jo ) ) ) )
