@@ -162,13 +162,7 @@ class ConcurrentStreamGenerator(resultName: String, processors: List[Enumeratee[
     }
     
     def receive() = {
-        case ip: InitPacket => {
-            // Send the monitoring actor notification of start
-            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self,
-                    "start"
-            )
-        }
+        case ip: InitPacket => {}
         case config: JsValue => dontReturnAtAll = (config \ "no_return").asOpt[Boolean].getOrElse(false)
         case sp: StopPacket => {
             // Send message to the monitor actor
@@ -247,13 +241,7 @@ class EOFSyncStreamGenerator(resultName: String, processors: List[Enumeratee[Dat
     }
     
     def receive() = {
-        case ip: InitPacket => {
-            // Send the monitoring actor notification of start
-            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self,
-                    "start"
-            )
-        }
+        case ip: InitPacket => {}
         case config: JsValue => {}
         case sp: StopPacket => {
             // Send message to the monitor actor

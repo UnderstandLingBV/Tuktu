@@ -15,14 +15,18 @@ import akka.util.Timeout
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
+import tuktu.api.ClusterNode
+import play.api.Logger
+import java.util.concurrent.TimeoutException
 
 /**
  * Loops through the web analytics configs and boots up instances of the flows present there
  */
 class WebGlobal() extends TuktuGlobal() {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    implicit val timeout = Timeout(1 seconds)
     // Initialize host map
     Cache.set("web.hostmap", collection.mutable.Map[String, ActorRef]())
+    val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
     
     /**
      * Load this on startup. The application is given as parameter
@@ -56,7 +60,17 @@ class WebGlobal() extends TuktuGlobal() {
             }
         
             // We must await, otherwise map will not be populated properly
-            val result = Await.result(Future.sequence(futures.map(elem => elem._2).toList), timeout.duration)
+            try {
+                val result = Await.result(Future.sequence(futures.map(elem => elem._2).toList), timeout.duration).asInstanceOf[List[ActorRef]]
+                futures.toMap.keys.zip(result).foreach(elem => 
+                    Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap").getOrElse(collection.mutable.Map[String, ActorRef]()) += elem._1 -> elem._2
+                )
+            }
+            catch {
+                case e: TimeoutException => {
+                    Logger.warn("Failed to load web analytics config(s).")
+                }
+            }
         }
     }
 }
