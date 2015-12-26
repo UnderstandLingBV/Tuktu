@@ -61,14 +61,12 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         // Create enumeratee that will send back
         val sendBackEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.map((d: DataPacket) => {
             if (!dontReturnAtAll) {
-                val sourceActor = {
-                    senderActor match {
-                        case Some(a) => a
-                        case None => sActor
-                    }
+                senderActor match {
+                    case Some(ar) => ar ! d
+                    case None => {}
                 }
                 
-                sourceActor ! d
+                sActor ! d
             }
             
             d

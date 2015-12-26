@@ -76,9 +76,7 @@ class SyncStreamForwarder() extends Actor with ActorLogging {
         }
         case dp: DataPacket => sync match {
             case false => remoteGenerator ! dp
-            case true => {
-                sender ! Await.result((remoteGenerator ? dp).mapTo[DataPacket], timeout.duration)
-            }
+            case true => sender ! Await.result((remoteGenerator ? dp).mapTo[DataPacket], timeout.duration)
         }
         case sp: StopPacket => {
             remoteGenerator ! Broadcast(new StopPacket)
@@ -93,7 +91,7 @@ class SyncStreamForwarder() extends Actor with ActorLogging {
 class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
-    val forwarder = Akka.system.actorOf(Props[SyncStreamForwarder])
+    val forwarder = Akka.system.actorOf(Props[SyncStreamForwarder], name = "SyncStreamForwarder_" + java.util.UUID.randomUUID.toString)
 
     var processorConfig: JsObject = new JsObject(Seq())
 
@@ -104,7 +102,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         sync = (config \ "sync").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Populate and dispatch remote generator with contents of first Datum
         val datum = data.data.headOption.getOrElse(Map())
 
@@ -144,7 +142,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         try {
             // Send a message to our Dispatcher to create the (remote) actor and return us the ActorRef
             val fut = Akka.system.actorSelection("user/TuktuDispatcher") ?
-                new DispatchRequest(nextName, Some(customConfig), false, true, sync, None)
+                new DispatchRequest(nextName, Some(customConfig), false, true, sync, Some(forwarder))
             val ar = Await.result(fut.mapTo[ActorRef], timeout.duration)
             // Tell the sync stream forwarder about the ActorRef
             val successFut = forwarder ? (ar, sync)
@@ -157,14 +155,17 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         // Send the result to the generator
         if (sync) {
             // Get the result from the generator
-            val dataFut = forwarder ? data
-            val result = Await.result(dataFut.mapTo[DataPacket], timeout.duration)
-            forwarder ! new StopPacket
-            result
+            val dataFut = (forwarder ? data).asInstanceOf[Future[DataPacket]]
+            dataFut.map {
+                case result: DataPacket => {
+                    forwarder ! new StopPacket
+                    result
+                }
+            }
         } else {
             forwarder ! data
             forwarder ! new StopPacket
-            data
+            Future { data }
         }
     }) compose Enumeratee.onEOF(() => {
         forwarder ! PoisonPill
