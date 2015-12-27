@@ -32,6 +32,10 @@ The following companies or organizations use or actively contribute to Tuktu.
 
 [EclipseIT](http://www.eclipseit.nl/) is a partner of the Tuktu platform and is using it in all of its big data science projects.
 
+<img src="images/zettadata_logo.png" width="80">
+
+[Zettadata](http://www.zettadata.net/) uses Tuktu as a platform to help clients manage digital assets and harness multiple information streams for data-savvy decision making.
+
 ![AnyPinion Logo](http://anypinion.com/assets/images/logo_grey.png)
 
 [AnyPinion](http://anypinion.com/) uses Tuktu for its API and real-time analytics module. AnyPinion has been an adopter of Tuktu from the very beginning.
@@ -53,12 +57,6 @@ Note that in order to run Tuktu, you need to navigate a terminal or command prom
 # Building from Source
 
 To build Tuktu from source, clone the repository. Tuktu was built against Play! version 2.3.x so you need that version of Play. Also, you need **Java 8**.
-
-**Important note:** If you want to build Tuktu as-is from cloning the git repository - including the NLP module - you will need to have the following NLP libraries installed to your local Maven or otherwise present on the classpath:
-
-- [LIGA](https://github.com/ErikTromp/LIGA) - Language Detection library
-- [OpenNLPPOSWrapper](https://github.com/ErikTromp/OpenNLPPOSWrapper) - Part-of-Speech Tagging wrapper around the OpenNLP library
-- [RBEM](https://github.com/ErikTromp/RBEM) - Multi-lingual Sentiment Analysis library
 
 To build Tuktu (for production), run:
 
