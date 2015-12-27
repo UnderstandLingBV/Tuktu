@@ -17,15 +17,18 @@ import play.api.cache.Cache
 import scala.collection.mutable.ListBuffer
 import tuktu.dlib.utils._
 
+
 /**
- * Harvests metadata records from an OAI-PMH target repository.
+ * Harvests metadata records or metadata records identifiers from an OAI-PMH target repository.
  */
-class ListRecordsProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+class HarvesterProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    
+  implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Set up the packet sender actor
     val packetSenderActor = Akka.system.actorOf(Props(classOf[PacketSenderActor], genActor))
     
+    var identifiersOnly: Boolean = _
     var target: String = _
     var metadataPrefix: String = _
     var from: Option[String] = _
@@ -35,6 +38,7 @@ class ListRecordsProcessor(genActor: ActorRef, resultName: String) extends Buffe
     
     override def initialize(config: JsObject) 
     {
+        identifiersOnly = (config \ "identifiersOnly").asOpt[Boolean].getOrElse(false)
         target = (config \ "target").as[String]
         metadataPrefix = (config \ "metadataPrefix").as[String]
         from = (config \ "from").asOpt[String]
@@ -43,14 +47,15 @@ class ListRecordsProcessor(genActor: ActorRef, resultName: String) extends Buffe
         toj = (config \ "toJSON").asOpt[Boolean].getOrElse(false)
     }
     
-    
-    
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         val futures = Future.sequence( 
             (for (datum <- data.data) yield
             {
                // compose verb
-               val verb = utils.evaluateTuktuString(target, datum) + "?verb=ListRecords"
+               val verb = identifiersOnly match{
+                 case false => utils.evaluateTuktuString(target, datum) + "?verb=ListRecords"
+                 case true => utils.evaluateTuktuString(target, datum) + "?verb=ListIdentifiers"
+               }
                // compose params
                val params = "&metadataPrefix=" + utils.evaluateTuktuString(metadataPrefix, datum) + (from match{
                   case None => ""
@@ -80,7 +85,10 @@ class ListRecordsProcessor(genActor: ActorRef, resultName: String) extends Buffe
       {
         case None => {
           // extract records and send them to channel
-          val records = (response \ "ListRecords" \ "record" \ "metadata" ).flatMap( _.child ).toSeq
+          val records = identifiersOnly match {
+            case false => (response \ "ListRecords" \ "record" \ "metadata" ).flatMap( _.child ).toSeq
+            case true => (response \ "ListIdentifiers" \ "header" ).toSeq
+          }
           val recs = (records map { rec => rec.toString.trim })
           val result = for (record <- recs; if (!record.isEmpty)) yield
           {
@@ -90,7 +98,10 @@ class ListRecordsProcessor(genActor: ActorRef, resultName: String) extends Buffe
             }
           }
           // check for resumption token
-          val rToken = ( response \ "ListRecords" \ "resumptionToken" ).headOption
+          val rToken = identifiersOnly match{
+            case false => ( response \ "ListRecords" \ "resumptionToken" ).headOption
+            case true => ( response \ "ListIdentifiers" \ "resumptionToken" ).headOption
+          }
           rToken match
             {
               case Some( resumptionToken ) => result ++ listRecords( verb, ("&resumptionToken=" + resumptionToken.text), datum ) // keep harvesting
@@ -109,7 +120,7 @@ class ListRecordsProcessor(genActor: ActorRef, resultName: String) extends Buffe
 }
 
 /**
- * Actor for forwarding the split data packets
+ * Actor for forwarding data packets
  */
 class PacketSenderActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
     remoteGenerator ! new InitPacket

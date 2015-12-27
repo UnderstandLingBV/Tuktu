@@ -1,7 +1,7 @@
 {
-    "name": "ListRecords Processor",
-    "description": "Harvests metadata records from an OAI-PMH target repository.",
-    "class": "tuktu.dlib.processors.oaipmh.ListRecordsProcessor",
+    "name": "Harvester Processor",
+    "description": "Harvests metadata records (ListRecords) or metadata records identifiers (ListIdentifiers) from an OAI-PMH target repository.",
+    "class": "tuktu.dlib.processors.oaipmh.HarvesterProcessor",
     "parameters": [
         {
             "name": "id",
@@ -18,6 +18,13 @@
             "type": "object",
             "required": true,
             "parameters": [
+                {
+                    "name": "identifiersOnly",
+                    "description": "Only harvest the record identifiers (ListIdentifiers) instead of the full metadata records (ListRecords)?",
+                    "type": "boolean",
+                    "required": true,
+                    "default": false
+                },
                 {
                     "name": "target",
                     "description": "The URL of the OAI-PMH target to harvest.",
