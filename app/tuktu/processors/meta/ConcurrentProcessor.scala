@@ -21,6 +21,9 @@ import akka.actor.PoisonPill
 import akka.actor.Actor
 import play.api.libs.iteratee.Concurrent
 import akka.pattern.ask
+import akka.remote.routing.RemoteRouterConfig
+import akka.routing.RoundRobinPool
+import akka.actor.Address
 
 /**
  * Actor that deals with parallel processing
@@ -66,7 +69,7 @@ class ConcurrentProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) ex
 class ConcurrentProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
-    var actors: collection.mutable.ListBuffer[ActorRef] = _
+    var router: ActorRef = _
     var actorOffset = 0
 
     override def initialize(config: JsObject) {
@@ -114,24 +117,18 @@ class ConcurrentProcessor(resultName: String) extends BaseProcessor(resultName) 
             val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Concurrent Processor - Unknown")
             (pipeline._1, pipeline._2.head)
         }
-        // @TODO: Set up #instanceCount actors across the nodes to use
-        (1 to instanceCount).foreach(i => {
-            // @TODO: Create remotely
-            //AddressFromURIString("akka.tcp://sys@host:1234")
-            //actors += system.actorOf(Props(classOf[ConcurrentProcessorActor], processor)
-            //    .withDeploy(Deploy(scope = RemoteScope(address))))
-
-            actors += Akka.system.actorOf(Props(classOf[ConcurrentProcessorActor], processor))
-        })
+        
+        // Set up #instanceCount actors across the nodes to use
+        val addresses = nodes.map(node => Address("akka.tcp", "application", node._2.host, node._2.akkaPort))
+        router = Akka.system.actorOf(RemoteRouterConfig(RoundRobinPool(instanceCount), addresses)
+                .props(Props(classOf[ConcurrentProcessorActor], processor)))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
-        // Send data to one of the actors
-        val actor = actors(actorOffset)
-        actorOffset = (actorOffset + 1) % actors.size
-
-        // Get the result
-        Await.result((actor ? data).asInstanceOf[Future[DataPacket]], timeout.duration)
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        // Send data to our actor
+        (router ? data).map {
+            case dp: DataPacket => dp
+        }
     })
 
 }

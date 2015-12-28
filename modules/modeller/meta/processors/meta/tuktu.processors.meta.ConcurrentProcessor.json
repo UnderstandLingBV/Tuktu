@@ -1,0 +1,103 @@
+{
+	"name": "Concurrent Processor",
+	"description": "Takes a subflow and creates a number of instances of it. Data is then processed by one of the instances.",
+	"class": "tuktu.processors.meta.ConcurrentProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "instances",
+					"description": "The number of instances to run per node.",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "nodes",
+					"description": "The nodes to use.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"description": "The hostname of the node.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "start",
+					"description": "The ID of the processor to compose first.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "pipeline",
+					"description": "The actual pipeline of processors.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "id",
+									"description": "The Id of the processor.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "name",
+									"description": "The name of the processor.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "config",
+									"description": "The config of the processor.",
+									"type": "JsObject",
+									"required": true
+								},
+								{
+									"name": "result",
+									"description": "The result of the processor.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "next",
+									"description": "The next processors to be composed. Due to current limitations, if this processor is the first one in the processor flow after start with not exactly one successor, its result is used for merging, ie. no branching is supported.",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"description": "The next processor to be composed. Due to current limitations, if this processor is the first one in the processor flow after start with not exactly one successor, its result is used for merging, ie. no branching is supported.",
+											"type": "string",
+											"required": true
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}
