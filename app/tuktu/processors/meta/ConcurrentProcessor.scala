@@ -24,6 +24,7 @@ import akka.pattern.ask
 import akka.remote.routing.RemoteRouterConfig
 import akka.routing.RoundRobinPool
 import akka.actor.Address
+import akka.routing.Broadcast
 
 /**
  * Actor that deals with parallel processing
@@ -63,13 +64,35 @@ class ConcurrentProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) ex
 }
 
 /**
+ * Actor that is always alive and truly async
+ */
+class IntermediateActor(genActor: ActorRef, node: ClusterNode, instanceCount: Int, processor: Enumeratee[DataPacket, DataPacket]) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    // Set up #instanceCount actors across the nodes to use
+    val router = Akka.system.actorOf(RemoteRouterConfig(RoundRobinPool(instanceCount),
+            Seq(Address("akka.tcp", "application", node.host, node.akkaPort))
+        ).props(Props(classOf[ConcurrentProcessorActor], processor)))
+            
+    def receive() = { 
+        case dp: DataPacket => {
+            (router ? dp).map {
+                case resultDp: DataPacket => genActor ! resultDp
+            }
+        }
+        case sp: StopPacket => {
+            router ! Broadcast(sp)
+            genActor ! new StopPacket
+        }
+    }
+}
+
+/**
  * Sets up a sub-flow concurrently and lets datapackets be processed by one of the instances,
  * allowing concurrent processing by multiple instances
  */
-class ConcurrentProcessor(resultName: String) extends BaseProcessor(resultName) {
-    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-
-    var router: ActorRef = _
+class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    var intermediateActors = List.empty[ActorRef]
     var actorOffset = 0
 
     override def initialize(config: JsObject) {
@@ -118,17 +141,18 @@ class ConcurrentProcessor(resultName: String) extends BaseProcessor(resultName) 
             (pipeline._1, pipeline._2.head)
         }
         
-        // Set up #instanceCount actors across the nodes to use
-        val addresses = nodes.map(node => Address("akka.tcp", "application", node._2.host, node._2.akkaPort))
-        router = Akka.system.actorOf(RemoteRouterConfig(RoundRobinPool(instanceCount), addresses)
-                .props(Props(classOf[ConcurrentProcessorActor], processor)))
+        // Make all the actors
+        intermediateActors = for (node <- nodes) yield
+            Akka.system.actorOf(Props(classOf[IntermediateActor], genActor, node._2, instanceCount, processor))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Send data to our actor
-        (router ? data).map {
-            case dp: DataPacket => dp
-        }
+        intermediateActors(actorOffset) ! data
+        actorOffset = (actorOffset + 1) % intermediateActors.size
+        
+        data
+    }) compose Enumeratee.onEOF(() => {
+        intermediateActors.foreach(_ ! new StopPacket)
     })
-
 }
