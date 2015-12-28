@@ -25,16 +25,23 @@
 					"required": true,
 					"parameters": [
 						{
-							"name": "number",
-							"type": "int",
+							"name": "",
+							"type": "object",
 							"required": true,
-							"description": "The number that should be assigned"
-						},
-						{
-							"name": "probability",
-							"type": "double",
-							"required": true,
-							"description": "The probability with which this number should be assigned."
+							"parameters": [
+								{
+									"name": "number",
+									"type": "int",
+									"required": true,
+									"description": "The number that should be assigned"
+								},
+								{
+									"name": "probability",
+									"type": "double",
+									"required": true,
+									"description": "The probability with which this number should be assigned."
+								}
+							]
 						}
 					]
 				}

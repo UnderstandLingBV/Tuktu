@@ -77,6 +77,7 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
     var joinActors = collection.mutable.ListBuffer[ActorRef]()
     var sourceActors = collection.mutable.Map[ActorRef, Int]()
     var sources = collection.mutable.ListBuffer[(String, List[String], String)]()
+    var stopPacketCounter = 0
     
     override def receive() = {
         case config: JsValue => {
@@ -120,7 +121,10 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                     .withDeploy(Deploy(scope = RemoteScope(Address("akka.tcp", "application", node._1, node._2)))))
             }
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => {
+            stopPacketCounter += 1
+            if (stopPacketCounter == sourceActors.size) cleanup
+        }
         case ip: InitPacket => setup
         case dp: DataPacket => {
             // Here we need to hash the data packet based on key and forward it to the joiners

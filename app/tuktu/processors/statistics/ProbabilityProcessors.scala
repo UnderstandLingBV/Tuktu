@@ -28,7 +28,7 @@ class NumberWithProbabilityProcessor(resultName: String) extends BaseProcessor(r
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         new DataPacket(for (datum <- data.data) yield {
             datum + (
-                    resultName -> getNumber(0.0, Math.random(), 0)
+                    resultName -> getNumber(numbersWithProbability(0)._2, Math.random(), 0)
             )
         })
     })

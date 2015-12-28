@@ -200,10 +200,10 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     senderActor match {
         case Some(ref) => {
             // Set up enumeratee that sends the result back to sender
-            val sendBackEnumeratee: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => {
+            val sendBackEnumeratee: Enumeratee[DataPacket, DataPacket] = Enumeratee.map((dp: DataPacket) => {
                 ref ! dp
                 dp
-            })
+            }) compose Enumeratee.onEOF(() => ref ! new StopPacket)
             processors.foreach(processor => enumerator |>> (processor compose sendBackEnumeratee) &>> sinkIteratee)
         }
         case None => processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
