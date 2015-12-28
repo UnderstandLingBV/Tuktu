@@ -1,0 +1,44 @@
+{
+	"name": "Number With Probability Processor",
+	"description": "Assigns a number to each datapacket's datum with a specific probability",
+	"class": "tuktu.processors.statistics.NumberWithProbabilityProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "numbers",
+					"type": "array",
+					"description": "The numbers with probabilities.",
+					"required": true,
+					"parameters": [
+						{
+							"name": "number",
+							"type": "int",
+							"required": true,
+							"description": "The number that should be assigned"
+						},
+						{
+							"name": "probability",
+							"type": "double",
+							"required": true,
+							"description": "The probability with which this number should be assigned."
+						}
+					]
+				}
+			]
+		}
+	]
+}

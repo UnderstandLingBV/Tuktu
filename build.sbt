@@ -1,5 +1,6 @@
 EclipseKeys.createSrc := EclipseCreateSrc.All
 
+// For running tests, comment the following line
 javaOptions += "-Xmax-classfile-name 100"
 
 lazy val appResolvers = Seq(

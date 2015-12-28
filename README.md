@@ -40,7 +40,7 @@ The following companies or organizations use or actively contribute to Tuktu.
 
 [AnyPinion](http://anypinion.com/) uses Tuktu for its API and real-time analytics module. AnyPinion has been an adopter of Tuktu from the very beginning.
 
-[University of Maastricht](http://www.maastrichtuniversity.nl/) The University of Maastricht has been using Tuktu as the core platform for performing analytics on open source data on. The University of Maastricht has been using Tuktu from the very beginning.
+[University of Maastricht](http://www.maastrichtuniversity.nl/) The University of Maastricht has been using Tuktu as the core platform for performing analytics on open source data. The University of Maastricht has been using Tuktu from the very beginning.
 
 Are you using Tuktu too and want to be on this list? [Contact us](mailto:info@et4it.nl) and send a small logo, a URL and a small explanation of what you are doing with Tuktu.
 
