@@ -1,0 +1,30 @@
+{
+	"name": "Punctuation Remover Processor",
+	"description": "Removes punctuation from a sequence of Strings.",
+	"class": "tuktu.nlp.processors.cleanup.PunctuationRemoverProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to remove punctuation from.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

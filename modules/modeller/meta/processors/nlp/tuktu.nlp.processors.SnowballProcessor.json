@@ -1,0 +1,37 @@
+{
+	"name": "Snowball Processor",
+	"description": "Snowballs a sequence of Strings in a given field, based on a given language.",
+	"class": "tuktu.nlp.processors.SnowballProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to be Snowball'ed. It needs to be a sequence of Strings.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "language",
+					"description": "Language of the text.",
+					"type": "string",
+					"required": true,
+					"default": "en"
+				}
+			]
+		}
+	]
+}
