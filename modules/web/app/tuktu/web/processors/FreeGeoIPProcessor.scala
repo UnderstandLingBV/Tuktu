@@ -48,14 +48,12 @@ class FreeGeoIPProcessor(resultName: String) extends BaseProcessor(resultName) {
 
     def lookupIP(ip: String): Future[Any] = {
         val future = WS.url(freegeoip + "/" + format + "/" + ip).get
-        val body = future.map(response => response.body)
-        body.map{ result =>
+        future.map(response =>
             format match {
-                case "json" => Json.parse(result)
-                case "csv"  => result
-                case "xml"  => result
+                case "json" => response.json
+                case "csv"  => response.body
+                case "xml"  => response.xml.toString
                 case _      => "invalid format requested!"
-            }
-        }
+            })
     }
 }
