@@ -46,6 +46,8 @@ object MongoCollectionPool {
              case false => MongoConnectionOptions( authMode = CrAuthentication )
            }
            val connection = connections.getOrElseUpdate(settings.hosts, driver.connection(settings.hosts, options = conOpts, authentications = List(credentials)))
+           // TODO find a better way to wait for authentication to succeed
+           Thread.sleep(10000L)
            val db = connection(settings.database)
            db(settings.collection)
         })        
