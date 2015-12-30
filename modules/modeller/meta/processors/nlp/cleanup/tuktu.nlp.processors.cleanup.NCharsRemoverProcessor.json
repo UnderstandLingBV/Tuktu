@@ -1,0 +1,38 @@
+{
+	"name": "N Chars Remover Processor",
+	"description": "Removes N chars from a sequence of Strings.",
+	"class": "tuktu.nlp.processors.cleanup.NCharsRemoverProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to remove N chars from.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "n",
+					"label": "N",
+					"description": "The N chars to remove.",
+					"type": "int",
+					"required": true,
+					"default": 3
+				}
+			]
+		}
+	]
+}

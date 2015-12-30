@@ -11,21 +11,19 @@ import org.tartarus.snowball.ext.porterStemmer
 import org.tartarus.snowball.SnowballStemmer
 
 /**
- * Removes punctuation from a given sequence of Strings.
+ * Generic Base class for the cleaner classes.
  */
-class PunctuationRemoverProcessor(resultName: String) extends BaseProcessor(resultName) {
+abstract class BaseCleaner(resultName: String) extends BaseProcessor(resultName) {
+    // field containing the sequence of tokens.
     var fieldName: String = _
-    
-    val punc =  """(\p{P})""".r
-    
+  
     override def initialize(config: JsObject) {
-        // Get fields
+        // Get field
         fieldName = (config \ "field").as[String]       
     }
-
+    
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        for (datum <- data) yield {
-          
+        for (datum <- data) yield {          
           val result = datum(fieldName) match {
             case a: Array[String] => clean(a.toSeq)
             case a: Seq[String] => clean(a)
@@ -35,10 +33,54 @@ class PunctuationRemoverProcessor(resultName: String) extends BaseProcessor(resu
           datum + (resultName -> result)
         }
     })
+    
+    def clean(seq: Seq[String]): Seq[String]
+}
 
+/**
+ * Removes punctuation from a given sequence of Strings.
+ */
+class PunctuationRemoverProcessor(resultName: String) extends BaseCleaner(resultName) {
+    // Regex for punctuation
+    val punc =  """(\p{P})""".r
+ 
+    def clean(seq: Seq[String]) = seq.filterNot(punc.pattern.matcher(_).matches)     
+}
+
+/**
+ * Removes punctuation from a given sequence of Strings.
+ */
+class NCharsRemoverProcessor(resultName: String) extends BaseCleaner(resultName) {
+    // N chars to remove
+    var n: Int = _
+  
+    override def initialize(config: JsObject) {
+      super.initialize(config)
+      // Minimum chars
+      n = (config \ "n").as[Int]
+    }
+  
+    def clean(seq: Seq[String]) = seq.filter(_.length() > n)
+}
+
+/**
+ * Changes the case of a sequence of Strings to all upper or lowercase.
+ */
+class CaseConverterProcessor(resultName: String) extends BaseCleaner(resultName) {
+    // N chars to remove
+    var uppercase: Boolean = _
+  
+    override def initialize(config: JsObject) {
+      super.initialize(config)
+      // Minimum chars
+      uppercase = (config \ "uppercase").asOpt[Boolean].getOrElse(false)
+    }
+  
     def clean(seq: Seq[String]) = {
-      for (
-        token <- seq if (!punc.pattern.matcher(token).matches)
-      ) yield token
+      if(uppercase) {
+        seq.map(_.toUpperCase) 
+      } else {
+        seq.map(_.toLowerCase)
+      }      
     }
 }

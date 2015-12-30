@@ -1,0 +1,37 @@
+{
+	"name": "Caseconverter Processor",
+	"description": "Changes the case of a sequence of Strings to all upper or lowercase.",
+	"class": "tuktu.nlp.processors.cleanup.CaseConverterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to convert case.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "uppercase",
+					"description": "Uppercase?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}
