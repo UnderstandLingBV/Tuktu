@@ -2,34 +2,36 @@ package tuktu.nlp.processors
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import org.tartarus.snowball.SnowballStemmer
 import org.tartarus.snowball.ext.dutchStemmer
 import org.tartarus.snowball.ext.porterStemmer
-
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
+import tuktu.api.utils
 
 /**
  * Snowball's a piece of text, based on a given language.
  */
 class SnowballProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldName: String = _
-    var languageField: String = _
+    var language: String = _
 
     override def initialize(config: JsObject) {
         // Get fields
         fieldName = (config \ "field").as[String]        
-        languageField = (config \ "language").as[String]
+        language = (config \ "language").as[String]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
           
+          // Get the language
+          val lang = utils.evaluateTuktuString(language, datum)
+          
           val stemmer = {
-            datum(languageField).asInstanceOf[String].toLowerCase match {
+            lang.toLowerCase match {
               case "nl" | "nl_nl" => new dutchStemmer
               case "en" | "en_en" | "en_uk" | _ => new porterStemmer
               //TODO add more languages

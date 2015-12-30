@@ -1,0 +1,37 @@
+{
+	"name": "Stopword Remover Processor",
+	"description": "Removes all the stopwords from a sequence of Strings, based on a given language.",
+	"class": "tuktu.nlp.processors.cleanup.StopwordRemoverProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to convert case.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "lang",
+					"description": "language",
+					"type": "string",
+					"required": true,
+					"default": "en"
+				}
+			]
+		}
+	]
+}
