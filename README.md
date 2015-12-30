@@ -1,4 +1,8 @@
 # Tuktu - Big Data Science Swiss Army Knife
+Tuktu is created and officially maintained by [UnderstandLing](http://www.understandling.com).
+
+![UnderstandLing Logo](images/ul.png)
+
 Tuktu is a big data analytics platform that focuses on ease of use. The idea of the platform is that its users can focus on (business) logic rather than dealing with technical implementation details. Tuktu comes with a couple of key characteristics:
 
 - Support for real-time and batch processing
