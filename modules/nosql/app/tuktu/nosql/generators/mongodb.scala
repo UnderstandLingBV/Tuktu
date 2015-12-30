@@ -4,13 +4,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Success
 import akka.actor.ActorRef
 import akka.actor.actorRef2Scala
-import play.api.libs.iteratee.Enumeratee
-import play.api.libs.iteratee.Iteratee
+import play.api.libs.iteratee._
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import play.modules.reactivemongo.json._
 import play.modules.reactivemongo.json.collection._
 import reactivemongo.api.MongoDriver
+import reactivemongo.api.Cursor
 import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.StopPacket
@@ -24,6 +24,7 @@ import scala.concurrent.Future
 import play.api.Logger
 import tuktu.nosql.util.MongoPipelineTransformer
 import reactivemongo.core.nodeset.Authenticate
+import reactivemongo.api.ReadPreference
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -49,6 +50,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                         case false => Authenticate(database, usr, pwd)
                     }
                     MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
+                    
                 }
             }
 
@@ -181,4 +183,59 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
     }
+}
+
+/**
+ * Generator for MongoDB finds
+ */
+class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    override def receive() = {
+        case config: JsValue => {
+            // Get connection properties
+            val hosts = (config \ "hosts").as[List[String]]
+            val database = (config \ "database").as[String]
+            val coll = (config \ "collection").as[String]
+
+            // Get credentials
+            val user = (config \ "user").asOpt[String]
+            val pwd = (config \ "password").asOpt[String].getOrElse("")
+            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
+            val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
+
+            // Set up connection
+            val settings = MongoSettings(hosts, database, coll)
+            val collection = user match {
+                case None => MongoCollectionPool.getCollection(settings)
+                case Some(usr) => {
+                    val credentials = admin match {
+                        case true  => Authenticate("admin", usr, pwd)
+                        case false => Authenticate(database, usr, pwd)
+                    }
+                    MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
+                    
+                }
+            }
+
+            // Get query and filter
+            val query = (config \ "query").as[JsObject]
+            val filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
+            val sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
+            
+            val enumerator: Enumerator[JsObject] = collection.find(query, filter).sort(sort).cursor[JsObject](ReadPreference.nearest).enumerate()
+            val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => channel.push(new DataPacket(List(tuktu.api.utils.JsObjectToMap(record))))}                
+            val future = enumerator.run(pushRecords)
+            future.onSuccess {
+                case _ => self ! new StopPacket
+            }
+            future.onFailure {
+                case e: Throwable => {
+                    e.printStackTrace
+                    self ! new StopPacket
+                }
+            }         
+        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
+    }
+    
 }

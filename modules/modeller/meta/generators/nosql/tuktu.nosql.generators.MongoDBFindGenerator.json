@@ -1,0 +1,122 @@
+{
+	"name": "MongoDB Find Generator",
+	"description": "Executes a query and streams the results (as opposed to the MongoDB Generator that keeps them in memory).",
+	"class": "tuktu.nosql.generators.MongoDBFindGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "database",
+					"description": "The database name.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"description": "The name of the collection to open.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "user",
+					"description": "The name of the user (if authentication is required).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "password",
+					"description": "The password of the user (if authentication is required).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "admin",
+					"description": "Does authentication use the admin database?",
+					"type": "boolean",
+					"required": true,
+					"default": true
+				},
+				{
+					"name": "ScramSha1",
+					"description" : "Use the ScramSha1 authentication method (instead of CrAuth)?",
+					"type": "boolean",
+					"required": true,
+					"default": true
+				},
+				{
+					"name": "query",
+					"description": "Find the documents matching these given criteria.",
+					"type": "JsObject",
+					"required": true
+				},
+				{
+					"name": "filter",
+					"description": "Filter results by this projection.",
+					"type": "JsObject",
+					"required": false
+				},
+				{
+					"name": "sort",
+					"description": "Sort results by this projection.",
+					"type": "JsObject",
+					"required": false
+				}
+			]
+		}
+	]
+}
