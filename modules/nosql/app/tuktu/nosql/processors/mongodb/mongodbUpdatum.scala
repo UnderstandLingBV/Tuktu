@@ -26,6 +26,7 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
     var collection: JSONCollection = _
     // If set to true, creates a new document when no document matches the _id key. 
     var upsert: Boolean = _
+    var blocking: Boolean = _
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
@@ -33,6 +34,7 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
+        blocking = (config \ "blocking").asOpt[Boolean].getOrElse(true)
         // Get credentials
         val user = (config \ "user").asOpt[String]
         val pwd = (config \ "password").asOpt[String].getOrElse("")
@@ -62,8 +64,7 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
             collection.update(selector, updater, upsert = upsert)
         })
         // Wait for all the updates to be finished
-        futures.foreach { f => if (!f.isCompleted) Await.ready(f, Cache.getAs[Int]("timeout").getOrElse(5) seconds) }
-
+        if (blocking) futures.foreach { f => if (!f.isCompleted) Await.ready(f, Cache.getAs[Int]("timeout").getOrElse(5) seconds) }
         data
     })
 }
