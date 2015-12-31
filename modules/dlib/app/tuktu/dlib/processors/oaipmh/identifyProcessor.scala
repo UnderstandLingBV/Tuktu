@@ -35,7 +35,11 @@ class IdentifyProcessor (resultName: String) extends BaseProcessor(resultName)
         }        
       })
     })
-  
+  /**
+   * Utility method to retrieve a repository description
+   * @param target: The OAI-PMH identify request
+   * @return the repository description
+   */
     def getIdentity( target: String ): String =
     {
       val verb = target + "?verb=Identify"

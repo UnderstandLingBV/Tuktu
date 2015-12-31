@@ -24,7 +24,7 @@ import tuktu.api._
 import tuktu.api.utils.evaluateTuktuString
 
 /**
- * @author dmssrt
+ * Queries the Europeana API and returns pointers to the resulting records.
  */
 class EuropeanaQueryProcessor(resultName: String) extends BaseProcessor(resultName) 
 {
@@ -49,7 +49,12 @@ class EuropeanaQueryProcessor(resultName: String) extends BaseProcessor(resultNa
             })
     })  
       
-    
+    /**
+     * Utility method to recursively call the Europeana API until either all the results or the requested number of results is reached
+     * @param query: a Europeana query without paging (&start) nor apikey (&wskey) parameters
+     * @param start: the first result to collect
+     * @return A stream of URLs pointing to the resulting Europeana metadata records 
+     */
     def callEuropeana( query: String, start: Int ): Stream[String] =
     {
         val encoding: String = "UTF8"

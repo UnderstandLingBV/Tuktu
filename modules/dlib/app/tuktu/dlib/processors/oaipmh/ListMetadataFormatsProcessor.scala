@@ -36,7 +36,6 @@ class ListMetadataFormatsProcessor(resultName: String) extends BaseProcessor(res
           case Some( i ) => "&identifier=" + utils.evaluateTuktuString( i , datum )
         }
         val verb = trgt + "?verb=ListMetadataFormats" + id
-        println( verb )
         toj match
         {
           case false => datum + ( resultName -> getFormats( verb ) )
@@ -44,7 +43,11 @@ class ListMetadataFormatsProcessor(resultName: String) extends BaseProcessor(res
         }        
       })
     })
-  
+  /**
+   * Utility method to retrieve the metadata formats supported by a repository
+   * @param verb: The OAI-PMH ListFormats request
+   * @return the metadata formats supported by the repository
+   */
     def getFormats( verb: String ): Seq[String] =
     {
       val response = oaipmh.harvest( verb )

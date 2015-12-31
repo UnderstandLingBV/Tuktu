@@ -50,7 +50,6 @@ class HarvesterActor(parentActor: ActorRef, verb: String, params: String) extend
         {
             // send records to parent
             val records = (rpacket.response \ "ListRecords" \ "record" \ "metadata" ).flatMap( _.child ).toSeq
-            // println( records.toString )
             // Send back to parent for pushing into channel
             parentActor ! OAIRecordsPacket( records )
             // check for resumptionToken

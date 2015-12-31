@@ -16,7 +16,7 @@ import tuktu.dlib.utils.oaipmh
 case class OAIIdentifiersPacket( ids: Seq[Node] )
 
 /**
- * Actor that harvests an OAI-PMH target
+ * Actor that harvests the record identifiers from an OAI-PMH target
  */
 class ListIdentifiersActor(parentActor: ActorRef, verb: String, params: String) extends Actor with ActorLogging 
 {
@@ -26,9 +26,7 @@ class ListIdentifiersActor(parentActor: ActorRef, verb: String, params: String) 
         case ip: InitPacket => self ! OAIRequestPacket( verb + params )
         
         case request: OAIRequestPacket => {
-          // println( "requested URL: " + request.request )
           val response = oaipmh.harvest( request.request )
-          // println( "response received: " + response.toString )
           (response \\ "error").headOption match{
               case None => self ! OAIResponsePacket( response )
               case Some( err ) => {
@@ -50,7 +48,6 @@ class ListIdentifiersActor(parentActor: ActorRef, verb: String, params: String) 
         {
             // send records to parent
             val headers = (rpacket.response \ "ListIdentifiers" \ "header" ).toSeq
-            // println( records.toString )
             // Send back to parent for pushing into channel
             parentActor ! OAIIdentifiersPacket( headers )
             // check for resumptionToken

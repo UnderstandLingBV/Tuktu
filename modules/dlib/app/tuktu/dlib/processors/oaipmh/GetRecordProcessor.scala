@@ -42,7 +42,12 @@ class GetRecordProcessor(resultName: String) extends BaseProcessor(resultName)
         }        
       })
     })
-  
+    
+  /**
+   * Utility method to retrieve an individual metadata record from a repository
+   * @param verb: The OAI-PMH request containing the identifier of the record to get
+   * @return the corresponding metadata record
+   */
     def getRecord( verb: String ): String =
     {
       val response = oaipmh.harvest( verb )

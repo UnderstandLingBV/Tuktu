@@ -15,6 +15,9 @@ import tuktu.dlib.utils.oaipmh
 
 case class OAISetsPacket( sets: Seq[Node] )
 
+/**
+ * Actor that obtains the set structure of a repository
+ */
 class ListSetsActor(parentActor: ActorRef, verb: String) extends Actor with ActorLogging 
 {
     

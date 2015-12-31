@@ -15,6 +15,9 @@ import tuktu.dlib.utils.oaipmh
 
 case class OAIFormatsPacket( formats: Seq[Node] )
 
+/**
+ * Actor that obtains the metadata formats available from a repository
+ */
 class ListFormatsActor(parentActor: ActorRef, verb: String) extends Actor with ActorLogging 
 {
     

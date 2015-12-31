@@ -36,6 +36,12 @@ class ListSetsProcessor(resultName: String) extends BaseProcessor(resultName)
       })
     })
   
+  /**
+   * Recursive utility method to retrieve the set structure of a repository
+   * @param target: The URL of the repository
+   * @param verb: the ListSets verb and its parameters
+   * @return the complete set structure of the repository
+   */
     def getSets( target: String, verb: String ): Seq[String] =
     {
       val response = oaipmh.harvest( target + verb )

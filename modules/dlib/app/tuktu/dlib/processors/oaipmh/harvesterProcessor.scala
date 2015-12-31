@@ -77,6 +77,14 @@ class HarvesterProcessor(genActor: ActorRef, resultName: String) extends BufferP
         }
     }) compose Enumeratee.onEOF(() => packetSenderActor ! new StopPacket)
     
+  /**
+   * Utility method to (selectively) harvest metadata records (or their identifiers) from a repository
+   * @param verb: The OAI-PMH verb url (listrecords or listidentifiers)
+   * @param params: The harvesting parameters for the verb considered
+   * @param datum: The datum containing the query 
+   * @return the corresponding metadata records or identifiers packaged in separate data packets.
+   */
+
     def listRecords( verb: String, params: String, datum: Map[String, Any] ): Seq[Future[Any]] =
     {
         val response = oaipmh.harvest( verb + params )
