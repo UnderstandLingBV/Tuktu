@@ -52,7 +52,7 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 /**
- * Removes specific top-level fields from the each datum
+ * Removes specific top-level fields from each datum
  */
 class FieldRemoveProcessor(resultName: String) extends BaseProcessor(resultName) {
     // The list of top-level fields to remove
