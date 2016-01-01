@@ -843,3 +843,38 @@ class GroupByProcessor(resultName: String) extends BaseProcessor(resultName) {
             )
         })
 }
+
+/**
+ * Filters out every datum that does not contain any of the required fields.
+ */
+class AbsentFieldsFilterProcessor(resultName: String) extends BaseProcessor(resultName) 
+{
+    var fields: List[String] = _
+
+    override def initialize(config: JsObject) 
+    {
+        fields = (config \ "fields").as[List[String]]
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        for (datum <- data; if (containsAll( datum, fields ))) yield datum 
+    }) compose Enumeratee.filterNot((data: DataPacket) =>  data.isEmpty)
+    
+    /**
+     * Does a datum contain a list of keys?
+     * @param datum: A datum to check
+     * @param keys: A list of mandatory keys to check
+     * @return true if all the keys are present in the datum, false otherwise  
+     */
+    def containsAll( datum: Map[String, Any], keys: List[String] ): Boolean =
+    {
+      if (keys.tail.isEmpty)
+      {
+        datum.contains( keys.head )
+      }
+      else
+      {
+        ( datum.contains( keys.head ) && containsAll( datum, keys.tail ) )
+      }
+    }
+}

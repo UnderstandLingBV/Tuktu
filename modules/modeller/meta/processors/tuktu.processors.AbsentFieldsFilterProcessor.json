@@ -1,0 +1,37 @@
+{
+	"name": "Absent Fields Filter Processor",
+	"description": "Discards every datum that does not contain all of the required fields.",
+	"class": "tuktu.processors.AbsentFieldsFilterProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The required fields (when any of them is absent, the datum is discarded).",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}
