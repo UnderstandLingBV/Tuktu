@@ -1,0 +1,37 @@
+{
+	"name": "ListSets Processor",
+	"description": "Retrieves the set structure of a repository.",
+	"class": "tuktu.dlib.processors.oaipmh.ListSetsProcessor",
+    "parameters": [
+        {
+            "name": "id",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "result",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "config",
+            "type": "object",
+            "required": true,
+            "parameters": [
+                {
+					"name": "target",
+					"description": "The URL of the OAI-PMH target repository.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "toJSON",
+					"description": "Converts XML set descriptions to JSON?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+            ]
+        }
+    ]
+}

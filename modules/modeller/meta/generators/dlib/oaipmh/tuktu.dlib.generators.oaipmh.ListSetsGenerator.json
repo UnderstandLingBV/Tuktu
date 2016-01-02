@@ -1,0 +1,73 @@
+{
+	"name": "ListSets Generator",
+	"description": "Retrieves the set structure of a repository.",
+	"class": "tuktu.dlib.generators.oaipmh.ListSetsGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "target",
+					"description": "The URL of the OAI-PMH target repository.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "toJSON",
+					"description": "Converts XML set descriptions to JSON?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "flatten",
+					"description": "Flattens JSON set descriptions?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

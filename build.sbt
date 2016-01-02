@@ -82,6 +82,14 @@ lazy val dlDependencies = Seq(
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
+lazy val dlibDependencies = Seq(
+    ws,
+    cache,
+    "commons-io" % "commons-io" % "2.4",
+    "org.json" % "json" % "20151123",
+    "org.scalatestplus" %% "play" % "1.2.0" % "test"
+)
+
 lazy val webDependencies = Seq(
     ws,
     cache,
@@ -216,6 +224,17 @@ lazy val dl = (project in file("modules/deeplearn"))
     .settings(EclipseKeys.skipParents in ThisBuild := false)
     .aggregate(api, ml)
     .dependsOn(api, ml)
+
+lazy val dlib = (project in file("modules/dlib"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-dlib")
+    .settings(version := "1.0")
+    .settings(scalaVersion := "2.11.7")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= dlibDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
+    .aggregate(api)
+    .dependsOn(api)
     
 lazy val web = (project in file("modules/web"))
     .enablePlugins(PlayScala)
@@ -281,5 +300,5 @@ lazy val root = project
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= coreDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
-    .aggregate(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz)
-    .dependsOn(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz)
+    .aggregate(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz, dlib)
+    .dependsOn(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz, dlib)

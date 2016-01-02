@@ -1,0 +1,69 @@
+{
+    "name": "Harvester Processor",
+    "description": "Harvests metadata records (ListRecords) or metadata records identifiers (ListIdentifiers) from an OAI-PMH target repository.",
+    "class": "tuktu.dlib.processors.oaipmh.HarvesterProcessor",
+    "parameters": [
+        {
+            "name": "id",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "result",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "config",
+            "type": "object",
+            "required": true,
+            "parameters": [
+                {
+                    "name": "identifiersOnly",
+                    "description": "Only harvest the record identifiers (ListIdentifiers) instead of the full metadata records (ListRecords)?",
+                    "type": "boolean",
+                    "required": true,
+                    "default": false
+                },
+                {
+                    "name": "target",
+                    "description": "The URL of the OAI-PMH target to harvest.",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "metadataPrefix",
+                    "description": "A required argument that specifies the metadataPrefix of the format that should be included in the metadata part of the returned records (e.g., Dublin Core: oai_dc, IEEE LOM: oai_lom).",
+                    "type": "string",
+                    "required": true,
+                    "default": "oai_dc"
+                },
+                {
+                    "name": "from",
+                    "description": "An optional argument with a UTCdatetime value, which specifies a lower bound for datestamp-based selective harvesting.",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "name": "until",
+                    "description": "An optional argument with a UTCdatetime value, which specifies a upper bound for datestamp-based selective harvesting.",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "name": "set",
+                    "description": "An optional argument that specifies the set to selectively harvest.",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "name": "toJSON",
+                    "description": "Convert harvested XML records to JSON?",
+                    "type": "boolean",
+                    "required": false,
+                    "default": false
+                }
+            ]
+        }
+    ]
+}

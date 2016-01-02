@@ -1,0 +1,61 @@
+{
+	"name": "Metadata Serialization Processor",
+	"description": "Serializes a metadata record to a file.",
+	"class": "tuktu.dlib.processors.MetadataSerializationProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "folder",
+					"description": "The folder in which the metadata record will be saved.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "fileName",
+					"description": "The name of the metadata record file to create",
+					"type": "string",
+					"required": true
+				},
+			    {
+					"name": "prefix",
+					"description": "A header to prefix to the metadata record (e.g., <?xml version=\"1.0\" encoding=\"UTF-8\"?>).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "content",
+					"description": "The main metadata content of the record.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "postfix",
+					"description": "A footer to postfix to the metadata record.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "encoding",
+					"description": "The file encoding",
+					"type": "string",
+					"required": true,
+					"default": "utf-8"
+				}
+			]
+		}
+	]
+}
