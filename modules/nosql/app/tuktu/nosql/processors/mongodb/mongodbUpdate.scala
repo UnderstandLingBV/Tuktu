@@ -32,6 +32,7 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     var update: String = _
     //  If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document. 
     var multi = false
+    var blocking: Boolean = _
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
@@ -42,6 +43,7 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         update = (config \ "update").as[String]
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
         multi = (config \ "multi").asOpt[Boolean].getOrElse(false)
+        blocking = (config \ "blocking").asOpt[Boolean].getOrElse(true)
         // Get credentials
         val user = (config \ "user").asOpt[String]
         val pwd = (config \ "password").asOpt[String].getOrElse("")
@@ -65,13 +67,14 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Update data into MongoDB
-        val futures = data.data.map(datum => {
+        val futures = Future.sequence(data.data.map(datum => {
             val selector = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
             val updater = Json.parse(stringHandler.evaluateString(update, datum, "\"", "")).as[JsObject]
             collection.update(selector, updater, upsert = upsert, multi = multi)
-        })
+        }))
+        
         // Wait for all the updates to be finished
-        futures.foreach { f => if (!f.isCompleted) Await.ready(f, Cache.getAs[Int]("timeout").getOrElse(5) seconds) }
+        if (blocking) Await.ready(futures, Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
         data
     })

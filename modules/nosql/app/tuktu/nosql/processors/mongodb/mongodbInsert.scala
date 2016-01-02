@@ -9,13 +9,12 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json._
 import tuktu.api.{ BaseProcessor, DataPacket }
 import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString }
-import tuktu.nosql.util.{ MongoSettings, MongoCollectionPool, stringHandler}
+import tuktu.nosql.util.{ MongoSettings, MongoCollectionPool, stringHandler }
 import reactivemongo.core.nodeset.Authenticate
 import play.modules.reactivemongo.json._
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 import reactivemongo.api.commands.WriteResult
-
 
 /**
  * Inserts data into MongoDB
@@ -30,20 +29,19 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
     var pwd: String = _
     var admin: Boolean = _
     var scramsha1: Boolean = _
-    
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
         hosts = (config \ "hosts").as[List[String]]
         database = (config \ "database").as[String]
         coll = (config \ "collection").as[String]
-        
+
         // Get credentials
         user = (config \ "user").asOpt[String]
         pwd = (config \ "password").asOpt[String].getOrElse("")
         admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
         scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
-        
+
         // What fields to write?
         fields = (config \ "fields").as[List[String]]
 
@@ -65,16 +63,15 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
 
         // Bulk insert and await
         val futures = for (f <- result) yield {
-            val collection = user match{
-            case None => MongoCollectionPool.getCollection(MongoSettings(f._1._1, f._1._2, f._1._3))
-            case Some( usr ) => {
-                val credentials = admin match
-                {
-                  case true => Authenticate( "admin", usr, pwd )
-                  case false => Authenticate( database, usr, pwd )
+            val collection = user match {
+                case None => MongoCollectionPool.getCollection(MongoSettings(f._1._1, f._1._2, f._1._3))
+                case Some(usr) => {
+                    val credentials = admin match {
+                        case true  => Authenticate("admin", usr, pwd)
+                        case false => Authenticate(database, usr, pwd)
+                    }
+                    MongoCollectionPool.getCollectionWithCredentials(MongoSettings(f._1._1, f._1._2, f._1._3), credentials, scramsha1)
                 }
-                MongoCollectionPool.getCollectionWithCredentials(MongoSettings(f._1._1, f._1._2, f._1._3),credentials, scramsha1)
-              }
             }
             collection.bulkInsert(f._2.toStream, false)
         }
@@ -85,10 +82,9 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
     })
 }
 
-
 /**
  * Insert the JSON Object contained in a field into MongoDB
- * 
+ *
  */
 class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
@@ -100,20 +96,19 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
     var pwd: String = _
     var admin: Boolean = _
     var scramsha1: Boolean = _
-    
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
         hosts = (config \ "hosts").as[List[String]]
         database = (config \ "database").as[String]
         coll = (config \ "collection").as[String]
-        
+
         // Get credentials
         user = (config \ "user").asOpt[String]
         pwd = (config \ "password").asOpt[String].getOrElse("")
         admin = (config \ "admin").as[Boolean]
         scramsha1 = (config \ "ScramSha1").as[Boolean]
-        
+
         // What fields to write?
         field = (config \ "field").as[String]
 
@@ -121,28 +116,24 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        
-        for (datum <- data.data
-          if (datum.contains( field ))) 
-          {
-              val jobj: JsObject = datum( field ) match{
-                case jobj: JsObject => jobj
+        for (datum <- data.data if (datum.contains(field))) {
+            val jobj: JsObject = datum(field) match {
+                case jobj: JsObject         => jobj
                 case jmap: Map[String, Any] => tuktu.api.utils.MapToJsObject(jmap, false)
-              }
-              val settings = MongoSettings( hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum) )
-              val collection = user match{
-                  case None => MongoCollectionPool.getCollection( settings )
-                  case Some( usr ) => {
-                      val credentials = admin match
-                      {
-                          case true => Authenticate( "admin", usr, pwd )
-                          case false => Authenticate( database, usr, pwd )
-                      }
-                      MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
-                  }
-              }
-              collection.insert(jobj)
-          }
-          data
+            }
+            val settings = MongoSettings(hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum))
+            val collection = user match {
+                case None => MongoCollectionPool.getCollection(settings)
+                case Some(usr) => {
+                    val credentials = admin match {
+                        case true  => Authenticate("admin", usr, pwd)
+                        case false => Authenticate(database, usr, pwd)
+                    }
+                    MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
+                }
+            }
+            collection.insert(jobj)
+        }
+        data
     })
 }
