@@ -5,13 +5,12 @@ import akka.pattern.ask
 import java.util.concurrent.atomic.AtomicInteger
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json._
+import play.api.libs.json.JsValue
 import play.api.Logger
 import play.api.Play.current
 import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.api._
-import scala.io.Source
-import scala.io.Codec
+import tuktu.dlib.utils.europeana
 
 case class LinksPacket( links: Seq[String] )
 
@@ -19,16 +18,18 @@ case class LinksPacket( links: Seq[String] )
 /**
  * Actor that queries the Europeana API
  */
-class EuropeanaActor(parentActor: ActorRef, query: String, apikey: String, maxresult: Option[Int]) extends Actor with ActorLogging 
+class EuropeanaActor(parentActor: ActorRef, query: String, maxresult: Option[Int]) extends Actor with ActorLogging 
 {
-    var total: Int = _
-    
     def receive() = 
     {   
         case ip: InitPacket => 
         {
-            total = 0
-            self ! LinksPacket( callEuropeana( query, 0 ) )
+            // total = 0
+            maxresult match{
+              case None => self ! LinksPacket( europeana.callEuropeana( query, 1, 0 )(maxresult) )
+              case Some(mr) => self ! LinksPacket( europeana.callEuropeana( query, 1, 0 )(maxresult).take(mr) ) 
+            }
+            
         }
         case stop: StopPacket => 
         {
@@ -48,39 +49,7 @@ class EuropeanaActor(parentActor: ActorRef, query: String, apikey: String, maxre
             }
         }
     }
-    
-    /**
-     * Utility method to recursively call the Europeana API until either all the results or the requested number of results is reached
-     * @param query: a Europeana query without paging (&start) nor apikey (&wskey) parameters
-     * @param start: the first result to collect
-     * @return A stream of URLs pointing to the resulting Europeana metadata records 
-     */
-    def callEuropeana( query: String, start: Int ): Stream[String] =
-    {
-        val encoding: String = "UTF8"
-        val src: Source = Source.fromURL( query + "&start=" + (start + 1) + "&wskey=" + apikey )( Codec.apply( encoding ) )
-        val json = Json.parse( src.mkString )
-        src.close()
-        val itemsCount: Int = (json \ "itemsCount").as[Int]
-        val tr: Int = (json \ "totalResults").as[Int]
-        val totalResults: Int = maxresult match{
-          case None => tr
-          case Some(max) => if ((max < tr) && (max > 0)) max else tr
-        } 
-        val results: Stream[String] = (json \ "items").as[Stream[JsObject]].map{ x => (x \ "link").as[String] }
-        total = total + itemsCount
-        if (totalResults > total)
-        {
-            return results ++ callEuropeana( query, total )
-        }
-        else
-        {
-            return results
-        }       
-    }
-    
 }
-
 
 /**
  * Queries the Europeana API and returns pointers to the resulting records.
@@ -95,10 +64,11 @@ class EuropeanaGenerator( resultName: String, processors: List[Enumeratee[DataPa
             // Get the Europeana url to query        
             val query = (config \ "query").as[String]
             val apikey = (config \ "apikey").as[String]
-            val maxresult = (config \ "maxresult").asOpt[Int]       
+            val maxresult = (config \ "maxresult").asOpt[Int] 
+            val url =  query + "&wskey=" + apikey
          
             // Create actor and kickstart
-            val europeanaActor = Akka.system.actorOf(Props(classOf[EuropeanaActor], self, query, apikey, maxresult))
+            val europeanaActor = Akka.system.actorOf(Props(classOf[EuropeanaActor], self, url, maxresult))
             europeanaActor ! new InitPacket()
         }
         case sp: StopPacket => cleanup
