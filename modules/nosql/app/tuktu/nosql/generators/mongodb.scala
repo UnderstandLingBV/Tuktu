@@ -1,30 +1,31 @@
 package tuktu.nosql.generators
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Success
 import akka.actor.ActorRef
 import akka.actor.actorRef2Scala
 import play.api.libs.iteratee._
 import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import play.api.libs.json.JsValue
+import play.api.Logger
 import play.modules.reactivemongo.json._
 import play.modules.reactivemongo.json.collection._
-import reactivemongo.api.MongoDriver
+import reactivemongo.api.commands.Command
 import reactivemongo.api.Cursor
+import reactivemongo.api.MongoDriver
+import reactivemongo.api.QueryOpts
+import reactivemongo.api.ReadPreference
+import reactivemongo.core.nodeset.Authenticate
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
 import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
-import tuktu.api.StopPacket
-import scala.util.Failure
 import tuktu.api.InitPacket
+import tuktu.api.StopPacket
 import tuktu.nosql.util.MongoCollectionPool
-import tuktu.nosql.util.MongoSettings
-import reactivemongo.api.QueryOpts
-import play.api.libs.json.Json
-import scala.concurrent.Future
-import play.api.Logger
 import tuktu.nosql.util.MongoPipelineTransformer
-import reactivemongo.core.nodeset.Authenticate
-import reactivemongo.api.ReadPreference
+import tuktu.nosql.util.MongoSettings
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -228,6 +229,107 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
                 case _ => self ! new StopPacket
             }
             future.onFailure {
+                case e: Throwable => {
+                    e.printStackTrace
+                    self ! new StopPacket
+                }
+            }         
+        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
+    }
+    
+}
+
+/**
+ * A Generator to list the collections in a database
+ */
+class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    override def receive() = {
+        case config: JsValue => {
+            // Get connection properties
+            val dbHosts = (config \ "hosts").as[List[String]]
+            val dbName = (config \ "database").as[String]
+            
+            // Get credentials
+            val user = (config \ "user").asOpt[String]
+            val pwd = (config \ "password").asOpt[String].getOrElse("")
+            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
+            
+            // Set up connection
+            val driver = new MongoDriver
+            val connection = user match{
+                case None => driver.connection(dbHosts)
+                case Some( usr ) => {
+                    val credentials = admin match{
+                        case true => Seq(Authenticate("admin", usr, pwd))
+                        case false => Seq(Authenticate(dbName, usr, pwd))
+                    }
+                driver.connection(dbHosts,authentications = credentials)  
+                }
+          }
+          val db = connection(dbName)
+
+          // Get command
+          val command = Json.obj( "listCollections" -> 1 )
+          val runner = Command.run(JSONSerializationPack)
+          val futureResult = runner.apply(db, runner.rawCommand(command)).one[JsObject]
+          val futureCollections = futureResult.map{ result => (result \\ "name").map { coll => coll.as[String] } }
+          futureCollections.onSuccess {
+              case collections: List[String] => collections.foreach{ collection => channel.push(new DataPacket(List( Map(resultName -> collection) ))) } 
+              case _ => self ! new StopPacket
+          }
+          futureCollections.onFailure {
+                case e: Throwable => {
+                    e.printStackTrace
+                    self ! new StopPacket
+                }
+            }         
+        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
+    }
+    
+}
+
+/**
+ * A Generator to run a raw database command
+ */
+class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    override def receive() = {
+        case config: JsValue => {
+            // Get connection properties
+            val dbHosts = (config \ "hosts").as[List[String]]
+            val dbName = (config \ "database").as[String]
+            
+            // Get credentials
+            val user = (config \ "user").asOpt[String]
+            val pwd = (config \ "password").asOpt[String].getOrElse("")
+            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
+            
+            // Set up connection
+            val driver = new MongoDriver
+            val connection = user match{
+                case None => driver.connection(dbHosts)
+                case Some( usr ) => {
+                    val credentials = admin match{
+                        case true => Seq(Authenticate("admin", usr, pwd))
+                        case false => Seq(Authenticate(dbName, usr, pwd))
+                    }
+                driver.connection(dbHosts,authentications = credentials)  
+                }
+          }
+          val db = connection(dbName)
+
+          // Get command
+          val command = (config \ "command").as[JsObject]
+          val runner = Command.run(JSONSerializationPack)
+          val futureResult = runner.apply(db, runner.rawCommand(command)).one[JsObject]
+          futureResult.onSuccess {
+              case result: JsObject => channel.push(new DataPacket(List( Map(resultName -> result) )))
+              case _ => self ! new StopPacket
+          }
+          futureResult.onFailure {
                 case e: Throwable => {
                     e.printStackTrace
                     self ! new StopPacket
