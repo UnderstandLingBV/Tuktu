@@ -846,16 +846,13 @@ class GroupByProcessor(resultName: String) extends BaseProcessor(resultName) {
  * Filters out every datum that does not contain any of the required fields.
  */
 class AbsentFieldsFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fields: List[String] = _
+    var fields: Set[String] = _
 
     override def initialize(config: JsObject) {
-        fields = (config \ "fields").as[List[String]]
+        fields = (config \ "fields").as[Set[String]]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for {
-            datum <- data.data
-            if (fields.diff(datum.keys.toList).isEmpty)
-        } yield datum)
-    }) compose Enumeratee.filterNot((data: DataPacket) => data.data.isEmpty)
+        data.filter(datum => fields.subsetOf(datum.keySet))
+    }) compose Enumeratee.filterNot((data: DataPacket) => data.isEmpty)
 }
