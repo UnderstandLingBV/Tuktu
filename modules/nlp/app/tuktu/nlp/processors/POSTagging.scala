@@ -30,7 +30,13 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
             // Get the language
             val language = utils.evaluateTuktuString(lang, datum)
             // Get the tokens
-            val tkns = datum(tokens).asInstanceOf[Array[String]]
+            val tkns = {
+                datum(tokens) match {
+                    case a: Seq[String] => a.toArray
+                    case a: String => a.split(" ")
+                    case a: Any => a.toString.split(" ")
+                }
+            }
 
             // See if the tagger is already loaded
             /*if (!taggers.contains(language)) {

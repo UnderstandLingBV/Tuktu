@@ -1,0 +1,50 @@
+{
+	"name": "N-Grams Processor",
+	"description": "Creates N-grams out of a piece of text (can be a sequence or a string).",
+	"class": "tuktu.nlp.processors.NgramProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to take N-grams from. This can be a String or a Seq[String].",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "n",
+					"description": "The length (N) of the N-grams.",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "flatten",
+					"description": "Whether or not to flatten the result. Normal result is a Seq[String]/Seq[Char].",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "chars",
+					"description": "Whether to take character N-grams (true) or word N-grams (false). Only applies if the input is String (not Seq[String]).",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}
