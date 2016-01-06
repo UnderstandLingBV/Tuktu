@@ -70,6 +70,12 @@
 					"default": true
 				},
 				{
+					"name": "field",
+					"description": "If present, use data from this field instead of the whole datum.",
+					"type": "string",
+					"required": false
+				},
+				{
 					"name": "upsert",
 					"description": "If set to true, creates a new document when no document matches the query criteria. If set to false, does not insert a new document when no match is found.",
 					"type": "boolean",
@@ -80,8 +86,9 @@
 					"description": "Wait for all the updates to be finished?",
 					"type": "boolean",
 					"required": false,
-					"default": true
+					"default": false
 				}
+				
 			]
 		}
 	]

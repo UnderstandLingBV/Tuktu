@@ -27,6 +27,7 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
     // If set to true, creates a new document when no document matches the _id key. 
     var upsert: Boolean = _
     var blocking: Boolean = _
+    var field: Option[String] = _
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
@@ -40,6 +41,8 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
         val pwd = (config \ "password").asOpt[String].getOrElse("")
         val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
         val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
+        // Use field instead of datum?
+        field = (config \ "field").asOpt[String]
 
         // Set up connection
         val settings = MongoSettings(hosts, database, coll)
@@ -59,7 +62,11 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         // Update data into MongoDB
         val futures = Future.sequence(data.data.map(datum => {
-            val updater = MapToJsObject( datum )
+            val updater = field match
+            {
+              case None => MapToJsObject( datum )
+              case Some( f ) => datum(f).asInstanceOf[JsObject]
+            }
             val selector = Json.obj( "_id" ->   (updater \ "_id") )
             collection.update(selector, updater, upsert = upsert)
         }))

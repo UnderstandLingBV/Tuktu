@@ -1,41 +1,12 @@
 {
-	"name": "MongoDB Collections Generator",
-	"description": "Lists the collections contained in a database (requires MongoDB 3.0 or higher).",
-	"class": "tuktu.nosql.generators.MongoDBCollectionsGenerator",
+	"name": "MongoDB Find2 Processor",
+	"description": "Executes a query with a filter on a given list of nodes and streams the results.",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBFind2Processor",
 	"parameters": [
 		{
-			"name": "nodes",
-			"type": "array",
-			"required": false,
-			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
-			"parameters": [
-				{
-					"name": "",
-					"type": "object",
-					"required": true,
-					"parameters": [
-						{
-							"name": "type",
-							"type": "string",
-							"required": true,
-							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
-						},
-						{
-							"name": "nodes",
-							"type": "string",
-							"required": true,
-							"description": "The nodes to use for this node handler type"
-						},
-						{
-							"name": "instances",
-							"type": "int",
-							"required": false,
-							"default": 1,
-							"description": "The amount of instances per node of this handler type"
-						}
-					]
-				}
-			]
+			"name": "id",
+			"type": "string",
+			"required": true
 		},
 		{
 			"name": "result",
@@ -67,6 +38,12 @@
 					"required": true
 				},
 				{
+					"name": "collection",
+					"description": "The name of the collection to open.",
+					"type": "string",
+					"required": true
+				},
+				{
 					"name": "user",
 					"description": "The name of the user (if authentication is required).",
 					"type": "string",
@@ -84,6 +61,31 @@
 					"type": "boolean",
 					"required": true,
 					"default": true
+				},
+				{
+					"name": "ScramSha1",
+					"description" : "Use the ScramSha1 authentication method (instead of CrAuth)?",
+					"type": "boolean",
+					"required": true,
+					"default": true
+				},
+				{
+					"name": "query",
+					"description": "Find the documents matching these given criteria.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "filter",
+					"description": "Filter results by this projection.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "sort",
+					"description": "Sort results by this projection.",
+					"type": "string",
+					"required": false
 				}
 			]
 		}

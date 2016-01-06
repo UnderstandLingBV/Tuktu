@@ -1,27 +1,29 @@
 package tuktu.nosql.processors.mongodb
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.Play.current
-import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json.JsValue
-import tuktu.api._
-import scala.concurrent.Future
-import play.api.libs.json.JsObject
-import reactivemongo.api._
+import akka.actor._
+import akka.pattern.ask
+import akka.util.Timeout
+import play.api.cache.Cache
+import play.api.libs.concurrent.Akka
+import play.api.libs.iteratee._
 import play.api.libs.iteratee.Iteratee
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
+import play.api.libs.json.JsValue
+import play.api.Play.current
 import play.modules.reactivemongo.json._
 import play.modules.reactivemongo.json.collection._
-import reactivemongo.api.MongoDriver
+import reactivemongo.api._
 import reactivemongo.core.nodeset.Authenticate
 import scala.concurrent.Await
-import play.api.cache.Cache
 import scala.concurrent.duration.DurationInt
-import play.api.libs.json.Json
-import tuktu.nosql.util.sql
-import tuktu.nosql.util.stringHandler
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import tuktu.api._
 import tuktu.nosql.util.MongoCollectionPool
 import tuktu.nosql.util.MongoSettings
-
+import tuktu.nosql.util.sql
+import tuktu.nosql.util.stringHandler
 
 /**
  * Queries MongoDB for data
@@ -101,4 +103,105 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         // Gather results
         new DataPacket(Await.result(dataFuture, Cache.getAs[Int]("timeout").getOrElse(30) seconds))
     })
+}
+
+/**
+ * Queries MongoDB for data
+ */
+class MongoDBFind2Processor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName)
+{
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    // Set up the packet sender actor
+    val packetSenderActor = Akka.system.actorOf(Props(classOf[PacketSenderActor], genActor))
+    
+    var settings: MongoSettings = _
+    var credentials: Option[Authenticate] = _
+    var scramsha1: Boolean = _
+    var query: String = _
+    var filter: String = _
+    var sort: String = _
+
+    override def initialize(config: JsObject) {
+        // Set up MongoDB client
+        val hosts = (config \ "hosts").as[List[String]]
+        val db = (config \ "database").as[String]
+        val coll = (config \ "collection").as[String]
+        settings = MongoSettings(hosts, db, coll)
+        
+        // Get credentials
+        val user = (config \ "user").asOpt[String]
+        val pwd = (config \ "password").asOpt[String].getOrElse("")
+        val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
+        
+        scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
+
+        // Set up connection
+        credentials = user match{
+            case None => None
+            case Some( usr ) => {
+                admin match
+                {
+                  case true => Option(Authenticate( "admin", usr, pwd ))
+                  case false => Option(Authenticate( db, usr, pwd ))
+                }
+            }
+        }
+        
+        
+        // Get query and filter
+        query = (config \ "query").as[String]
+        filter = (config \ "filter").asOpt[String].getOrElse("{}")
+        sort = (config \ "sort").asOpt[String].getOrElse("{}")
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+      val futures = Future.sequence(  
+          for( datum <- data.data ) yield
+          { 
+              // evaluate credentials if needed
+              val authenticate: Option[Authenticate] = credentials match{
+                  case None => None
+                  case Some(cred) => Option( Authenticate(utils.evaluateTuktuString(cred.db, datum), utils.evaluateTuktuString(cred.user, datum), utils.evaluateTuktuString(cred.password, datum) ) )
+              }
+              
+              // evaluate settings
+              val setts = MongoSettings( settings.hosts, utils.evaluateTuktuString(settings.database, datum), utils.evaluateTuktuString(settings.collection, datum) )
+              
+              // get collection
+              val collection = authenticate match{
+                  case None => MongoCollectionPool.getCollection(setts)
+                  case Some( auth ) => MongoCollectionPool.getCollectionWithCredentials(setts, auth, scramsha1)
+              }
+              // Evaluate the query and filter strings and convert to JSON
+              val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
+              val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
+              val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).as[JsObject]
+              
+              // query database
+              val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson).sort(sortJson).cursor[JsObject](ReadPreference.nearest).enumerate()
+              val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => (packetSenderActor ! (datum + ( resultName -> record ))) }
+              enumerator.run(pushRecords)
+          })
+      data
+    })
+}
+
+/**
+ * Actor for forwarding data packets
+ */
+class PacketSenderActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
+    remoteGenerator ! new InitPacket
+    
+    def receive() = {
+        case sp: StopPacket => {
+            remoteGenerator ! sp
+            self ! PoisonPill
+            println( "stopped" )
+        }
+        case datum: Map[String, Any] => {
+            // Directly forward
+            remoteGenerator ! new DataPacket(List(datum))
+            sender ! "ok"
+        }
+    }
 }
