@@ -8,13 +8,15 @@ import tuktu.api.WebJsCodeObject
 import tuktu.api.WebJsEventObject
 import tuktu.api.utils
 import tuktu.api.WebJsFunctionObject
+import tuktu.api.WebJsSrcObject
 
 object JSGeneration {
     /**
      * Turns a data packet into javascript that can be executed and returned by Tuktu
      */
-    def PacketToJsBuilder(dp: DataPacket): (String, Option[String]) = {
+    def PacketToJsBuilder(dp: DataPacket): (String, Option[String], List[String]) = {
         var nextFlow: Option[String] = None
+        val includes = collection.mutable.ListBuffer.empty[String]
         
         val res = (for {
             datum <- dp.data
@@ -25,12 +27,14 @@ object JSGeneration {
             // Side effect
             dValue match {
                 case a: WebJsNextFlow => nextFlow = Some(a.flowName)
+                case a: WebJsSrcObject => includes += a.url
+                case a: Any => {}
             }
             
             handleJsObject(datum, dKey, dValue)
         }).toList.mkString(";")
         
-        (res, nextFlow)
+        (res, nextFlow, includes.toList)
     }
     
     def handleJsObject(datum: Map[String, Any], key: String, value: Any) = {

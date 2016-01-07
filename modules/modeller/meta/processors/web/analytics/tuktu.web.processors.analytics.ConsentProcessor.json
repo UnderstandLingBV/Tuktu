@@ -1,0 +1,24 @@
+{
+	"name": "Consent Processor",
+	"description": "Shows a consent notification to a visitor",
+	"class": "tuktu.web.processors.analytics.ConsentProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+			]
+		}
+	]
+}

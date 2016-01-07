@@ -72,7 +72,6 @@ class TuktuJSGenerator(
             // Remove ourselves from the cache
             Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
                 .getOrElse(collection.mutable.Map[String, ActorRef]()) -= referer
-            Logger.info("Removing from generator: " + referer)
             
             // Send message to the monitor actor
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(

@@ -15,6 +15,10 @@ case class WebJsNextFlow(
         flowName: String
 ) extends BaseJsObject()
 
+case class WebJsSrcObject(
+        url: String
+) extends BaseJsObject()
+
 case class WebJsCodeObject(
         code: String
 ) extends BaseJsObject()

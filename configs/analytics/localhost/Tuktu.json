@@ -12,7 +12,7 @@
             "config": {},
             "name": "tuktu.web.generators.TuktuJSGenerator",
             "next": [
-                "collect"
+                "consent"
             ]
         }
     ],
@@ -25,6 +25,15 @@
             },
             "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
             "next": []
+        },
+        {
+            "id": "consent",
+            "result": "consent",
+            "config": {},
+            "name": "tuktu.web.processors.analytics.ConsentProcessor",
+            "next": [
+                "collect"
+            ]
         }
     ]
 }
