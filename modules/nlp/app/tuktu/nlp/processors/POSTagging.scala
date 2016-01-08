@@ -32,6 +32,7 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
             // Get the tokens
             val tkns = {
                 datum(tokens) match {
+                    case a: Array[String] => a
                     case a: Seq[String] => a.toArray
                     case a: String => a.split(" ")
                     case a: Any => a.toString.split(" ")
