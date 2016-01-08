@@ -44,6 +44,9 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
                 driver.connection(dbHosts,authentications = credentials, options = conOpts)  
             }
         }
+        // TODO find a better way to wait for authentication to succeed
+        // should be solved by upgrading to reactivemongo 0.11.9 (which requires play 2.4) with which authentication returns a Future that can be handled explicitly
+        Thread.sleep(10000L)
         db = connection(dbName)
 
         // Get command
