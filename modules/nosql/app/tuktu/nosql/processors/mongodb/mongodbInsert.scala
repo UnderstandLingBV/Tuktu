@@ -83,7 +83,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
 }
 
 /**
- * Insert the JSON Object contained in a field into MongoDB
+ * Insert the map or the JSON object contained in a field into MongoDB
  *
  */
 class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resultName) {
