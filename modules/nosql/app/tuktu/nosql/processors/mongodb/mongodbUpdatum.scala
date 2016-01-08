@@ -65,7 +65,10 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
             val updater = field match
             {
               case None => MapToJsObject( datum )
-              case Some( f ) => datum(f).asInstanceOf[JsObject]
+              case Some( f ) => datum(f) match{
+                 case j: JsObject => j
+                 case m: Map[String, Any] => MapToJsObject( m ) 
+              }
             }
             val selector = Json.obj( "_id" ->   (updater \ "_id") )
             collection.update(selector, updater, upsert = upsert)
