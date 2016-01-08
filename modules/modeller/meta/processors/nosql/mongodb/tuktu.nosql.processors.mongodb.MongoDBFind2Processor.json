@@ -86,6 +86,20 @@
 					"description": "Sort results by this projection.",
 					"type": "string",
 					"required": false
+				},
+				{
+					"name": "readPreference",
+					"description": "ReadPreference: nearest (default), primary, primaryPreferred, secondary, secondaryPreferred.",
+					"type": "string",
+					"required": false,
+					"default": "nearest"
+				},
+				{
+					"name": "keepAsJson",
+					"description": "Keep records as JSON objects (true) or convert them to Map[String, Any] (false)?",
+					"type": "boolean",
+					"required": false,
+					"default": true
 				}
 			]
 		}

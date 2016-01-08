@@ -120,6 +120,8 @@ class MongoDBFind2Processor(genActor: ActorRef, resultName: String) extends Buff
     var query: String = _
     var filter: String = _
     var sort: String = _
+    var readPreference: ReadPreference = _
+    var keepjson: Boolean = _
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
@@ -152,6 +154,19 @@ class MongoDBFind2Processor(genActor: ActorRef, resultName: String) extends Buff
         query = (config \ "query").as[String]
         filter = (config \ "filter").asOpt[String].getOrElse("{}")
         sort = (config \ "sort").asOpt[String].getOrElse("{}")
+        
+        // Get read preference and keepJson
+        keepjson = (config \ "keepAsJson").asOpt[Boolean].getOrElse(true)
+        val readPref = (config \ "readPreference").asOpt[String].getOrElse("nearest")
+        readPreference = readPref match{
+          case "nearest" => ReadPreference.nearest
+          case "primary" => ReadPreference.primary
+          case "primaryPreferred" => ReadPreference.primaryPreferred
+          case "secondary" => ReadPreference.secondary
+          case "secondaryPreferred" => ReadPreference.secondaryPreferred
+          case _ => ReadPreference.nearest
+        }
+        
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
@@ -178,8 +193,11 @@ class MongoDBFind2Processor(genActor: ActorRef, resultName: String) extends Buff
               val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).as[JsObject]
               
               // query database
-              val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson).sort(sortJson).cursor[JsObject](ReadPreference.nearest).enumerate()
-              val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => (packetSenderActor ! (datum + ( resultName -> record ))) }
+              val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson).sort(sortJson).cursor[JsObject](readPreference).enumerate()
+              val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => keepjson match{
+                  case true => (packetSenderActor ! (datum + ( resultName -> record )))
+                  case false => (packetSenderActor ! (datum + ( resultName -> tuktu.api.utils.JsObjectToMap(record) )))
+              } }
               enumerator.run(pushRecords)
           })
       data
