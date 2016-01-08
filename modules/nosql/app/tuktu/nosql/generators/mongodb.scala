@@ -265,7 +265,8 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
                         case true => Seq(Authenticate("admin", usr, pwd))
                         case false => Seq(Authenticate(dbName, usr, pwd))
                     }
-                driver.connection(dbHosts,authentications = credentials)  
+                val conOpts = MongoConnectionOptions( authMode = ScramSha1Authentication )
+                driver.connection(dbHosts,authentications = credentials, options = conOpts)   
                 }
           }
           val db = connection(dbName)
@@ -316,7 +317,8 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
                         case true => Seq(Authenticate("admin", usr, pwd))
                         case false => Seq(Authenticate(dbName, usr, pwd))
                     }
-                driver.connection(dbHosts,authentications = credentials)  
+                val conOpts = MongoConnectionOptions( authMode = ScramSha1Authentication )
+                driver.connection(dbHosts,authentications = credentials, options = conOpts)  
                 }
           }
           val db = connection(dbName)

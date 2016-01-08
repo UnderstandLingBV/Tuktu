@@ -40,7 +40,8 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
                     case true => Seq(Authenticate("admin", usr, pwd))
                     case false => Seq(Authenticate(dbName, usr, pwd))
                 }
-                driver.connection(dbHosts,authentications = credentials)  
+                val conOpts = MongoConnectionOptions( authMode = ScramSha1Authentication )
+                driver.connection(dbHosts,authentications = credentials, options = conOpts)  
             }
         }
         db = connection(dbName)
