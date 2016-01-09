@@ -115,8 +115,16 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
         timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        for (datum <- data.data if (datum.contains(field))) {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        doInsert(data)
+        data
+    })
+    
+    // Does the actual inserting
+    def doInsert(data: DataPacket) = {
+        // Update data into MongoDB
+        Future.sequence(for (datum <- data.data; if (datum.contains(field)) ) yield
+        {
             val jobj: JsObject = datum(field) match {
                 case jobj: JsObject         => jobj
                 case jmap: Map[String, Any] => tuktu.api.utils.MapToJsObject(jmap, false)
@@ -133,7 +141,6 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
                 }
             }
             collection.insert(jobj)
-        }
-        data
-    })
+        })
+    }
 }
