@@ -106,7 +106,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 /**
- * Queries MongoDB for data
+ * Queries MongoDB for data and streams the resulting records.
  */
 class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName)
 {
