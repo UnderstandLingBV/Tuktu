@@ -1,7 +1,7 @@
 {
-	"name": "MongoDB Find2 Processor",
+	"name": "MongoDB Find Stream Processor",
 	"description": "Executes a query with a filter on a given list of nodes and streams the results.",
-	"class": "tuktu.nosql.processors.mongodb.MongoDBFind2Processor",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBFindStreamProcessor",
 	"parameters": [
 		{
 			"name": "id",

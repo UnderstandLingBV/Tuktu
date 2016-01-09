@@ -108,7 +108,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 /**
  * Queries MongoDB for data
  */
-class MongoDBFind2Processor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName)
+class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName)
 {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     // Set up the packet sender actor
