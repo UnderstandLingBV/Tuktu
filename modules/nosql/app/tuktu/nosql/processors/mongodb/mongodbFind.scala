@@ -149,7 +149,6 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
             }
         }
         
-        
         // Get query and filter
         query = (config \ "query").as[String]
         filter = (config \ "filter").asOpt[String].getOrElse("{}")
@@ -166,14 +165,18 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
           case "secondaryPreferred" => ReadPreference.secondaryPreferred
           case _ => ReadPreference.nearest
         }
-        
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-      val futures = Future.sequence(  
-          for( datum <- data.data ) yield
-          { 
-              // evaluate credentials if needed
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        doFind(data)
+        data
+    })
+    
+    // Does the actual querying
+    def doFind(data: DataPacket) = {
+        // Update data into MongoDB
+        Future.sequence(data.data.map(datum => {
+            // evaluate credentials if needed
               val authenticate: Option[Authenticate] = credentials match{
                   case None => None
                   case Some(cred) => Option( Authenticate(utils.evaluateTuktuString(cred.db, datum), utils.evaluateTuktuString(cred.user, datum), utils.evaluateTuktuString(cred.password, datum) ) )
@@ -199,9 +202,9 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
                   case false => (packetSenderActor ! (datum + ( resultName -> tuktu.api.utils.JsObjectToMap(record) )))
               } }
               enumerator.run(pushRecords)
-          })
-      data
-    })
+        }))
+    }
+    
 }
 
 /**
