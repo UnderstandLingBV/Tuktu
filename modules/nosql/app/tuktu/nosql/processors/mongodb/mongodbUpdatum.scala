@@ -58,10 +58,11 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
               }
           }
     }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+    
+    // Does the actual updating
+    def doUpdate(data: DataPacket) = {
         // Update data into MongoDB
-        val futures = Future.sequence(data.data.map(datum => {
+        Future.sequence(data.data.map(datum => {
             val updater = field match
             {
               case None => MapToJsObject( datum )
@@ -73,8 +74,17 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
             val selector = Json.obj( "_id" ->   (updater \ "_id") )
             collection.update(selector, updater, upsert = upsert)
         }))
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (blocking) {
+        Future {
+            doUpdate(data)
+            data
+        }
+    } else {
         // Wait for all the updates to be finished
-        if (blocking) Await.ready(futures, Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-        data
+        doUpdate(data).map {
+            case _ => data
+        }
     })
 }
