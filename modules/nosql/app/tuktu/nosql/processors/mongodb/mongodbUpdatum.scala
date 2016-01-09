@@ -76,7 +76,7 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
         }))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (blocking) {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (!blocking) {
         Future {
             doUpdate(data)
             data

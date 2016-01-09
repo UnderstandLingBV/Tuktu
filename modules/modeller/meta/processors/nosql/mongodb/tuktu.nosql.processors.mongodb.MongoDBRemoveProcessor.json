@@ -82,6 +82,13 @@
 					"required": false
 				},
 				{
+					"name": "blocking",
+					"description": "Wait for deletion to complete?",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
 					"name": "timeout",
 					"description": "Overwrite the Tuktu default timeout.",
 					"type": "int",

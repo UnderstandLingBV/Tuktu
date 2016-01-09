@@ -2,6 +2,7 @@ package tuktu.nosql.processors.mongodb
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
 import play.api.Play.current
@@ -29,6 +30,7 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
     var filter: String = _
     var justOne: Boolean = _
     var timeout: Int = _
+    var blocking: Boolean = _
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
@@ -61,22 +63,33 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
 
         // Only delete maximum of one item?
         justOne = (config \ "just_one").asOpt[Boolean].getOrElse(false)
+        
+        // Wait for deletion to complete?
+        blocking = (config \ "blocking").asOpt[Boolean].getOrElse(true)
 
         // Maximum time out
         timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        // create one big remove query
+       override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (!blocking) {
+        Future {
+            doRemove(data)
+            data
+        }
+    } else {
+        // Wait for the removal to be finished
+        doRemove(data).map {
+            case _ => data
+        }
+    })
+    
+    
+    // Does the actual removal
+    def doRemove(data: DataPacket) = {
+        // Remove data from MongoDB
         val queries = (for (datum <- data.data) yield {
             Json.parse(stringHandler.evaluateString(query, datum, "\"", ""))
         }).distinct
-
-        // execute and wait for completion
-        val result = collection.remove[JsObject](Json.obj("$or" -> queries), firstMatchOnly = justOne)
-        Await.ready(result, timeout seconds)
-
-        // return original data
-        data
-    })
+        collection.remove[JsObject](Json.obj("$or" -> queries), firstMatchOnly = justOne)
+    } 
 }

@@ -83,8 +83,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
 }
 
 /**
- * Insert the map or the JSON object contained in a field into MongoDB
- *
+ * Insert a map or a JSON object contained in a field into MongoDB.
  */
 class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
@@ -122,7 +121,7 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
     
     // Does the actual inserting
     def doInsert(data: DataPacket) = {
-        // Update data into MongoDB
+        // Insert field content into MongoDB
         Future.sequence(for (datum <- data.data; if (datum.contains(field)) ) yield
         {
             val jobj: JsObject = datum(field) match {
