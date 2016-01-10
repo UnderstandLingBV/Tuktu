@@ -25,30 +25,32 @@ class IdentifyProcessor (resultName: String) extends BaseProcessor(resultName)
         toj = (config \ "toJSON").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-      new DataPacket(for (datum <- data.data) yield {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+      val lfuture = for (datum <- data.data) yield {
         val trgt = utils.evaluateTuktuString( target , datum)
         toj match
         {
-          case false => datum + ( resultName -> getIdentity( trgt ) )
-          case true => datum + ( resultName ->  oaipmh.xml2jsObject( getIdentity( trgt ) ) )
-        }        
-      })
+          case false => getIdentity( trgt ).map{ x => datum + ( resultName -> x ) } 
+          case true => getIdentity( trgt ).map{ x => datum + ( resultName ->  oaipmh.xml2jsObject( x ) ) }
+        }
+      }
+      Future.sequence( lfuture ).map{ x => new DataPacket( x )  }
     })
+    
   /**
    * Utility method to retrieve a repository description
    * @param target: The OAI-PMH identify request
    * @return the repository description
    */
-    def getIdentity( target: String ): String =
+    def getIdentity( target: String ): Future[String] =
     {
-      val verb = target + "?verb=Identify"
-      val response = oaipmh.harvest( verb )
-      // check for error
-      (response \\ "error").headOption match
-      {
-        case None => (response \ "Identify").head.toString
-        case Some( err ) => response.toString
-      }
+        val verb = target + "?verb=Identify"
+        oaipmh.fharvest( verb ).map{ response =>
+            (response \\ "error").headOption match
+            {
+                case None => (response \ "Identify").head.toString
+                case Some( err ) => response.toString
+            }        
+        }
     }
 }

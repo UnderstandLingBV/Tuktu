@@ -29,18 +29,19 @@ class GetRecordProcessor(resultName: String) extends BaseProcessor(resultName)
         toj = (config \ "toJSON").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-      new DataPacket(for (datum <- data.data) yield {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+      val lfuture = for (datum <- data.data) yield {
         val trgt = utils.evaluateTuktuString( target , datum )
         val id = utils.evaluateTuktuString( identifier , datum )
         val prefix = utils.evaluateTuktuString( metadataPrefix , datum )
         val verb = trgt + "?verb=GetRecord&identifier=" + id + "&metadataPrefix=" + prefix
         toj match
         {
-          case false => datum + ( resultName -> getRecord( verb ) )
-          case true => datum + ( resultName ->  oaipmh.xml2jsObject( getRecord( verb ) ) )
+          case false => getRecord( verb ).map { x => datum + ( resultName -> x ) }
+          case true => getRecord( verb ).map { x => datum + ( resultName ->  oaipmh.xml2jsObject( x ) ) }
         }        
-      })
+      }
+      Future.sequence( lfuture ).map{ x => new DataPacket( x )  }
     })
     
   /**
@@ -48,18 +49,19 @@ class GetRecordProcessor(resultName: String) extends BaseProcessor(resultName)
    * @param verb: The OAI-PMH request containing the identifier of the record to get
    * @return the corresponding metadata record
    */
-    def getRecord( verb: String ): String =
+    def getRecord( verb: String ): Future[String] =
     {
-      val response = oaipmh.harvest( verb )
-      // check for error
-      (response \\ "error").headOption match
-      {
-        case None => (response \ "GetRecord" \ "record" \ "@status" ).headOption match
-        {
-          case Some( status ) => status.text
-          case None => (for ( record <- (response \ "GetRecord" \ "record" \ "metadata").head.child; if ( !record.toString.trim.isEmpty ) ) yield{ record.toString }).head
+        oaipmh.fharvest( verb ).map { response => 
+            // check for error
+            (response \\ "error").headOption match
+            {
+                case None => (response \ "GetRecord" \ "record" \ "@status" ).headOption match
+                {
+                    case Some( status ) => status.text
+                    case None => (for ( record <- (response \ "GetRecord" \ "record" \ "metadata").head.child; if ( !record.toString.trim.isEmpty ) ) yield{ record.toString }).head
+                }
+                case Some( err ) => response.toString
+            }
         }
-        case Some( err ) => response.toString
-      }
     }
 }

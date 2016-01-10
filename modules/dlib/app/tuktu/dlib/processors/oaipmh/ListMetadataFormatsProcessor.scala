@@ -27,38 +27,41 @@ class ListMetadataFormatsProcessor(resultName: String) extends BaseProcessor(res
         toj = (config \ "toJSON").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-      new DataPacket(for (datum <- data.data) yield {
-        val trgt = utils.evaluateTuktuString( target , datum )
-        val id = identifier match
-        {
-          case None => ""
-          case Some( i ) => "&identifier=" + utils.evaluateTuktuString( i , datum )
-        }
-        val verb = trgt + "?verb=ListMetadataFormats" + id
-        toj match
-        {
-          case false => datum + ( resultName -> getFormats( verb ) )
-          case true => datum + ( resultName ->  getFormats( verb ).map{ f => oaipmh.xml2jsObject( f ) }  )
-        }        
-      })
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+      val lfuture = for (datum <- data.data) yield {
+          val trgt = utils.evaluateTuktuString( target , datum )
+          val id = identifier match
+          {
+              case None => ""
+              case Some( i ) => "&identifier=" + utils.evaluateTuktuString( i , datum )
+          }
+          val verb = trgt + "?verb=ListMetadataFormats" + id
+          toj match
+          {
+              case false => getFormats( verb ).map{ x => datum + ( resultName -> x ) } 
+              case true => getFormats( verb ).map{ x => datum + ( resultName ->  x.map{ f => oaipmh.xml2jsObject( f ) } ) } 
+          }        
+      }
+      Future.sequence( lfuture ).map{ x => new DataPacket( x )  }
     })
+    
   /**
    * Utility method to retrieve the metadata formats supported by a repository
    * @param verb: The OAI-PMH ListFormats request
    * @return the metadata formats supported by the repository
    */
-    def getFormats( verb: String ): Seq[String] =
+    def getFormats( verb: String ): Future[Seq[String]] =
     {
-      val response = oaipmh.harvest( verb )
-      // check for error
-      (response \\ "error").headOption match
-      {
-        case None => {
-          val f = ((response \ "ListMetadataFormats" \ "metadataFormat" ).toSeq map { frmt => frmt.toString.trim })
-          for (format <- f; if (!format.isEmpty)) yield( format )
-        }  
-        case Some( err ) => Seq(response.toString)
-      }
+        oaipmh.fharvest( verb ).map{ response =>
+            // check for error
+            (response \\ "error").headOption match
+            {
+                case None => {
+                    val f = ((response \ "ListMetadataFormats" \ "metadataFormat" ).toSeq map { frmt => frmt.toString.trim })
+                    for (format <- f; if (!format.isEmpty)) yield( format )
+                }  
+                case Some( err ) => Seq(response.toString)
+            }
+        }
     }
 }
