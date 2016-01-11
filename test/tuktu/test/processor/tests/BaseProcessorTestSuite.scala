@@ -1042,8 +1042,8 @@ class BaseProcessorTestSuite extends PlaySpec {
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 4)
                 )),
                 new DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 3),
-                    Map("key1" -> 1, "key2" -> 3, "key3" -> 4)
+                    Map("key1" -> 1, "key2" -> 2, "key3" -> 5),
+                    Map("key1" -> 1, "key2" -> 3, "key3" -> 6)
                 ))
             )
 
@@ -1054,10 +1054,10 @@ class BaseProcessorTestSuite extends PlaySpec {
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 4)
                 )),
                 new DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 3)
+                    Map("key1" -> 1, "key2" -> 2, "key3" -> 5)
                 )),
                 new DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 3, "key3" -> 4)
+                    Map("key1" -> 1, "key2" -> 3, "key3" -> 6)
                 ))
             )
 
@@ -1066,10 +1066,10 @@ class BaseProcessorTestSuite extends PlaySpec {
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 4)
                 )),
                 new DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 3, "key3" -> 4)
+                    Map("key1" -> 1, "key2" -> 3, "key3" -> 6)
                 )),
                 new DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 3)
+                    Map("key1" -> 1, "key2" -> 2, "key3" -> 5)
                 ))
             )
 
@@ -1088,20 +1088,51 @@ class BaseProcessorTestSuite extends PlaySpec {
 
             // Input
             val input = List(new DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 1, "key3" -> 1),
-                    Map("key1" -> 1, "key3" -> 1, "key4" -> 1)
+                    Map("key1" -> 1, "key2" -> 2, "key3" -> 3),
+                    Map("key1" -> 4, "key3" -> 5, "key4" -> 6)
                 )),
                 new DataPacket(List(
-                    Map("key1" -> 1, "key3" -> 1, "key4" -> 1),
-                    Map("key1" -> 1, "key3" -> 1, "key4" -> 1)
+                    Map("key1" -> 7, "key3" -> 8, "key4" -> 9),
+                    Map("key1" -> 10, "key3" -> 11, "key4" -> 12)
                 ))
             )
 
             //Expected output
             val output = List(new DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 1, "key3" -> 1)
+                    Map("key1" -> 1, "key2" -> 2, "key3" -> 3)
                 ))
             )
+
+            new BaseProcessorTest()(proc, config, input, output)
+        }
+    }
+
+    "ConvertToBigDecimal" must {
+        "convert a field to BigDecimal" in {
+
+            // Processor
+            val proc = new ConvertToBigDecimal("")
+
+            // Config
+            val config = Json.obj("field" -> "key")
+
+            // Input
+            val input = List(new DataPacket(List(
+                    Map("key" -> 17),
+                    Map("key" -> 1.337),
+                    Map("key" -> 102341L),
+                    Map("key" -> "1.3e12"),
+                    Map("key" -> List(3, 183L, 1.337, "-1.2e-3"))
+            )))
+
+            //Expected output
+            val output = List(new DataPacket(List(
+                    Map("key" -> BigDecimal(17)),
+                    Map("key" -> BigDecimal(1.337)),
+                    Map("key" -> BigDecimal(102341L)),
+                    Map("key" -> BigDecimal("1.3e12")),
+                    Map("key" -> List(BigDecimal(3), BigDecimal(183L), BigDecimal(1.337), BigDecimal("-1.2e-3")))
+            )))
 
             new BaseProcessorTest()(proc, config, input, output)
         }
