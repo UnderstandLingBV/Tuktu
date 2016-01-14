@@ -26,6 +26,7 @@ import tuktu.generators.SyncStreamGenerator
 import tuktu.processors.EOFBufferProcessor
 import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
 import tuktu.processors.meta.ConcurrentProcessor
+import mailbox.DeadLetterWatcher
 
 case class treeNode(
         name: String,
@@ -152,6 +153,10 @@ object Dispatcher {
                         )
                     }
                 }
+                
+                // Dead letter watcher
+                val watcher = Akka.system.actorOf(Props(classOf[DeadLetterWatcher], generator), "watcher_" + "subflows_" + subIdString)
+                Akka.system.eventStream.subscribe(watcher, classOf[DeadLetter])
                 
                 // Notify the monitor so we can recover from errors
                 Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(
@@ -412,6 +417,10 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                         name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + idString
                                     )
                             }
+                            
+                            // Dead letter watcher
+                            val watcher = Akka.system.actorOf(Props(classOf[DeadLetterWatcher], actorRef), "watcher_" + dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + idString)
+                            Akka.system.eventStream.subscribe(watcher, classOf[DeadLetter])
 
                             // Notify the monitor so we can recover from errors
                             Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, instanceCount, Some(actorRef))

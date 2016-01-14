@@ -19,6 +19,8 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.JsObject
 import play.api.cache.Cache
 import play.api.Application
+import play.api.Play
+import akka.actor.Cancellable
 
 case class DataPacket(
         data: List[Map[String, Any]]
@@ -44,6 +46,10 @@ case class DispatchRequest(
 case class InitPacket()
 
 case class StopPacket()
+
+case class BackPressurePacket()
+
+case class DecreasePressurePacket()
 
 case class ResponsePacket(
         json: JsValue
@@ -190,6 +196,9 @@ abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends B
 abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
+    val pushTimeOut = Play.current.configuration.getInt("tuktu.mailbox.push-timeout").getOrElse(100)
+    private var backOffCount = 1
+    private var cancellable: Cancellable = _
 
     // Add our parent (the Router of this Routee) to cache
     Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
@@ -224,10 +233,33 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
         //context.stop(self)
         self ! PoisonPill
     }
+    
+    def backoff() = {
+        cancellable.cancel
+        
+        // We are pushing too fast, back off
+        Thread.sleep(backOffCount * pushTimeOut)
+        
+        // To turn it back down
+        cancellable = Akka.system.scheduler.schedule(pushTimeOut milliseconds,
+                pushTimeOut milliseconds,
+                self,
+                new DecreasePressurePacket())
+        
+        // Increment
+        backOffCount *= 2
+    }
+    
+    def decBP() {
+        backOffCount /= 2
+        if (backOffCount == 1) cancellable.cancel
+    }
 
     def setup() = {}
 
     def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case ip: InitPacket => setup
         case config: JsValue => ???
         case sp: StopPacket => cleanup
