@@ -22,8 +22,9 @@ import tuktu.api.utils.MapToJsObject
  * Updates datum into MongoDB (assuming it was initially found in MongoDB)
  */
 class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultName) {
-    // the collection to write to
-    var collection: JSONCollection = _
+    var settings: MongoSettings = _
+    var credentials: Option[Authenticate] = _
+    var scramsha1: Boolean = _
     // If set to true, creates a new document when no document matches the _id key. 
     var upsert: Boolean = _
     var blocking: Boolean = _
@@ -34,35 +35,39 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
         val hosts = (config \ "hosts").as[List[String]]
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
+        settings = MongoSettings(hosts, database, coll)
+        
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
         blocking = (config \ "blocking").asOpt[Boolean].getOrElse(true)
         // Get credentials
         val user = (config \ "user").asOpt[String]
         val pwd = (config \ "password").asOpt[String].getOrElse("")
         val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-        val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
+        credentials = user match
+        {
+            case None => None
+            case Some( usr ) => {
+                admin match
+                {
+                  case true => Option(Authenticate( "admin", usr, pwd ))
+                  case false => Option(Authenticate( database, usr, pwd ))
+                }
+            }
+        }
+        scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
         // Use field instead of datum?
         field = (config \ "field").asOpt[String]
-
-        // Set up connection
-        val settings = MongoSettings(hosts, database, coll)
-        collection = user match{
-            case None => MongoCollectionPool.getCollection(settings)
-            case Some( usr ) => {
-                val credentials = admin match
-                {
-                  case true => Authenticate( "admin", usr, pwd )
-                  case false => Authenticate( database, usr, pwd )
-                }
-                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
-              }
-          }
     }
     
     // Does the actual updating
     def doUpdate(data: DataPacket) = {
         // Update data into MongoDB
         Future.sequence(data.data.map(datum => {
+            val setts = MongoSettings( settings.hosts.map{ host => tuktu.api.utils.evaluateTuktuString(host, datum)}, tuktu.api.utils.evaluateTuktuString(settings.database, datum), tuktu.api.utils.evaluateTuktuString(settings.collection, datum))
+            val collection = credentials match{
+                case None => MongoCollectionPool.getCollection(setts)
+                case Some( creds ) => MongoCollectionPool.getCollectionWithCredentials(setts, creds, scramsha1)
+            }
             val updater = field match
             {
               case None => MapToJsObject( datum )
