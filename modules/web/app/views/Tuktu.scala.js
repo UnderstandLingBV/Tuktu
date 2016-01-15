@@ -4,6 +4,7 @@ if (typeof tuktuvars === 'undefined') {
 	tuktuvars = {};
 }
 var tuktu = function() {
+	 tuktuvars.referrer = document.referrer;
 	 var h = document.getElementsByTagName("head")[0];
      var s = document.createElement("script");
      s.setAttribute("type", "text/javascript");

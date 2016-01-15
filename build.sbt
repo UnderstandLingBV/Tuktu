@@ -56,8 +56,8 @@ lazy val nosqlDependencies = Seq(
     cache,
     ws,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
-    "mysql" % "mysql-connector-java" % "5.1.34",
-    "org.mariadb.jdbc" % "mariadb-java-client" % "1.1.7",
+    "mysql" % "mysql-connector-java" % "5.1.38",
+    "org.mariadb.jdbc" % "mariadb-java-client" % "1.3.4",
     "com.h2database" % "h2" % "1.3.176",
     "org.postgresql" % "postgresql" % "9.3-1102-jdbc41",
     "org.xerial" % "sqlite-jdbc" % "3.8.7",
@@ -65,7 +65,8 @@ lazy val nosqlDependencies = Seq(
     "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play23",
     "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.4",
     "org.elasticsearch" % "elasticsearch" % "1.4.4",
-    "org.apache.hadoop" % "hadoop-client" % "2.6.0"
+    "org.apache.hadoop" % "hadoop-client" % "2.6.0",
+    "com.mchange" % "c3p0" % "0.9.5.2"
 )
 
 lazy val mlDependencies = Seq(

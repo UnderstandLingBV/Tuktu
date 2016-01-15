@@ -18,15 +18,6 @@
     ],
     "processors": [
         {
-            "id": "collect",
-            "result": "collect",
-            "config": {
-                "flow_name": "CollectionTest"
-            },
-            "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
-            "next": []
-        },
-        {
             "id": "consent",
             "result": "consent",
             "config": {},
@@ -34,6 +25,15 @@
             "next": [
                 "collect"
             ]
+        },
+        {
+            "id": "collect",
+            "result": "collect",
+            "config": {
+                "flow_name": "CollectionTest"
+            },
+            "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
+            "next": []
         }
     ]
 }

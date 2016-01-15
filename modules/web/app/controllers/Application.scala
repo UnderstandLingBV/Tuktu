@@ -56,14 +56,14 @@ object Application extends Controller {
                             val dataPacket = if (isInitial)
                                 new DataPacket(List(Map(
                                     // By default, add referer, request and headers
-                                    "referer" -> referrer,
+                                    "url" -> referrer,
                                     "request" -> request,
                                     "headers" -> request.headers
                                 )))
                             else
                                 new DataPacket(List(Map(
                                     // By default, add referer, request and headers
-                                    "referer" -> referrer,
+                                    "url" -> referrer,
                                     "request" -> request,
                                     "headers" -> request.headers
                                 ) ++ bodyData.keys.map(key => key -> utils.JsValueToAny(bodyData \ key))))
