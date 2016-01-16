@@ -112,7 +112,10 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                     if (startLine <= 0) endEnumeratee
                     else Enumeratee.drop[String](startLine) compose endEnumeratee
 
-                fileStream |>> startEnumeratee &>> Iteratee.foreach[String](line => channel.push(new DataPacket(List(Map(resultName -> line)))))
+                // Stream the whole thing together now
+                processors.foreach(processor => fileStream |>> (startEnumeratee compose Enumeratee.mapM(line => Future {
+                    DataPacket(List(Map(resultName -> line)))
+                }) compose processor) &>> sinkIteratee)
             }
         }
         case sp: StopPacket => {
