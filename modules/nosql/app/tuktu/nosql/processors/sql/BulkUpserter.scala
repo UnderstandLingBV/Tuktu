@@ -63,7 +63,7 @@ class SQLBulkProcessor(resultName: String) extends BaseProcessor(resultName) {
         val evalDriver = tuktu.api.utils.evaluateTuktuString(driver, firstPacket)
         
         // Initialize
-        if (connDef == null) {
+        if (connDef == null || conn == null) {
             connDef = new ConnectionDefinition(evalUrl, evalUser, evalPassword, evalDriver)
             conn = getConnection(connDef)
         }
