@@ -4,8 +4,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 import akka.actor.ActorRef
-import akka.actor.actorRef2Scala
-import collection.JSONBatchCommands.AggregationFramework
 import play.api.Logger
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Enumerator
