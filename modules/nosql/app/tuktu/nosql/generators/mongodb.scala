@@ -208,15 +208,14 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
 
             // Set up connection
             val settings = MongoSettings(hosts, database, coll)
-            val collection = user match {
-                case None => MongoCollectionPool.getCollection(settings)
+            val fcollection = user match {
+                case None => Future(MongoCollectionPool.getCollection(settings))
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
-                    
+                    MongoCollectionPool.getFutureCollectionWithCredentials(settings, credentials, scramsha1) 
                 }
             }
 
@@ -224,19 +223,20 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
             val query = (config \ "query").as[JsObject]
             val filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
             val sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
-            
-            val enumerator: Enumerator[JsObject] = collection.find(query, filter).sort(sort).cursor[JsObject](ReadPreference.nearest).enumerate()
-            val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => channel.push(new DataPacket(List(tuktu.api.utils.JsObjectToMap(record))))}                
-            val future = enumerator.run(pushRecords)
-            future.onSuccess {
-                case _ => self ! new StopPacket
-            }
-            future.onFailure {
-                case e: Throwable => {
-                    e.printStackTrace
-                    self ! new StopPacket
+            fcollection.map{ collection =>
+                val enumerator: Enumerator[JsObject] = collection.find(query, filter).sort(sort).cursor[JsObject](ReadPreference.nearest).enumerate()
+                val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => channel.push(new DataPacket(List(tuktu.api.utils.JsObjectToMap(record))))}                
+                val future = enumerator.run(pushRecords)
+                future.onSuccess {
+                    case _ => self ! new StopPacket
                 }
-            }         
+                future.onFailure {
+                    case e: Throwable => {
+                        e.printStackTrace
+                        self ! new StopPacket
+                    }
+                }
+            }
         }
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
