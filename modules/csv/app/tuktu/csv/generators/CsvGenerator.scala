@@ -179,7 +179,9 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                 }
 
                 // Stream the whole thing together now
-                fileStream |>> startEnumeratee &>> Iteratee.foreach[Map[String, Any]](data => channel.push(new DataPacket(List(data))))
+                processors.foreach(processor => fileStream |>> (startEnumeratee compose Enumeratee.mapM(data => Future {
+                    DataPacket(List(data))
+                }) compose processor) &>> sinkIteratee)
             }
         }
         case sp: StopPacket => {

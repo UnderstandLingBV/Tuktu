@@ -7,8 +7,10 @@ import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
-import tuktu.nosql.util.sql._
 import tuktu.nosql.util.stringHandler
+import tuktu.nosql.util.sql._
+import tuktu.nosql.util.sql.ConnectionDefinition
+import java.sql.Connection
 
 class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var url: String = _
@@ -18,8 +20,9 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var query: String = _
     var append: Boolean = _
     var distinct: Boolean = _
-
-    var client: client = _
+    
+    var connDef: ConnectionDefinition = null
+    var conn: Connection = null
 
     override def initialize(config: JsObject) {
         // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
@@ -51,23 +54,29 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
             if (distinct && query_results.contains((evalQuery, evalUrl, evalUser, evalPassword, evalDriver)))
                 query_results((evalQuery, evalUrl, evalUser, evalPassword, evalDriver))
             else {
-                // See if we need to initialize client
-                if (client == null)
-                    client = new client(evalUrl, evalUser, evalPassword, evalDriver)
-                // See if we need to update the client
-                else if (evalUrl != client.url || evalUser != client.user || evalPassword != client.password || evalDriver != client.driver) {
-                    client.close
-                    client = new client(evalUrl, evalUser, evalPassword, evalDriver)
+                // Initialize
+                if (connDef == null)
+                    connDef = new ConnectionDefinition(evalUrl, evalUser, evalPassword, evalDriver)
+                
+                // Check change
+                if (connDef.url != evalUrl || connDef.user != evalUser || connDef.password != evalPassword || connDef.driver != evalDriver) {
+                    // Give back
+                    releaseConnection(connDef)
+                    connDef = new ConnectionDefinition(evalUrl, evalUser, evalPassword, evalDriver)
                 }
+                    
+                // Get connection from pool
+                conn = getConnection(connDef)
+                
                 // See if we need to append or not
                 if (append) {
-                    val res = client.queryResult(evalQuery).map(row => rowToMap(row))
+                    val res = queryResult(evalQuery)(conn).map(row => rowToMap(row))
                     // Add to query results, only if distinct
                     if (distinct)
                         query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> res
                     res
                 } else {
-                    client.query(evalQuery)
+                   tuktu.nosql.util.sql.query(evalQuery)(conn)
                     // Add to query results, only if distinct
                     if (distinct)
                         query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> Nil
@@ -82,5 +91,5 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
         } else {
             data
         }
-    }) compose Enumeratee.onEOF(() => if (client != null) client.close)
+    }) compose Enumeratee.onEOF(() => if (connDef != null) releaseConnection(connDef))
 }

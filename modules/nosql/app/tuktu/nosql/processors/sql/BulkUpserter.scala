@@ -9,9 +9,11 @@ import tuktu.api.DataPacket
 import tuktu.api.utils
 import tuktu.nosql.util.sql._
 import tuktu.nosql.util.stringHandler
-import anorm.NamedParameter
 import java.sql.Date
 import org.joda.time.DateTime
+import anorm.NamedParameter
+import java.sql.Connection
+import tuktu.nosql.util.sql._
 
 /**
  * Inserts/updates data in an SQL database in bulk
@@ -29,7 +31,8 @@ class SQLBulkProcessor(resultName: String) extends BaseProcessor(resultName) {
     
     var queryTrail: String = _
 
-    var client: client = _
+    var connDef: ConnectionDefinition = null
+    var conn: Connection = null
 
     override def initialize(config: JsObject) {
         // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
@@ -59,13 +62,19 @@ class SQLBulkProcessor(resultName: String) extends BaseProcessor(resultName) {
         val evalPassword = tuktu.api.utils.evaluateTuktuString(password, firstPacket)
         val evalDriver = tuktu.api.utils.evaluateTuktuString(driver, firstPacket)
         
-        // Initialize client
-        if (client == null)
-            client = new client(evalUrl, evalUser, evalPassword, evalDriver)
-        // See if we need to update the client
-        else if (evalUrl != client.url || evalUser != client.user || evalPassword != client.password || evalDriver != client.driver) {
-            client.close
-            client = new client(evalUrl, evalUser, evalPassword, evalDriver)
+        // Initialize
+        if (connDef == null) {
+            connDef = new ConnectionDefinition(evalUrl, evalUser, evalPassword, evalDriver)
+            conn = getConnection(connDef)
+        }
+        
+        // Check change
+        if (connDef.url != evalUrl || connDef.user != evalUser || connDef.password != evalPassword || connDef.driver != evalDriver) {
+            // Give back
+            releaseConnection(connDef)
+            connDef = new ConnectionDefinition(evalUrl, evalUser, evalPassword, evalDriver)
+            // Get connection from pool
+            conn = getConnection(connDef)
         }
         
         // Create the stament
@@ -98,8 +107,8 @@ class SQLBulkProcessor(resultName: String) extends BaseProcessor(resultName) {
         }}
         
         // Finally, we insert the whole
-        client.bulkQuery(anormStatement, parameters)
+        bulkQuery(anormStatement, parameters)(conn)
         
         data
-    }) compose Enumeratee.onEOF(() => if (client != null) client.close)
+    }) compose Enumeratee.onEOF(() => if (connDef != null) releaseConnection(connDef))
 }
