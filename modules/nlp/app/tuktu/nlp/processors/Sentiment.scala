@@ -34,9 +34,17 @@ class RBEMPolarityProcessor(resultName: String) extends BaseProcessor(resultName
             // Get the language
             val language = utils.evaluateTuktuString(lang, datum)
             // Get the tokens from data
-            val tkns = datum(tokens).asInstanceOf[Array[String]]
+            val tkns = datum(tokens) match {
+                case t: String => t.split(" ")
+                case t: Array[String] => t
+                case t: Any => t.toString.split(" ")
+            }
             // We need POS-tags before we can do anything, must be given in a field
-            val posTags = datum(tags).asInstanceOf[Array[String]]
+            val posTags = datum(tags) match {
+                case t: String => t.split(" ")
+                case t: Array[String] => t
+                case t: Any => t.toString.split(" ")
+            }
 
             // See if the model for this language is already loaded
             if (!models.contains(language)) {
@@ -81,9 +89,17 @@ class RBEMEmotionProcessor(resultName: String) extends BaseProcessor(resultName)
             // Get the language
             val language = utils.evaluateTuktuString(lang, datum)
             // Get the tokens from data
-            val tkns = datum(tokens).asInstanceOf[Array[String]]
+            val tkns = datum(tokens) match {
+                case t: String => t.split(" ")
+                case t: Array[String] => t
+                case t: Any => t.toString.split(" ")
+            }
             // We need POS-tags before we can do anything, must be given in a field
-            val posTags = datum(tags).asInstanceOf[Array[String]]
+            val posTags = datum(tags) match {
+                case t: String => t.split(" ")
+                case t: Array[String] => t
+                case t: Any => t.toString.split(" ")
+            }
 
             // See if the model for this language is already loaded
             if (!models.contains(language)) {
