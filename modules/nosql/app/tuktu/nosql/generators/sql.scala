@@ -1,15 +1,15 @@
 package tuktu.nosql.generators
 
-import tuktu.api._
-import play.api.libs.json.JsValue
-import play.api.libs.iteratee.Enumeratee
 import java.sql._
-import anorm._
-import tuktu.nosql.util.sql
 import akka.actor.ActorRef
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsValue
+import tuktu.api._
+import tuktu.nosql.util.sql
+import tuktu.nosql.util.sql.ConnectionDefinition
 
 case class StopHelper(
-        client: sql.client
+        conn: ConnectionDefinition
 )
 
 class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
@@ -26,21 +26,22 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
 
             // Load the driver, set up the client
-            val client = new tuktu.nosql.util.sql.client(url, user, password, driver)
+            val conn = ConnectionDefinition(url, user, password, driver)
+            val connection = sql.getConnection(conn)
 
             // Run the query
-            val rows = client.queryResult(query)
+            val rows = sql.queryResult(query)(connection)
             for (row <- rows) flatten match {
                 case true => channel.push(new DataPacket(List(sql.rowToMap(row))))
                 case false => channel.push(new DataPacket(List(Map(resultName -> sql.rowToMap(row)))))
             }
 
             // We stop once the query is done
-            self ! StopHelper(client)
+            self ! StopHelper(conn)
         }
         case sh: StopHelper => {
+            sql.releaseConnection(sh.conn)
             cleanup
-            sh.client.close
         }
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup

@@ -171,7 +171,8 @@ class DataMonitor extends Actor with ActorLogging {
                     DPcount(mp.typeOf) += 1
                 }
                 case None => {
-                    Logger.warn("DataMonitor received MonitorPacket for unkown app with uuid: " + mp.uuid)
+                    // TODO: Doesn't work well with concurrent processor
+                    //Logger.warn("DataMonitor received MonitorPacket for unkown app with uuid: " + mp.uuid)
                 }
             }
         }

@@ -9,13 +9,17 @@ import tuktu.api.DataPacket
 import tuktu.api.utils
 import tuktu.nosql.util.sql
 import tuktu.nosql.util.stringHandler
+import java.sql.Connection
+import tuktu.nosql.util.sql._
+import tuktu.nosql.util.sql.ConnectionDefinition
 
 /**
  * In SQL, an edge table contains edges from a graph and relations need to be fetched iteratively.
  * This processor does just that.
  */
 class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var client: sql.client = null
+    var conn: Connection = _
+    var connDef: ConnectionDefinition = null
 
     // Column to fetch
     var fetchColumns: Map[String, String] = _
@@ -53,8 +57,9 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
         // Do we stop or find exhaustively?
         iterationDepth = (config \ "n").asOpt[Int]
 
-        // Set up the client
-        client = new sql.client(url, user, password, driver)
+        // Set up the connection
+        connDef = new ConnectionDefinition(url, user, password, driver)
+        conn = getConnection(connDef)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
@@ -68,7 +73,7 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
                     datum ++ ancestor
                 })
         })
-    }) compose Enumeratee.onEOF(() => client.close)
+    }) compose Enumeratee.onEOF(() => releaseConnection(connDef))
 
     /**
      * This function recursively finds all ancestors until there are no more, no cycle detection here though!
@@ -84,7 +89,7 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
             }
 
             // Get the result and use it to fetch new relations
-            val parents = client.queryResult(query).map(row => {
+            val parents = queryResult(query)(conn).map(row => {
                 val map = sql.rowToMap(row)
 
                 // Replace the anorm table naming with what we need

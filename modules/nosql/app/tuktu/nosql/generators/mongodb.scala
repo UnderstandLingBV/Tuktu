@@ -4,11 +4,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 import akka.actor.ActorRef
-import akka.actor.actorRef2Scala
 import play.api.Logger
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
@@ -223,19 +221,19 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
             val query = (config \ "query").as[JsObject]
             val filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
             val sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
+            
             fcollection.map{ collection =>
+                // Create the enumerator that gets JsObjects
                 val enumerator: Enumerator[JsObject] = collection.find(query, filter).sort(sort).cursor[JsObject](ReadPreference.nearest).enumerate()
-                val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => channel.push(new DataPacket(List(tuktu.api.utils.JsObjectToMap(record))))}                
-                val future = enumerator.run(pushRecords)
-                future.onSuccess {
-                    case _ => self ! new StopPacket
-                }
-                future.onFailure {
-                    case e: Throwable => {
-                        e.printStackTrace
-                        self ! new StopPacket
-                    }
-                }
+                // Transformator to turn the JsObjects into DataPackets
+                val transformator: Enumeratee[JsObject, DataPacket] = Enumeratee.mapM(record => Future {DataPacket(List(tuktu.api.utils.JsObjectToMap(record)))})
+                // onEOF close the reader and send StopPacket
+                val onEOF = Enumeratee.onEOF[DataPacket](() => self ! new StopPacket)
+                
+                // Chain this together
+                processors.foreach(processor => {
+                    enumerator |>> (transformator compose onEOF compose processor) &>> sinkIteratee
+                })
             }
         }
         case sp: StopPacket => cleanup
