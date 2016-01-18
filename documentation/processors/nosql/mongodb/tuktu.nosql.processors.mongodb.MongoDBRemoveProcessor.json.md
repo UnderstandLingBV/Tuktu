@@ -36,6 +36,9 @@ Removes data from MongoDB.
     * **just_one** *(type: boolean)* `[Optional]`
     - Delete only one item?
 
+    * **blocking** *(type: boolean)* `[Optional, default = true]`
+    - Wait for deletion to complete?
+
     * **timeout** *(type: int)* `[Optional, default = 5]`
     - Overwrite the Tuktu default timeout.
 

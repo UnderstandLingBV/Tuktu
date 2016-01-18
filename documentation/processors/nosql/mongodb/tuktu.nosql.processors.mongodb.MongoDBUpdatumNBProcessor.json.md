@@ -1,5 +1,5 @@
-### tuktu.nosql.processors.mongodb.MongoDBUpdateProcessor
-Updates data into MongoDB.
+### tuktu.nosql.processors.mongodb.MongoDBUpdatumProcessor
+Updates, in a non-blocking way, data initially found in MongoDB with the content of the current tuktu datum.
 
   * **id** *(type: string)* `[Required]`
 
@@ -30,18 +30,9 @@ Updates data into MongoDB.
     * **ScramSha1** *(type: boolean)* `[Required]`
     - Use the ScramSha1 authentication method (instead of CrAuth)?
 
-    * **query** *(type: string)* `[Required]`
-    - The selection criteria for the update. 
-
-    * **update** *(type: string)* `[Required]`
-    - The modifications to apply.
+    * **field** *(type: string)* `[Optional]`
+    - If present, use data from this field instead of the whole datum.
 
     * **upsert** *(type: boolean)* `[Optional]`
     - If set to true, creates a new document when no document matches the query criteria. If set to false, does not insert a new document when no match is found.
-
-    * **multi** *(type: boolean)* `[Optional]`
-    - If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document.
-
-    * **blocking** *(type: boolean)* `[Optional, default = true]`
-    - Wait for all the updates to be finished?
 

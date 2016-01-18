@@ -1,5 +1,5 @@
-### tuktu.nosql.processors.mongodb.MongoDBUpdateProcessor
-Updates data into MongoDB.
+### tuktu.nosql.processors.mongodb.MongoDBFindStreamProcessor
+Executes a query with a filter on a given list of nodes and streams the results.
 
   * **id** *(type: string)* `[Required]`
 
@@ -31,17 +31,17 @@ Updates data into MongoDB.
     - Use the ScramSha1 authentication method (instead of CrAuth)?
 
     * **query** *(type: string)* `[Required]`
-    - The selection criteria for the update. 
+    - Find the documents matching these given criteria.
 
-    * **update** *(type: string)* `[Required]`
-    - The modifications to apply.
+    * **filter** *(type: string)* `[Optional]`
+    - Filter results by this projection.
 
-    * **upsert** *(type: boolean)* `[Optional]`
-    - If set to true, creates a new document when no document matches the query criteria. If set to false, does not insert a new document when no match is found.
+    * **sort** *(type: string)* `[Optional]`
+    - Sort results by this projection.
 
-    * **multi** *(type: boolean)* `[Optional]`
-    - If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document.
+    * **readPreference** *(type: string)* `[Optional, default = "nearest"]`
+    - ReadPreference: nearest (default), primary, primaryPreferred, secondary, secondaryPreferred.
 
-    * **blocking** *(type: boolean)* `[Optional, default = true]`
-    - Wait for all the updates to be finished?
+    * **keepAsJson** *(type: boolean)* `[Optional, default = true]`
+    - Keep records as JSON objects (true) or convert them to Map[String, Any] (false)?
 

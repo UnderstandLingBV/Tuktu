@@ -30,6 +30,12 @@ Updates data initially found in MongoDB with the content of the current tuktu da
     * **ScramSha1** *(type: boolean)* `[Required]`
     - Use the ScramSha1 authentication method (instead of CrAuth)?
 
+    * **field** *(type: string)* `[Optional]`
+    - If present, use data from this field instead of the whole datum.
+
     * **upsert** *(type: boolean)* `[Optional]`
     - If set to true, creates a new document when no document matches the query criteria. If set to false, does not insert a new document when no match is found.
+
+    * **blocking** *(type: boolean)* `[Optional, default = false]`
+    - Wait for all the updates to be finished?
 
