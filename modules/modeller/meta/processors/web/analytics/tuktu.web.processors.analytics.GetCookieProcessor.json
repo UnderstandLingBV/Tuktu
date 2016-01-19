@@ -1,0 +1,30 @@
+{
+	"name": "Get Cookie Processor",
+	"description": "Gets a cookie by name.",
+	"class": "tuktu.web.processors.analytics.GetCookieProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "name",
+					"description": "The name of the cookie.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

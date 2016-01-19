@@ -1,0 +1,22 @@
+{
+	"name": "Get All Cookie Processor",
+	"description": "Gets all cookies as an array of key/value pairs.",
+	"class": "tuktu.web.processors.analytics.GetAllCookiesProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true
+		}
+	]
+}

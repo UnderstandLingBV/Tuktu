@@ -1,0 +1,42 @@
+{
+	"name": "Set Cookie Processor",
+	"description": "Sets a cookie (resultName will be the name of the cookie).",
+	"class": "tuktu.web.processors.analytics.SetCookieProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "value",
+					"description": "The cookie's value.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "expires",
+					"description": "The expiration date time as string.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "path",
+					"description": "The cookie's path.",
+					"type": "string",
+					"required": false
+				}
+			]
+		}
+	]
+}
