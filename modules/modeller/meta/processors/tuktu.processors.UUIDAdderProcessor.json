@@ -1,0 +1,22 @@
+{
+	"name": "UUID Adder Processor",
+	"description": "Adds a UUID.",
+	"class": "tuktu.processors.UUIDAdderProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true
+		}
+	]
+}
