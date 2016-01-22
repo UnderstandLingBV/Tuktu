@@ -30,7 +30,7 @@ import tuktu.nosql.util.stringHandler
  */
 // TODO: Support dynamic querying, is now static
 class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var collection: JSONCollection = _
+    var fcollection: Future[JSONCollection] = _
     var query: String = _
     var filter: String = _
     var sort: String = _
@@ -50,15 +50,15 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 
         // Set up connection
         val settings = MongoSettings(hosts, database, coll)
-        collection = user match{
-            case None => MongoCollectionPool.getCollection(settings)
+        fcollection = user match{
+            case None => Future(MongoCollectionPool.getCollection(settings))
             case Some( usr ) => {
                 val credentials = admin match
                 {
                   case true => Authenticate( "admin", usr, pwd )
                   case false => Authenticate( database, usr, pwd )
                 }
-                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
+                MongoCollectionPool.getFutureCollectionWithCredentials(settings,credentials, scramsha1)
               }
           }
         
@@ -78,12 +78,12 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
             val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
 
             // Get data based on query and filter
-            val resultData: Future[List[JsObject]] = limit match {
+            val resultData: Future[List[JsObject]] = fcollection.flatMap { collection =>  limit match {
                 case Some(s) => collection.find(queryJson, filterJson)
-                    .sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject].collect[List](s)
+                    .sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject](ReadPreference.primary).collect[List](s)
                 case None    => collection.find(queryJson, filterJson)
-                    .sort(sortJson).cursor[JsObject].collect[List]()
-            }
+                    .sort(sortJson).cursor[JsObject](ReadPreference.primary).collect[List]()
+            }}
 
             resultData.map(resultList => {
                 for (resultRow <- resultList) yield {
@@ -186,9 +186,9 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
               val setts = MongoSettings( settings.hosts, utils.evaluateTuktuString(settings.database, datum), utils.evaluateTuktuString(settings.collection, datum) )
               
               // get collection
-              val collection = authenticate match{
-                  case None => MongoCollectionPool.getCollection(setts)
-                  case Some( auth ) => MongoCollectionPool.getCollectionWithCredentials(setts, auth, scramsha1)
+              val fcollection = authenticate match{
+                  case None => Future(MongoCollectionPool.getCollection(setts))
+                  case Some( auth ) => MongoCollectionPool.getFutureCollectionWithCredentials(setts, auth, scramsha1)
               }
               // Evaluate the query and filter strings and convert to JSON
               val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
@@ -196,12 +196,14 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
               val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).as[JsObject]
               
               // query database
-              val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson).sort(sortJson).cursor[JsObject](readPreference).enumerate()
-              val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => keepjson match{
+              fcollection.flatMap { collection =>
+                val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson).sort(sortJson).cursor[JsObject](readPreference).enumerate()
+                val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => keepjson match{
                   case true => (packetSenderActor ! (datum + ( resultName -> record )))
                   case false => (packetSenderActor ! (datum + ( resultName -> tuktu.api.utils.JsObjectToMap(record) )))
-              } }
-              enumerator.run(pushRecords)
+                }}
+                enumerator.run(pushRecords)
+              }
         }))
     }
     

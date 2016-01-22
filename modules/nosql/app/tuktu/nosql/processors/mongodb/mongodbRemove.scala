@@ -25,7 +25,7 @@ import scala.util.Success
  * Removes data from MongoDB
  */
 class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var collection: JSONCollection = _
+    var fcollection: Future[JSONCollection] = _
     var query: String = _
     var filter: String = _
     var justOne: Boolean = _
@@ -46,15 +46,15 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
 
         // Set up connection
         val settings = MongoSettings(hosts, database, coll)
-        collection = user match{
-            case None => MongoCollectionPool.getCollection(settings)
+        fcollection = user match{
+            case None => Future(MongoCollectionPool.getCollection(settings))
             case Some( usr ) => {
                 val credentials = admin match
                 {
                   case true => Authenticate( "admin", usr, pwd )
                   case false => Authenticate( database, usr, pwd )
                 }
-                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
+                MongoCollectionPool.getFutureCollectionWithCredentials(settings,credentials, scramsha1)
               }
           }
 
@@ -90,6 +90,6 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         val queries = (for (datum <- data.data) yield {
             Json.parse(stringHandler.evaluateString(query, datum, "\"", ""))
         }).distinct
-        collection.remove[JsObject](Json.obj("$or" -> queries), firstMatchOnly = justOne)
+        fcollection.flatMap{ collection => collection.remove[JsObject](Json.obj("$or" -> queries), firstMatchOnly = justOne) }
     } 
 }

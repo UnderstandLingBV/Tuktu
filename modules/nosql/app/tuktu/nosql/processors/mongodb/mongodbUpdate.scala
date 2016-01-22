@@ -23,7 +23,7 @@ import tuktu.nosql.util.stringHandler
  */
 class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultName) {
     // the collection to write to
-    var collection: JSONCollection = _
+    var fcollection: Future[JSONCollection] = _
     // If set to true, creates a new document when no document matches the query criteria. 
     var upsert = false
     // The selection criteria for the update. 
@@ -52,15 +52,15 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
 
         // Set up connection
         val settings = MongoSettings(hosts, database, coll)
-        collection = user match{
-            case None => MongoCollectionPool.getCollection(settings)
+        fcollection = user match{
+            case None => Future(MongoCollectionPool.getCollection(settings))
             case Some( usr ) => {
                 val credentials = admin match
                 {
                   case true => Authenticate( "admin", usr, pwd )
                   case false => Authenticate( database, usr, pwd )
                 }
-                MongoCollectionPool.getCollectionWithCredentials(settings,credentials, scramsha1)
+                MongoCollectionPool.getFutureCollectionWithCredentials(settings,credentials, scramsha1)
               }
           }
     }
@@ -83,8 +83,10 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         // Update data into MongoDB
         Future.sequence(data.data.map(datum => {
             val selector = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
+            println( "selector: " + selector  )
             val updater = Json.parse(stringHandler.evaluateString(update, datum, "\"", "")).as[JsObject]
-            collection.update(selector, updater, upsert = upsert, multi = multi)
+            println( "updater : " + updater  )
+            fcollection.flatMap{ collection => collection.update(selector, updater, upsert = upsert, multi = multi) }
         }))
     }    
 }

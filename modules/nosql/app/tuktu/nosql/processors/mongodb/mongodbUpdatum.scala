@@ -65,80 +65,6 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
         // Update data into MongoDB
         Future.sequence(data.data.map(datum => {
             val setts = MongoSettings( settings.hosts.map{ host => tuktu.api.utils.evaluateTuktuString(host, datum)}, tuktu.api.utils.evaluateTuktuString(settings.database, datum), tuktu.api.utils.evaluateTuktuString(settings.collection, datum))
-            val collection = credentials match{
-                case None => MongoCollectionPool.getCollection(setts)
-                case Some( creds ) => MongoCollectionPool.getCollectionWithCredentials(setts, creds, scramsha1)
-            }
-            val updater = field match
-            {
-              case None => MapToJsObject( datum )
-              case Some( f ) => datum(f) match{
-                 case j: JsObject => j
-                 case m: Map[String, Any] => MapToJsObject( m ) 
-              }
-            }
-            val selector = Json.obj( "_id" ->   (updater \ "_id") )
-            collection.update(selector, updater, upsert = upsert)
-        }))
-    }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (!blocking) {
-        Future {
-            doUpdate(data)
-            data
-        }
-    } else {
-        // Wait for all the updates to be finished
-        doUpdate(data).map {
-            case _ => data
-        }
-    })
-}
-
-/**
- * Updates datum into MongoDB in a non-blocking way (assuming it was initially found in MongoDB)
- */
-class MongoDBUpdatumProcessorNB(resultName: String) extends BaseProcessor(resultName) {
-    var settings: MongoSettings = _
-    var credentials: Option[Authenticate] = _
-    var scramsha1: Boolean = _
-    // If set to true, creates a new document when no document matches the _id key. 
-    var upsert: Boolean = _
-    var field: Option[String] = _
-
-    override def initialize(config: JsObject) {
-        // Set up MongoDB client
-        val hosts = (config \ "hosts").as[List[String]]
-        val database = (config \ "database").as[String]
-        val coll = (config \ "collection").as[String]
-        settings = MongoSettings(hosts, database, coll)
-        
-        upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
-        // Get credentials
-        val user = (config \ "user").asOpt[String]
-        val pwd = (config \ "password").asOpt[String].getOrElse("")
-        val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-        credentials = user match
-        {
-            case None => None
-            case Some( usr ) => {
-                admin match
-                {
-                  case true => Option(Authenticate( "admin", usr, pwd ))
-                  case false => Option(Authenticate( database, usr, pwd ))
-                }
-            }
-        }
-        scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
-        // Use field instead of datum?
-        field = (config \ "field").asOpt[String]
-    }
-    
-    // Does the actual updating
-    def doUpdate(data: DataPacket) = {
-        // Update data into MongoDB
-        Future.sequence(data.data.map(datum => {
-            val setts = MongoSettings( settings.hosts.map{ host => tuktu.api.utils.evaluateTuktuString(host, datum)}, tuktu.api.utils.evaluateTuktuString(settings.database, datum), tuktu.api.utils.evaluateTuktuString(settings.collection, datum))
             val fcollection = credentials match{
                 case None => Future(MongoCollectionPool.getCollection(setts))
                 case Some( creds ) => MongoCollectionPool.getFutureCollectionWithCredentials(setts, creds, scramsha1)
@@ -152,14 +78,19 @@ class MongoDBUpdatumProcessorNB(resultName: String) extends BaseProcessor(result
               }
             }
             val selector = Json.obj( "_id" ->   (updater \ "_id") )
-            fcollection.flatMap{ collection => collection.update(selector, updater, upsert = upsert) }
+            fcollection.flatMap { collection => collection.update(selector, updater, upsert = upsert) }
         }))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (!blocking) {
         Future {
             doUpdate(data)
             data
+        }
+    } else {
+        // Wait for all the updates to be finished
+        doUpdate(data).map {
+            case _ => data
         }
     })
 }

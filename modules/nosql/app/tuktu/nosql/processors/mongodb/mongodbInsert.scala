@@ -63,17 +63,17 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
 
         // Bulk insert and await
         val futures = for (f <- result) yield {
-            val collection = user match {
-                case None => MongoCollectionPool.getCollection(MongoSettings(f._1._1, f._1._2, f._1._3))
+            val fcollection = user match {
+                case None => Future(MongoCollectionPool.getCollection(MongoSettings(f._1._1, f._1._2, f._1._3)))
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getCollectionWithCredentials(MongoSettings(f._1._1, f._1._2, f._1._3), credentials, scramsha1)
+                    MongoCollectionPool.getFutureCollectionWithCredentials(MongoSettings(f._1._1, f._1._2, f._1._3), credentials, scramsha1)
                 }
             }
-            collection.bulkInsert(f._2.toStream, false)
+            fcollection.flatMap { collection => collection.bulkInsert(f._2.toStream, false) }
         }
         // Wait for all the results to be retrieved
         futures.foreach { x => if (!x.isCompleted) Await.ready(x, timeout seconds) }
@@ -129,17 +129,17 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
                 case jmap: Map[String, Any] => tuktu.api.utils.MapToJsObject(jmap, false)
             }
             val settings = MongoSettings(hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum))
-            val collection = user match {
-                case None => MongoCollectionPool.getCollection(settings)
+            val fcollection = user match {
+                case None => Future(MongoCollectionPool.getCollection(settings))
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
+                    MongoCollectionPool.getFutureCollectionWithCredentials(settings, credentials, scramsha1)
                 }
             }
-            collection.insert(jobj)
+            fcollection.flatMap { collection => collection.insert(jobj) }
         })
     }
 }
