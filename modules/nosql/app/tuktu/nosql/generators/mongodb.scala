@@ -44,14 +44,14 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 
             // Set up connection
             val settings = MongoSettings(hosts, database, coll)
-            val collection = user match {
-                case None => MongoCollectionPool.getCollection(settings)
+            val fcollection = user match {
+                case None => Future(MongoCollectionPool.getCollection(settings))
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
+                    MongoCollectionPool.getFutureCollectionWithCredentials(settings, credentials, scramsha1)
                     
                 }
             }
@@ -68,12 +68,12 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 
             val resultFuture = {
                 // Get data based on query and filter
-                val resultData = limit match {
+                val resultData = fcollection.flatMap { collection =>  limit match {
                     case Some(s) => collection.find(query, filter).sort(sort)
-                        .options(QueryOpts().batchSize(s)).cursor[JsObject].collect[List](s)
+                        .options(QueryOpts().batchSize(s)).cursor[JsObject](ReadPreference.primary).collect[List](s)
                     case None => collection.find(query, filter).sort(sort)
-                        .options(QueryOpts().batchSize(batchSize)).cursor[JsObject].collect[List]()
-                }
+                        .options(QueryOpts().batchSize(batchSize)).cursor[JsObject](ReadPreference.primary).collect[List]()
+                }}
                 // Get futures into JSON
                 resultData.map { resultList =>
                     {
