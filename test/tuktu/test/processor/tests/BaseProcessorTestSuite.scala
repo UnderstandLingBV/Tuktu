@@ -707,10 +707,10 @@ class BaseProcessorTestSuite extends PlaySpec {
         }
     }
     
-    "ImploderProcessor" must {
+    "KeyImploderProcessor" must {
         "implode all elements in a Datapacket into a single element of a datapacket" in {
             // Processor
-            val proc = new ImploderProcessor("result")
+            val proc = new KeyImploderProcessor("result")
             
             // Config
             val config = Json.parse("""

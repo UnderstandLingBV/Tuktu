@@ -494,9 +494,30 @@ class StringImploderProcessor(resultName: String) extends BaseProcessor(resultNa
 }
 
 /**
- * Implodes elements of a DataPacket into one element with a sequence
+ * Implodes a number of fields (or an entire DataPacket) into a sequence
  */
 class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var fields: Option[List[String]] = _
+    override def initialize(config: JsObject) {
+        fields = (config \ "fields").asOpt[List[String]]
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            fields match {
+                case Some(fs) => datum + (resultName -> (datum.collect {
+                    case (key: String, value: Any) if fs.contains(key) => value
+                }).toList)
+                case None => datum + (resultName -> datum.map(_._2).toList)
+            }
+        })
+    })
+}
+
+/**
+ * Implodes elements of a DataPacket into one element with a sequence based on key
+ */
+class KeyImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fields: List[String] = _
     override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]

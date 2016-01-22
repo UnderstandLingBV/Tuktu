@@ -1,0 +1,72 @@
+{
+	"name": "Normalization Train Processor",
+	"description": "Trains a normalization model.",
+	"class": "tuktu.ml.processors.preprocessing.NormalizationTrainProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be trained. If a model with that name is already available, that model will be used for additional training. Otherwise a new model with this name will be instantiated.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "wait_for_store",
+					"description": "Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "fields",
+					"type": "array",
+					"required": false,
+					"description": "The fields to normalize.",
+					"parameters": [
+						{
+							"name": "",
+							"description": "Field name.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "min",
+					"description": "The lower bound to normalize to (0.0 if not set).",
+					"type": "double",
+					"required": false,
+					"default": 0.0
+				},
+				{
+					"name": "max",
+					"description": "The upper bound to normalize to (1.0 if not set).",
+					"type": "double",
+					"required": false,
+					"default": 1.0
+				}
+			]
+		}
+	]
+}

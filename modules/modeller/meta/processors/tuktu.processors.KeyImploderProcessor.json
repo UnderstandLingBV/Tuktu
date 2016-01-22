@@ -1,7 +1,7 @@
 {
 	"name": "Imploder Processor",
-	"description": "Implodes given fields into a list",
-	"class": "tuktu.processors.ImploderProcessor",
+	"description": "Implodes all elements in a DataPacket into a single element of a DataPacket based on key",
+	"class": "tuktu.processors.KeyImploderProcessor",
 	"parameters": [
 		{
 			"name": "id",
@@ -22,7 +22,7 @@
 					"name": "fields",
 					"description": "The fields to be imploded.",
 					"type": "array",
-					"required": false,
+					"required": true,
 					"parameters": [
 						{
 							"name": "",

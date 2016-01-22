@@ -1,0 +1,51 @@
+{
+	"name": "Normalization Apply Processor",
+	"description": "Applies a normalization model to data.",
+	"class": "tuktu.ml.processors.preprocessing.LinearRegressionApplyProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be applied. If a model with this name cannot be found, the data will go through unchanged.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "fields",
+					"type": "array",
+					"required": false,
+					"description": "The fields to normalize.",
+					"parameters": [
+						{
+							"name": "",
+							"description": "Field name.",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}

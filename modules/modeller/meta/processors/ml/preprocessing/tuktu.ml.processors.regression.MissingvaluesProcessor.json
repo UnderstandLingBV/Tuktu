@@ -1,0 +1,66 @@
+{
+	"name": "Missing Values Processor",
+	"description": "Replaces missing values with target values.",
+	"class": "tuktu.ml.processors.preprocessing.MissingvaluesProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The fields to replace missing values for. Applies to all fields if not specified.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"description": "Field name.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "replacements",
+					"type": "array",
+					"required": true,
+					"description": "The target values per data type for missing values.",
+					"parameters": [
+						{
+							"name": "",
+							"description": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "type",
+									"type": "string",
+									"required": true,
+									"description": "The data type (ie. int, long, double, string etc. - use any as special case)."
+								},
+								{
+									"name": "target",
+									"type": "any",
+									"required": true,
+									"description": "The target value, enclose strings in double quotes!"
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

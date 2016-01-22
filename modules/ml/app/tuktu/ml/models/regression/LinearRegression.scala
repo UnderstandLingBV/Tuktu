@@ -12,9 +12,10 @@ import java.io.ObjectOutputStream
  */
 class LinearRegression extends BaseModel {
     var regression = new OLSMultipleLinearRegression
+    var coefficients: Array[Double] = _
     
-    private var currentData: Array[Array[Double]] = _
-    private var currentLabels: Array[Double] = _
+    private var currentData = Array.empty[Array[Double]]
+    private var currentLabels = Array.empty[Double]
     
     /**
      * Adds data to our linear regression model
@@ -25,24 +26,31 @@ class LinearRegression extends BaseModel {
         regression.newSampleData(currentLabels, currentData)
     }
     
+    def calculateEstimation(x: Double, coe: Array[Double]) = {
+        var result: Double = 0.0
+        for (i <- 0 to coe.length - 1)
+            result += coe(i) * Math.pow(x, i)
+        result
+    }
+    
     /**
      * Predicts a Y-value for X-values
      */
     def classify(data: Seq[Double]) = {
-        val weights = regression.estimateRegressionParameters()
-        data.zip(weights.drop(0)).foldLeft(weights(0))((s, z) => s + z._1 * z._2)
+        coefficients = regression.estimateRegressionParameters()
+        data.zip(coefficients).foldLeft(0.0)((s, z) => s + z._1 * z._2)
     }
     
     override def serialize(filename: String) = {
         // Write out model
         val oos = new ObjectOutputStream(new FileOutputStream(filename))
-        oos.writeObject(regression)
+        oos.writeObject(coefficients)
         oos.close
     }
     
     override def deserialize(filename: String) = {
         val ois = new ObjectInputStream(new FileInputStream(filename))
-        regression = ois.readObject.asInstanceOf[OLSMultipleLinearRegression]
+        coefficients = ois.readObject.asInstanceOf[Array[Double]]
         ois.close
     }
 }

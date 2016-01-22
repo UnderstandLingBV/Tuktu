@@ -11,8 +11,11 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.concurrent.Akka
 import play.api.Logger
 import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.Play
 
 object utils {
+    val logDpContent = Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true)
+    
     /**
      * Enumeratee for error-logging and handling
      * @param idString A string used to identify the flow this logEnumeratee is part of. A mapping exists
@@ -26,7 +29,10 @@ object utils {
             Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorNotificationPacket(idString, configName, processorName, input.toString, e)
 
             // Log the error
-            Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString, on Input: " + input, e)
+            if (logDpContent)
+                Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString, on Input: " + input, e)
+            else
+                Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString", e)
         }
     }
 
