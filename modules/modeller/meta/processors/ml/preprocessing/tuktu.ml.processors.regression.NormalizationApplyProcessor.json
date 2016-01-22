@@ -1,7 +1,7 @@
 {
 	"name": "Normalization Apply Processor",
 	"description": "Applies a normalization model to data.",
-	"class": "tuktu.ml.processors.preprocessing.LinearRegressionApplyProcessor",
+	"class": "tuktu.ml.processors.preprocessing.NormalizationApplyProcessor",
 	"parameters": [
 		{
 			"name": "id",
