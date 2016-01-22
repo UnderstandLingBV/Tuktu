@@ -1,5 +1,5 @@
 {
-	"name": "Imploder Processor",
+	"name": "Key Imploder Processor",
 	"description": "Implodes all elements in a DataPacket into a single element of a DataPacket based on key",
 	"class": "tuktu.processors.KeyImploderProcessor",
 	"parameters": [
