@@ -8,7 +8,8 @@ import akka.actor.Actor
 abstract class BaseJsObject() extends java.io.Serializable
 
 case class WebJsObject(
-        js: Any
+        js: Any,
+        noQoutes: Boolean = false
 ) extends BaseJsObject()
 
 case class WebJsNextFlow(

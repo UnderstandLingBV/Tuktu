@@ -1,7 +1,7 @@
 {
-	"name": "Linear Regression Apply Processor",
-	"description": "Applies a Linear regression model to data.",
-	"class": "tuktu.ml.processors.regression.LinearRegressionApplyProcessor",
+	"name": "Ridge Regression Apply Processor",
+	"description": "Applies a Ridge regression model to data.",
+	"class": "tuktu.ml.processors.regression.RidgeRegressionApplyProcessor",
 	"parameters": [
 		{
 			"name": "id",
@@ -36,13 +36,6 @@
 					"type": "string",
 					"required": true,
 					"description": "The field the data resides in. Data must be of type Seq[Int]."
-				},
-				{
-					"name": "estimate",
-					"type": "boolean",
-					"required": false,
-					"default": true,
-					"description": "If set to true, the coefficients of the regression model are estimated before applying the model. If set to false, it is assumed that the model is deserialized from pre-stored coefficients."
 				}
 			]
 		}

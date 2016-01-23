@@ -32,7 +32,7 @@ object JSGeneration {
             }
             
             handleJsObject(datum, dKey, dValue)
-        }).toList.mkString(";")
+        }).toList.filter(!_.isEmpty).mkString(";")
         
         (res, nextFlow, includes.toList)
     }
@@ -43,8 +43,8 @@ object JSGeneration {
                 // Get the value to obtain and place it in a key with a proper name that we will collect
                 "tuktuvars." + key + " = " + (aVal.js match {
                     case v: String if (v.startsWith("function")) => v
-                    case v: String => "'" + v + "'"
-                    case v: Int => v.toString
+                    case v: String if !aVal.noQoutes => "'" + v + "'"
+                    case _ => aVal.js.toString
                 })
             }
             case aVal: WebJsCodeObject => {
@@ -58,7 +58,7 @@ object JSGeneration {
             }
             case aVal: WebJsFunctionObject => {
                 // Add function
-                "function " + aVal.name + "(" + aVal.functionParams.mkString(",") +
+                "function " + aVal.name + "(" + aVal.functionParams.mkString(",") + ")" +
                 "{" + aVal.functionBody + "}"
             }
             case _ => ""

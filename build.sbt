@@ -72,6 +72,8 @@ lazy val nosqlDependencies = Seq(
 lazy val mlDependencies = Seq(
     cache,
     "org.apache.commons" % "commons-math3" % "3.5",
+    "com.thoughtworks.xstream" % "xstream" % "1.4.8",
+    "com.github.haifengl" % "smile-core" % "1.0.4",
     "org.scalanlp" %% "breeze" % "0.10",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )

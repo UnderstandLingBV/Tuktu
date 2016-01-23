@@ -60,13 +60,15 @@ object Application extends Controller {
                                     "request" -> request,
                                     "headers" -> request.headers
                                 )))
-                            else
+                            else {
+                                println("Body: " + bodyData)
                                 new DataPacket(List(Map(
                                     // By default, add referer, request and headers
                                     "url" -> referrer,
                                     "request" -> request,
                                     "headers" -> request.headers
                                 ) ++ bodyData.keys.map(key => key -> utils.JsValueToAny(bodyData \ key))))
+                            }
 
                             // See if we need to start a new flow or if we can send to the running actor
                             val resultFut = if (isInitial) {
@@ -111,6 +113,12 @@ object Application extends Controller {
                                 case dp: DataPacket =>
                                     // Get all the JS elements and output them one after the other
                                     val jsResult = JSGeneration.PacketToJsBuilder(dp)
+                                    println("JS:")
+                                    println(jsResult._1)
+                                    println("Next flow:")
+                                    println(jsResult._2)
+                                    println("Includes:")
+                                    println(jsResult._3)
                                     Ok(views.js.Tuktu(jsResult._2, jsResult._1,
                                             Play.current.configuration.getString("tuktu.jsurl").getOrElse("/Tuktu.js"), jsResult._3))
                                 case _ =>

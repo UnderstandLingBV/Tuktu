@@ -1,0 +1,30 @@
+{
+	"name": "Flatten Cookie Processor",
+	"description": "Flattens cookies obtained by the GetAllCookiesProcessor.",
+	"class": "tuktu.web.processors.analytics.FlattenCookiesProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The name of the field containing all the cookies.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

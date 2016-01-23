@@ -35,7 +35,15 @@
 					"description": "The cookie's path.",
 					"type": "string",
 					"required": false
+				},
+				{
+					"name": "only_if_not_exists",
+					"description": "If set to true, this cookie will only be set if it doesn't exist already, otherwise it will be overwritten if it exists.",
+					"type": "boolean",
+					"required": false,
+					"default": true
 				}
+				
 			]
 		}
 	]

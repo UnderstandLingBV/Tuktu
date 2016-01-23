@@ -10,7 +10,7 @@ import java.io.ObjectOutputStream
 /**
  * Implements a wrapper around apache common math regression
  */
-class LinearRegression extends BaseModel {
+class LinearRegression() extends BaseModel {
     var regression = new OLSMultipleLinearRegression
     var coefficients: Array[Double] = _
     
@@ -32,17 +32,19 @@ class LinearRegression extends BaseModel {
             result += coe(i) * Math.pow(x, i)
         result
     }
-    
+
     /**
      * Predicts a Y-value for X-values
      */
-    def classify(data: Seq[Double]) = {
-        coefficients = regression.estimateRegressionParameters()
+    def classify(data: Seq[Double], estimate: Boolean) = {
+        if (estimate)
+            coefficients = regression.estimateRegressionParameters()
         data.zip(coefficients).foldLeft(0.0)((s, z) => s + z._1 * z._2)
     }
     
     override def serialize(filename: String) = {
         // Write out model
+        coefficients = regression.estimateRegressionParameters()
         val oos = new ObjectOutputStream(new FileOutputStream(filename))
         oos.writeObject(coefficients)
         oos.close

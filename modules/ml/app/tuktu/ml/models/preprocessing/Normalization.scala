@@ -17,7 +17,7 @@ class Normalization(minScale: Double = 0.0, maxScale: Double = 1.0) extends Base
         if (!minMaxes.contains(key)) minMaxes += key -> (value, value)
         else {
             val min = if (minMaxes(key)._1 > value) value else minMaxes(key)._1
-            val max = if (minMaxes(key)._2 > value) value else minMaxes(key)._2
+            val max = if (minMaxes(key)._2 < value) value else minMaxes(key)._2
             minMaxes += key -> (min, max)
         }
     }
@@ -38,7 +38,8 @@ class Normalization(minScale: Double = 0.0, maxScale: Double = 1.0) extends Base
     // Normalizes a value
     def normalize(key: String, value: Double) = {
         if (minMaxes.contains(key)) {
-            (value - minMaxes(key)._1) / (minMaxes(key)._2 - minMaxes(key)._1) * (maxScale - minScale) + minScale
+            if (minMaxes(key)._2 - minMaxes(key)._1 == 0) 0 else
+                (value - minMaxes(key)._1) / (minMaxes(key)._2 - minMaxes(key)._1) * (maxScale - minScale) + minScale
         } else value
     }
     
