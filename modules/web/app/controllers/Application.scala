@@ -61,7 +61,6 @@ object Application extends Controller {
                                     "headers" -> request.headers
                                 )))
                             else {
-                                println("Body: " + bodyData)
                                 new DataPacket(List(Map(
                                     // By default, add referer, request and headers
                                     "url" -> referrer,
@@ -113,12 +112,6 @@ object Application extends Controller {
                                 case dp: DataPacket =>
                                     // Get all the JS elements and output them one after the other
                                     val jsResult = JSGeneration.PacketToJsBuilder(dp)
-                                    println("JS:")
-                                    println(jsResult._1)
-                                    println("Next flow:")
-                                    println(jsResult._2)
-                                    println("Includes:")
-                                    println(jsResult._3)
                                     Ok(views.js.Tuktu(jsResult._2, jsResult._1,
                                             Play.current.configuration.getString("tuktu.jsurl").getOrElse("/Tuktu.js"), jsResult._3))
                                 case _ =>
