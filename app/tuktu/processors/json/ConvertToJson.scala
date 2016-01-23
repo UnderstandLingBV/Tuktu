@@ -12,7 +12,7 @@ import tuktu.api.utils.MapToJsObject
 /**
  * Converts a field to JSON.
  */
-class ConvertToJson(resultName: String) extends BaseProcessor(resultName) {
+class ConvertFieldToJson(resultName: String) extends BaseProcessor(resultName) {
     /** The field containing the value to be converted to JSON. */
     var field: String = _
     /** Append the data */
@@ -30,5 +30,16 @@ class ConvertToJson(resultName: String) extends BaseProcessor(resultName) {
             else
                 datum + (resultName -> MapToJsObject(datum) \ field)
         }
+    })
+}
+
+/**
+ * Converts an entire data packet into JSON
+ */
+class ConvertToJson(resultName: String) extends BaseProcessor(resultName) {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            datum + (resultName -> MapToJsObject(datum))
+        })
     })
 }

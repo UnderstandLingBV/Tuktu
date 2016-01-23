@@ -1,6 +1,6 @@
 {
-	"name": "Convert a Field to JSON Processor",
-	"description": "Converts a field to JSON.",
+	"name": "Convert to JSON Processor",
+	"description": "Converts the entire data packet to JSON.",
 	"class": "tuktu.processors.json.ConvertToJson",
 	"parameters": [
 		{
@@ -16,22 +16,7 @@
 		{
 			"name": "config",
 			"type": "object",
-			"required": true,
-			"parameters": [
-				{
-					"name": "field",
-					"description": "The field containing the value to be converted to JSON.",
-					"type": "string",
-					"required": true
-				},
-				{
-					"name": "append",
-					"description": "Append the data as resultName or overwrite field.",
-					"type": "boolean",
-					"required": false,
-					"default": false
-				}
-			]
+			"required": true
 		}
 	]
 }

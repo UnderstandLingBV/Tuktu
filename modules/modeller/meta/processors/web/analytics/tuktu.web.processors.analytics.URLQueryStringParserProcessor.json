@@ -1,0 +1,30 @@
+{
+	"name": "URL Query String Parser Processor",
+	"description": "Parses a query string obtained from a URL.",
+	"class": "tuktu.web.processors.analytics.URLQueryStringParserProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field that contains the URL to parse.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

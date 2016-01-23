@@ -247,7 +247,7 @@ object utils {
         case a: Seq[_]     => SeqToJsArray(a, mongo)
         case a: Array[_]   => SeqToJsArray(a, mongo)
         case a: Map[_, _]  => MapToJsObject(a, mongo)
-        case _             => a.toString
+        case _             => if (a == null) "null" else a.toString
     }
 
     /**

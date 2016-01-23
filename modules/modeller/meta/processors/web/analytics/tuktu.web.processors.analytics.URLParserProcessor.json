@@ -1,0 +1,30 @@
+{
+	"name": "URL Parser Processor",
+	"description": "Parses a URL into a map containing key/value pairs that explain the URL content. The following keys are added: protocol, authority, host, port, path, query, filename, ref.",
+	"class": "tuktu.web.processors.analytics.URLParserProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field that contains the URL to parse.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

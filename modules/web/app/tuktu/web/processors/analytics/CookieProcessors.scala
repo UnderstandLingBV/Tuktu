@@ -34,11 +34,11 @@ class SetCookieProcessor(resultName: String) extends BaseProcessor(resultName) {
             // Evaluate
             val cValue = utils.evaluateTuktuString(value, datum)
             val cExpires = expires match {
-                case Some(e) => utils.evaluateTuktuString(e, datum)
+                case Some(e) => Some(utils.evaluateTuktuString(e, datum))
                 case None => None
             }
             val cPath = path match {
-                case Some(p) => utils.evaluateTuktuString(p, datum)
+                case Some(p) => Some(utils.evaluateTuktuString(p, datum))
                 case None => None
             }
             
