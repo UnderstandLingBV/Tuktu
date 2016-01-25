@@ -1,0 +1,90 @@
+{
+	"name": "SVM Train Processor",
+	"description": "Trains an SVM model.",
+	"class": "tuktu.ml.processors.svm.SVMTrainProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be trained. If a model with that name is already available, that model will be used for additional training. Otherwise a new model with this name will be instantiated.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "wait_for_store",
+					"description": "Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "data_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the data resides in. Data must be of type Seq[Int]."
+				},
+				{
+					"name": "label_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the label is in. Value must be an integer."
+				},
+				{
+					"name": "kernel",
+					"type": "string",
+					"required": false,
+					"default": "linear",
+					"description": "Which kernel to use, valid options are: gaussian, hellinger, hyperbolictangent, laplacian, linear, peason, polynomial, thinplatespline. Linear is used by default."
+				},
+				{
+					"name": "kernel_params",
+					"type": "array",
+					"required": false,
+					"description": "If a kernel requires parameters, you should enter them here. 0 to 2 values can be used, depending on the kernel.",
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "penalty",
+					"type": "double",
+					"required": false,
+					"default": 2.0,
+					"description": "The soft margin penalty parameter."
+				},
+				{
+					"name": "strategy",
+					"type": "string",
+					"required": false,
+					"default": "one_vs_all",
+					"description": "The classification strategy to use. Can be either one_vs_one or one_vs_all."
+				}
+			]
+		}
+	]
+}
