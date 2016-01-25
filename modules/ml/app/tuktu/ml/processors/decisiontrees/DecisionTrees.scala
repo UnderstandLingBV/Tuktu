@@ -1,4 +1,4 @@
-package tuktu.ml.processors.regression
+package tuktu.ml.processors.decisiontrees
 
 import play.api.libs.json.JsObject
 import tuktu.ml.models.decisitiontrees.DecisionTree
