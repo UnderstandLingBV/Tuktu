@@ -24,19 +24,19 @@ class MetadataSerializationProcessor(resultName: String) extends BaseProcessor(r
 {
    var folder: String = _
    var fileName: String = _
-   var prefix: String = _
+   var prefix: Option[String] = _
    var content: String = _
-   var postfix: String = _
+   var postfix: Option[String] = _
    var encoding: String = _
     
     override def initialize(config: JsObject) 
     {
         folder = (config \ "folder").as[String]
         fileName = (config \ "fileName").as[String]
-        prefix = (config \ "prefix").asOpt[String].getOrElse("")
+        prefix = (config \ "prefix").asOpt[String]
         content = (config \ "content").as[String]
-        postfix = (config \ "postfix").asOpt[String].getOrElse("")
-        encoding = ( config \ "encoding" ).as[String]
+        postfix = (config \ "postfix").asOpt[String]
+        encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -44,7 +44,13 @@ class MetadataSerializationProcessor(resultName: String) extends BaseProcessor(r
                 val path: String = utils.evaluateTuktuString(folder, datum) + File.separator + utils.evaluateTuktuString(fileName, datum)
                 val file: File = new File( path )
                 
-                val metadata: String = utils.evaluateTuktuString(prefix, datum) + "\n" + utils.evaluateTuktuString(content, datum) + "\n" + utils.evaluateTuktuString(postfix, datum) 
+                val metadata: String = (prefix match {
+                  case None => ""
+                  case Some(pre) => utils.evaluateTuktuString(pre, datum) + "\n" 
+                })  + utils.evaluateTuktuString(content, datum) + ( postfix match {
+                  case None => ""
+                  case Some(post) => "\n" + utils.evaluateTuktuString(post, datum)
+                }) 
                 FileUtils.write( file, metadata, utils.evaluateTuktuString(encoding, datum) ) ;
                 datum
             })
