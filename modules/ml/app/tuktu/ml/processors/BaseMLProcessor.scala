@@ -33,7 +33,7 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
         waitForStore = (config \ "wait_for_store").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Get name of the model and line it up for destruction
         val newModelName = utils.evaluateTuktuString(modelName, data.data.headOption.getOrElse(Map.empty))
         if (destroyOnEOF) toBeDestroyed += newModelName

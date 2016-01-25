@@ -18,6 +18,7 @@ import scala.collection.mutable.ListBuffer
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.Concurrent
 
 /**
  * This actor is used to buffer stuff in
@@ -62,13 +63,14 @@ class SizeBufferProcessor(resultName: String) extends BaseProcessor(resultName) 
         maxSize = (config \ "size").as[Int]
     }
 
-    // Iteratee to take the data we need
-    def groupPackets: Iteratee[DataPacket, DataPacket] = for (
-            dps <- Enumeratee.take[DataPacket](maxSize) &>> Iteratee.getChunks
-    ) yield new DataPacket(dps.flatMap(data => data.data))
-
     // Use the iteratee and Enumeratee.grouped
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
+    override def processor(): Enumeratee[DataPacket, DataPacket] = BufferEnumeratee.batched(maxSize) compose
+        Enumeratee.mapM((packets: List[DataPacket]) => Future {new DataPacket(
+            for {
+                data <- packets
+                datum <- data.data
+            } yield datum
+    )}) compose Enumeratee.filter(_.data.size != 0)
 }
 
 /**
@@ -110,13 +112,14 @@ class TimeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
  * Buffers until EOF (end of data stream) is found
  */
 class EOFBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
-    // Iteratee to take the data we need
-    def groupPackets: Iteratee[DataPacket, DataPacket] = for (
-            dps <- Enumeratee.takeWhile[DataPacket](_ != Input.EOF) &>> Iteratee.getChunks
-    ) yield new DataPacket(dps.flatMap(data => data.data))
-
-    // Use the iteratee and Enumeratee.grouped
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
+    // Use Concurrent.buffer
+    override def processor(): Enumeratee[DataPacket, DataPacket] = BufferEnumeratee.eof() compose
+        Enumeratee.mapM((packets: List[DataPacket]) => Future {new DataPacket(
+            for {
+                data <- packets
+                datum <- data.data
+            } yield datum
+        )}) compose Enumeratee.filter(_.data.size != 0)
 }
 
 /**
