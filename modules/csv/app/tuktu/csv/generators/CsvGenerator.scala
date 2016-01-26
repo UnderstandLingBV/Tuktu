@@ -142,51 +142,54 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                     separator, quote, escape, batchSize, flattened, resultName, startLine, endLine, ignoreErrors, backOffInterval, backOffAmount))
                 csvGenActor ! new InitPacket
             } else {
-                // Use Iteratee lib for proper back pressure handling
-                val reader = new CSVReader(tuktu.api.file.genericReader(fileName)(Codec(encoding)), separator, quote, escape)
-                // Headers
-                val headers: Option[List[String]] = {
-                    if (hasHeaders) Some(reader.readNext.toList)
-                    else {
-                        if (headersGiven.nonEmpty) Some(headersGiven)
-                        else None
-                    }
-                }
-
-                val fileStream: Enumerator[Array[String]] = Enumerator.generateM[Array[String]] {
-                    Future { Option(reader.readNext) }
-                }.andThen(Enumerator.eof)
-
-                // onEOF close the reader and send StopPacket
-                val onEOF = Enumeratee.onEOF[Map[String, Any]](() => {
-                    reader.close
-                    self ! new StopPacket
-                })
-                // Zip the lines with the header
-                val zipEnumeratee: Enumeratee[Array[String], Map[String, Any]] = Enumeratee.mapM[Array[String]](line => Future {
-                    headers match {
-                        case Some(hdrs) => flattened match {
-                            case false => Map(resultName -> hdrs.zip(line).toMap)
-                            case true  => hdrs.zip(line).toMap
+                // Make separate enumerators, for each processor
+                processors.foreach(processor => {
+                    // Use Iteratee lib for proper back pressure handling
+                    val reader = new CSVReader(tuktu.api.file.genericReader(fileName)(Codec(encoding)), separator, quote, escape)
+                    // Headers
+                    val headers: Option[List[String]] = {
+                        if (hasHeaders) Some(reader.readNext.toList)
+                        else {
+                            if (headersGiven.nonEmpty) Some(headersGiven)
+                            else None
                         }
-                        case None => Map(resultName -> line.toList)
                     }
+    
+                    val fileStream: Enumerator[Array[String]] = Enumerator.generateM[Array[String]] {
+                        Future { Option(reader.readNext) }
+                    }.andThen(Enumerator.eof)
+    
+                    // onEOF close the reader and send StopPacket
+                    val onEOF = Enumeratee.onEOF[Map[String, Any]](() => {
+                        reader.close
+                        self ! new StopPacket
+                    })
+                    // Zip the lines with the header
+                    val zipEnumeratee: Enumeratee[Array[String], Map[String, Any]] = Enumeratee.mapM[Array[String]](line => Future {
+                        headers match {
+                            case Some(hdrs) => flattened match {
+                                case false => Map(resultName -> hdrs.zip(line).toMap)
+                                case true  => hdrs.zip(line).toMap
+                            }
+                            case None => Map(resultName -> line.toList)
+                        }
+                    })
+                    // If endLine is defined, take at most endLine - startLine + 1 lines
+                    val endEnumeratee = endLine match {
+                        case None          => zipEnumeratee compose onEOF
+                        case Some(endLine) => Enumeratee.take[Array[String]](endLine - math.max(startLine.getOrElse(0), 0) + 1) compose zipEnumeratee compose onEOF
+                    }
+                    // If startLine is positive, drop that many lines
+                    val startEnumeratee = startLine match {
+                        case None            => endEnumeratee
+                        case Some(startLine) => Enumeratee.drop[Array[String]](startLine) compose endEnumeratee
+                    }
+                    
+                    // Stream it all together
+                    fileStream |>> (startEnumeratee compose Enumeratee.mapM(data => Future {
+                        DataPacket(List(data))
+                    }) compose processor) &>> sinkIteratee
                 })
-                // If endLine is defined, take at most endLine - startLine + 1 lines
-                val endEnumeratee = endLine match {
-                    case None          => zipEnumeratee compose onEOF
-                    case Some(endLine) => Enumeratee.take[Array[String]](endLine - math.max(startLine.getOrElse(0), 0) + 1) compose zipEnumeratee compose onEOF
-                }
-                // If startLine is positive, drop that many lines
-                val startEnumeratee = startLine match {
-                    case None            => endEnumeratee
-                    case Some(startLine) => Enumeratee.drop[Array[String]](startLine) compose endEnumeratee
-                }
-
-                // Stream the whole thing together now
-                processors.foreach(processor => fileStream |>> (startEnumeratee compose Enumeratee.mapM(data => Future {
-                    DataPacket(List(data))
-                }) compose processor) &>> sinkIteratee)
             }
         }
         case sp: StopPacket => {

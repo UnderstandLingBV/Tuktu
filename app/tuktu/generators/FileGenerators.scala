@@ -78,7 +78,7 @@ class LineReader(parentActor: ActorRef, resultName: String, fileName: String, en
  */
 class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var lineGenActor: ActorRef = _
-
+    
     override def receive() = {
         case config: JsValue => {
             // Get filename
@@ -96,32 +96,41 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                 lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, resultName, fileName, encoding, batchSize, startLine, endLine, backOffInterval, backOffAmount))
                 lineGenActor ! new InitPacket
             } else {
-                // Use Iteratee lib for proper back pressure handling
-                lazy val bufferedReader = file.genericReader(fileName)(Codec(encoding))
-
-                val fileStream: Enumerator[String] = Enumerator.generateM[String] {
-                    Future { Option(bufferedReader.readLine) }
-                }.andThen(Enumerator.eof)
-
-                // onEOF close the reader and send StopPacket
-                val onEOF = Enumeratee.onEOF[String](() => {
-                    bufferedReader.close
-                    self ! new StopPacket
+                // Make separate enumerators, for each processor
+                processors.foreach(processor => {
+                    // Use Iteratee lib for proper back pressure handling
+                    lazy val bufferedReader = file.genericReader(fileName)(Codec(encoding))
+                
+                    val fileStream: Enumerator[String] = Enumerator.generateM[String] {
+                        Future { Option(bufferedReader.readLine) }
+                    }.andThen(Enumerator.eof)
+    
+                    // onEOF close the reader and send StopPacket
+                    val onEOF = Enumeratee.onEOF[String](() => {
+                        bufferedReader.close
+                        self ! new StopPacket
+                    })
+                    // If endLine is defined, take at most endLine - startLine + 1 lines
+                    val endEnumeratee = endLine match {
+                        case None          => onEOF
+                        case Some(endLine) => Enumeratee.take[String](endLine - math.max(startLine, 0) + 1) compose onEOF
+                    }
+                    // If startLine is positive, drop that many lines
+                    val startEnumeratee =
+                        if (startLine <= 0) endEnumeratee
+                        else Enumeratee.drop[String](startLine) compose endEnumeratee
+                        
+                    fileStream |>> (startEnumeratee compose Enumeratee.mapM(line => Future {
+                        DataPacket(List(Map(resultName -> line)))
+                    }) compose processor) &>> sinkIteratee
                 })
-                // If endLine is defined, take at most endLine - startLine + 1 lines
-                val endEnumeratee = endLine match {
-                    case None          => onEOF
-                    case Some(endLine) => Enumeratee.take[String](endLine - math.max(startLine, 0) + 1) compose onEOF
-                }
-                // If startLine is positive, drop that many lines
-                val startEnumeratee =
-                    if (startLine <= 0) endEnumeratee
-                    else Enumeratee.drop[String](startLine) compose endEnumeratee
+
+                
 
                 // Stream the whole thing together now
-                processors.foreach(processor => fileStream |>> (startEnumeratee compose Enumeratee.mapM(line => Future {
+                /*processors.foreach(processor => fileStream |>> (startEnumeratee compose Enumeratee.mapM(line => Future {
                     DataPacket(List(Map(resultName -> line)))
-                }) compose processor) &>> sinkIteratee)
+                }) compose processor) &>> sinkIteratee)*/
             }
         }
         case sp: StopPacket => {
