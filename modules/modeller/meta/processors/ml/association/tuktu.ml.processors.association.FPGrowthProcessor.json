@@ -1,0 +1,36 @@
+{
+	"name": "FP Growth Processor",
+	"description": "Runs the FP Growth algorithm on batched data to obtain frequent itemsets.",
+	"class": "tuktu.ml.processors.association.FPGrowthProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The name of the field that contains the transactions. This field must contain a Seq[Int].",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "min_support",
+					"description": "The minimum support of the frequent itemsets.",
+					"type": "int",
+					"required": true
+				}
+			]
+		}
+	]
+}
