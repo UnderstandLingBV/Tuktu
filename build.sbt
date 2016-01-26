@@ -119,8 +119,8 @@ lazy val coreDependencies = Seq(
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "net.sf.opencsv" % "opencsv" % "2.0",
     "org.codehaus.groovy" % "groovy-all" % "2.2.1",
-    "com.typesafe.akka" %% "akka-remote" % "2.3.4",
-    "com.typesafe.akka" %% "akka-testkit" % "2.3.4",
+    "com.typesafe.akka" %% "akka-remote" % "2.3.6",
+    "com.typesafe.akka" %% "akka-testkit" % "2.3.6",
     "com.github.nscala-time" %% "nscala-time" % "1.8.0",
     "joda-time" % "joda-time" % "2.7",
     "org.apache.commons" % "commons-math3" % "3.5",
@@ -138,7 +138,7 @@ lazy val tuktuDBDependencies = Seq(
 lazy val dfsDependencies = Seq(
     cache,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
-    "com.typesafe.akka" %% "akka-remote" % "2.3.4"
+    "com.typesafe.akka" %% "akka-remote" % "2.3.6"
 )
 
 lazy val api = (project in file("modules/api"))

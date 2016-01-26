@@ -17,7 +17,8 @@ import play.api.libs.iteratee.Iteratee
 /**
  * Actor that reads file immutably and non-blocking
  */
-class LineReader(parentActor: ActorRef, resultName: String, fileName: String, encoding: String, batchSize: Int, startLine: Int, endLine: Option[Int]) extends Actor with ActorLogging {
+class LineReader(parentActor: ActorRef, resultName: String, fileName: String, encoding: String, batchSize: Int,
+        startLine: Int, endLine: Option[Int], backOffInterval: Int, backOffAmount: Int) extends Actor with ActorLogging {
     case class ReadLinePacket()
 
     var batch = collection.mutable.Queue.empty[Map[String, Any]]
@@ -47,6 +48,9 @@ class LineReader(parentActor: ActorRef, resultName: String, fileName: String, en
         case pkt: ReadLinePacket => reader.readLine match {
             case null => self ! new StopPacket // EOF, stop processing
             case line: String => {
+                // Check if we need to backoff
+                if (lineOffset != 0 && lineOffset % backOffInterval == 0) Thread.sleep(backOffAmount)
+                
                 // Have we reached endLine yet or not
                 if (endLine.map(endLine => lineOffset <= endLine).getOrElse(true)) {
                     // Buffer line
@@ -84,10 +88,12 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             val endLine = (config \ "end_line").asOpt[Int]
             val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(1000)
             val batched = (config \ "batched").asOpt[Boolean].getOrElse(false)
+            val backOffInterval = (config \ "backoff_interval").asOpt[Int].getOrElse(1000)
+            val backOffAmount = (config \ "backoff_amount").asOpt[Int].getOrElse(10)
 
             if (batched) {
                 // Batching is done using the actor
-                lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, resultName, fileName, encoding, batchSize, startLine, endLine))
+                lineGenActor = Akka.system.actorOf(Props(classOf[LineReader], self, resultName, fileName, encoding, batchSize, startLine, endLine, backOffInterval, backOffAmount))
                 lineGenActor ! new InitPacket
             } else {
                 // Use Iteratee lib for proper back pressure handling

@@ -34,11 +34,9 @@ class DecisionTreeTrainProcessor(resultName: String) extends BaseMLTrainProcesso
         }
         
         // Train the regression model
-        println("Starting training on " + data.size)
         val trainData = records.map(_._1).toArray
         val labels = records.map(_._2).toArray
         model.train(trainData, labels, maxNodes)
-        println("Done training")
 
         model
     }

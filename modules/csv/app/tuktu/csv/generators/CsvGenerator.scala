@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 class BatchedCSVReader(parentActor: ActorRef, fileName: String, encoding: String, hasHeaders: Boolean, givenHeaders: List[String],
                        separator: Char, quote: Char, escape: Char, batchSize: Integer, flattened: Boolean, resultName: String,
-                       startLine: Option[Int], endLine: Option[Int], ignoreErrors: Boolean) extends Actor with ActorLogging {
+                       startLine: Option[Int], endLine: Option[Int], ignoreErrors: Boolean, backOffInterval: Int, backOffAmount: Int) extends Actor with ActorLogging {
     case class ReadLinePacket()
 
     var batch = collection.mutable.Queue[Map[String, Any]]()
@@ -56,6 +56,9 @@ class BatchedCSVReader(parentActor: ActorRef, fileName: String, encoding: String
             parentActor ! sp
         }
         case pkt: ReadLinePacket => {
+            // Check if we need to backoff
+            if (lineOffset != 0 && lineOffset % backOffInterval == 0) Thread.sleep(backOffAmount)
+            
             val (nextRead, doRead): (Array[String], Boolean) = {
                 if (ignoreErrors) {
                     try {
@@ -130,11 +133,13 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(1000)
             val batched = (config \ "batched").asOpt[Boolean].getOrElse(false)
             val ignoreErrors = (config \ "ignore_error_lines").asOpt[Boolean].getOrElse(false)
+            val backOffInterval = (config \ "backoff_interval").asOpt[Int].getOrElse(1000)
+            val backOffAmount = (config \ "backoff_amount").asOpt[Int].getOrElse(10)
 
             if (batched) {
                 // Batched uses batching actor
                 csvGenActor = Akka.system.actorOf(Props(classOf[BatchedCSVReader], self, fileName, encoding, hasHeaders, headersGiven,
-                    separator, quote, escape, batchSize, flattened, resultName, startLine, endLine, ignoreErrors))
+                    separator, quote, escape, batchSize, flattened, resultName, startLine, endLine, ignoreErrors, backOffInterval, backOffAmount))
                 csvGenActor ! new InitPacket
             } else {
                 // Use Iteratee lib for proper back pressure handling
