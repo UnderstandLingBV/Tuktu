@@ -1,0 +1,50 @@
+{
+	"name": "LRE Query Processor",
+	"description": "Queries the Learning Resource Exchange (LRE) REST API and returns the identifiers of the resulting records.",
+	"class": "tuktu.dlib.processors.LREQueryProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "service",
+					"description": "The LRE API endpoint.",
+					"type": "string",
+					"required": true,
+					"default": "http://lresearch.eun.org/"
+				},
+				{
+					"name": "query",
+					"description": "A CNF query.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "limit",
+					"description": "The maximum number of results to be returned by each query.",
+					"type": "int",
+					"required": false
+				},
+				{
+				    "name": "resultOnly",
+				    "description": "Only returns record identifiers?",
+				    "type": "boolean",
+				    "required": true,
+				    "default": true
+				}
+			]
+		}
+	]
+}
