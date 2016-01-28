@@ -44,8 +44,8 @@ lazy val csvDependencies = Seq(
 lazy val socialDependencies = Seq(
     cache,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
-    "org.twitter4j" % "twitter4j-core" % "[4.0,)",
-    "org.twitter4j" % "twitter4j-stream" % "[4.0,)",
+    "org.twitter4j" % "twitter4j-core" % "4.0.4",
+    "org.twitter4j" % "twitter4j-stream" % "4.0.4",
     "org.scribe" % "scribe" % "1.3.5",
     "com.googlecode.batchfb" % "batchfb" % "2.1.5"
 )
