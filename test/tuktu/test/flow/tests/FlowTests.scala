@@ -9,10 +9,22 @@ import play.api.test.Helpers.running
 import tuktu.api.DataPacket
 import tuktu.test.flow.BaseFlowTester
 
-class DummyTest extends PlaySpec with OneAppPerSuite {
+class FlowTests extends PlaySpec with OneServerPerSuite {
     "DummyTest flow" must {
         "generate one simple value" in {
             val data = List(new DataPacket(List(Map("test" -> "test"))))
+            new BaseFlowTester(Akka.system)(List(data), "flowtests/dummy")
+        }
+    }
+    
+    "Normalization flow" must {
+        "normalize values to range [-1, 1]" in {
+            val data = List(new DataPacket(List(
+                    Map("num" -> 0.6666666666666667),
+                    Map("num" -> 1.0),
+                    Map("num" -> -1.0),
+                    Map("num" -> 0.8499999999999999)
+            )))
             new BaseFlowTester(Akka.system)(List(data), "flowtests/dummy")
         }
     }
