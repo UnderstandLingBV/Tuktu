@@ -9,7 +9,7 @@ import play.api.test.Helpers.running
 import tuktu.api.DataPacket
 import tuktu.test.flow.BaseFlowTester
 
-class FlowTests extends PlaySpec with OneServerPerSuite {
+class FlowTests extends PlaySpec with OneAppPerSuite {
     "DummyTest flow" must {
         "generate one simple value" in {
             val data = List(new DataPacket(List(Map("test" -> "test"))))
