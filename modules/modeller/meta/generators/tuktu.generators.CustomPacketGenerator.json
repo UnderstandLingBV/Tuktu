@@ -60,6 +60,13 @@
 					"required": true
 				},
 				{
+				    "name": "json",
+				    "description": "Keep values as JSON?",
+				    "type": "boolean",
+				    "required": false,
+				    "default": true
+				},
+				{
 					"name": "send_immediately",
 					"type": "boolean",
 					"required": false,

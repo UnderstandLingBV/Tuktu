@@ -26,21 +26,32 @@ class URLCheckerProcessor(resultName: String) extends BaseProcessor(resultName)
 
     var url: String = _
     var codes: Option[List[Int]] = _
+    var field: Option[String] = _
 
     override def initialize(config: JsObject) {
         // Get the name of the url to check.
         url = (config \ "url").as[String]
         // Get the codes to consider as valid.
         codes = (config \ "codes").asOpt[List[Int]]
+        // Get field
+        field = (config \ "field").asOpt[String]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         val lfuture = data.data.map{ datum => 
             val u = evaluateTuktuString(url, datum)
             val code = checkUrl( u )
-            codes match {
+            val statuses: Option[Seq[Int]] = field match{
+                case None => codes
+                case Some(f) => datum.get( f ) match{
+                    case None => None
+                    case Some(list) => try{ Option(list.asInstanceOf[Seq[Int]])
+                    } catch { case e: Exception => None }
+                }
+            }
+            statuses match {
                 case None => code.map { c => datum + (resultName -> c)}
-                case Some( cs ) => code.map { c => datum + (resultName -> cs.contains(c)) }
+                case Some( s ) => code.map { c => datum + (resultName -> s.contains(c)) }
             }
         }
         Future.sequence( lfuture ).map{ fl => new DataPacket( fl ) }

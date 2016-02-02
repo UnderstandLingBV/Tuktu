@@ -36,6 +36,12 @@
 							"required": true
 						}
 					]
+				},
+				{
+					"name": "field",
+					"description": "The name of a field containing the list of HTTP response status codes considered as a success. Note that, when this field exists, parameter 'codes' is ignored.",
+					"type": "string",
+					"required": false
 				}
 			]
 		}

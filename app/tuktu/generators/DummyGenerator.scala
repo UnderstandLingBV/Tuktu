@@ -169,8 +169,9 @@ class CustomPacketGenerator(resultName: String, processors: List[Enumeratee[Data
             val tickInterval = (config \ "interval").as[Int]
             // Get the packet to send
             val tpkt = (config \ "packet").as[String]
+            val js = (config \ "json").asOpt[Boolean].getOrElse(true)
             val jpkt = Json.parse( tpkt ).as[List[JsObject]]
-            packet = new DataPacket(jpkt.map{ jobj => jobj.as[Map[String,JsValue]]} )
+            packet = new DataPacket(jpkt.map{ jobj => if(js) { jobj.as[Map[String,JsValue]]} else { tuktu.api.utils.JsObjectToMap(jobj) } } )
             
             // See if we need to stop at some point
             maxAmount = (config \ "max_amount").asOpt[Int]
