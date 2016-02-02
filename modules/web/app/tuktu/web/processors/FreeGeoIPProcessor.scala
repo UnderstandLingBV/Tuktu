@@ -18,12 +18,12 @@ import tuktu.api._
 import tuktu.api.utils.evaluateTuktuString
 
 /**
- * @author dmssrt
  * Searches the geolocation of IP addresses using the freegeoip.net web service
  * or one of its clones.
  * See http://freegeoip.net/ for details and limitations.
  */
-class FreeGeoIPProcessor(resultName: String) extends BaseProcessor(resultName) {
+class FreeGeoIPProcessor(resultName: String) extends BaseProcessor(resultName) 
+{
     var ip: String = _
     var freegeoip: String = _
     var format: String = _

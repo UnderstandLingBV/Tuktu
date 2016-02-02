@@ -1,0 +1,43 @@
+{
+	"name": "URL Checker Processor",
+	"description": "Returns the HTTP response status of a URL (returns -1 if the URL times out).  If a list of valid status codes is provided, returns true if the actual status is contained in the list and false otherwise (or if the URL times out).",
+	"class": "tuktu.web.processors.URLCheckerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "url",
+					"description": "The URL to check.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "codes",
+					"description": "A list of HTTP response status codes considered as a success.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "int",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}
