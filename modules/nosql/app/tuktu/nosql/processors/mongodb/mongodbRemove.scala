@@ -26,6 +26,7 @@ import scala.util.Success
  */
 class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fcollection: Future[JSONCollection] = _
+    var settings: MongoSettings = _
     var query: String = _
     var filter: String = _
     var justOne: Boolean = _
@@ -45,7 +46,7 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
         // Set up connection
-        val settings = MongoSettings(hosts, database, coll)
+        settings = MongoSettings(hosts, database, coll)
         fcollection = user match{
             case None => Future(MongoCollectionPool.getCollection(settings))
             case Some( usr ) => {
@@ -71,7 +72,7 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
     }
 
-       override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (!blocking) {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (!blocking) {
         Future {
             doRemove(data)
             data
@@ -81,7 +82,7 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         doRemove(data).map {
             case _ => data
         }
-    })
+    }) compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
     
     
     // Does the actual removal

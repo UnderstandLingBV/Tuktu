@@ -23,17 +23,16 @@ import tuktu.api.utils.evaluateTuktuString
  */
 class URLCheckerProcessor(resultName: String) extends BaseProcessor(resultName) 
 {
-
     var url: String = _
     var codes: Option[List[Int]] = _
     var field: Option[String] = _
 
     override def initialize(config: JsObject) {
-        // Get the name of the url to check.
+        // Get url to check.
         url = (config \ "url").as[String]
-        // Get the codes to consider as valid.
+        // Get list of valid status codes.
         codes = (config \ "codes").asOpt[List[Int]]
-        // Get field
+        // Get field name.
         field = (config \ "field").asOpt[String]
     }
 

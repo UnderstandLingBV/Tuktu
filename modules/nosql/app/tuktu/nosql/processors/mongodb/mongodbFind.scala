@@ -35,6 +35,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     var filter: String = _
     var sort: String = _
     var limit: Option[Int] = _
+    var settings: MongoSettings = _
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
@@ -49,7 +50,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
         // Set up connection
-        val settings = MongoSettings(hosts, database, coll)
+        settings = MongoSettings(hosts, database, coll)
         fcollection = user match{
             case None => Future(MongoCollectionPool.getCollection(settings))
             case Some( usr ) => {
@@ -102,7 +103,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 
         // Gather results
         new DataPacket(Await.result(dataFuture, Cache.getAs[Int]("timeout").getOrElse(30) seconds))
-    })
+    }) compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
 }
 
 /**
@@ -170,7 +171,7 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         doFind(data)
         data
-    })
+    })  compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
     
     // Does the actual querying
     def doFind(data: DataPacket) = {

@@ -92,5 +92,5 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
         doUpdate(data).map {
             case _ => data
         }
-    })
+    }) compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
 }

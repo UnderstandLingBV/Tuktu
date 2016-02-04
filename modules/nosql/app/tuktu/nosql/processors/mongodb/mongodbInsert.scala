@@ -24,6 +24,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
     var hosts: List[String] = _
     var database: String = _
     var coll: String = _
+    var settings: MongoSettings = _
     var timeout: Int = _
     var user: Option[String] = _
     var pwd: String = _
@@ -63,14 +64,15 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
 
         // Bulk insert and await
         val futures = for (f <- result) yield {
+            settings = MongoSettings(f._1._1, f._1._2, f._1._3)
             val fcollection = user match {
-                case None => Future(MongoCollectionPool.getCollection(MongoSettings(f._1._1, f._1._2, f._1._3)))
+                case None => Future(MongoCollectionPool.getCollection(settings))
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getFutureCollectionWithCredentials(MongoSettings(f._1._1, f._1._2, f._1._3), credentials, scramsha1)
+                    MongoCollectionPool.getFutureCollectionWithCredentials(settings, credentials, scramsha1)
                 }
             }
             fcollection.flatMap { collection => collection.bulkInsert(f._2.toStream, false) }
@@ -79,7 +81,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         futures.foreach { x => if (!x.isCompleted) Await.ready(x, timeout seconds) }
 
         data
-    })
+    })  compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
 }
 
 /**
@@ -90,6 +92,7 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
     var hosts: List[String] = _
     var database: String = _
     var coll: String = _
+    var settings: MongoSettings = _
     var timeout: Int = _
     var user: Option[String] = _
     var pwd: String = _
@@ -117,7 +120,7 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         doInsert(data)
         data
-    })
+    })  compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
     
     // Does the actual inserting
     def doInsert(data: DataPacket) = {
@@ -128,7 +131,7 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
                 case jobj: JsObject         => jobj
                 case jmap: Map[String, Any] => tuktu.api.utils.MapToJsObject(jmap, false)
             }
-            val settings = MongoSettings(hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum))
+            settings = MongoSettings(hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum))
             val fcollection = user match {
                 case None => Future(MongoCollectionPool.getCollection(settings))
                 case Some(usr) => {
@@ -140,6 +143,6 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
                 }
             }
             fcollection.flatMap { collection => collection.insert(jobj) }
-        })
+        }) 
     }
 }

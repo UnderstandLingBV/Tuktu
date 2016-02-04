@@ -22,7 +22,8 @@ import tuktu.nosql.util.stringHandler
  * Updates data into MongoDB
  */
 class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultName) {
-    // the collection to write to
+    // the collection to write to and its settings
+    var settings: MongoSettings = _
     var fcollection: Future[JSONCollection] = _
     // If set to true, creates a new document when no document matches the query criteria. 
     var upsert = false
@@ -51,7 +52,7 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
         // Set up connection
-        val settings = MongoSettings(hosts, database, coll)
+        settings = MongoSettings(hosts, database, coll)
         fcollection = user match{
             case None => Future(MongoCollectionPool.getCollection(settings))
             case Some( usr ) => {
@@ -75,7 +76,7 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         doUpdate(data).map {
             case _ => data
         }
-    })
+    }) compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
     
     
     // Does the actual updating

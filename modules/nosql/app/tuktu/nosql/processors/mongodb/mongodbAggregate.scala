@@ -64,6 +64,6 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
         val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
 
         resultData.map { resultList => new DataPacket(for (resultRow <- resultList) yield { tuktu.api.utils.JsObjectToMap(resultRow) }) }
-    })
+    }) compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
 
 }
