@@ -20,13 +20,15 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-
 object MongoTools 
 {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
   
     import scala.concurrent.ExecutionContext.Implicits.global
-    val driver = new MongoDriver
+    
+    def typesafeConfig: com.typesafe.config.Config = play.api.libs.concurrent.Akka.system.settings.config
+    val driver = new reactivemongo.api.MongoDriver(Some(typesafeConfig))
+    
     val connections = scala.collection.mutable.HashMap[Any,MongoConnection]()
     val collections = scala.collection.mutable.HashMap[(Any,MongoSettings),Future[JSONCollection]]()
     
