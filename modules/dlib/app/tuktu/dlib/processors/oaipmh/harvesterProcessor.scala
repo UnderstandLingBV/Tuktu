@@ -89,41 +89,40 @@ class HarvesterProcessor(genActor: ActorRef, resultName: String) extends BufferP
     {
         val response = oaipmh.harvest( verb + params )
         // check for error
-      (response \\ "error").headOption match
-      {
-        case None => {
-          // extract records and send them to channel
-          val records = identifiersOnly match {
-            case false => (response \ "ListRecords" \ "record" \ "metadata" ).flatMap( _.child ).toSeq
-            case true => (response \ "ListIdentifiers" \ "header" ).toSeq
-          }
-          val recs = (records map { rec => rec.toString.trim })
-          val result = for (record <- recs; if (!record.isEmpty)) yield
-          {
-            toj match{
-              case false => packetSenderActor ? (datum + ( resultName -> record ))
-              case true => packetSenderActor ? (datum + ( resultName -> oaipmh.xml2jsObject( record ) ))
-            }
-          }
-          // check for resumption token
-          val rToken = identifiersOnly match{
-            case false => ( response \ "ListRecords" \ "resumptionToken" ).headOption
-            case true => ( response \ "ListIdentifiers" \ "resumptionToken" ).headOption
-          }
-          rToken match
-            {
-              case Some( resumptionToken ) => result ++ listRecords( verb, ("&resumptionToken=" + resumptionToken.text), datum ) // keep harvesting
-              case None => result // harvesting completed
-            }
-        }  
-        case Some( err ) => {
-          toj match{
-              case false => Seq(packetSenderActor ? (datum + ( resultName -> response.toString )))
-              case true => Seq(packetSenderActor ? (datum + ( resultName -> oaipmh.xml2jsObject( response.toString ) )))
+        (response \\ "error").headOption match
+        {
+            case None => {
+                // extract records and send them to channel
+                val records = identifiersOnly match {
+                    case false => (response \ "ListRecords" \ "record" \ "metadata" ).flatMap( _.child ).toSeq
+                    case true => (response \ "ListIdentifiers" \ "header" ).toSeq
+                }
+                val recs = (records map { rec => rec.toString.trim })
+                val result = for (record <- recs; if (!record.isEmpty)) yield
+                {
+                    toj match{
+                        case false => packetSenderActor ? (datum + ( resultName -> record ))
+                        case true => packetSenderActor ? (datum + ( resultName -> oaipmh.xml2jsObject( record ) ))
+                    }
+                }
+                // check for resumption token
+                val rToken = identifiersOnly match{
+                    case false => ( response \ "ListRecords" \ "resumptionToken" ).headOption
+                    case true => ( response \ "ListIdentifiers" \ "resumptionToken" ).headOption
+                }
+                rToken match
+                {
+                    case Some( resumptionToken ) => result ++ listRecords( verb, ("&resumptionToken=" + resumptionToken.text), datum ) // keep harvesting
+                    case None => result // harvesting completed
+                }
+            }  
+            case Some( err ) => {
+                toj match{
+                    case false => Seq(packetSenderActor ? (datum + ( resultName -> response.toString )))
+                    case true => Seq(packetSenderActor ? (datum + ( resultName -> oaipmh.xml2jsObject( response.toString ) )))
+                }
             }
         }
-          
-      }
     }
 }
 

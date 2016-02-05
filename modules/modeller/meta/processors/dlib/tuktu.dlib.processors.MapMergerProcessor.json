@@ -1,0 +1,42 @@
+{
+	"name": "Map Merger Processor",
+	"description": "Merges two JSON objects into a third one.",
+	"class": "tuktu.dlib.processors.MapMergerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "map1",
+					"description": "The field that contains the first map to merge.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "map2",
+					"description": "The field that contains the second map to merge.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "priority",
+					"description": "The map (i.e., map1 or map2) that serves as a basis for the merging.",
+					"type": "string",
+					"required": false
+				}
+			]
+		}
+	]
+}
