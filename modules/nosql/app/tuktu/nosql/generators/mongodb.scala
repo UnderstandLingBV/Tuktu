@@ -2,7 +2,6 @@ package tuktu.nosql.generators
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import akka.actor.ActorRef
 import play.api.Logger
 import play.api.libs.iteratee.Enumeratee
@@ -27,6 +26,7 @@ import tuktu.api.StopPacket
 import tuktu.nosql.util.MongoCollectionPool
 import tuktu.nosql.util.MongoPipelineTransformer
 import tuktu.nosql.util.MongoSettings
+import play.api.libs.iteratee.Input
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
@@ -224,7 +224,9 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
             
             fcollection.map{ collection =>
                 // Create the enumerator that gets JsObjects
-                val enumerator: Enumerator[JsObject] = collection.find(query, filter).sort(sort).cursor[JsObject](ReadPreference.nearest).enumerate()
+                val enumerator: Enumerator[JsObject] = collection.find(query, filter)
+                    .sort(sort).cursor[JsObject](ReadPreference.nearest)
+                    .enumerate().andThen(Enumerator.eof)
                 // Transformator to turn the JsObjects into DataPackets
                 val transformator: Enumeratee[JsObject, DataPacket] = Enumeratee.mapM(record => Future {DataPacket(List(tuktu.api.utils.JsObjectToMap(record)))})
                 // onEOF close the reader and send StopPacket

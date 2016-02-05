@@ -20,7 +20,7 @@ import java.net.MalformedURLException
  */
 class URLParserProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
-    
+
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
     }
@@ -28,13 +28,9 @@ class URLParserProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         new DataPacket(for (datum <- data.data) yield {
             // Get URL 
-            val url = try {
-                new URL(datum(field).asInstanceOf[String])
-            }
-            catch {
-                case e: MalformedURLException => new URL("")
-            }
-            datum + (resultName -> Map(
+            try {
+                val url = new URL(datum(field).asInstanceOf[String])
+                datum + (resultName -> Map(
                     "protocol " -> url.getProtocol,
                     "authority " -> url.getAuthority,
                     "host " -> url.getHost,
@@ -42,8 +38,10 @@ class URLParserProcessor(resultName: String) extends BaseProcessor(resultName) {
                     "path " -> url.getPath,
                     "query " -> url.getQuery,
                     "filename " -> url.getFile,
-                    "ref " -> url.getRef
-            ))
+                    "ref " -> url.getRef))
+            } catch {
+                case e: MalformedURLException => datum + (resultName -> Map.empty[String, String])
+            }
         })
     })
 }
@@ -53,7 +51,7 @@ class URLParserProcessor(resultName: String) extends BaseProcessor(resultName) {
  */
 class URLQueryStringParserProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
-    
+
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
     }
@@ -63,7 +61,7 @@ class URLQueryStringParserProcessor(resultName: String) extends BaseProcessor(re
             // Get URL 
             val url = new URI(datum(field).asInstanceOf[String])
             val params = URLEncodedUtils.parse(url, "UTF-8")
-            
+
             datum + (resultName -> params.map(nvp => nvp.getName -> nvp.getValue))
         })
     })

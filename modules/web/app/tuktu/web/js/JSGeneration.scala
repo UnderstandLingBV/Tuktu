@@ -31,7 +31,7 @@ object JSGeneration {
                 case a: Any => {}
             }
             
-            handleJsObject(datum, dKey, dValue)
+            handleJsObject(datum, dKey, dValue).trim().replaceAll("\r\n|\r|\n", "")
         }).toList.filter(!_.isEmpty).mkString(";")
         
         (res, nextFlow, includes.toList)

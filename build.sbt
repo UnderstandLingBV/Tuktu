@@ -112,6 +112,7 @@ lazy val vizDependencies = Seq(
 )
 
 lazy val coreDependencies = Seq(
+    filters,
     jdbc,
     anorm,
     cache,

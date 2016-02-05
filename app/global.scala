@@ -29,8 +29,10 @@ import play.api.mvc.Results.NotFound
 import tuktu.api.ClusterNode
 import tuktu.api.TuktuGlobal
 import play.api.Logger
+import play.api.mvc.WithFilters
+import filters.CorsFilter
 
-object Global extends GlobalSettings {
+object Global extends WithFilters(CorsFilter) with GlobalSettings {
     implicit val timeout = Timeout(5 seconds)
 
     /**

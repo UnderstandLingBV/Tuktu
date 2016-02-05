@@ -47,26 +47,23 @@ object Application extends Controller {
                             val (bodyData, flowName) = {
                                 val params = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
                                 (
-                                        (params \ "d").asOpt[JsObject].getOrElse(Json.obj()),
-                                        (params \ "f").asOpt[String]
-                                )
+                                    (params \ "d").asOpt[JsObject].getOrElse(Json.obj()),
+                                    (params \ "f").asOpt[String])
                             }
-                            
+
                             // Set up the data packet
                             val dataPacket = if (isInitial)
                                 new DataPacket(List(Map(
                                     // By default, add referer, request and headers
                                     "url" -> referrer,
                                     "request" -> request,
-                                    "headers" -> request.headers
-                                )))
+                                    "headers" -> request.headers)))
                             else {
                                 new DataPacket(List(Map(
                                     // By default, add referer, request and headers
                                     "url" -> referrer,
                                     "request" -> request,
-                                    "headers" -> request.headers
-                                ) ++ bodyData.keys.map(key => key -> utils.JsValueToAny(bodyData \ key))))
+                                    "headers" -> request.headers) ++ bodyData.keys.map(key => key -> utils.JsValueToAny(bodyData \ key))))
                             }
 
                             // See if we need to start a new flow or if we can send to the running actor
@@ -74,16 +71,15 @@ object Application extends Controller {
                                 // Send the Actor a DataPacket
                                 val actorRef = actorRefMap(url.getHost)
                                 actorRef ? dataPacket
-                            }
-                            else {
+                            } else {
                                 // Since this is not the default flow, we have to see if this one is running, and start
                                 // if if this is not the case
-                                
+
                                 // Flow name must be set
                                 flowName match {
                                     case None => {
                                         // Flow name is gone, this cant be
-                                        Future { }
+                                        Future {}
                                     }
                                     case Some(fn) => {
                                         // See if the flow for this one is already running
@@ -91,8 +87,8 @@ object Application extends Controller {
                                             // Dispatch new config
                                             val fut = Akka.system.actorSelection("user/TuktuDispatcher") ?
                                                 new DispatchRequest(
-                                                        webRepo.drop(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs").size)
-                                                            + "/" + url.getHost + "/" + fn, None, false, true, true, None)
+                                                    webRepo.drop(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs").size)
+                                                        + "/" + url.getHost + "/" + fn, None, false, true, true, None)
                                             // We must wait here
                                             val actorRef = Await.result(fut, timeout.duration).asInstanceOf[ActorRef]
                                             // Add to our map
@@ -100,20 +96,21 @@ object Application extends Controller {
                                                 .getOrElse(collection.mutable.Map[String, ActorRef]()) +=
                                                 (url.getHost + "." + fn -> actorRef)
                                         }
-                                        
+
                                         // Send the Actor a DataPacket containing the referrer
                                         actorRefMap(url.getHost + "." + fn) ? dataPacket
                                     }
                                 }
                             }
-                            
+
                             // Return result
                             resultFut.map {
                                 case dp: DataPacket =>
                                     // Get all the JS elements and output them one after the other
                                     val jsResult = JSGeneration.PacketToJsBuilder(dp)
                                     Ok(views.js.Tuktu(jsResult._2, jsResult._1,
-                                            Play.current.configuration.getString("tuktu.jsurl").getOrElse("/Tuktu.js"), jsResult._3))
+                                        Play.current.configuration.getString("tuktu.jsurl").getOrElse("/Tuktu.js"), jsResult._3)
+                                    )
                                 case _ =>
                                     // Return blank
                                     Ok("").as("text/javascript")
@@ -124,7 +121,7 @@ object Application extends Controller {
             }
         }
     }
-    
+
     /**
      * Loads a JavaScript analytics script depending on referrer
      */
