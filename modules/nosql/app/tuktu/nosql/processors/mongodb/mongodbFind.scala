@@ -20,7 +20,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import tuktu.api._
-import tuktu.nosql.util.MongoCollectionPool
+import tuktu.nosql.util.MongoTools
 import tuktu.nosql.util.MongoSettings
 import tuktu.nosql.util.sql
 import tuktu.nosql.util.stringHandler
@@ -52,14 +52,14 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         // Set up connection
         settings = MongoSettings(hosts, database, coll)
         fcollection = user match{
-            case None => Future(MongoCollectionPool.getCollection(settings))
+            case None => MongoTools.getFutureCollection(this, settings)
             case Some( usr ) => {
                 val credentials = admin match
                 {
                   case true => Authenticate( "admin", usr, pwd )
                   case false => Authenticate( database, usr, pwd )
                 }
-                MongoCollectionPool.getFutureCollectionWithCredentials(settings,credentials, scramsha1)
+                MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
               }
           }
         
@@ -103,7 +103,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 
         // Gather results
         new DataPacket(Await.result(dataFuture, Cache.getAs[Int]("timeout").getOrElse(30) seconds))
-    }) compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
+    }) compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
 }
 
 /**
@@ -115,7 +115,7 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
     // Set up the packet sender actor
     val packetSenderActor = Akka.system.actorOf(Props(classOf[PacketSenderActor], genActor))
     
-    var settings: MongoSettings = _
+    var settings, setts: MongoSettings = _
     var credentials: Option[Authenticate] = _
     var scramsha1: Boolean = _
     var query: String = _
@@ -171,7 +171,7 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         doFind(data)
         data
-    })  compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
+    })  compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, setts) }
     
     // Does the actual querying
     def doFind(data: DataPacket) = {
@@ -184,12 +184,12 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
               }
               
               // evaluate settings
-              val setts = MongoSettings( settings.hosts, utils.evaluateTuktuString(settings.database, datum), utils.evaluateTuktuString(settings.collection, datum) )
+              setts = MongoSettings( settings.hosts, utils.evaluateTuktuString(settings.database, datum), utils.evaluateTuktuString(settings.collection, datum) )
               
               // get collection
               val fcollection = authenticate match{
-                  case None => Future(MongoCollectionPool.getCollection(setts))
-                  case Some( auth ) => MongoCollectionPool.getFutureCollectionWithCredentials(setts, auth, scramsha1)
+                  case None => MongoTools.getFutureCollection(this, setts)
+                  case Some( auth ) => MongoTools.getFutureCollection(this, setts, auth, scramsha1)
               }
               // Evaluate the query and filter strings and convert to JSON
               val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]

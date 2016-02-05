@@ -9,7 +9,7 @@ import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.core.nodeset.Authenticate
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
-import tuktu.nosql.util.MongoCollectionPool
+import tuktu.nosql.util.MongoTools
 import tuktu.nosql.util.MongoSettings
 import play.api.cache.Cache
 import play.api.Play.current
@@ -54,14 +54,14 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         // Set up connection
         settings = MongoSettings(hosts, database, coll)
         fcollection = user match{
-            case None => Future(MongoCollectionPool.getCollection(settings))
+            case None => MongoTools.getFutureCollection(this, settings)
             case Some( usr ) => {
                 val credentials = admin match
                 {
                   case true => Authenticate( "admin", usr, pwd )
                   case false => Authenticate( database, usr, pwd )
                 }
-                MongoCollectionPool.getFutureCollectionWithCredentials(settings,credentials, scramsha1)
+                MongoTools.getFutureCollection(this, settings,credentials, scramsha1)
               }
           }
     }
@@ -76,7 +76,7 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         doUpdate(data).map {
             case _ => data
         }
-    }) compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
+    }) compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
     
     
     // Does the actual updating

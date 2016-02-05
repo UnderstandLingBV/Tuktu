@@ -27,8 +27,11 @@ import tuktu.nosql.util.MongoCollectionPool
 import tuktu.nosql.util.MongoPipelineTransformer
 import tuktu.nosql.util.MongoSettings
 import play.api.libs.iteratee.Input
+import tuktu.nosql.util.MongoTools
 
-class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
+{    
+    var settings: MongoSettings = _
     override def receive() = {
         case config: JsValue => {
             // Get connection properties
@@ -43,16 +46,15 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
             // Set up connection
-            val settings = MongoSettings(hosts, database, coll)
+            settings = MongoSettings(hosts, database, coll)
             val fcollection = user match {
-                case None => Future(MongoCollectionPool.getCollection(settings))
+                case None =>MongoTools.getFutureCollection(this, settings)
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getFutureCollectionWithCredentials(settings, credentials, scramsha1)
-                    
+                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
                 }
             }
 
@@ -104,7 +106,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                 }
             }
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => MongoTools.deleteCollection(this, settings); cleanup
         case ip: InitPacket => setup
     }
 }
@@ -112,8 +114,11 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 /**
  * Generator for MongoDB aggregations
  */
-class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
+{
+    var settings: MongoSettings = _
+    override def receive() = 
+    {
         case config: JsValue => {
             // Get connection properties
             val hosts = (config \ "hosts").as[List[String]]
@@ -127,15 +132,15 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
             val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
             // Set up connection
-            val settings = MongoSettings(hosts, database, coll)
+            settings = MongoSettings(hosts, database, coll)
             implicit val collection = user match {
-                case None => MongoCollectionPool.getCollection(settings)
+                case None => MongoTools.getFutureCollection(this, settings) 
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
+                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
                 }
             }
 
@@ -146,24 +151,21 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
             val batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
 
             // prepare aggregation pipeline
-            import collection.BatchCommands.AggregationFramework.PipelineOperator
-            val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
-            val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x) }
-
-            val resultFuture = {
+            val resultFuture = collection.flatMap { coll => {
+                import coll.BatchCommands.AggregationFramework.PipelineOperator
+                val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(coll)
+                val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x)(collection=coll) }
                 // Get data based on the aggregation pipeline
-                import collection.BatchCommands.AggregationFramework.AggregationResult
-                val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
+                import coll.BatchCommands.AggregationFramework.AggregationResult
+                val resultData: Future[List[JsObject]] = coll.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
                 // Get futures into JSON
                 resultData.map { resultList =>
-                    {
-                        for (resultRow <- resultList) yield {
-                            tuktu.api.utils.JsObjectToMap(resultRow)
-                        }
+                {
+                    for (resultRow <- resultList) yield {
+                        tuktu.api.utils.JsObjectToMap(resultRow)
                     }
-                }
-            }
-
+                }}
+            }}
             // Handle results
             resultFuture.onSuccess {
                 case res: List[Map[String, Any]] => {
@@ -182,7 +184,7 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
                 }
             }
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => MongoTools.deleteCollection(this, settings); cleanup
         case ip: InitPacket => setup
     }
 }
@@ -190,7 +192,9 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
 /**
  * Generator for MongoDB finds
  */
-class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
+{
+    var settings: MongoSettings = _
     override def receive() = {
         case config: JsValue => {
             // Get connection properties
@@ -205,18 +209,17 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
             val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
             // Set up connection
-            val settings = MongoSettings(hosts, database, coll)
+            settings = MongoSettings(hosts, database, coll)
             val fcollection = user match {
-                case None => Future(MongoCollectionPool.getCollection(settings))
+                case None => MongoTools.getFutureCollection(this, settings)
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getFutureCollectionWithCredentials(settings, credentials, scramsha1) 
+                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1) 
                 }
             }
-
             // Get query and filter
             val query = (config \ "query").as[JsObject]
             val filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
@@ -238,16 +241,17 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
                 })
             }
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => MongoTools.deleteCollection(this, settings); cleanup
         case ip: InitPacket => setup
     }
-    
 }
 
 /**
  * A Generator to list the collections in a database
  */
-class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
+{
+    var connection: reactivemongo.api.MongoConnection = _
     override def receive() = {
         case config: JsValue => {
             // Get connection properties
@@ -261,7 +265,7 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
             
             // Set up connection
             val driver = new MongoDriver
-            val connection = user match{
+            connection = user match{
                 case None => driver.connection(dbHosts)
                 case Some( usr ) => {
                     val credentials = admin match{
@@ -273,7 +277,6 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
                 }
           }
           // TODO find a better way to wait for authentication to succeed
-          // should be solved by upgrading to reactivemongo 0.11.9 (which requires play 2.4) with which authentication returns a Future that can be handled explicitly
           Thread.sleep(10000L)
           val db = connection(dbName)
 
@@ -293,16 +296,17 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
                 }
             }         
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => connection.close; cleanup
         case ip: InitPacket => setup
     }
-    
 }
 
 /**
  * A Generator to run a raw database command
  */
-class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
+{
+    var connection: reactivemongo.api.MongoConnection = _
     override def receive() = {
         case config: JsValue => {
             // Get connection properties
@@ -316,7 +320,7 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
             
             // Set up connection
             val driver = new MongoDriver
-            val connection = user match{
+            connection = user match{
                 case None => driver.connection(dbHosts)
                 case Some( usr ) => {
                     val credentials = admin match{
@@ -328,7 +332,6 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
                 }
           }
           // TODO find a better way to wait for authentication to succeed
-          // should be solved by upgrading to reactivemongo 0.11.9 (which requires play 2.4) with which authentication returns a Future that can be handled explicitly
           Thread.sleep(10000L)
           val db = connection(dbName)
 
@@ -347,8 +350,7 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
                 }
             }         
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => connection.close; cleanup
         case ip: InitPacket => setup
     }
-    
 }

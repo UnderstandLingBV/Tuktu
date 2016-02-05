@@ -9,7 +9,7 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json._
 import tuktu.api.{ BaseProcessor, DataPacket }
 import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString }
-import tuktu.nosql.util.{ MongoSettings, MongoCollectionPool, stringHandler }
+import tuktu.nosql.util.{ MongoSettings, MongoTools, stringHandler }
 import reactivemongo.core.nodeset.Authenticate
 import play.modules.reactivemongo.json._
 import scala.concurrent.Future
@@ -66,13 +66,13 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         val futures = for (f <- result) yield {
             settings = MongoSettings(f._1._1, f._1._2, f._1._3)
             val fcollection = user match {
-                case None => Future(MongoCollectionPool.getCollection(settings))
+                case None => MongoTools.getFutureCollection(this, settings)
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getFutureCollectionWithCredentials(settings, credentials, scramsha1)
+                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
                 }
             }
             fcollection.flatMap { collection => collection.bulkInsert(f._2.toStream, false) }
@@ -81,7 +81,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         futures.foreach { x => if (!x.isCompleted) Await.ready(x, timeout seconds) }
 
         data
-    })  compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
+    })  compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
 }
 
 /**
@@ -120,7 +120,7 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         doInsert(data)
         data
-    })  compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
+    })  compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
     
     // Does the actual inserting
     def doInsert(data: DataPacket) = {
@@ -133,13 +133,13 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
             }
             settings = MongoSettings(hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum))
             val fcollection = user match {
-                case None => Future(MongoCollectionPool.getCollection(settings))
+                case None => MongoTools.getFutureCollection(this, settings)
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoCollectionPool.getFutureCollectionWithCredentials(settings, credentials, scramsha1)
+                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
                 }
             }
             fcollection.flatMap { collection => collection.insert(jobj) }

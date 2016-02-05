@@ -10,7 +10,7 @@ import reactivemongo.core.nodeset.Authenticate
 import reactivemongo.api.commands.UpdateWriteResult
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
-import tuktu.nosql.util.MongoCollectionPool
+import tuktu.nosql.util.MongoTools
 import tuktu.nosql.util.MongoSettings
 import play.api.cache.Cache
 import play.api.Play.current
@@ -23,7 +23,7 @@ import tuktu.api.utils.MapToJsObject
  * Updates datum into MongoDB (assuming it was initially found in MongoDB)
  */
 class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var settings: MongoSettings = _
+    var settings, setts: MongoSettings = _
     var credentials: Option[Authenticate] = _
     var scramsha1: Boolean = _
     // If set to true, creates a new document when no document matches the _id key. 
@@ -64,10 +64,10 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
     def doUpdate(data: DataPacket) = {
         // Update data into MongoDB
         Future.sequence(data.data.map(datum => {
-            val setts = MongoSettings( settings.hosts.map{ host => tuktu.api.utils.evaluateTuktuString(host, datum)}, tuktu.api.utils.evaluateTuktuString(settings.database, datum), tuktu.api.utils.evaluateTuktuString(settings.collection, datum))
+            setts = MongoSettings( settings.hosts.map{ host => tuktu.api.utils.evaluateTuktuString(host, datum)}, tuktu.api.utils.evaluateTuktuString(settings.database, datum), tuktu.api.utils.evaluateTuktuString(settings.collection, datum))
             val fcollection = credentials match{
-                case None => Future(MongoCollectionPool.getCollection(setts))
-                case Some( creds ) => MongoCollectionPool.getFutureCollectionWithCredentials(setts, creds, scramsha1)
+                case None => MongoTools.getFutureCollection(this, setts)
+                case Some( creds ) => MongoTools.getFutureCollection(this, setts, creds, scramsha1)
             }
             val updater = field match
             {
@@ -92,5 +92,5 @@ class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultNa
         doUpdate(data).map {
             case _ => data
         }
-    }) compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
+    }) compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, setts) }
 }

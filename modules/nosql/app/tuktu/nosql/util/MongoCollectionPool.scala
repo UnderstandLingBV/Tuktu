@@ -33,6 +33,7 @@ object MongoCollectionPool {
     val fmap = scala.collection.mutable.HashMap[List[String],HashMap[String,HashMap[String, Future[JSONCollection]]]]()
     
     //create or get a collection
+    @deprecated("Prefer MongoTools non-blocking method getFutureCollection","2016-02-05")
     def getCollection(settings: MongoSettings): JSONCollection = {
         map.getOrElseUpdate(settings.hosts, {
             HashMap[String,HashMap[String, JSONCollection]]()
@@ -47,6 +48,7 @@ object MongoCollectionPool {
     
         //create or get a collection with credentials
     // http://reactivemongo.org/releases/0.11/documentation/tutorial/connect-database.html
+    @deprecated("Prefer MongoTools non-blocking method getFutureCollection","2016-02-05")
     def getCollectionWithCredentials(settings: MongoSettings, credentials: Authenticate, scramsha1: Boolean): JSONCollection = 
     {
         map.getOrElseUpdate(settings.hosts, {
@@ -67,7 +69,7 @@ object MongoCollectionPool {
            
         })        
     }
-    
+    @deprecated("Prefer MongoTools non-blocking method getFutureCollection","2016-02-05")
     def getFutureCollectionWithCredentials(settings: MongoSettings, credentials: Authenticate, scramsha1: Boolean): Future[JSONCollection] = 
     {
        fmap.getOrElseUpdate(settings.hosts, {
@@ -95,6 +97,7 @@ object MongoCollectionPool {
     
     
     // close connection is received, try to close all relevant connections
+    @deprecated("Prefer MongoTools method deleteCollection","2016-02-05")
     def closeCollection(settings: MongoSettings) {
         map.synchronized{
             map.get(settings.hosts) match {

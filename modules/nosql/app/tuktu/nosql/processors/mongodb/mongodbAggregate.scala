@@ -44,26 +44,26 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        implicit val collection: JSONCollection = user match {
-            case None => MongoCollectionPool.getCollection(settings)
+        val fcollection: Future[JSONCollection] = user match {
+            case None => MongoTools.getFutureCollection(this, settings)
             case Some(usr) => {
                 val credentials = admin match {
                     case true  => Authenticate("admin", usr, pwd)
                     case false => Authenticate(settings.database, usr, pwd)
                 }
-                MongoCollectionPool.getCollectionWithCredentials(settings, credentials, scramsha1)
+                MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
             }
         }
+        fcollection.flatMap { collection => {
+            import collection.BatchCommands.AggregationFramework.PipelineOperator
+            // Prepare aggregation pipeline
+            val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
+            val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x)(collection=collection) }
+            // Get data from Mongo
+            val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
 
-        import collection.BatchCommands.AggregationFramework.PipelineOperator
-        // Prepare aggregation pipeline
-        val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
-        val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x) }
-
-        // Get data from Mongo
-        val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
-
-        resultData.map { resultList => new DataPacket(for (resultRow <- resultList) yield { tuktu.api.utils.JsObjectToMap(resultRow) }) }
-    }) compose Enumeratee.onEOF { () => MongoCollectionPool.closeCollection(settings) }
+            resultData.map { resultList => new DataPacket(for (resultRow <- resultList) yield { tuktu.api.utils.JsObjectToMap(resultRow) }) }
+        }}
+    }) compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
 
 }
