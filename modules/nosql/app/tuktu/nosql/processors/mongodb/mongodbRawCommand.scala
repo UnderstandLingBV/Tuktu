@@ -19,6 +19,7 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
     var command: String = _
     var db: DefaultDB = _
     var resultOnly: Boolean = _
+    var connection: MongoConnection = _
 
     override def initialize(config: JsObject) {
         // Prepare db connection
@@ -33,7 +34,7 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
         // val scramsha1 = (config \ "ScramSha1").as[Boolean]
         
         val driver = new MongoDriver
-        val connection = user match{
+        connection = user match{
             case None => driver.connection(dbHosts)
             case Some( usr ) => {
                 val credentials = admin match{
@@ -74,6 +75,6 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
       val tmp = Future.sequence( temp )
       tmp.map{ l => new DataPacket( l ) }
 
-    })
+    }) compose Enumeratee.onEOF { () => connection.close() }
 
 }
