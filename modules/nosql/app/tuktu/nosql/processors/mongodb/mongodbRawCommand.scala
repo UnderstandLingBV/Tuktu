@@ -58,7 +58,7 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
 
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
       val temp: List[Future[Map[String,Any]]] = data.data.map{ datum =>
         val runner = Command.run(JSONSerializationPack)
         val jcommand = Json.parse( evaluateTuktuString(command, datum) ).as[JsObject]
