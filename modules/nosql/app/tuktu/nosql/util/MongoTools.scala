@@ -23,8 +23,6 @@ import scala.concurrent.Future
 object MongoTools 
 {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-  
-    import scala.concurrent.ExecutionContext.Implicits.global
     
     def typesafeConfig: com.typesafe.config.Config = play.api.libs.concurrent.Akka.system.settings.config
     val driver = new reactivemongo.api.MongoDriver(Some(typesafeConfig))
