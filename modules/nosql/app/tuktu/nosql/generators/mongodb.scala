@@ -1,24 +1,30 @@
 package tuktu.nosql.generators
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import akka.actor.ActorRef
-import play.api.Logger
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.Input
 import play.api.libs.json.JsObject
-import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.modules.reactivemongo.json.JSONSerializationPack
+import play.api.libs.json.JsValue
+import play.api.Logger
+import play.api.Play.current
 import play.modules.reactivemongo.json.JsObjectDocumentWriter
+import play.modules.reactivemongo.json.JSONSerializationPack
+import reactivemongo.api.commands.Command
+import reactivemongo.api.MongoConnection
 import reactivemongo.api.MongoConnectionOptions
 import reactivemongo.api.MongoDriver
 import reactivemongo.api.QueryOpts
 import reactivemongo.api.ReadPreference
 import reactivemongo.api.ScramSha1Authentication
-import reactivemongo.api.commands.Command
+import reactivemongo.core.commands.SuccessfulAuthentication
 import reactivemongo.core.nodeset.Authenticate
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.InitPacket
@@ -26,7 +32,6 @@ import tuktu.api.StopPacket
 import tuktu.nosql.util.MongoCollectionPool
 import tuktu.nosql.util.MongoPipelineTransformer
 import tuktu.nosql.util.MongoSettings
-import play.api.libs.iteratee.Input
 import tuktu.nosql.util.MongoTools
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
@@ -247,11 +252,12 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
 }
 
 /**
- * A Generator to list the collections in a database
+ * A Generator to list the collections in a database (requires MongoDB 3.0 or higher)
  */
 class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
 {
     var connection: reactivemongo.api.MongoConnection = _
+    
     override def receive() = {
         case config: JsValue => {
             // Get connection properties
@@ -263,33 +269,38 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
             val pwd = (config \ "password").asOpt[String].getOrElse("")
             val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
             
-            // Set up connection
-            val driver = new MongoDriver
+            // Authenticate and set up connection
+            def typesafeConfig: com.typesafe.config.Config = play.api.libs.concurrent.Akka.system.settings.config
+            val driver = new reactivemongo.api.MongoDriver(Some(typesafeConfig))
+            
             connection = user match{
                 case None => driver.connection(dbHosts)
-                case Some( usr ) => {
-                    val credentials = admin match{
-                        case true => Seq(Authenticate("admin", usr, pwd))
-                        case false => Seq(Authenticate(dbName, usr, pwd))
-                    }
-                val conOpts = MongoConnectionOptions( authMode = ScramSha1Authentication )
-                driver.connection(dbHosts,authentications = credentials, options = conOpts)   
-                }
-          }
-          // TODO find a better way to wait for authentication to succeed
-          Thread.sleep(10000L)
-          val db = connection(dbName)
+                case Some( u ) => driver.connection(dbHosts, options = MongoConnectionOptions( authMode = ScramSha1Authentication ))
+            }
+            
+            val db = connection(dbName)
+            val auth = user match {
+                case None => None
+                case Some( u ) => Option({ admin match {
+                    case false => db.authenticate(u, pwd)(timeout.duration)
+                    case true => connection( "admin" ).authenticate(u, pwd)(timeout.duration) }})
+            }
 
-          // Get command
-          val command = Json.obj( "listCollections" -> 1 )
-          val runner = Command.run(JSONSerializationPack)
-          val futureResult = runner.apply(db, runner.rawCommand(command)).one[JsObject]
-          val futureCollections = futureResult.map{ result => (result \\ "name").map { coll => coll.as[String] } }
-          futureCollections.onSuccess {
-              case collections: List[String] => collections.foreach{ collection => channel.push(new DataPacket(List( Map(resultName -> collection) ))) } 
-              case _ => self ! new StopPacket
-          }
-          futureCollections.onFailure {
+            // Get command
+            val command = Json.obj( "listCollections" -> 1 )
+            val runner = Command.run(JSONSerializationPack)
+            
+            val futureResult: Future[JsObject] = auth match{
+                case None => runner.apply(db, runner.rawCommand(command)).one[JsObject]
+                case Some( a ) => a.flatMap { _ => runner.apply(db, runner.rawCommand(command)).one[JsObject] }
+            }
+            
+            val futureCollections = futureResult.map{ result => (result \\ "name").map { coll => coll.as[String] } }
+            futureCollections.onSuccess {
+                case collections: List[String] => collections.foreach{ collection => channel.push(new DataPacket(List( Map(resultName -> collection) ))) } 
+                case _ => self ! new StopPacket
+            }
+            futureCollections.onFailure {
                 case e: Throwable => {
                     e.printStackTrace
                     self ! new StopPacket
@@ -306,7 +317,7 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
  */
 class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
 {
-    var connection: reactivemongo.api.MongoConnection = _
+    var connection: MongoConnection = _
     override def receive() = {
         case config: JsValue => {
             // Get connection properties
@@ -318,27 +329,32 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
             val pwd = (config \ "password").asOpt[String].getOrElse("")
             val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
             
-            // Set up connection
-            val driver = new MongoDriver
+            // Authenticate and set up connection
+            def typesafeConfig: com.typesafe.config.Config = play.api.libs.concurrent.Akka.system.settings.config
+            val driver = new reactivemongo.api.MongoDriver(Some(typesafeConfig))
+            
             connection = user match{
                 case None => driver.connection(dbHosts)
-                case Some( usr ) => {
-                    val credentials = admin match{
-                        case true => Seq(Authenticate("admin", usr, pwd))
-                        case false => Seq(Authenticate(dbName, usr, pwd))
-                    }
-                val conOpts = MongoConnectionOptions( authMode = ScramSha1Authentication )
-                driver.connection(dbHosts,authentications = credentials, options = conOpts)  
-                }
-          }
-          // TODO find a better way to wait for authentication to succeed
-          Thread.sleep(10000L)
-          val db = connection(dbName)
+                case Some( u ) => driver.connection(dbHosts, options = MongoConnectionOptions( authMode = ScramSha1Authentication ))
+            }
+            
+            val db = connection(dbName)
+            val auth = user match {
+                case None => None
+                case Some( u ) => Option({ admin match {
+                    case false => db.authenticate(u, pwd)(timeout.duration)
+                    case true => connection( "admin" ).authenticate(u, pwd)(timeout.duration) }})
+            }
 
           // Get command
           val command = (config \ "command").as[JsObject]
           val runner = Command.run(JSONSerializationPack)
-          val futureResult = runner.apply(db, runner.rawCommand(command)).one[JsObject]
+          
+          val futureResult: Future[JsObject] = auth match{
+                case None => runner.apply(db, runner.rawCommand(command)).one[JsObject]
+                case Some( a ) => a.flatMap { _ => runner.apply(db, runner.rawCommand(command)).one[JsObject] }
+            }
+          
           futureResult.onSuccess {
               case result: JsObject => channel.push(new DataPacket(List( Map(resultName -> result) )))
               case _ => self ! new StopPacket

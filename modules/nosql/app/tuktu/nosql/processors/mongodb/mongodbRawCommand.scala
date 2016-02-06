@@ -41,7 +41,7 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
         // val scramsha1 = (config \ "ScramSha1").as[Boolean]
         
         def typesafeConfig: com.typesafe.config.Config = play.api.libs.concurrent.Akka.system.settings.config
-        val driver = new reactivemongo.api.MongoDriver(Some(typesafeConfig))
+        val driver = new MongoDriver(Some(typesafeConfig))
         
         connection = user match{
             case None => driver.connection(dbHosts)
@@ -61,7 +61,6 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
 
         // Get result format
         resultOnly = (config \ "resultOnly").asOpt[Boolean].getOrElse(false)
-
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
