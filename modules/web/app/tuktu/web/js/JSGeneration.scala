@@ -53,9 +53,7 @@ object JSGeneration {
             }
             case aVal: WebJsEventObject => {
                 // Add event listener
-                "var elements=document.querySelectorAll('" + aVal.selector + "');" +
-                "for(var i=0,l=elements.length;i<l;i++)" +
-                "elements.item(i).addEventListener('" + aVal.event + "'," + aVal.callback + ");"
+                "$(document).on('" + aVal.event + "','" + aVal.selector + "'," + aVal.callback + ");"
             }
             case aVal: WebJsFunctionObject => {
                 // Add function
