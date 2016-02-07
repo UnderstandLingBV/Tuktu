@@ -21,7 +21,7 @@
             "id": "logoClick",
             "result": "logoClick",
             "config": {
-                "element_id": "ulLogo",
+                "selector": "#ulLogo",
                 "event_name": "click",
                 "flow_name": "ULPrintTest"
             },
