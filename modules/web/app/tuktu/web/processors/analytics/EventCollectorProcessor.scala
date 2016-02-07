@@ -27,7 +27,7 @@ class EventCollectorProcessor(resultName: String) extends BaseProcessor(resultNa
             utils.evaluateTuktuString(eventName, datum),
             {
                 val flow = utils.evaluateTuktuString(flowName, datum)
-                "function(){tuktuvars." + resultName + "=true;tuktu();}"
+                "function(){tuktuvars." + resultName + "=true;tuktuFlow('" + flow + "');}"
             }
         ))
     })

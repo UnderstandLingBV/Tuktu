@@ -12,31 +12,20 @@
             "config": {},
             "name": "tuktu.web.generators.TuktuJSGenerator",
             "next": [
-                "consent"
+                "logoClick"
             ]
         }
     ],
     "processors": [
         {
-            "id": "consent",
-            "result": "consent",
+            "id": "logoClick",
+            "result": "logoClick",
             "config": {
                 "element_id": "ulLogo",
-                "event_name": "onclick",
+                "event_name": "click",
                 "flow_name": "ULPrintTest"
             },
             "name": "tuktu.web.processors.analytics.EventCollectorProcessor",
-            "next": [
-                "collect"
-            ]
-        },
-        {
-            "id": "collect",
-            "result": "collect",
-            "config": {
-                "flow_name": "CollectionTest"
-            },
-            "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
             "next": []
         }
     ]
