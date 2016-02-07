@@ -20,8 +20,12 @@
         {
             "id": "consent",
             "result": "consent",
-            "config": {},
-            "name": "tuktu.web.processors.analytics.ConsentProcessor",
+            "config": {
+                "element_id": "ulLogo",
+                "event_name": "onclick",
+                "flow_name": "ULPrintTest"
+            },
+            "name": "tuktu.web.processors.analytics.EventCollectorProcessor",
             "next": [
                 "collect"
             ]

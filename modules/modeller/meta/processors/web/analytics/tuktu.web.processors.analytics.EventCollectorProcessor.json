@@ -1,0 +1,42 @@
+{
+	"name": "Event Collector Processor",
+	"description": "Adds an event listener to a specific DOM element and sends collected data to Tuktu when the event is triggered. The event that was triggered will add a variable with resultName set to true when submitting to Tuktu.",
+	"class": "tuktu.web.processors.analytics.EventCollectorProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "element_id",
+					"description": "The ID of the DOM element.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "event_name",
+					"description": "The event name that should be listened to.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "flow_name",
+					"description": "The name of the flow where the data triggered by this event should be sent to.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
