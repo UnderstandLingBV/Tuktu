@@ -19,8 +19,8 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "element_id",
-					"description": "The ID of the DOM element.",
+					"name": "selector",
+					"description": "The query selector.",
 					"type": "string",
 					"required": true
 				},

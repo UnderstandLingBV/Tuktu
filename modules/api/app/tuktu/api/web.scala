@@ -31,7 +31,7 @@ case class WebJsFunctionObject(
 ) extends BaseJsObject()
 
 case class WebJsEventObject(
-        elementId: String,
+        selector: String,
         event: String,
         callback: String
 ) extends BaseJsObject()

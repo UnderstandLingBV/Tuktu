@@ -14,19 +14,19 @@ import tuktu.api.utils
  * Adds even listeners to DOM elements
  */
 class EventListenenerProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var elementId: String = _
+    var selector: String = _
     var eventName: String = _
     var callback: Option[String] = None
 
     override def initialize(config: JsObject) {
-        elementId = (config \ "element_id").as[String]
+        selector = (config \ "selector").as[String]
         eventName = (config \ "event_name").as[String]
         callback = (config \ "callback").asOpt[String]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield datum + (resultName -> new WebJsEventObject(
-            utils.evaluateTuktuString(elementId, datum),
+            utils.evaluateTuktuString(selector, datum),
             utils.evaluateTuktuString(eventName, datum),
             (callback match {
                 case Some(cb) => utils.evaluateTuktuString(cb, datum)
