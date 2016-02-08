@@ -57,6 +57,7 @@ GET     /dfsw/openfiles                     controllers.DFSWrapper.openFiles
 
 # Web
 GET     /Tuktu.js                           controllers.web.Application.TuktuJs
+GET     /Tuktu.js/:id                       controllers.web.Application.TuktuJsGet(id)
 POST    /Tuktu.js                           controllers.web.Application.web
 
 # CORS

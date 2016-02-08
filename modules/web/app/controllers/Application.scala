@@ -25,21 +25,21 @@ object Application extends Controller {
     /**
      * Handles a polymorphic JS-request
      */
-    def handleRequest(request: Request[AnyContent], isInitial: Boolean): Future[Result] = {
-        request.headers.get("referer") match {
+    def handleRequest(idOption: Option[String], request: Request[AnyContent], isInitial: Boolean): Future[Result] = {
+        idOption match {
             case None => Future { BadRequest("// No referrer found in HTTP headers.") }
-            case Some(referrer) => {
+            case Some(id) => {
                 Play.current.configuration.getString("tuktu.webrepo") match {
                     case None => Future { BadRequest("// No repository for JavaScripts and Tuktu flows set in Tuktu configuration.") }
                     case Some(webRepo) => {
-                        // Convert referrer to URL to get its host
-                        val url = new URL(referrer)
+                        // Get the referer
+                        val referrer = request.headers.get("referer")
                         // Get actual actor
                         val actorRefMap = Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
                             .getOrElse(collection.mutable.Map[String, ActorRef]())
 
                         // Check if JS actor is running
-                        if (!actorRefMap.contains(url.getHost))
+                        if (!actorRefMap.contains(id))
                             Future { BadRequest("// The analytics script is not enabled.") }
                         else {
                             implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -69,7 +69,7 @@ object Application extends Controller {
                             // See if we need to start a new flow or if we can send to the running actor
                             val resultFut = if (isInitial) {
                                 // Send the Actor a DataPacket
-                                val actorRef = actorRefMap(url.getHost)
+                                val actorRef = actorRefMap(id)
                                 actorRef ? dataPacket
                             } else {
                                 // Since this is not the default flow, we have to see if this one is running, and start
@@ -83,22 +83,22 @@ object Application extends Controller {
                                     }
                                     case Some(fn) => {
                                         // See if the flow for this one is already running
-                                        if (!actorRefMap.contains(url.getHost + "." + fn)) {
+                                        if (!actorRefMap.contains(id + "." + fn)) {
                                             // Dispatch new config
                                             val fut = Akka.system.actorSelection("user/TuktuDispatcher") ?
                                                 new DispatchRequest(
                                                     webRepo.drop(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs").size)
-                                                        + "/" + url.getHost + "/" + fn, None, false, true, true, None)
+                                                        + "/" + id + "/" + fn, None, false, true, true, None)
                                             // We must wait here
                                             val actorRef = Await.result(fut, timeout.duration).asInstanceOf[ActorRef]
                                             // Add to our map
                                             Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
                                                 .getOrElse(collection.mutable.Map[String, ActorRef]()) +=
-                                                (url.getHost + "." + fn -> actorRef)
+                                                (id + "." + fn -> actorRef)
                                         }
 
                                         // Send the Actor a DataPacket containing the referrer
-                                        actorRefMap(url.getHost + "." + fn) ? dataPacket
+                                        actorRefMap(id + "." + fn) ? dataPacket
                                     }
                                 }
                             }
@@ -126,13 +126,26 @@ object Application extends Controller {
      * Loads a JavaScript analytics script depending on referrer
      */
     def TuktuJs = Action.async { implicit request =>
-        handleRequest(request, true)
+        handleRequest(request.headers.get("referer") match {
+            case None => None
+            case Some(ref) => Some(new URL(ref).getHost)
+        }, request, true)
+    }
+    
+    /**
+     * Invoke a flow based on a GET parameter that serves as ID
+     */
+    def TuktuJsGet(id: String) = Action.async { implicit request => 
+        handleRequest(Some(id), request, false)
     }
 
     /**
      * Handles analytics
      */
     def web = Action.async { implicit request =>
-        handleRequest(request, false)
+        handleRequest(request.headers.get("referer") match {
+            case None => None
+            case Some(ref) => Some(new URL(ref).getHost)
+        }, request, false)
     }
 }
