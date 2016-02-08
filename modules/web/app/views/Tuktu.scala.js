@@ -6,9 +6,9 @@ if (typeof tuktuvars === 'undefined') {
 if (typeof jQuery === 'undefined') {
 	var h = document.getElementsByTagName("head")[0];
     var s = s = document.createElement("script");
-	 s.setAttribute("type", "text/javascript");
-	 s.setAttribute("src", "//code.jquery.com/jquery-2.2.0.min.js");
-	 h.appendChild(s);
+	s.setAttribute("type", "text/javascript");
+	s.setAttribute("src", "//code.jquery.com/jquery-2.2.0.min.js");
+	h.appendChild(s);
 }
 function tuktuFlow(nf) {
 	var h = document.getElementsByTagName("head")[0];
