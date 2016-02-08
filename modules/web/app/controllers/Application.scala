@@ -128,7 +128,11 @@ object Application extends Controller {
     def TuktuJs = Action.async { implicit request =>
         handleRequest(request.headers.get("referer") match {
             case None => None
-            case Some(ref) => Some(new URL(ref).getHost)
+            case Some(ref) => Some({
+                val host = new URL(ref).getHost
+                if (host.startsWith("www.")) host.drop("www.".length)
+                else host
+            })
         }, request, true)
     }
     
@@ -145,7 +149,11 @@ object Application extends Controller {
     def web = Action.async { implicit request =>
         handleRequest(request.headers.get("referer") match {
             case None => None
-            case Some(ref) => Some(new URL(ref).getHost)
+            case Some(ref) => Some({
+                val host = new URL(ref).getHost
+                if (host.startsWith("www.")) host.drop("www.".length)
+                else host
+            })
         }, request, false)
     }
 }
