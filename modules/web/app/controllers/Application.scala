@@ -140,7 +140,7 @@ object Application extends Controller {
      * Invoke a flow based on a GET parameter that serves as ID
      */
     def TuktuJsGet(id: String) = Action.async { implicit request => 
-        handleRequest(Some(id), request, false)
+        handleRequest(Some(id), request, true)
     }
 
     /**
