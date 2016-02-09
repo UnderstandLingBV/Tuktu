@@ -1,0 +1,43 @@
+{
+	"name": "K-Means Apply Processor",
+	"description": "Applies a K-means model to data as a classifier using the centroids computed earlier and Euclidean distance.",
+	"class": "tuktu.ml.processors.clustering.KMeansApplyProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be applied. If a model with this name cannot be found, the data will go through unchanged.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "data_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the data resides in. Data must be of type Seq[Double]."
+				}
+			]
+		}
+	]
+}
