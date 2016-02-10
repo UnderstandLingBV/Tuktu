@@ -75,10 +75,10 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
                     MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
                 }
             }
-            fcollection.flatMap { collection => collection.bulkInsert(f._2.toStream, false) }
+            fcollection.map { _.bulkInsert(f._2.toStream, false) }
         }
         // Wait for all the results to be retrieved
-        futures.foreach { x => if (!x.isCompleted) Await.ready(x, timeout seconds) }
+        Await.ready(Future.sequence(futures), timeout seconds)
 
         data
     })  compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
