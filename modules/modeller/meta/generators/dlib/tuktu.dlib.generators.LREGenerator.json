@@ -1,0 +1,79 @@
+{
+	"name": "LRE Generator",
+	"description": "Queries the Learning Resource Exchange (LRE) API and returns the corresponding list of LRE resource identifiers.",
+	"class": "tuktu.dlib.generators.LREGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "service",
+					"description": "The LRE API endpoint.",
+					"type": "string",
+					"required": true,
+					"default": "http://lresearch.eun.org/"
+				},
+				{
+					"name": "query",
+					"description": "A CNF query.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "limit",
+					"description": "The maximum number of results to be returned by each query.",
+					"type": "int",
+					"required": false
+				},
+				{
+				    "name": "resultOnly",
+				    "description": "Only returns record identifiers?",
+				    "type": "boolean",
+				    "required": true,
+				    "default": true
+				}
+			]
+		}
+	]
+}

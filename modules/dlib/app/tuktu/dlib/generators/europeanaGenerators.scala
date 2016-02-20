@@ -74,7 +74,7 @@ class EuropeanaGenerator( resultName: String, processors: List[Enumeratee[DataPa
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
         case link: String => channel.push(new DataPacket(List(Map(resultName -> link))))
-        case x => Logger.error("Time generator got unexpected packet " + x + "\r\n")
+        case x => Logger.error("Europeana generator got unexpected packet " + x + "\r\n")
     }
 }
 
