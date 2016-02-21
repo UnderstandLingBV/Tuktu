@@ -21,6 +21,7 @@ POST    /showConfigs                        controllers.Monitor.showConfigs
 GET     /browseConfigs                      controllers.Monitor.browseConfigs
 POST    /startJob                           controllers.Monitor.startJob
 POST    /newFile                            controllers.Monitor.newFile
+POST    /uploadFile                         controllers.Monitor.uploadFile
 POST    /newDirectory                       controllers.Monitor.newDirectory
 POST    /deleteFile                         controllers.Monitor.deleteFile
 POST    /batchStarter                       controllers.Monitor.batchStarter
