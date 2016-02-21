@@ -1,0 +1,44 @@
+{
+	"name": "LRE Retrieval Processor",
+	"description": "Retrieves Learning Resource Exchange (LRE) metadata and paradata records based on their identifiers.",
+	"class": "tuktu.dlib.processors.LRERetrievalProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "service",
+					"description": "The LRE API endpoint.",
+					"type": "string",
+					"required": true,
+					"default": "http:// lredata.eun.org/"
+				},
+				{
+					"name": "identifiers",
+					"description": "A comma-separated list of the identifiers of the records to retrieve",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "format",
+					"description": "The maximum number of results to be returned by each query.",
+					"type": "string",
+					"required": true,
+					"default": "json"
+				}
+			]
+		}
+	]
+}
