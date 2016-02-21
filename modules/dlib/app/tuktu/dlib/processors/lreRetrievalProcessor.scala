@@ -34,7 +34,7 @@ class LRERetrievalProcessor(resultName: String) extends BaseProcessor(resultName
     override def initialize(config: JsObject) 
     {
         // Get the LRE query parameters
-        service = (config \ "service").asOpt[String].getOrElse( "http:// lredata.eun.org/" )
+        service = (config \ "service").asOpt[String].getOrElse( "http://lredata.eun.org/" )
         identifiers = (config \ "identifiers").as[String]
         format = (config \ "format").asOpt[String].getOrElse("json")
     }

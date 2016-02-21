@@ -23,7 +23,7 @@
 					"description": "The LRE API endpoint.",
 					"type": "string",
 					"required": true,
-					"default": "http:// lredata.eun.org/"
+					"default": "http://lredata.eun.org/"
 				},
 				{
 					"name": "identifiers",
@@ -33,7 +33,7 @@
 				},
 				{
 					"name": "format",
-					"description": "The maximum number of results to be returned by each query.",
+					"description": "The format in which records must be returned.",
 					"type": "string",
 					"required": true,
 					"default": "json"
