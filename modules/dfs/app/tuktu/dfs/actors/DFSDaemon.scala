@@ -387,7 +387,6 @@ class ReaderDaemon(trr: TDFSReadInitiateRequest, requester: ActorRef) extends Ac
         case trce: TDFSReadContentEOF => {
             // Check if we need a new reader, or if we need to stop as a whole
             if (trce.global) {
-                println("Done reading")
                 // Since we are fully done, we still need to send the accumulated content, if present
                 if (lastContent != null)
                     requester ! new TDFSContentPacket(lastContent.getBytes)
@@ -451,7 +450,6 @@ class TextTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends Act
                     if (eofs.contains(trr.filename)) eofs(fName) == trr.part
                     else false
                 }
-                println("Sending " + globalEof + " to " + requester)
                 requester ! new TDFSReadContentEOF(globalEof)
                 reader.close
                 self ! PoisonPill
