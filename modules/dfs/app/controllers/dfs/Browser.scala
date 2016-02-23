@@ -17,6 +17,10 @@ import tuktu.dfs.util.util
 import tuktu.api.DFSOpenFileListResponse
 import tuktu.api.DFSOpenFileListRequest
 import play.api.Play
+import tuktu.api.ClusterNode
+import tuktu.dfs.actors.TDFSOverviewPacket
+import tuktu.dfs.actors.TDFSOverviewReply
+import java.nio.file.Paths
 
 object Browser  extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -35,28 +39,34 @@ object Browser  extends Controller {
         // Get filename
         val body = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
         val filename = body("filename").head
-        val index = util.getIndex(filename)._1.filter(!_.isEmpty)
+        val isFolder = body("isFolder").head.toBoolean
         
-        // Ask the DFS Daemon for the files
-        val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new DFSListRequest(filename)).asInstanceOf[Future[Option[DFSResponse]]]
-        
-        fut.map(resp => {
-            // Check what the response is
-            resp match {
-                case None => Ok(views.html.dfs.files(index, null, null))
-                case Some(response) => {
-                    // We should list the files and folders
-                    val folders = response.files.collect {
-                            case el: (String, DFSElement) if el._2.isDirectory => el._1
-                    }
-                    val files = response.files.collect {
-                            case el: (String, DFSElement) if !el._2.isDirectory => el._1
-                    }
-                    
-                    Ok(views.html.dfs.files(index, folders toList, files toList))
-                }
-            }
+        // Ask all TDFS daemons for the filename
+        val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+        val futs = clusterNodes.map(node => {
+            (Akka.system.actorSelection({
+                if (node._1 == Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")) "user/tuktu.dfs.Daemon"
+                else "akka.tcp://application@" + node._2.host  + ":" + node._2.akkaPort + "/user/tuktu.dfs.Daemon"
+            }) ? new TDFSOverviewPacket(filename, isFolder)).asInstanceOf[Future[TDFSOverviewReply]]
         })
+        
+        // Get all results in
+        Future.sequence(futs).map(replies => {
+            // Determine index
+            val pList = {
+                val p = Paths.get(filename)
+                util.pathBuilderHelper(p.iterator)
+            }
+            
+            // Combine replies
+            val folders = replies.flatMap(elem => elem.files.filter(_._2.isEmpty).map(_._1)).toList
+            val files = replies.flatMap(elem => elem.files.filter(!_._2.isEmpty)).toList.groupBy(_._1).map(file => {
+                file._1 -> file._2.map(prt => prt._2).flatten
+            })
+            
+            Ok(views.html.dfs.files(pList.take(pList.size - 1), folders, files))
+        })
+        
     }
     
     /**

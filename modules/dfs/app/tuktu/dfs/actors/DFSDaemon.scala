@@ -1,9 +1,13 @@
 package tuktu.dfs.actors
 
+import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.nio.file.Path
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -22,12 +26,7 @@ import play.api.libs.concurrent.Akka
 import tuktu.api.ClusterNode
 import tuktu.api.StopPacket
 import tuktu.dfs.util.util
-import java.io.BufferedReader
-import java.io.FileInputStream
-import java.io.InputStreamReader
-import scala.io.Codec
-import java.io.BufferedInputStream
-import java.io.DataInputStream
+import java.nio.file.Paths
 
 case class TDFSWriteInitiateRequest(
         filename: String,
@@ -68,6 +67,13 @@ case class TDFSContentEOF()
 case class TDFSReadContentEOF(
         global: Boolean
 )
+case class TDFSOverviewPacket(
+        filename: String,
+        isFolder: Boolean
+)
+case class TDFSOverviewReply(
+        files: Map[String, List[Int]] // File name to list of part indices
+)
 
 /**
  * Daemon actor that handles write and read requests
@@ -77,48 +83,105 @@ class TDFSDaemon extends Actor with ActorLogging {
     
     def receive() = {
         case tir: TDFSWriteInitiateRequest => {
+            val fName = Paths.get(tir.filename).normalize.toString
             // Set up the writer actor that will take care of the rest and return the ref to sender
             sender ! Akka.system.actorOf(Props(classOf[WriterDaemon], tir),
-                    name = "tuktu.dfs.WriterDaemon." + tir.filename.replaceAll("/", "_") + "_" + System.currentTimeMillis)
+                    name = "tuktu.dfs.WriterDaemon." + fName.replaceAll("/", "_") + "_" + System.currentTimeMillis)
+        }
+        case top: TDFSOverviewPacket => {
+            // Check if we have files inside the request folder or parts for the requested filename
+            val fileTable = Cache.getAs[collection.mutable.Map[String, collection.mutable.ArrayBuffer[Int]]]("tuktu.dfs.NodeFileTable")
+                .getOrElse(collection.mutable.Map.empty[String, collection.mutable.ArrayBuffer[Int]])
+                
+            val reply = {
+                val requestPath = Paths.get(top.filename).normalize
+                
+                // Our map contains files and folders, we need to potentially scan all of them because only files are stored
+                val potentialFiles: Map[String, List[Int]] = if (top.isFolder) {
+                    // We are matching for a folder, we need to find all subfolders and files
+                    val requestList = util.pathBuilderHelper(requestPath.iterator)
+                    
+                    // Fetch the right elements
+                    (for {
+                        fileRecord <- fileTable
+                        
+                        // Use paths for comparison
+                        entryPath = Paths.get(fileRecord._1).normalize
+                        
+                        // Now check if our folders match or not
+                        if (top.filename == "" || entryPath.startsWith(requestPath))
+                    } yield {
+                        // Chop the file path up into the pieces we need
+                        val entryList = util.pathBuilderHelper(entryPath.iterator)
+                        
+                        // Check if this is a folder or a file
+                        if (fileTable.contains(entryPath.toString)) {
+                            // File, just return the pieces
+                            entryPath.toString -> fileTable(entryPath.toString).toList
+                        }
+                        else {
+                            // Folder, return the name of the subfolder only
+                            entryList.drop(requestList.size).head.toString -> List.empty[Int]
+                        }
+                    }).toMap
+                }
+                else {
+                    // Simply file match, get the parts we own
+                    if (fileTable.contains(requestPath.toString)) {
+                        // File, just return the pieces
+                        Map(requestPath.toString -> fileTable(requestPath.toString).toList)
+                    } else Map.empty[String, List[Int]]
+                }
+                
+                // Make the reply
+                new TDFSOverviewReply(potentialFiles)
+            }
+            
+            // Send back
+            sender ! reply
         }
         case twr: TDFSWriteRequest => {
             // We are asked to make a writer for a partfile, keep track of it
             val fileTable = Cache.getAs[collection.mutable.Map[String, collection.mutable.ArrayBuffer[Int]]]("tuktu.dfs.NodeFileTable")
                 .getOrElse(collection.mutable.Map.empty[String, collection.mutable.ArrayBuffer[Int]])
-            if (fileTable.contains(twr.filename))
-                fileTable(twr.filename) += twr.part
+            // Use paths for consistency
+            val fName = Paths.get(twr.filename).normalize.toString
+            if (fileTable.contains(fName))
+                fileTable(fName) += twr.part
             else
-                 fileTable += twr.filename -> collection.mutable.ArrayBuffer[Int](twr.part)
+                 fileTable += fName -> collection.mutable.ArrayBuffer[Int](twr.part)
             
             // Text or binary?
             sender ! {
                 if (twr.binary)
                     Akka.system.actorOf(Props(classOf[BinaryTDFSWriterActor], twr),
-                            name = "tuktu.dfs.Writer.binary." + twr.filename.replaceAll("/", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
+                            name = "tuktu.dfs.Writer.binary." + fName.replaceAll("/|\\", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
                 else
                     Akka.system.actorOf(Props(classOf[TextTDFSWriterActor], twr),
-                            name = "tuktu.dfs.Writer.text." + twr.filename.replaceAll("/", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
+                            name = "tuktu.dfs.Writer.text." + fName.replaceAll("/|\\", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
             }
         }
         case trr: TDFSReadInitiateRequest => {
             // Create the reader daemon and send back the ref
+            val fName = Paths.get(trr.filename).normalize.toString
             Akka.system.actorOf(Props(classOf[ReaderDaemon], trr, sender),
-                    name = "tuktu.dfs.ReaderDaemon." + trr.filename.replaceAll("/", "_") + "_" + System.currentTimeMillis)
+                    name = "tuktu.dfs.ReaderDaemon." + fName.replaceAll("/|\\", "_") + "_" + System.currentTimeMillis)
         }
         case tcr: TDFSReadRequest => {
             // Check if we have the request part, or need to cache
             val fileTable = Cache.getAs[collection.mutable.Map[String, collection.mutable.ArrayBuffer[Int]]]("tuktu.dfs.NodeFileTable")
                 .getOrElse(collection.mutable.Map.empty[String, collection.mutable.ArrayBuffer[Int]])
-            if (fileTable.contains(tcr.filename)) {
+            val fName = Paths.get(tcr.filename).normalize.toString
+            if (fileTable.contains(fName)) {
                 // Check part and if we need to do anything
-                if (fileTable(tcr.filename).contains(tcr.part)) {
+                if (fileTable(fName).contains(tcr.part)) {
                     // Set up the actual reader
                     if (tcr.binary)
                         Akka.system.actorOf(Props(classOf[BinaryTDFSReaderActor], tcr, sender),
-                                name = "tuktu.dfs.Reader.binary." + tcr.filename.replaceAll("/", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
+                                name = "tuktu.dfs.Reader.binary." + fName.replaceAll("/|\\", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
                     else
                         Akka.system.actorOf(Props(classOf[TextTDFSReaderActor], tcr, sender),
-                                name = "tuktu.dfs.Reader.text." + tcr.filename.replaceAll("/", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
+                                name = "tuktu.dfs.Reader.text." + fName.replaceAll("/|\\", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
                 }
             }
         }

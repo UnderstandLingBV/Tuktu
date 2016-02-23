@@ -1,4 +1,4 @@
-@(index: List[String], folders: List[String], files: List[String])
+@(index: List[String], folders: List[String], files: Map[String, List[Int]])
 
 @if(files == null) {
     <h2>Failed to fetch files</h2>
@@ -34,11 +34,11 @@
                 <td>
                     <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
                     &nbsp;
-	                <a href="@controllers.dfs.routes.Browser.serveFile(file)">
+	                <a href="@controllers.dfs.routes.Browser.serveFile(file._1)">
 	                   <span aria-hidden="true" class="glyphicon glyphicon-download-alt"> </span>
 	                </a>
 	                &nbsp;
-	                @file.split("[/\\\\]").takeRight(1)
+	                @file._1.split("[/\\\\]").takeRight(1) (@file._2.size part(s))
                 </td>
             </tr>
         }
@@ -50,7 +50,8 @@
                 method : "POST",
                 url : "@controllers.dfs.routes.Browser.getFiles",
                 data : {
-                    filename : folder
+                    filename : folder,
+                    isFolder: true
                 }
             }).done(function(html) {
                 updateFileList(html);

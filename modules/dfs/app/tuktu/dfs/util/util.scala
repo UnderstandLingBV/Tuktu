@@ -1,8 +1,6 @@
 package tuktu.dfs.util
 
-import play.api.cache.Cache
-import play.api.Play.current
-import scala.util.hashing.MurmurHash3
+import java.nio.file.Path
 
 object util {
     /**
@@ -17,4 +15,13 @@ object util {
         
         (index, index.dropRight(1))
     }
+    
+    /**
+     * Gets separate folders of a path
+     */
+    def pathBuilderHelper(iter: java.util.Iterator[Path]): List[String] = if (!iter.hasNext) List.empty[String]
+        else iter.next match {
+            case null => List.empty[String]
+            case p: Path => p.toString::pathBuilderHelper(iter)
+        }
 }

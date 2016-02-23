@@ -7,7 +7,8 @@
         method : "POST",
         url : "@controllers.dfs.routes.Browser.getFiles",
         data : {
-            filename : ""
+            filename : "",
+            isFolder: true
         }
     }).done(function(html) {
         updateFileList(html);
