@@ -86,7 +86,7 @@ class TDFSDaemon extends Actor with ActorLogging {
             val fName = Paths.get(tir.filename).normalize.toString
             // Set up the writer actor that will take care of the rest and return the ref to sender
             sender ! Akka.system.actorOf(Props(classOf[WriterDaemon], tir),
-                    name = "tuktu.dfs.WriterDaemon." + fName.replaceAll("/", "_") + "_" + System.currentTimeMillis)
+                    name = "tuktu.dfs.WriterDaemon." + fName.replaceAll("/|\\\\", "_") + "_" + System.currentTimeMillis)
         }
         case top: TDFSOverviewPacket => {
             // Check if we have files inside the request folder or parts for the requested filename
@@ -99,7 +99,7 @@ class TDFSDaemon extends Actor with ActorLogging {
                 // Our map contains files and folders, we need to potentially scan all of them because only files are stored
                 val potentialFiles: Map[String, List[Int]] = if (top.isFolder) {
                     // We are matching for a folder, we need to find all subfolders and files
-                    val requestList = util.pathBuilderHelper(requestPath.iterator)
+                    val requestList = if (top.filename == "") List.empty[String] else util.pathBuilderHelper(requestPath.iterator)
                     
                     // Fetch the right elements
                     (for {
@@ -112,10 +112,10 @@ class TDFSDaemon extends Actor with ActorLogging {
                         if (top.filename == "" || entryPath.startsWith(requestPath))
                     } yield {
                         // Chop the file path up into the pieces we need
-                        val entryList = util.pathBuilderHelper(entryPath.iterator)
+                        val entryList = util.pathBuilderHelper(entryPath.iterator).take(requestList.size + 1)
                         
                         // Check if this is a folder or a file
-                        if (fileTable.contains(entryPath.toString)) {
+                        if (fileTable.contains(Paths.get(entryList.mkString("/")).toString)) {
                             // File, just return the pieces
                             entryPath.toString -> fileTable(entryPath.toString).toList
                         }
@@ -155,17 +155,17 @@ class TDFSDaemon extends Actor with ActorLogging {
             sender ! {
                 if (twr.binary)
                     Akka.system.actorOf(Props(classOf[BinaryTDFSWriterActor], twr),
-                            name = "tuktu.dfs.Writer.binary." + fName.replaceAll("/|\\", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
+                            name = "tuktu.dfs.Writer.binary." + fName.replaceAll("/|\\\\", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
                 else
                     Akka.system.actorOf(Props(classOf[TextTDFSWriterActor], twr),
-                            name = "tuktu.dfs.Writer.text." + fName.replaceAll("/|\\", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
+                            name = "tuktu.dfs.Writer.text." + fName.replaceAll("/|\\\\", "_") + ".part" + twr.part + "_" + System.currentTimeMillis)
             }
         }
         case trr: TDFSReadInitiateRequest => {
             // Create the reader daemon and send back the ref
             val fName = Paths.get(trr.filename).normalize.toString
             Akka.system.actorOf(Props(classOf[ReaderDaemon], trr, sender),
-                    name = "tuktu.dfs.ReaderDaemon." + fName.replaceAll("/|\\", "_") + "_" + System.currentTimeMillis)
+                    name = "tuktu.dfs.ReaderDaemon." + fName.replaceAll("/|\\\\", "_") + "_" + System.currentTimeMillis)
         }
         case tcr: TDFSReadRequest => {
             // Check if we have the request part, or need to cache
@@ -178,10 +178,10 @@ class TDFSDaemon extends Actor with ActorLogging {
                     // Set up the actual reader
                     if (tcr.binary)
                         Akka.system.actorOf(Props(classOf[BinaryTDFSReaderActor], tcr, sender),
-                                name = "tuktu.dfs.Reader.binary." + fName.replaceAll("/|\\", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
+                                name = "tuktu.dfs.Reader.binary." + fName.replaceAll("/|\\\\", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
                     else
                         Akka.system.actorOf(Props(classOf[TextTDFSReaderActor], tcr, sender),
-                                name = "tuktu.dfs.Reader.text." + fName.replaceAll("/|\\", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
+                                name = "tuktu.dfs.Reader.text." + fName.replaceAll("/|\\\\", "_") + ".part" + tcr.part + "_" + System.currentTimeMillis)
                 }
             }
         }
@@ -304,8 +304,9 @@ class BinaryTDFSWriterActor(twr: TDFSWriteRequest) extends Actor with ActorLoggi
     def receive() = {
         case tce: TDFSContentEOF => {
             // Current part was the last part, keep track of that
+            val fName = Paths.get(twr.filename).normalize.toString
             Cache.getAs[collection.mutable.Map[String, Int]]("tuktu.dfs.NodeFileTable.eofs")
-                .getOrElse(collection.mutable.Map.empty[String, Int]) += twr.filename -> twr.part
+                .getOrElse(collection.mutable.Map.empty[String, Int]) += fName -> twr.part
         }
         case sp: StopPacket => {
             writer.close()
@@ -342,8 +343,9 @@ class TextTDFSWriterActor(twr: TDFSWriteRequest) extends Actor with ActorLogging
     def receive() = {
         case tce: TDFSContentEOF => {
             // Current part was the last part, keep track of that
+            val fName = Paths.get(twr.filename).normalize.toString
             Cache.getAs[collection.mutable.Map[String, Int]]("tuktu.dfs.NodeFileTable.eofs")
-                .getOrElse(collection.mutable.Map.empty[String, Int]) += twr.filename -> twr.part
+                .getOrElse(collection.mutable.Map.empty[String, Int]) += fName -> twr.part
         }
         case sp: StopPacket => {
             writer.close()
@@ -385,6 +387,7 @@ class ReaderDaemon(trr: TDFSReadInitiateRequest, requester: ActorRef) extends Ac
         case trce: TDFSReadContentEOF => {
             // Check if we need a new reader, or if we need to stop as a whole
             if (trce.global) {
+                println("Done reading")
                 // Since we are fully done, we still need to send the accumulated content, if present
                 if (lastContent != null)
                     requester ! new TDFSContentPacket(lastContent.getBytes)
@@ -442,11 +445,13 @@ class TextTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends Act
             if (lrc.previous == null) {
                 // Send local EOF, but maybe global too?
                 val globalEof = {
+                    val fName = Paths.get(trr.filename).normalize.toString
                     val eofs = Cache.getAs[collection.mutable.Map[String, Int]]("tuktu.dfs.NodeFileTable.eofs")
                         .getOrElse(collection.mutable.Map.empty[String, Int])
-                    if (eofs.contains(trr.filename)) eofs(trr.filename) == trr.part
+                    if (eofs.contains(trr.filename)) eofs(fName) == trr.part
                     else false
                 }
+                println("Sending " + globalEof + " to " + requester)
                 requester ! new TDFSReadContentEOF(globalEof)
                 reader.close
                 self ! PoisonPill
@@ -485,9 +490,10 @@ class BinaryTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends A
             if (tbrcp.result == -1) {
                 // We are done, send local EOF, but maybe global too?
                 val globalEof = {
+                    val fName = Paths.get(trr.filename).normalize.toString
                     val eofs = Cache.getAs[collection.mutable.Map[String, Int]]("tuktu.dfs.NodeFileTable.eofs")
                         .getOrElse(collection.mutable.Map.empty[String, Int])
-                    if (eofs.contains(trr.filename)) eofs(trr.filename) == trr.part
+                    if (eofs.contains(trr.filename)) eofs(fName) == trr.part
                     else false
                 }
                 requester ! new TDFSReadContentEOF(globalEof)
