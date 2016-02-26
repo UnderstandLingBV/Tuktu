@@ -439,6 +439,8 @@ class TextTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends Act
     else
         self ! new LineReaderContent(firstLine, reader.readLine)
     
+    val newLineSymbol = String.format("%n").intern
+    
     def receive() = {
         case lrc: LineReaderContent => {
             if (lrc.previous == null) {
@@ -457,7 +459,7 @@ class TextTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends Act
             else {
                 val nextLine = reader.readLine
                 // Send it to the requester
-                requester ! new TDFSTextReadContentPacket(lrc.previous, lrc.current == null)
+                requester ! new TDFSTextReadContentPacket(lrc.previous + newLineSymbol, lrc.current == null)
                 // Continue with next line
                 self ! new LineReaderContent(lrc.current, nextLine)
             }

@@ -120,15 +120,4 @@ object Browser extends Controller {
             Ok.chunked(enum)
         )
     }
-
-    /**
-     * Fetches open files asynchronously
-     */
-    def getOpenFiles() = Action.async { implicit request =>
-        // Ask the DFS Daemon for the files
-        val fut = (Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new DFSOpenFileListRequest()).asInstanceOf[Future[DFSOpenFileListResponse]]
-        fut.map(resp => {
-            Ok(views.html.dfs.listOpenFiles(resp.localFiles, resp.remoteFiles, resp.readFiles))
-        })
-    }
 }
