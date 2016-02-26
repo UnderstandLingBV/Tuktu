@@ -1,0 +1,42 @@
+{
+	"name": "PopUp Processor",
+	"description": "Shows a pop-up with custom content on the page. Useful to display (debugging) information.",
+	"class": "tuktu.web.processors.analytics.PopUpProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "content",
+					"description": "The content to show inside the pop-up window.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "width",
+					"description": "The width of the pop-up window.",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "height",
+					"description": "The height of the pop-up window.",
+					"type": "int",
+					"required": true
+				}
+			]
+		}
+	]
+}

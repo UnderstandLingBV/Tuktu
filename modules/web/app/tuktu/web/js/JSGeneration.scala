@@ -57,8 +57,9 @@ object JSGeneration {
             }
             case aVal: WebJsFunctionObject => {
                 // Add function
-                "function " + aVal.name + "(" + aVal.functionParams.mkString(",") + ")" +
-                "{" + aVal.functionBody + "}"
+                "if(typeof " + aVal.name + "!=='function'){" + 
+                "window." + aVal.name + "=function(" + aVal.functionParams.mkString(",") + ")" +
+                "{" + aVal.functionBody + "}}"
             }
             case _ => ""
         }
