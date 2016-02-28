@@ -1,5 +1,5 @@
-### tuktu.processors.json.ConvertToJson
-Converts the entire data packet to JSON.
+### tuktu.web.processors.analytics.GetAllCookiesProcessor
+Gets all cookies as an array of key/value pairs.
 
   * **id** *(type: string)* `[Required]`
 

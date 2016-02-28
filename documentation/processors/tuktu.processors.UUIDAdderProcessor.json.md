@@ -1,5 +1,5 @@
-### tuktu.processors.json.ConvertToJson
-Converts the entire data packet to JSON.
+### tuktu.processors.UUIDAdderProcessor
+Adds a UUID.
 
   * **id** *(type: string)* `[Required]`
 

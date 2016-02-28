@@ -37,3 +37,9 @@ Streams a file line by line.
     * **batch_size** *(type: int)* `[Optional, default = 1000]`
     - While lines are processed one by one, the buffered reader takes them in batches. Tweak for best performance.
 
+    * **backoff_interval** *(type: int)* `[Optional, default = 1000]`
+    - After reading this many batches, we backoff for a while to make sure we don't flood the flow.
+
+    * **backoff_amount** *(type: int)* `[Optional, default = 10]`
+    - This is the amount of milliseconds to backoff for.
+

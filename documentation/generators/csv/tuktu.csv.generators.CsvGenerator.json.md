@@ -60,3 +60,9 @@ Parses a given CSV file with predefined or provided headers.
     * **ignore_error_lines** *(type: boolean)* `[Optional, default = false]`
     - If set to true, a line that cannot be parsed will be ignored. Note that this can be dangerous if the error spans more than one (CSV) line.
 
+    * **backoff_interval** *(type: int)* `[Optional, default = 1000]`
+    - After reading this many batches, we backoff for a while to make sure we don't flood the flow.
+
+    * **backoff_amount** *(type: int)* `[Optional, default = 10]`
+    - This is the amount of milliseconds to backoff for.
+

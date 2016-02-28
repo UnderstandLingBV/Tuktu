@@ -1,5 +1,5 @@
-### tuktu.processors.ImploderProcessor
-Implodes given fields into a list
+### tuktu.processors.KeyImploderProcessor
+Implodes all elements in a DataPacket into a single element of a DataPacket based on key
 
   * **id** *(type: string)* `[Required]`
 
@@ -7,7 +7,7 @@ Implodes given fields into a list
 
   * **config** *(type: object)* `[Required]`
 
-    * **fields** *(type: array)* `[Optional]`
+    * **fields** *(type: array)* `[Required]`
     - The fields to be imploded.
 
       * **[UNNAMED]** *(type: string)* `[Required]`

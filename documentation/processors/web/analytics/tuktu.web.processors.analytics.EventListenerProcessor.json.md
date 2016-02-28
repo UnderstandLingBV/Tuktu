@@ -7,8 +7,8 @@ Adds an event listener to the JS.
 
   * **config** *(type: object)* `[Required]`
 
-    * **element_id** *(type: string)* `[Required]`
-    - The ID of the DOM element.
+    * **selector** *(type: string)* `[Required]`
+    - The query selector.
 
     * **event_name** *(type: string)* `[Required]`
     - The event name that should be listened to.

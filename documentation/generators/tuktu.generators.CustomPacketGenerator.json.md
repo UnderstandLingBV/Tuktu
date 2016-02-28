@@ -25,6 +25,9 @@ Generates a custom tuktu data packet every tick
     * **packet** *(type: string)* `[Required]`
     - The tuktu data packet (expressed as a JSON array of JSON objects) to send every tick.
 
+    * **json** *(type: boolean)* `[Optional, default = true]`
+    - Keep values as JSON?
+
     * **send_immediately** *(type: boolean)* `[Optional]`
     - True if you want the initial data packet to be immediately send
 
