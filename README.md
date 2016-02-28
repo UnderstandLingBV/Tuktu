@@ -52,7 +52,7 @@ Are you using Tuktu too and want to be on this list? [Contact us](mailto:info@et
 
 Installing Tuktu can be done by either building from source as described below, or by downloading a fully packaged (including all the submodules mentioned here) release from the following URL:
 
-[http://tuktu.et4it.nl/downloads/tuktu-1.1-M1.zip](http://tuktu.et4it.nl/downloads/tuktu-1.1-M1.zip) 
+[http://static.understandling.com/Tuktu-1.1.zip](http://static.understandling.com/Tuktu-1.1.zip) 
 
 Note that Tuktu requires Java (JRE) to be present on the system it is run from. Tuktu requires **Java 8** to run or compile.
 
