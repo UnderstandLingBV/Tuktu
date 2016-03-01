@@ -62,7 +62,7 @@ class WebGlobal() extends TuktuGlobal() {
             // We must await, otherwise map will not be populated properly
             try {
                 val result = Await.result(Future.sequence(futures.map(elem => elem._2).toList), timeout.duration).asInstanceOf[List[ActorRef]]
-                futures.toMap.keys.zip(result).foreach(elem => 
+                futures.map(_._1).zip(result).foreach(elem => 
                     Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap").getOrElse(collection.mutable.Map[String, ActorRef]()) += elem._1 -> elem._2
                 )
             }

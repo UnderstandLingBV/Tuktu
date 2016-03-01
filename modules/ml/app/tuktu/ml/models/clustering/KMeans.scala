@@ -19,4 +19,8 @@ class KMeans extends BaseModel with Operators {
     
     def predict(data: Array[Double]) =
         model.predict(data)
+        
+    override def serialize(filename: String) = write(model, filename)
+    
+    override def deserialize(filename: String) = { model = read(filename).asInstanceOf[clustering.KMeans] }
 }
