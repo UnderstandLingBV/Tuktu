@@ -33,7 +33,7 @@ class PopUpProcessor(resultName: String) extends BaseProcessor(resultName) {
                     "var c=document.createElement('div');" +
                         "c.innerHTML='" + evalContent + "';" +
                         "c.id='divContent';" +
-                        "c.style.position='absolute';" +
+                        "c.style.position='fixed';" +
                         "c.style.border='1px solid gray';" +
                         "c.style.padding='10px';" +
                         "c.style.backgroundColor='white';" +

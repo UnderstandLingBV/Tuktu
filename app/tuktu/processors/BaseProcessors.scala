@@ -889,3 +889,22 @@ class UUIDAdderProcessor(resultName: String) extends BaseProcessor(resultName) {
         })
     })
 }
+
+/**
+ * Collects a number of fields and puts them in a list.
+ */
+class FieldsToListProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var fields: List[String] = _
+    
+    override def initialize(config: JsObject) {
+        fields = (config \ "fields").as[List[String]]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            datum + (resultName -> fields.map(field => {
+                datum(field)
+            }).toList)
+        })
+    })
+}
