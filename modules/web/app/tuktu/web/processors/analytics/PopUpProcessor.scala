@@ -29,7 +29,7 @@ class PopUpProcessor(resultName: String) extends BaseProcessor(resultName) {
             // Evaluate title and content
             val evalContent = utils.evaluateTuktuString(content, datum)
             
-            datum + ((resultName + "_call") -> new WebJsCodeObject(
+            datum + (resultName -> new WebJsCodeObject(
                     "var c=document.createElement('div');" +
                         "c.innerHTML='" + evalContent + "';" +
                         "c.id='divContent';" +
@@ -45,7 +45,9 @@ class PopUpProcessor(resultName: String) extends BaseProcessor(resultName) {
                         "var b=document.getElementsByTagName('body')[0];" +
                         "b.appendChild(c);" +
                         "$('#divContent').show(1000);" +
-                        "positionPopup();" +
+                        "$(window).on('load resize scroll',function(e){" +
+                        "$('#divContent').css('bottom','0');$('#divContent').css('right','0');" +
+                        "});" +
                         "$(c).click(function () {" +
                           "$('#divContent').show(500);" +
                         "});"

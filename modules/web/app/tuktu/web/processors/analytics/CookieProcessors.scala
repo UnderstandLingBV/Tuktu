@@ -116,8 +116,8 @@ class GetCookieProcessor(resultName: String) extends BaseProcessor(resultName) {
                             """if (c.indexOf(name) == 0) return c.substring(name.length,c.length);""" +
                         """}""" +
                         """return "";"""
-            )) + ((resultName + "_call") -> new WebJsObject(
-                    "getCookie" + resultName + "()"
+            )) + (resultName -> new WebJsObject(
+                    "getCookie" + resultName + "()", true
             ))
         }
     })

@@ -12,11 +12,33 @@
             "config": {},
             "name": "tuktu.web.generators.TuktuJSGenerator",
             "next": [
-                "logoClick"
+                "setPageViews"
             ]
         }
     ],
     "processors": [
+        {
+            "id": "setPageViews",
+            "result": "num_pages_tuktu",
+            "config": {
+                "value": "1"
+            },
+            "name": "tuktu.web.processors.analytics.SetCookieProcessor",
+            "next": [
+                "getPageViews"
+            ]
+        },
+        {
+            "id": "getPageViews",
+            "result": "num_pages",
+            "config": {
+                "name": "num_pages_tuktu"
+            },
+            "name": "tuktu.web.processors.analytics.GetCookieProcessor",
+            "next": [
+                "logoClick"
+            ]
+        },
         {
             "id": "logoClick",
             "result": "logoClick",
@@ -26,6 +48,17 @@
                 "flow_name": "ULPrintTest"
             },
             "name": "tuktu.web.processors.analytics.EventCollectorProcessor",
+            "next": [
+                "showPageViews"
+            ]
+        },
+        {
+            "id": "showPageViews",
+            "result": "showPageViews",
+            "config": {
+                "flow_name": "showPageViews"
+            },
+            "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
             "next": []
         }
     ]
