@@ -1,0 +1,30 @@
+{
+	"name": "CSS Applier Processor",
+	"description": "Overwrites certain CSS classes and definitions. Useful if you want to apply a specific styling to a lot of elements with the same class or type at once.",
+	"class": "tuktu.web.processors.analytics.CssApplierProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "css",
+					"description": "The CSS code. Should be just a regular stylesheet as you would write normally. Tuktu strings are allows to be mixed in.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
