@@ -6,3 +6,4 @@
 GET     /                           controllers.dfs.Browser.index
 POST    /files                      controllers.dfs.Browser.getFiles
 GET     /serveFile/:filename        controllers.dfs.Browser.serveFile(filename)
+POST    /upload/:binary             controllers.dfs.Browser.uploadFile(binary: Boolean)

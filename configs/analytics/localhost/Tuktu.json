@@ -21,7 +21,8 @@
             "id": "setPageViews",
             "result": "num_pages_tuktu",
             "config": {
-                "value": "1"
+                "value": "1",
+                "path": "/"
             },
             "name": "tuktu.web.processors.analytics.SetCookieProcessor",
             "next": [

@@ -110,6 +110,7 @@ object Application extends Controller {
                                 // Get all the JS elements and output them one after the other
                                 val jsResult = JSGeneration.PacketToJsBuilder(dp)
                                 Ok(views.js.Tuktu(jsResult._2, jsResult._1,
+                                    Play.current.configuration.getString("tuktu.url").get +
                                     Play.current.configuration.getString("tuktu.jsurl").get + idOption.map('/' + _).getOrElse(""),
                                     jsResult._3))
                             case _ =>
