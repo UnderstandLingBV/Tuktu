@@ -1,0 +1,23 @@
+{
+    "name": "Datum To Field Processor",
+    "description": "Move the content of a datum to a field.",
+    "class": "tuktu.processors.DatumToFieldProcessor",
+    "parameters": [
+        {
+            "name": "id",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "result",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "config",
+            "type": "object",
+            "required": true,
+            "parameters": []
+        }
+    ]
+}
