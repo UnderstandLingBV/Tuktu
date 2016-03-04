@@ -17,6 +17,10 @@ lazy val modellerDependencies = Seq(
     "org.webjars" % "underscorejs" % "1.8.3"
 )
 
+lazy val restApiDependencies = Seq(
+    cache
+)
+
 lazy val apiDependencies = Seq(
     cache,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
@@ -150,6 +154,17 @@ lazy val api = (project in file("modules/api"))
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= apiDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
+    
+lazy val restapi = (project in file("modules/restapi"))
+    .enablePlugins(PlayScala)
+    .settings(name := "Tuktu-RESTAPI")
+    .settings(version := "1.1")
+    .settings(scalaVersion := "2.11.7")
+    .settings(resolvers ++= appResolvers)
+    .settings(libraryDependencies ++= restApiDependencies)
+    .settings(EclipseKeys.skipParents in ThisBuild := false)
+    .aggregate(api)
+    .dependsOn(api)
  
 lazy val modeller = (project in file("modules/modeller"))
     .enablePlugins(PlayScala)
@@ -304,5 +319,5 @@ lazy val root = project
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= coreDependencies)
     .settings(EclipseKeys.skipParents in ThisBuild := false)
-    .aggregate(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz, dlib)
-    .dependsOn(api, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz, dlib)
+    .aggregate(api, restapi, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz, dlib)
+    .dependsOn(api, restapi, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz, dlib)

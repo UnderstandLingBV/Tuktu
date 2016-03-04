@@ -61,6 +61,9 @@ GET     /Tuktu.js                           controllers.web.Application.TuktuJs
 POST    /Tuktu.js/:id                       controllers.web.Application.webGet(id)
 POST    /Tuktu.js                           controllers.web.Application.web
 
+# API
+->      /api/v1                             restapi.Routes
+
 # CORS
 OPTIONS  /                                  controllers.Application.options(path="")
 OPTIONS  /*path                             controllers.Application.options(path)

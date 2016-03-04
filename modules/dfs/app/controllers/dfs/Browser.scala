@@ -1,38 +1,35 @@
 package controllers.dfs
 
+import java.nio.file.Paths
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.PoisonPill
+import akka.actor.Props
 import akka.pattern.ask
 import akka.util.Timeout
+import controllers.dfs.Browser.FileServingActor
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
+import play.api.libs.iteratee.Concurrent
+import play.api.libs.iteratee.Concurrent.Channel
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.Input
 import play.api.mvc.Action
 import play.api.mvc.Controller
-import tuktu.api.DFSElement
-import tuktu.api.DFSListRequest
-import tuktu.api.DFSResponse
-import tuktu.dfs.util.util
-import tuktu.api.DFSOpenFileListResponse
-import tuktu.api.DFSOpenFileListRequest
-import play.api.Play
 import tuktu.api.ClusterNode
+import tuktu.api.InitPacket
+import tuktu.api.StopPacket
+import tuktu.dfs.actors.TDFSContentPacket
 import tuktu.dfs.actors.TDFSOverviewPacket
 import tuktu.dfs.actors.TDFSOverviewReply
-import java.nio.file.Paths
 import tuktu.dfs.actors.TDFSReadInitiateRequest
-import akka.actor.ActorLogging
-import play.api.libs.iteratee.Enumerator
-import akka.actor.Actor
-import play.api.libs.iteratee.Concurrent
-import tuktu.dfs.actors.TDFSContentPacket
-import tuktu.api.StopPacket
-import play.api.libs.iteratee.Concurrent.Channel
-import play.api.libs.iteratee.Input
-import akka.actor.PoisonPill
-import akka.actor.Props
-import tuktu.api.InitPacket
+import tuktu.dfs.util.util
 
 object Browser extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)

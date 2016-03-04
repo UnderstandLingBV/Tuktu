@@ -1,0 +1,14 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# List API endpoints
+GET         /                       controllers.restapi.RESTAPI.index
+
+# Job stuff
+GET         /jobs                   controllers.restapi.RESTAPI.getJobs
+GET         /config/:name           controllers.restapi.RESTAPI.getConfig(name)
+POST        /config/:name           controllers.restapi.RESTAPI.setConfig(name)
+POST        /job/start              controllers.restapi.RESTAPI.start
+POST        /job/stop               controllers.restapi.RESTAPI.stop
+POST        /job/terminate          controllers.restapi.RESTAPI.terminate
