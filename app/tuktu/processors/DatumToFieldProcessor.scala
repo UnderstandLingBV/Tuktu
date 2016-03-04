@@ -9,7 +9,7 @@ import tuktu.api._
 /**
  * Moves a datum to a field
  */
-class Datum2FieldProcessor(resultName: String) extends BaseProcessor(resultName) {
+class DatumToFieldProcessor(resultName: String) extends BaseProcessor(resultName) {
 
     override def initialize(config: JsObject) {}
 
