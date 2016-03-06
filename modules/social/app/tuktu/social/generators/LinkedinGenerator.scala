@@ -1,17 +1,17 @@
 package tuktu.social.generators
 
-import org.scribe.builder.ServiceBuilder
-import org.scribe.builder.api.LinkedInApi
 import akka.actor.ActorRef
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsValue
 import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.StopPacket
-import org.scribe.model.Verb
-import org.scribe.model.OAuthRequest
-import org.scribe.model.Token
 import tuktu.api.InitPacket
+import com.github.scribejava.core.model.OAuthRequest
+import com.github.scribejava.core.model.Verb
+import com.github.scribejava.apis.LinkedInApi20
+import com.github.scribejava.core.builder.ServiceBuilder
+import com.github.scribejava.core.model.OAuth2AccessToken
 
 /**
  * Gets data from a linkedin endpoint
@@ -27,12 +27,11 @@ class LinkedinGenerator(resultName: String, processors: List[Enumeratee[DataPack
 
             // Set up OAuth account
             val service = new ServiceBuilder()
-                .provider(classOf[LinkedInApi])
                 .apiKey(consumerKey)
                 .apiSecret(consumerSecret)
-                .build
+                .build(LinkedInApi20.instance())
             // Set up access token
-            val token = new Token(accessToken, accessTokenSecret)
+            val token = new OAuth2AccessToken(accessToken, accessTokenSecret)
 
             // Get the endpoint to request
             val url = (config \ "url").as[String]
@@ -46,7 +45,7 @@ class LinkedinGenerator(resultName: String, processors: List[Enumeratee[DataPack
             }
             
             // Make the request
-            val request = new OAuthRequest(httpMethod, url)
+            val request = new OAuthRequest(httpMethod, url, service)
             service.signRequest(token, request)
             val response = request.send
             

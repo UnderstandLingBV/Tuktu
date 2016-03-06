@@ -1,29 +1,30 @@
 package tuktu.social.generators
 
-import tuktu.api.BaseGenerator
-import play.api.libs.iteratee.Enumeratee
+import java.math.BigInteger
+
+import com.github.scribejava.apis.TwitterApi
+import com.github.scribejava.core.builder.ServiceBuilder
+import com.github.scribejava.core.model.OAuth1AccessToken
+import com.github.scribejava.core.model.OAuthRequest
+import com.github.scribejava.core.model.Verb
+import com.github.scribejava.core.oauth.OAuth10aService
+
+import akka.actor.Actor
+import akka.actor.ActorLogging
 import akka.actor.ActorRef
-import tuktu.api._
+import akka.actor.PoisonPill
+import akka.actor.Props
+import akka.actor.actorRef2Scala
+import play.api.Play.current
+import play.api.libs.concurrent.Akka
+import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
-import twitter4j.TwitterStreamFactory
-import twitter4j.FilterQuery
-import twitter4j.conf.ConfigurationBuilder
-import akka.actor.Props
-import org.scribe.builder.api.TwitterApi
-import org.scribe.builder.ServiceBuilder
-import org.scribe.model.Token
-import play.api.libs.concurrent.Akka
-import play.api.Play.current
-import org.scribe.oauth.OAuthService
-import akka.actor.ActorLogging
-import akka.actor.Actor
-import org.scribe.model.Verb
-import org.scribe.model.OAuthRequest
 import play.api.libs.json.Json
-import java.text.SimpleDateFormat
-import akka.actor.PoisonPill
-import java.math.BigInteger
+import tuktu.api.BaseGenerator
+import tuktu.api.DataPacket
+import tuktu.api.InitPacket
+import tuktu.api.StopPacket
 
 case class SearchPacket(
         keywords: List[String],
@@ -33,11 +34,11 @@ case class ReplyPacket(
         tweet: JsObject
 )
 
-class SearchProcessor(actorId: Int, client: OAuthService, aToken: Token, parentActor: ActorRef) extends Actor with ActorLogging {
+class SearchProcessor(actorId: Int, client: OAuth10aService, aToken: OAuth1AccessToken, parentActor: ActorRef) extends Actor with ActorLogging {
     def receive() = {
         case sp: SearchPacket => {
             // Make the request
-            val request = new OAuthRequest(Verb.GET, "https://api.twitter.com/1.1/search/tweets.json")
+            val request = new OAuthRequest(Verb.GET, "https://api.twitter.com/1.1/search/tweets.json", client)
             request.addQuerystringParameter("q", sp.keywords.map(keyword => {
                 if (keyword.contains(" ")) "(" + keyword.replaceAll(" ", " AND ") + ")"
                 else keyword
@@ -103,12 +104,11 @@ class TwitterSearchGenerator(resultName: String, processors: List[Enumeratee[Dat
              
              // Build scribe service
             val sService = new ServiceBuilder()
-                .provider(classOf[TwitterApi])
                 .apiKey(consumerKey)
                 .apiSecret(consumerSecret)
                 .callback("http://localhost")
-                .build()
-            val aToken = new Token(accessToken, accessTokenSecret)
+                .build(TwitterApi.instance())
+            val aToken = new OAuth1AccessToken(accessToken, accessTokenSecret)
             
             val actor = Akka.system.actorOf(Props(new SearchProcessor(0, sService, aToken, self)))
             

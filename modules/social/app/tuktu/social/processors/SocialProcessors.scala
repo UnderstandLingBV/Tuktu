@@ -2,12 +2,12 @@ package tuktu.social.processors
 
 import scala.concurrent.Future
 
-import org.scribe.builder.ServiceBuilder
-import org.scribe.builder.api.FacebookApi
-import org.scribe.model.OAuthRequest
-import org.scribe.model.Token
-import org.scribe.model.Verb
-import org.scribe.oauth.OAuthService
+import com.github.scribejava.apis.FacebookApi
+import com.github.scribejava.core.builder.ServiceBuilder
+import com.github.scribejava.core.model.OAuth2AccessToken
+import com.github.scribejava.core.model.OAuthRequest
+import com.github.scribejava.core.model.Verb
+import com.github.scribejava.core.oauth.OAuth20Service
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumeratee
@@ -183,8 +183,8 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
  * Makes one single REST request
  */
 class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fbClient: OAuthService = null
-    var accessToken: Token = null
+    var fbClient: OAuth20Service = null
+    var accessToken: OAuth2AccessToken = null
 
     var url = ""
     var httpMethod = Verb.GET
@@ -195,12 +195,11 @@ class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName
         val consumerSecret = (config \ "consumer_secret").as[String]
         val token = (config \ "access_token").as[String]
         fbClient = new ServiceBuilder()
-            .provider(classOf[FacebookApi])
             .apiKey(consumerKey)
             .apiSecret(consumerSecret)
             .callback("http://localhost/")
-            .build()
-        accessToken = new Token(token, "")
+            .build(FacebookApi.instance())
+        accessToken = new OAuth2AccessToken(token, "")
 
         // Get the URL 
         url = (config \ "url").as[String]
@@ -229,7 +228,7 @@ class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName
             }).mkString("")
 
             // Make the actual request
-            val request = new OAuthRequest(httpMethod, replacedUrl)
+            val request = new OAuthRequest(httpMethod, replacedUrl, fbClient)
             fbClient.signRequest(accessToken, request)
             val response = request.send
             // Get result
