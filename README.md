@@ -1,5 +1,5 @@
 # Tuktu - Big Data Science Swiss Army Knife
-Tuktu is created and officially maintained by [UnderstandLing](http://www.understandling.com).
+Tuktu is created and officially maintained by [UnderstandLing Intellect](http://www.understandling.com).
 
 ![UnderstandLing Logo](images/ul.png)
 
@@ -24,17 +24,13 @@ The name comes from the Inuït word *tuktu*, which freely translates to the Engl
 # Users and Partners
 The following companies or organizations use or actively contribute to Tuktu.
 
-![BDC Logo](https://www.bigdata.company/wp-content/uploads/2014/12/Screen-Shot-2014-12-08-at-14.45.08-e1418079507919.png)
-
-[BigData.Company](http://bigdata.company/) is the largest contributor to Tuktu and actively uses it as its core platform.
-
 ![RISA Logo](https://www.risa-it.nl/wp-content/uploads/2015/08/logo-risa_mob.png)
 
 [RISA IT](https://www.risa-it.nl/) is a partner of the Tuktu platform and is using it in all of its big data science projects.
 
-![EclipseIT logo](http://www.eclipseit.nl/content/images/EclipseIT-logo.png)
+![Alten logo](http://www.alten.nl/wp-content/themes/alteneurope/images/logo.png)
 
-[EclipseIT](http://www.eclipseit.nl/) is a partner of the Tuktu platform and is using it in all of its big data science projects.
+[Alten](http://www.alten.nl/) is a partner of the Tuktu platform and is using it in all of its big data science projects.
 
 <img src="images/zettadata_logo.png" width="80">
 
