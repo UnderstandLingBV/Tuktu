@@ -1,0 +1,50 @@
+{
+    "generators": [
+        {
+            "result": "data",
+            "config": {},
+            "name": "tuktu.web.generators.TuktuJSGenerator",
+            "next": [
+                "showNumPages"
+            ]
+        }
+    ],
+    "processors": [
+        {
+            "id": "showNumPages",
+            "result": "showNumPages",
+            "config": {
+                "content": "Number of pages viewed in this session: ${num_pages}",
+                "width": 200,
+                "height": 80
+            },
+            "name": "tuktu.web.processors.analytics.PopUpProcessor",
+            "next": [
+                "incPageViews"
+            ]
+        },
+        {
+            "id": "incPageViews",
+            "result": "inc_pages",
+            "config": {
+                "calculate": "${num_pages} + 1",
+                "number_of_decimals": 0
+            },
+            "name": "tuktu.processors.arithmetics.ArithmeticProcessor",
+            "next": [
+                "setIncreasedPageVIews"
+            ]
+        },
+        {
+            "id": "setIncreasedPageVIews",
+            "result": "num_pages_tuktu",
+            "config": {
+                "value": "${inc_pages}",
+                "path": "/",
+                "only_if_not_exists": false
+            },
+            "name": "tuktu.web.processors.analytics.SetCookieProcessor",
+            "next": []
+        }
+    ]
+}
