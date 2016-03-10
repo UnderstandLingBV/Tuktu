@@ -63,6 +63,7 @@ class URLCheckerProcessor(resultName: String) extends BaseProcessor(resultName)
           case ce: java.net.ConnectException => -1
           case te: java.util.concurrent.TimeoutException => -2
           case iae: java.lang.IllegalArgumentException => -3
+          case ioe: java.io.IOException => -4
         }
       }
       catch
