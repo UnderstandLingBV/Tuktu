@@ -65,6 +65,7 @@ class URLCheckerProcessor(resultName: String) extends BaseProcessor(resultName)
           case iae: java.lang.IllegalArgumentException => -3
           case ioe: java.io.IOException => -4
           case mre: com.ning.http.client.MaxRedirectException => -5
+          case npe: java.lang.NullPointerException => -6
         }
       }
       catch
