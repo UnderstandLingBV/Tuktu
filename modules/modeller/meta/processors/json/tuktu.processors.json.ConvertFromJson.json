@@ -23,13 +23,6 @@
 					"description": "The field containing the JSON to be converted into a Map.",
 					"type": "string",
 					"required": true
-				},
-				{
-					"name": "overwrite",
-					"description": "Overwrite field, or append the data as resultName.",
-					"type": "boolean",
-					"required": false,
-					"default": false
 				}
 			]
 		}

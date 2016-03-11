@@ -72,13 +72,6 @@
 					"required": false,
 					"default": 1,
 					"description": "If batch is set to true, this number is the minimum amount of elements that should fulfill the expression(s) before including the whole DataPacket."
-				},
-				{
-					"name": "filter_empty",
-					"type": "boolean",
-					"required": false,
-					"default": true,
-					"description": "Whether or not to filter out empty data packets"
 				}
 			]
 		}

@@ -1,0 +1,44 @@
+{
+	"name": "Rhetorics Processor",
+	"description": "Gets all rhetorical figures of a text.",
+	"class": "tuktu.nlp.processors.RhetoricsProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "language",
+					"description": "The language to be used.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tokens",
+					"label": "Tokens field",
+					"description": "The field that contains the tokens.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "pos",
+					"label": "POS tags field",
+					"description": "The field that contains the POS tags.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

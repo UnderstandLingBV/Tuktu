@@ -8,25 +8,27 @@ import scala.concurrent.Future
 import tuktu.api._
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.JsValue
+import play.api.libs.json.Json
 
 /**
  * Takes a generic JSON field and turns it into the scala equivalent
  */
 class ConvertFromJson(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
-    var overwrite = false
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
-        overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
-            if (overwrite)
-                datum + (field -> utils.JsValueToAny(datum(field).asInstanceOf[JsValue]))
-            else
-                datum + (resultName -> utils.JsValueToAny(datum(field).asInstanceOf[JsValue]))
+                datum + (resultName -> {
+                    datum(field) match {
+                        case j: JsValue => utils.JsValueToAny(j)
+                        case j: String => utils.JsValueToAny(Json.parse(j))
+                        case j: Any => utils.JsValueToAny(Json.parse(j.toString))
+                    }
+                })
         }
     })
 }

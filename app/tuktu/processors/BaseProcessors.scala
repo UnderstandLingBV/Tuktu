@@ -387,13 +387,11 @@ class PacketRegexFilterProcessor(resultName: String) extends BaseProcessor(resul
     var expressions: List[JsObject] = _
     var batch: Boolean = _
     var batchMinCount: Int = _
-    var filterEmpty: Boolean = _
 
     override def initialize(config: JsObject) {
         expressions = (config \ "expressions").as[List[JsObject]]
         batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
         batchMinCount = (config \ "batch_min_count").asOpt[Int].getOrElse(1)
-        filterEmpty = (config \ "filter_empty").asOpt[Boolean].getOrElse(true)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -419,8 +417,6 @@ class PacketRegexFilterProcessor(resultName: String) extends BaseProcessor(resul
                 // Filter data
                 data.data.filter(datum => evaluateExpressions(datum, expressions))
             })
-    }) compose Enumeratee.filter((data: DataPacket) => {
-        filterEmpty && data.data.nonEmpty
     })
 }
 
