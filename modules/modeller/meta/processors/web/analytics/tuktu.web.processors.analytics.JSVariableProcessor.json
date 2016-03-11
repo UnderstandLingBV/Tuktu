@@ -1,0 +1,30 @@
+{
+	"name": "JS Variable Processor",
+	"description": "Gets the value from a JS-set variable (by some other script) into Tuktu.",
+	"class": "tuktu.web.processors.analytics.JSVariableProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "code",
+					"description": "The variable name itself, possibly some JS code to execute to access it.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

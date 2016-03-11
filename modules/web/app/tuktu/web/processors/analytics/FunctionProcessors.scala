@@ -48,7 +48,7 @@ class FunctionFetcherProcessor(resultName: String) extends BaseProcessor(resultN
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
             datum + (resultName -> new WebJsObject(
-                    "function() {" + utils.evaluateTuktuString(body, datum) + "}"
+                    "function() {" + utils.evaluateTuktuString(body, datum) + "}", true
             ))
         }
     })
