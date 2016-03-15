@@ -5,105 +5,18 @@
                 {
                     "type": "SingleNode",
                     "nodes": "127.0.0.1",
-                    "instances": 2
+                    "instances": 5
                 }
             ],
-            "result": "jsReq",
+            "result": "test",
             "config": {},
             "name": "tuktu.web.generators.TuktuJSGenerator",
             "next": [
-                "segmentPicker"
+                "setPageViews"
             ]
         }
     ],
     "processors": [
-        {
-            "id": "segmentPicker",
-            "result": "segment",
-            "config": {
-                "numbers": [
-                    {
-                        "number": 0,
-                        "probability": 0.5
-                    },
-                    {
-                        "number": 1,
-                        "probability": 0.5
-                    }
-                ]
-            },
-            "name": "tuktu.processors.statistics.NumberWithProbabilityProcessor",
-            "next": [
-                "tuktuLogo"
-            ]
-        },
-        {
-            "id": "tuktuLogo",
-            "result": "tuktuLogo",
-            "config": {
-                "js_code": "if (${segment} == 0) document.evaluate( \"//img[@alt='Technische Unie']\" ,document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null ).singleNodeValue.setAttribute('src', 'https://tuktu.understandling.com/assets/images/understandling_grey.png'); else document.evaluate( \"//img[@alt='Technische Unie']\" ,document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null ).singleNodeValue.setAttribute('src', '//tuktu.anypinion.com/assets/images/logo.png');"
-            },
-            "name": "tuktu.web.processors.analytics.JSFreeProcessor",
-            "next": [
-                "addUUID"
-            ]
-        },
-        {
-            "id": "addUUID",
-            "result": "uuid",
-            "config": {},
-            "name": "tuktu.processors.UUIDAdderProcessor",
-            "next": [
-                "addUUID2"
-            ]
-        },
-        {
-            "id": "addUUID2",
-            "result": "uuid2",
-            "config": {},
-            "name": "tuktu.processors.UUIDAdderProcessor",
-            "next": [
-                "setSegment"
-            ]
-        },
-        {
-            "id": "setSegment",
-            "result": "segment_tuktu",
-            "config": {
-                "value": "${segment}",
-                "expires": "Sat, 1 Jan 2050 12:00:00 UTC",
-                "path": "/"
-            },
-            "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-            "next": [
-                "visitorIdSetter"
-            ]
-        },
-        {
-            "id": "visitorIdSetter",
-            "result": "user_id_tuktu",
-            "config": {
-                "value": "${uuid}",
-                "expires": "Sat, 1 Jan 2050 12:00:00 UTC",
-                "path": "/"
-            },
-            "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-            "next": [
-                "sessionIdSetter"
-            ]
-        },
-        {
-            "id": "sessionIdSetter",
-            "result": "session_id_tuktu",
-            "config": {
-                "value": "${uuid2}",
-                "path": "/"
-            },
-            "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-            "next": [
-                "setPageViews"
-            ]
-        },
         {
             "id": "setPageViews",
             "result": "num_pages_tuktu",
@@ -124,267 +37,27 @@
             },
             "name": "tuktu.web.processors.analytics.GetCookieProcessor",
             "next": [
-                "getCookies"
+                "logoClick"
             ]
         },
         {
-            "id": "getCookies",
-            "result": "allCookies",
-            "config": {},
-            "name": "tuktu.web.processors.analytics.GetAllCookiesProcessor",
-            "next": [
-                "setPageTypeCookies"
-            ]
-        },
-        {
-            "id": "setPageTypeCookies",
-            "result": "merged",
+            "id": "logoClick",
+            "result": "logoClick",
             "config": {
-                "merger": "tuktu.processors.merge.JSMerger",
-                "processors": [
-                    {
-                        "start": "administrativeSetter",
-                        "pipeline": [
-                            {
-                                "id": "administrativeSetter",
-                                "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-                                "config": {
-                                    "value": "0",
-                                    "path": "/"
-                                },
-                                "result": "num_pages_adm_tuktu",
-                                "next": [
-                                    "administrativeGetter"
-                                ]
-                            },
-                            {
-                                "id": "administrativeGetter",
-                                "name": "tuktu.web.processors.analytics.GetCookieProcessor",
-                                "config": {
-                                    "name": "num_pages_adm_tuktu"
-                                },
-                                "result": "num_pages_adm",
-                                "next": []
-                            }
-                        ]
-                    },
-                    {
-                        "start": "searchSetter",
-                        "pipeline": [
-                            {
-                                "id": "searchSetter",
-                                "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-                                "config": {
-                                    "value": "0",
-                                    "path": "/"
-                                },
-                                "result": "num_pages_search_tuktu",
-                                "next": [
-                                    "searchGetter"
-                                ]
-                            },
-                            {
-                                "id": "searchGetter",
-                                "name": "tuktu.web.processors.analytics.GetCookieProcessor",
-                                "config": {
-                                    "name": "num_pages_search_tuktu"
-                                },
-                                "result": "num_pages_search",
-                                "next": []
-                            }
-                        ]
-                    },
-                    {
-                        "start": "productSetter",
-                        "pipeline": [
-                            {
-                                "id": "productSetter",
-                                "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-                                "config": {
-                                    "value": "0",
-                                    "path": "/"
-                                },
-                                "result": "num_pages_product_tuktu",
-                                "next": [
-                                    "productGetter"
-                                ]
-                            },
-                            {
-                                "id": "productGetter",
-                                "name": "tuktu.web.processors.analytics.GetCookieProcessor",
-                                "config": {
-                                    "name": "num_pages_product_tuktu"
-                                },
-                                "result": "num_pages_product",
-                                "next": []
-                            }
-                        ]
-                    },
-                    {
-                        "start": "cartSetter",
-                        "pipeline": [
-                            {
-                                "id": "cartSetter",
-                                "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-                                "config": {
-                                    "value": "0",
-                                    "path": "/"
-                                },
-                                "result": "num_pages_cart_tuktu",
-                                "next": [
-                                    "cartGetter"
-                                ]
-                            },
-                            {
-                                "id": "cartGetter",
-                                "name": "tuktu.web.processors.analytics.GetCookieProcessor",
-                                "config": {
-                                    "name": "num_pages_cart_tuktu"
-                                },
-                                "result": "num_pages_cart",
-                                "next": []
-                            }
-                        ]
-                    },
-                    {
-                        "start": "listSetter",
-                        "pipeline": [
-                            {
-                                "id": "listSetter",
-                                "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-                                "config": {
-                                    "value": "0",
-                                    "path": "/"
-                                },
-                                "result": "num_pages_list_tuktu",
-                                "next": [
-                                    "listGetter"
-                                ]
-                            },
-                            {
-                                "id": "listGetter",
-                                "name": "tuktu.web.processors.analytics.GetCookieProcessor",
-                                "config": {
-                                    "name": "num_pages_list_tuktu"
-                                },
-                                "result": "num_pages_list",
-                                "next": []
-                            }
-                        ]
-                    },
-                    {
-                        "start": "cmpSetter",
-                        "pipeline": [
-                            {
-                                "id": "cmpSetter",
-                                "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-                                "config": {
-                                    "value": "0",
-                                    "path": "/"
-                                },
-                                "result": "num_pages_cmp_tuktu",
-                                "next": [
-                                    "cmpGetter"
-                                ]
-                            },
-                            {
-                                "id": "cmpGetter",
-                                "name": "tuktu.web.processors.analytics.GetCookieProcessor",
-                                "config": {
-                                    "name": "num_pages_cmp_tuktu"
-                                },
-                                "result": "num_pages_cmp",
-                                "next": []
-                            }
-                        ]
-                    },
-                    {
-                        "start": "homeSetter",
-                        "pipeline": [
-                            {
-                                "id": "homeSetter",
-                                "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-                                "config": {
-                                    "value": "0",
-                                    "path": "/"
-                                },
-                                "result": "num_pages_home_tuktu",
-                                "next": [
-                                    "homeGetter"
-                                ]
-                            },
-                            {
-                                "id": "homeGetter",
-                                "name": "tuktu.web.processors.analytics.GetCookieProcessor",
-                                "config": {
-                                    "name": "num_pages_home_tuktu"
-                                },
-                                "result": "num_pages_home",
-                                "next": []
-                            }
-                        ]
-                    },
-                    {
-                        "start": "genSetter",
-                        "pipeline": [
-                            {
-                                "id": "genSetter",
-                                "name": "tuktu.web.processors.analytics.SetCookieProcessor",
-                                "config": {
-                                    "value": "0",
-                                    "path": "/"
-                                },
-                                "result": "num_pages_gen_tuktu",
-                                "next": [
-                                    "genGetter"
-                                ]
-                            },
-                            {
-                                "id": "genGetter",
-                                "name": "tuktu.web.processors.analytics.GetCookieProcessor",
-                                "config": {
-                                    "name": "num_pages_gen_tuktu"
-                                },
-                                "result": "num_pages_gen",
-                                "next": []
-                            }
-                        ]
-                    }
-                ]
+                "selector": "#ulLogo",
+                "event_name": "click",
+                "flow_name": "ULPrintTest"
             },
-            "name": "tuktu.processors.meta.ParallelProcessor",
+            "name": "tuktu.web.processors.analytics.EventCollectorProcessor",
             "next": [
-                "getTuID"
+                "showPageViews"
             ]
         },
         {
-            "id": "getTuID",
-            "result": "getTuID",
+            "id": "showPageViews",
+            "result": "showPageViews",
             "config": {
-                "name": "getTUID",
-                "body": "if(typeof customVars2!=='undefined'){if(typeof customVars2.cv!=='undefined'){if(customVars2.cv.length>=3){return customVars2.cv[2][3];}}} return \"\";"
-            },
-            "name": "tuktu.web.processors.analytics.FunctionProcessor",
-            "next": [
-                "getUserIdTU"
-            ]
-        },
-        {
-            "id": "getUserIdTU",
-            "result": "user_id_tu",
-            "config": {
-                "code": "getTUID()"
-            },
-            "name": "tuktu.web.processors.analytics.JSVariableProcessor",
-            "next": [
-                "collect"
-            ]
-        },
-        {
-            "id": "collect",
-            "result": "collect",
-            "config": {
-                "flow_name": "CollectTU"
+                "flow_name": "showPageViews"
             },
             "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
             "next": []
