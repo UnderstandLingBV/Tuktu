@@ -19,9 +19,6 @@ Trains a K-Means model - basically computes the centroids on the given data.
     * **data_field** *(type: string)* `[Required]`
     - The field the data resides in. Data must be of type Seq[Int].
 
-    * **label_field** *(type: string)* `[Required]`
-    - The field the label is in. Value must be an integer.
-
     * **k** *(type: int)* `[Required]`
     - The number of clusters to find.
 

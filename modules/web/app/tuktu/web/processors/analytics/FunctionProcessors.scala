@@ -9,11 +9,12 @@ import tuktu.api.WebJsObject
 import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.api.WebJsFunctionObject
 import tuktu.api.utils
+import tuktu.api.BaseJsProcessor
 
 /**
  * Adds a JS function to the code
  */
-class FunctionProcessor(resultName: String) extends BaseProcessor(resultName) {
+class FunctionProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var name: String = _
     var params: List[String] = _
     var body: String = _
@@ -26,7 +27,7 @@ class FunctionProcessor(resultName: String) extends BaseProcessor(resultName) {
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
-            datum + (resultName -> new WebJsFunctionObject(
+            addJsElement(datum, new WebJsFunctionObject(
                     utils.evaluateTuktuString(name, datum),
                     params.map(p => utils.evaluateTuktuString(p, datum)),
                     utils.evaluateTuktuString(body, datum)
@@ -38,7 +39,7 @@ class FunctionProcessor(resultName: String) extends BaseProcessor(resultName) {
 /**
  * Collects the outcome of a function
  */
-class FunctionFetcherProcessor(resultName: String) extends BaseProcessor(resultName) {
+class FunctionFetcherProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var body: String = _
     
     override def initialize(config: JsObject) {
@@ -46,10 +47,8 @@ class FunctionFetcherProcessor(resultName: String) extends BaseProcessor(resultN
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        for (datum <- data) yield {
-            datum + (resultName -> new WebJsObject(
-                    "function() {" + utils.evaluateTuktuString(body, datum) + "}", true
-            ))
-        }
+        for (datum <- data) yield addJsElement(datum, new WebJsObject(
+                "function() {" + utils.evaluateTuktuString(body, datum) + "}", true
+        ))
     })
 }

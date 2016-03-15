@@ -2,18 +2,18 @@ package tuktu.web.processors.analytics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.WebJsCodeObject
 import tuktu.api.utils
+import tuktu.api.BaseJsProcessor
 
 /**
  * Shows a pop-up window on the page. Useful for showing (debugging) information to the user.
  */
-class PopUpProcessor(resultName: String) extends BaseProcessor(resultName) {
+class PopUpProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var content: String = _
     var width: Int = _
     var height: Int = _
@@ -29,7 +29,7 @@ class PopUpProcessor(resultName: String) extends BaseProcessor(resultName) {
             // Evaluate title and content
             val evalContent = utils.evaluateTuktuString(content, datum)
             
-            datum + (resultName -> new WebJsCodeObject(
+            addJsElement(datum, new WebJsCodeObject(
                     "var c=document.createElement('div');" +
                         "c.innerHTML='" + evalContent + "';" +
                         "c.id='divContent';" +

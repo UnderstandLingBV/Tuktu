@@ -9,8 +9,9 @@ import tuktu.api.utils
 import tuktu.api.WebJsEventObject
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.Play
+import tuktu.api.BaseJsProcessor
 
-class EventCollectorProcessor(resultName: String) extends BaseProcessor(resultName) {
+class EventCollectorProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var selector: String = _
     var eventName: String = _
     var flowName: String = _
@@ -22,7 +23,7 @@ class EventCollectorProcessor(resultName: String) extends BaseProcessor(resultNa
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        for (datum <- data) yield datum + (resultName -> new WebJsEventObject(
+        for (datum <- data) yield addJsElement(datum, new WebJsEventObject(
             utils.evaluateTuktuString(selector, datum),
             utils.evaluateTuktuString(eventName, datum),
             {

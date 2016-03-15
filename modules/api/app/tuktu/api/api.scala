@@ -1,26 +1,26 @@
 package tuktu.api
 
+import scala.collection.GenTraversableOnce
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.collection.GenTraversableOnce
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
-import akka.actor.Identify
+import akka.actor.Cancellable
 import akka.actor.PoisonPill
 import akka.pattern.ask
 import akka.util.Timeout
+import play.api.Application
+import play.api.Play
 import play.api.Play.current
+import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Iteratee
-import play.api.libs.json.JsValue
 import play.api.libs.json.JsObject
-import play.api.cache.Cache
-import play.api.Application
-import play.api.Play
-import akka.actor.Cancellable
+import play.api.libs.json.JsValue
 
 case class DataPacket(
         data: List[Map[String, Any]]
@@ -178,6 +178,32 @@ case class ClearFlowPacket(
 abstract class BaseProcessor(resultName: String) {
     def initialize(config: JsObject): Unit = {}
     def processor(): Enumeratee[DataPacket, DataPacket] = ???
+}
+
+abstract class BaseJsProcessor(resultName: String) extends BaseProcessor(resultName) {
+    val jsField = Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")
+    
+    def addJsElement[A <: BaseJsObject](datum: Map[String, Any], element: A): Map[String, Any] = {
+        // Get the JS elements
+        val newDatum = if (!datum.contains(jsField)) datum + (jsField -> new WebJsOrderedObject(List())) else {
+            datum(jsField) match {
+                case a: WebJsOrderedObject => datum
+                case a: Any => datum + (jsField -> new WebJsOrderedObject(List()))
+            }
+        }
+        
+        val jsElements = newDatum(jsField).asInstanceOf[WebJsOrderedObject]
+        
+        // Add this element to the ordered web js object
+        newDatum + (jsField -> new WebJsOrderedObject(
+                jsElements.items ++ List(Map(
+                        resultName -> element
+                ))
+        ))
+    }
+    
+    def addJsElements[A <: BaseJsObject](datum: Map[String, Any], element: List[A]): Map[String, Any] =
+        element.foldLeft(datum)((a,b) => addJsElement(a, b))
 }
 
 /**

@@ -305,10 +305,16 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
     var actors: List[ActorRef] = null
     var merger: Method = null
     var mergerClass: Any = null
+    var includeOriginal: Boolean = _
+    var sendOriginal: Boolean = _
 
     override def initialize(config: JsObject) {
         // Process config
         val pipelines = (config \ "processors").as[List[JsObject]]
+        
+        // Should we merge the results into the original DataPacket
+        includeOriginal = (config \ "include_original").asOpt[Boolean].getOrElse(false)
+        sendOriginal = (config \ "send_original").asOpt[Boolean].getOrElse(true)
 
         // Set up the merger
         val mergerProcClazz = Class.forName((config \ "merger").as[String])
@@ -351,13 +357,18 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
         // Send data to actors
-        val futs = for (actor <- actors) yield (actor ? data).asInstanceOf[Future[DataPacket]]
+        val futs = for (actor <- actors) yield (actor ? {
+            if (sendOriginal) data else new DataPacket(List())
+        }).asInstanceOf[Future[DataPacket]]
 
         // Get the results
         val results = Await.result(Future.sequence(futs), timeout.duration)
 
         // Apply the merger
-        merger.invoke(mergerClass, results).asInstanceOf[DataPacket]
+        if (includeOriginal)
+            merger.invoke(mergerClass, data :: results).asInstanceOf[DataPacket]
+        else
+            merger.invoke(mergerClass, results).asInstanceOf[DataPacket]
     })
 
 }
@@ -373,6 +384,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
     var include_original: Boolean = _
     var send_whole: Boolean = _
     var replacements: Map[String, String] = _
+    var sendOriginal: Boolean = _
 
     override def initialize(config: JsObject) {
         // Set up the merger
@@ -382,6 +394,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
 
         // Should we merge the results into the original DataPacket
         include_original = (config \ "include_original").asOpt[Boolean].getOrElse(false)
+        sendOriginal = (config \ "send_original").asOpt[Boolean].getOrElse(true)
 
         // Send the whole datapacket or in pieces
         send_whole = (config \ "send_whole").asOpt[Boolean].getOrElse(true)
@@ -440,7 +453,9 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
                 }) compose enumeratee compose Enumeratee.onEOF(() => 
                     Akka.system.actorSelection("user/TuktuMonitor") ! new AppStopPacket(idString)
                 )
-                Enumerator(data).through(inclMonitor).run(Iteratee.getChunks)
+                Enumerator({
+                    if (sendOriginal) data else new DataPacket(List())
+                }).through(inclMonitor).run(Iteratee.getChunks)
             }
         } flatMap (t => Future.sequence(t))) // Flatten Future[List[Future[T]]] => Future[List[T]]
 

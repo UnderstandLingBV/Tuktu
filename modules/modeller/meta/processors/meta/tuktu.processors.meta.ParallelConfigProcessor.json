@@ -32,6 +32,13 @@
 					"default": false
 				},
 				{
+					"name": "send_original",
+					"description": "Whether or not to send the original source packet. If set to false, a dummy empty DataPacket is sent. Use with caution.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
 					"name": "send_whole",
 					"description" : "Send the whole DataPacket, or sends each datum inside the DataPacket separately. In the latter case, each datum will be processed and merged separately, and after that concatenated to form the new resulting DataPacket.",
 					"type": "boolean",

@@ -9,11 +9,12 @@ import tuktu.api.WebJsObject
 import tuktu.api.WebJsNextFlow
 import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.api.utils
+import tuktu.api.BaseJsProcessor
 
 /**
  * Adds a field to signal what flow to execute to collect the data is captured by all WebJsObjects in this data packet
  */
-class CollectionFlowProcessor(resultName: String) extends BaseProcessor(resultName) {
+class CollectionFlowProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var flowName: String = _
     
     override def initialize(config: JsObject) {
@@ -22,7 +23,7 @@ class CollectionFlowProcessor(resultName: String) extends BaseProcessor(resultNa
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
-            datum + (resultName -> new WebJsNextFlow(
+            addJsElement(datum, WebJsNextFlow(
                     utils.evaluateTuktuString(flowName, datum)
             ))
         }

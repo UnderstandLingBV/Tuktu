@@ -9,12 +9,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.api.utils
 import tuktu.api.WebJsFunctionObject
 import tuktu.api.WebJsCodeObject
+import tuktu.api.WebJsOrderedObject
+import tuktu.api.BaseJsProcessor
 
 /**
  * Overwrites certain CSS classes and definitions. Useful if you want to apply a specific
  * styling to a lot of elements with the same class or type at once.
  */
-class CssApplierProcessor(resultName: String) extends BaseProcessor(resultName) {
+class CssApplierProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var cssContent: String = _
     
     override def initialize(config: JsObject) {
@@ -25,21 +27,24 @@ class CssApplierProcessor(resultName: String) extends BaseProcessor(resultName) 
         for (datum <- data) yield {
             val evalContent = utils.evaluateTuktuString(cssContent, datum)
             
-            datum + ((resultName + "_fnc") -> new WebJsFunctionObject(
-                    "setStyle",
-                    List("cssTest"),
-                    "var sheet = document.createElement('style');" +
-                    "sheet.type = 'text/css';" +
-                    "window.customSheet = sheet;" +
-                    "(document.head || document.getElementsByTagName('head')[0]).appendChild(sheet);" +
-                    "return (setStyle = function(cssText, node) {" +
-                        "if(!node || node.parentNode !== sheet)" +
-                            "return sheet.appendChild(document.createTextNode(cssText));" +
-                        "node.nodeValue = cssText;" +
-                        "return node;" +
-                    "})(cssText);"
-            )) + (resultName -> new WebJsCodeObject(
-                    "setStyle(" + evalContent + ")"
+            addJsElements(datum, List(
+                new WebJsFunctionObject(
+                        "setStyle",
+                        List("cssTest"),
+                        "var sheet = document.createElement('style');" +
+                        "sheet.type = 'text/css';" +
+                        "window.customSheet = sheet;" +
+                        "(document.head || document.getElementsByTagName('head')[0]).appendChild(sheet);" +
+                        "return (setStyle = function(cssText, node) {" +
+                            "if(!node || node.parentNode !== sheet)" +
+                                "return sheet.appendChild(document.createTextNode(cssText));" +
+                            "node.nodeValue = cssText;" +
+                            "return node;" +
+                        "})(cssText);"
+                ),
+                new WebJsCodeObject(
+                        "setStyle(" + evalContent + ")"
+                )
             ))
         }
     })

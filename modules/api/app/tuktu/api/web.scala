@@ -36,6 +36,10 @@ case class WebJsEventObject(
         callback: String
 ) extends BaseJsObject()
 
+case class WebJsOrderedObject(
+        items: List[Map[String, _ <: BaseJsObject]]
+) extends BaseJsObject()
+
 abstract class TuktuBaseJSGenerator(
         referer: String,
         resultName: String,

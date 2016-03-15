@@ -25,6 +25,20 @@
 					"required": true
 				},
 				{
+					"name": "include_original",
+					"description": "Merge the other results into the original DataPacket, or not.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "send_original",
+					"description": "Whether or not to send the original source packet. If set to false, a dummy empty DataPacket is sent. Use with caution.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
 					"name": "processors",
 					"description": "Each entry is defining a pipeline of processors for which an Enumeratee is built. The results of each is then merged using the merger class.",
 					"type": "array",

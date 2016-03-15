@@ -8,11 +8,12 @@ import tuktu.api.DataPacket
 import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.api.WebJsCodeObject
 import tuktu.api.utils
+import tuktu.api.BaseJsProcessor
 
 /**
  * Allows to create free-field JS code that will be executed
  */
-class JSFreeProcessor(resultName: String) extends BaseProcessor(resultName) {
+class JSFreeProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var code: String = _
     
     override def initialize(config: JsObject) {
@@ -20,7 +21,7 @@ class JSFreeProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        for (datum <- data) yield datum + (resultName -> new WebJsCodeObject(
+        for (datum <- data) yield addJsElement(datum, new WebJsCodeObject(
                 utils.evaluateTuktuString(code, datum)
         ))
     })

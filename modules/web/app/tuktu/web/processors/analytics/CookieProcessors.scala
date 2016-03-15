@@ -1,6 +1,6 @@
 package tuktu.web.processors.analytics
 
-import tuktu.api.BaseProcessor
+import tuktu.api.BaseJsProcessor
 import tuktu.api.DataPacket
 import play.api.libs.json.JsObject
 import play.api.libs.iteratee.Enumeratee
@@ -12,11 +12,13 @@ import tuktu.api.WebJsCodeObject
 import tuktu.api.WebJsFunctionObject
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
+import tuktu.api.WebJsOrderedObject
+import tuktu.api.BaseProcessor
 
 /**
  * Sets a cookie
  */
-class SetCookieProcessor(resultName: String) extends BaseProcessor(resultName) {
+class SetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var value: String = _
     var expires: Option[String] = _
     var path: Option[String] = _
@@ -44,34 +46,37 @@ class SetCookieProcessor(resultName: String) extends BaseProcessor(resultName) {
             
             // Check if we need to set only if the cookie doesnt exist, or always
             if (onlyIfNotExists) {
-                datum + ((resultName + "_fnc") -> new WebJsFunctionObject(
-                        "getCookie" + resultName,
-                        List(""),
-                        """var name = '""" + resultName + """' + "=";""" +
-                            """var ca = document.cookie.split(';');""" +
-                            """for(var i=0; i<ca.length; i++) {""" +
-                                """var c = ca[i];""" +
-                                """while (c.charAt(0)==' ') c = c.substring(1);""" +
-                                """if (c.indexOf(name) == 0) return c.substring(name.length,c.length);""" +
-                            """}""" +
-                            """return "";"""
-                )) + (resultName -> new WebJsCodeObject(
-                        "if (getCookie" + resultName + "() === \"\") {document.cookie=\"" +
-                        resultName + "=" + cValue + {
-                            cExpires match {
-                                case Some(e) => "; expires=" + e
-                                case None => ""
-                            }
-                        } + {
-                            cPath match {
-                                case Some(p) => "; path=" + p
-                                case None => ""
-                            }
-                        } + "\";}"
+                addJsElements(datum, List(
+                    new WebJsFunctionObject(
+                            "setCookie" + resultName,
+                            List(""),
+                            """var name = '""" + resultName + """' + "=";""" +
+                                """var ca = document.cookie.split(';');""" +
+                                """for(var i=0; i<ca.length; i++) {""" +
+                                    """var c = ca[i];""" +
+                                    """while (c.charAt(0)==' ') c = c.substring(1);""" +
+                                    """if (c.indexOf(name) == 0) return c.substring(name.length,c.length);""" +
+                                """}""" +
+                                """return "";"""
+                    ),
+                    new WebJsCodeObject(
+                            "if (setCookie" + resultName + "() === \"\") {document.cookie=\"" +
+                            resultName + "=" + cValue + {
+                                cExpires match {
+                                    case Some(e) => "; expires=" + e
+                                    case None => ""
+                                }
+                            } + {
+                                cPath match {
+                                    case Some(p) => "; path=" + p
+                                    case None => ""
+                                }
+                            } + "\";}"
+                    )
                 ))
             }
             else {
-                datum + (resultName -> new WebJsCodeObject(
+                addJsElement(datum, new WebJsCodeObject(
                         "document.cookie=\"" +
                         resultName + "=" + cValue + {
                             cExpires match {
@@ -93,7 +98,7 @@ class SetCookieProcessor(resultName: String) extends BaseProcessor(resultName) {
 /**
  * Gets a single cookie by name
  */
-class GetCookieProcessor(resultName: String) extends BaseProcessor(resultName) {
+class GetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var name: String = _
     
     override def initialize(config: JsObject) {
@@ -105,19 +110,22 @@ class GetCookieProcessor(resultName: String) extends BaseProcessor(resultName) {
             // Evaluate
             val cName = utils.evaluateTuktuString(name, datum)
             
-            datum + ((resultName + "_fnc") -> new WebJsFunctionObject(
-                    "getCookie" + resultName,
-                    List(""),
-                    """var name = '""" + cName + """' + "=";""" +
-                        """var ca = document.cookie.split(';');""" +
-                        """for(var i=0; i<ca.length; i++) {""" +
-                            """var c = ca[i];""" +
-                            """while (c.charAt(0)==' ') c = c.substring(1);""" +
-                            """if (c.indexOf(name) == 0) return c.substring(name.length,c.length);""" +
-                        """}""" +
-                        """return "";"""
-            )) + (resultName -> new WebJsObject(
-                    "getCookie" + resultName + "()", true
+            addJsElements(datum, List(
+                new WebJsFunctionObject(
+                        "getCookie" + resultName,
+                        List(""),
+                        """var name = '""" + cName + """' + "=";""" +
+                            """var ca = document.cookie.split(';');""" +
+                            """for(var i=0; i<ca.length; i++) {""" +
+                                """var c = ca[i];""" +
+                                """while (c.charAt(0)==' ') c = c.substring(1);""" +
+                                """if (c.indexOf(name) == 0) return c.substring(name.length,c.length);""" +
+                            """}""" +
+                            """return "";"""
+                ),
+                new WebJsObject(
+                        "getCookie" + resultName + "()", true
+                )
             ))
         }
     })
@@ -126,10 +134,10 @@ class GetCookieProcessor(resultName: String) extends BaseProcessor(resultName) {
 /**
  * Gets all cookies
  */
-class GetAllCookiesProcessor(resultName: String) extends BaseProcessor(resultName) {
+class GetAllCookiesProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
-            datum + (resultName -> new WebJsObject(
+            addJsElement(datum, new WebJsObject(
                     "document.cookie.split(';').map(function(elem) {" +
                     "var res={};var splt=elem.split('=');" +
                     "res[splt[0]]=splt.slice(1,splt.length).join('=');" +

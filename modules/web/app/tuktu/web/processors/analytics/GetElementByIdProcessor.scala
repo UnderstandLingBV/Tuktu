@@ -8,11 +8,12 @@ import scala.concurrent.Future
 import tuktu.api.WebJsObject
 import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.api.utils
+import tuktu.api.BaseJsProcessor
 
 /**
  * Adds JS to fetch a DOM element
  */
-class DOMElementFetcherProcessor(resultName: String) extends BaseProcessor(resultName) {
+class DOMElementFetcherProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var elementName: String = _
     
     override def initialize(config: JsObject) {
@@ -21,7 +22,7 @@ class DOMElementFetcherProcessor(resultName: String) extends BaseProcessor(resul
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
-            datum + (resultName -> new WebJsObject(
+            addJsElement(datum, new WebJsObject(
                     "document.getElementById(\"" + utils.evaluateTuktuString(elementName, datum) + "\")"
             ))
         }

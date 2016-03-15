@@ -2,6 +2,8 @@ package tuktu.processors.merge
 
 import tuktu.api.DataMerger
 import tuktu.api.DataPacket
+import tuktu.api.WebJsOrderedObject
+import play.api.Play
 
 /**
  * This merger iterates over all datapackets' data and merges them by taking
@@ -13,6 +15,37 @@ class SimpleMerger() extends DataMerger() {
                 // Fold and zip the packets into one
                 packets.map(packet => packet.data).fold(Nil)((x, y) => x.zipAll(y, Map(), Map()).map(z => z._1 ++ z._2))
         )
+    }
+}
+
+/**
+ * Same as simple merger, but has awareness of JS elements in the child-packets which need their content to be merged
+ */
+class JSMerger() extends DataMerger() {
+    override def merge(packets: List[DataPacket]): DataPacket = {
+        val jsField = Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")
+        
+        new DataPacket({
+                // Fold and zip the packets into one
+                val x = packets.map(packet => packet.data)
+                packets.map(packet => packet.data).fold(Nil)((x, y) => x.zipAll(y, Map.empty[String, Any], Map.empty[String, Any]).map(z => {
+                    // Check if JS elements are there
+                    if (z._2.contains(jsField) && z._1.contains(jsField)) {
+                        // We must merge the content of these JS elements
+                        val jsFirst = z._1(jsField).asInstanceOf[WebJsOrderedObject]
+                        val jsSecond = z._2(jsField).asInstanceOf[WebJsOrderedObject]
+                        (z._1 ++ z._2) + (jsField -> {
+                            new WebJsOrderedObject({
+                                jsFirst.items ++ jsSecond.items.map(elem => {
+                                    // Make sure we don't get overlapping keys (from the original source packet for example)
+                                    elem.filter(el => !jsFirst.items.flatMap(el => el).contains(el._1))
+                                })
+                            })
+                        })
+                    }
+                    else z._1 ++ z._2
+                }))
+        })
     }
 }
 
