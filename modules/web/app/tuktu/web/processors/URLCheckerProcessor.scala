@@ -57,8 +57,22 @@ class URLCheckerProcessor(resultName: String) extends BaseProcessor(resultName)
     })
 
     def checkUrl(url: String): Future[Int] = {
+      try
+      {
         WS.url( url ).head().map( response => response.status ).recover{
           case ce: java.net.ConnectException => -1
+          case te: java.util.concurrent.TimeoutException => -2
+          case iae: java.lang.IllegalArgumentException => -3
+          case ioe: java.io.IOException => -4
+          case mre: com.ning.http.client.MaxRedirectException => -5
+          case npe: java.lang.NullPointerException => -6
+          case re: java.lang.RuntimeException => -7
+          case tlfe: org.jboss.netty.handler.codec.frame.TooLongFrameException => -8
         }
+      }
+      catch
+      {
+        case e: Exception => Future(-100)
+      }
     }
 }
