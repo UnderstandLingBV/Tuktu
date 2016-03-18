@@ -13,6 +13,9 @@ Starts parallel processor pipelines through generic configs, which are merged up
     * **include_original** *(type: boolean)* `[Optional, default = false]`
     - Merge the other results into the original DataPacket, or not.
 
+    * **send_original** *(type: boolean)* `[Optional, default = true]`
+    - Whether or not to send the original source packet. If set to false, a dummy empty DataPacket is sent. Use with caution.
+
     * **send_whole** *(type: boolean)* `[Optional, default = true]`
     - Send the whole DataPacket, or sends each datum inside the DataPacket separately. In the latter case, each datum will be processed and merged separately, and after that concatenated to form the new resulting DataPacket.
 

@@ -10,6 +10,12 @@ Starts parallel processor pipelines, which are merged upon completion.
     * **merger** *(type: string)* `[Required]`
     - The merger class to be used to merge the results of the processors.
 
+    * **include_original** *(type: boolean)* `[Optional, default = false]`
+    - Merge the other results into the original DataPacket, or not.
+
+    * **send_original** *(type: boolean)* `[Optional, default = true]`
+    - Whether or not to send the original source packet. If set to false, a dummy empty DataPacket is sent. Use with caution.
+
     * **processors** *(type: array)* `[Required]`
     - Each entry is defining a pipeline of processors for which an Enumeratee is built. The results of each is then merged using the merger class.
 

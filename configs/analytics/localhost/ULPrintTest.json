@@ -1,0 +1,52 @@
+{
+    "generators": [
+        {
+            "result": "ulClick",
+            "config": {},
+            "name": "tuktu.web.generators.TuktuJSGenerator",
+            "next": [
+                "message"
+            ]
+        }
+    ],
+    "processors": [
+        {
+            "id": "message",
+            "result": "message",
+            "config": {
+                "value": "Thanks for visiting our website!"
+            },
+            "name": "tuktu.processors.FieldConstantAdderProcessor",
+            "next": [
+                "filterMessage"
+            ]
+        },
+        {
+            "id": "filterMessage",
+            "result": "filterMessage",
+            "config": {
+                "fields": [
+                    {
+                        "path": [
+                            "message"
+                        ],
+                        "result": "message"
+                    }
+                ]
+            },
+            "name": "tuktu.processors.FieldFilterProcessor",
+            "next": [
+                "debug"
+            ]
+        },
+        {
+            "id": "debug",
+            "result": "debug",
+            "config": {
+                "prettify": true
+            },
+            "name": "tuktu.processors.ConsoleWriterProcessor",
+            "next": []
+        }
+    ]
+}
