@@ -1,11 +1,15 @@
 {
     "generators": [
         {
-            "name": "tuktu.generators.LineGenerator",
             "result": "line",
             "config": {
-                "filename": "data/2015-01-city-of-london-street.csv"
+                "filename": "//data/2015-01-city-of-london-street.csv",
+                "start_line": 0,
+                "batch_size": 1000,
+                "backoff_interval": 1000,
+                "backoff_amount": 10
             },
+            "name": "tuktu.generators.LineGenerator",
             "next": [
                 "corrector"
             ]
@@ -14,7 +18,6 @@
     "processors": [
         {
             "id": "corrector",
-            "name": "tuktu.processors.ReplaceProcessor",
             "result": "",
             "config": {
                 "field": "line",
@@ -27,63 +30,85 @@
                     "On or near Further/Higher Educational Building"
                 ]
             },
+            "name": "tuktu.processors.ReplaceProcessor",
             "next": [
                 "csvConverter"
             ]
         },
         {
             "id": "csvConverter",
-            "name": "tuktu.csv.processors.CSVReaderProcessor",
             "result": "",
             "config": {
                 "field": "line",
-                "remove_original": true,
-                "headers_from_first": true
+                "headers_from_first": true,
+                "remove_original": true
             },
+            "name": "tuktu.csv.processors.CSVReaderProcessor",
             "next": [
                 "locationFilter"
             ]
         },
         {
             "id": "locationFilter",
-            "name": "tuktu.processors.InclusionProcessor",
             "result": "",
             "config": {
-                "expression": "Location=No Location,Location=On or near Conference/Exhibition Centre,Location=On or near Further/Higher Educational Building",
-                "type": "simple",
-                "and_or": "or"
+                "expressions": [
+                    {
+                        "type": "simple",
+                        "expression": "${Location}=No Location"
+                    },
+                    {
+                        "type": "simple",
+                        "expression": "${Location}=On or near Conference/Exhibition Centre"
+                    },
+                    {
+                        "type": "simple",
+                        "expression": "${Location}=On or near Further/Higher Educational Building"
+                    }
+                ],
+                "batch_min_count": 1
             },
+            "name": "tuktu.processors.PacketFilterProcessor",
             "next": [
                 "outcomeFilter"
             ]
         },
         {
             "id": "outcomeFilter",
-            "name": "tuktu.processors.InclusionProcessor",
             "result": "",
             "config": {
-                "expression": "Crime type=Other crime,Crime type=Other theft",
-                "type": "simple",
-                "and_or": "or"
+                "expressions": [
+                    {
+                        "type": "simple",
+                        "expression": "${Crime type}=Other crime"
+                    },
+                    {
+                        "type": "simple",
+                        "expression": "${Crime type}=Other theft"
+                    }
+                ],
+                "batch_min_count": 1
             },
+            "name": "tuktu.processors.PacketFilterProcessor",
             "next": [
-                "debug", "writer"
+                "debug",
+                "writer"
             ]
         },
         {
-			"id": "writer",
-			"name": "tuktu.csv.processors.CSVWriterProcessor",
-			"result": "",
-			"config": {
-				"file_name": "data/my_first_tuktu_output.csv"
-			},
-			"next": []
-		},
-        {
             "id": "debug",
-            "name": "tuktu.processors.ConsoleWriterProcessor",
             "result": "",
             "config": {},
+            "name": "tuktu.processors.ConsoleWriterProcessor",
+            "next": []
+        },
+        {
+            "id": "writer",
+            "result": "",
+            "config": {
+                "file_name": "data/my_first_tuktu_output.csv"
+            },
+            "name": "tuktu.csv.processors.CSVWriterProcessor",
             "next": []
         }
     ]

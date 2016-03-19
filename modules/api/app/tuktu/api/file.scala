@@ -15,6 +15,7 @@ import com.netaporter.uri.Uri
 import java.io.FileInputStream
 import play.api.Play.current
 import play.api.Play
+import java.io.File
 
 object file {
     /**
@@ -40,7 +41,10 @@ object file {
      * Reads from Local disk
      */
     def fileReader(uri: URI)(implicit codec: Codec): BufferedReader = {
-        Source.fromFile(uri.getPath)(codec).bufferedReader
+        if (uri.toString.startsWith("//"))
+            Source.fromFile(uri.getHost + File.separator + uri.getPath)(codec).bufferedReader
+        else
+            Source.fromFile(uri.getPath)(codec).bufferedReader
     }
 
     /**
