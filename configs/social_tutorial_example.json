@@ -1,7 +1,7 @@
 {
     "generators": [
         {
-            "result": "data",
+            "result": "tweet",
             "config": {
                 "credentials": {
                     "consumer_key": "...",
@@ -21,7 +21,7 @@
             ]
         },
         {
-            "result": "data",
+            "result": "post",
             "config": {
                 "credentials": {
                     "access_token": "..."
@@ -31,11 +31,7 @@
                         "obama"
                     ]
                 },
-                "update_time": 5,
-                "interval": {
-                    "start": null,
-                    "end": null
-                }
+                "update_time": 5
             },
             "name": "tuktu.social.generators.FacebookGenerator",
             "next": [
@@ -63,7 +59,7 @@
                     {
                         "default": "",
                         "path": [
-                            "data",
+                            "tweet",
                             "text"
                         ],
                         "result": "message"
@@ -105,6 +101,14 @@
                     {
                         "type": "simple",
                         "expression": "${language}=nl_NL"
+                    },
+                    {
+                        "type": "simple",
+                        "expression": "${language}=de_DE"
+                    },
+                    {
+                        "type": "simple",
+                        "expression": "${language}=en_UK"
                     }
                 ],
                 "batch_min_count": 1
@@ -135,17 +139,6 @@
                 "pos": "POSTags"
             },
             "name": "tuktu.nlp.processors.RBEMPolarityProcessor",
-            "next": [
-                "fieldImploder"
-            ]
-        },
-        {
-            "id": "fieldImploder",
-            "result": "",
-            "config": {
-                "fields": []
-            },
-            "name": "tuktu.processors.ImploderProcessor",
             "next": [
                 "writer",
                 "debug"
@@ -186,7 +179,7 @@
                     {
                         "default": "",
                         "path": [
-                            "data",
+                            "post",
                             "message"
                         ],
                         "result": "message"

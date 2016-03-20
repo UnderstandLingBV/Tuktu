@@ -66,19 +66,6 @@
 					"required": true,
 					"parameters": [
 						{
-							"name": "keywords",
-							"description": "The keywords to search for in any posts.",
-							"type": "array",
-							"required": false,
-							"parameters": [
-								{
-									"name": "",
-									"type": "string",
-									"required": true
-								}
-							]
-						},
-						{
 							"name": "users",
 							"description": "The users (given by their Facebook user id) from which to get everything from their feed, independently from keywords above.",
 							"type": "array",
