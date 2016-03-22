@@ -7,13 +7,15 @@ javaOptions in Universal ++= Seq(
 	"-Xmax-classfile-name 100"
 )
 
-mappings in Universal ++= Seq(file("nft.data") -> "nft.data")
-
-mappings in Universal ++= directory("documentation")
-
-mappings in Universal ++= directory("images")
-
-mappings in Universal ++= (file("modules/modeller/meta").*** pair basic )
+mappings in Universal ++= 
+	directory("documentation") ++
+	directory("images") ++
+	(file("modules/modeller/meta").*** pair basic) ++
+	(file("configs/analytics/localhost").*** pair basic) ++
+	Seq(file("nft.data") -> "nft.data",
+		file("configs/crime_tutorial_example.json") -> "configs/crime_tutorial_example.json",		
+		file("configs/social_tutorial_example.json") -> "configs/social_tutorial_example.json"
+	)
 
 lazy val appResolvers = Seq(
     "JCenter" at "http://jcenter.bintray.com/",
