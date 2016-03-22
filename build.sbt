@@ -1,7 +1,19 @@
+import NativePackagerHelper._
+
 EclipseKeys.createSrc := EclipseCreateSrc.All
 
 // For running tests, comment the following line
-javaOptions += "-Xmax-classfile-name 100"
+javaOptions in Universal ++= Seq(
+	"-Xmax-classfile-name 100"
+)
+
+mappings in Universal ++= Seq(file("nft.data") -> "nft.data")
+
+mappings in Universal ++= directory("documentation")
+
+mappings in Universal ++= directory("images")
+
+mappings in Universal ++= (file("modules/modeller/meta").*** pair basic )
 
 lazy val appResolvers = Seq(
     "JCenter" at "http://jcenter.bintray.com/",
