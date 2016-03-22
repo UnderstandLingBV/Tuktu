@@ -26,11 +26,6 @@ Gets posts containing keywords or from specific users from a given time interval
 
     * **filters** *(type: object)* `[Required]`
 
-      * **keywords** *(type: array)* `[Optional]`
-      - The keywords to search for in any posts.
-
-        * **[UNNAMED]** *(type: string)* `[Required]`
-
       * **users** *(type: array)* `[Optional]`
       - The users (given by their Facebook user id) from which to get everything from their feed, independently from keywords above.
 

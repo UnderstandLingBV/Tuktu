@@ -1,5 +1,5 @@
 @(section: String, messages: Map[String, List[String]])(menu: Html)(content: Html)<!DOCTYPE html>
-
+@import play.api.Play
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -18,7 +18,7 @@
         <title>Tuktu - Big Data Made Easy</title>
     </head>
 
-    <body><script async src=http://localhost:9000/Tuktu.js></script>
+    <body><script async src=@{Play.current.configuration.getString("tuktu.url").get + Play.current.configuration.getString("tuktu.jsurl").get}></script>
         <nav class="navbar navbar-fixed-top">
             <div class="container">
                 <div class="navbar-header">
