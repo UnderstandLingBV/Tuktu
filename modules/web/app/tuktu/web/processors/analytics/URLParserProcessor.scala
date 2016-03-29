@@ -31,14 +31,14 @@ class URLParserProcessor(resultName: String) extends BaseProcessor(resultName) {
             try {
                 val url = new URL(datum(field).asInstanceOf[String])
                 datum + (resultName -> Map(
-                    "protocol " -> url.getProtocol,
-                    "authority " -> url.getAuthority,
-                    "host " -> url.getHost,
-                    "port " -> url.getPort,
-                    "path " -> url.getPath,
-                    "query " -> url.getQuery,
-                    "filename " -> url.getFile,
-                    "ref " -> url.getRef))
+                    "protocol" -> url.getProtocol,
+                    "authority" -> url.getAuthority,
+                    "host" -> url.getHost,
+                    "port" -> url.getPort,
+                    "path" -> url.getPath,
+                    "query" -> url.getQuery,
+                    "filename" -> url.getFile,
+                    "ref" -> url.getRef))
             } catch {
                 case e: MalformedURLException => datum + (resultName -> Map.empty[String, String])
             }
