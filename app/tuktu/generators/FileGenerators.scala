@@ -13,6 +13,8 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
+import scala.xml.XML
+import play.api.libs.json.JsObject
 
 /**
  * Actor that reads file immutably and non-blocking
@@ -206,5 +208,33 @@ class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
         case path: Path     => channel.push(new DataPacket(List(Map(resultName -> path))))
+    }
+}
+
+/**
+ * Reads XML in as bulk and streams an XPath selection forward
+ */
+class XmlGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    override def receive() = {
+        case config: JsValue => {
+            // Get the file name
+            val filename = (config \ "file_name").as[String]
+            val query = (config \ "query").asOpt[List[JsObject]].getOrElse(List())
+            val asText = (config \ "as_text").asOpt[Boolean].getOrElse(false)
+            val trim = (config \ "trim").asOpt[Boolean].getOrElse(false)
+            
+            // Read in XML
+            val xml = XML.loadFile(filename)
+            
+            // Get the elements we are after
+            val nodes = utils.xmlQueryParser(xml.head, query)
+            if (asText) nodes.foreach(el => channel.push(new DataPacket(List(Map(resultName -> {
+                    if (trim) el.text.trim
+                    else el.text
+                })))))
+            else nodes.foreach(el => channel.push(new DataPacket(List(Map(resultName -> el)))))
+        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
     }
 }

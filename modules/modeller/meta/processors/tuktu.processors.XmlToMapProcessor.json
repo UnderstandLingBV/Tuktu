@@ -1,0 +1,51 @@
+{
+	"name": "XML To Map Processor",
+	"description": "Converts an XML node/document into a Map recursively.",
+	"class": "tuktu.processors.XmlToMapProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the XML document.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "trim",
+					"description": "Whether or not to trim the text if as_text is set to true.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "non_empty",
+					"description": "If set to true, keeps only non-empty children.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "flattened",
+					"description": "If set to true, returns the XML document as first-class citizen, otherwise adds the map as field resultName.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

@@ -908,3 +908,29 @@ class FieldsToListProcessor(resultName: String) extends BaseProcessor(resultName
         })
     })
 }
+
+/**
+ * Turns ugly XML into pretty map :)
+ */
+class XmlToMapProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field: String = _
+    var trim: Boolean = _
+    var nonEmpty: Boolean = _
+    var flattened: Boolean = _
+    
+    override def initialize(config: JsObject) {
+        field = (config \ "field").as[String]
+        trim = (config \ "trim").asOpt[Boolean].getOrElse(false)
+        nonEmpty = (config \ "non_empty").asOpt[Boolean].getOrElse(false)
+        flattened = (config \ "flattened").asOpt[Boolean].getOrElse(false)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            if (flattened)
+                datum ++ utils.xmlToMap(datum(field).asInstanceOf[scala.xml.Node], trim, nonEmpty)
+            else    
+                datum + (resultName -> utils.xmlToMap(datum(field).asInstanceOf[scala.xml.Node], trim, nonEmpty))
+        })
+    })
+}

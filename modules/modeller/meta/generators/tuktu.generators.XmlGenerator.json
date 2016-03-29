@@ -1,0 +1,102 @@
+{
+	"name": "XML Generator",
+	"description": "Reads in an XML file and selects elements from it to stream further. Node that this generator reads the full XML into memory.",
+	"class": "tuktu.generators.XmlGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "file_name",
+					"description": "The file name to read XML from.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "as_text",
+					"description": "Whether or not to turn the content of the XML nodes into text.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "trim",
+					"description": "Whether or not to trim the text if as_text is set to true.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "query",
+					"type": "array",
+					"required": false,
+					"description": "The XPath-like query to fetch.",
+					"default": true,
+					"parameters": [
+						{
+							"name": "selector",
+							"description": "The XPath-like selector",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "type",
+									"description": "The type of selector, can be either \\ for children, \\\\ for descendants or @ for attributes.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "string",
+									"description": "The actual selector string.",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

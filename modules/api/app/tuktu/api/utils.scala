@@ -12,6 +12,11 @@ import play.api.libs.concurrent.Akka
 import play.api.Logger
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.Play
+import scala.xml.XML
+import scala.xml.Elem
+import scala.xml.Node
+import scala.xml.NodeSeq
+
 
 object utils {
     val logDpContent = Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true)
@@ -329,5 +334,44 @@ object utils {
             })
             case None => clusterNodes
         }
+    }
+    
+    /**
+     * Gets data from an XML document based on a query that iteratively selects fields or attributes
+     */
+    def xmlQueryParser(xml: Node, query: List[JsObject]): List[Node] = query match {
+        case Nil => List(xml)
+        case selector::trail => {
+            // Get the element based on the type of selector
+            val selectType = (selector \ "type").as[String]
+            val selectString = (selector \ "string").as[String]
+            selectType match {
+                case "\\" => (xml \ selectString).asInstanceOf[NodeSeq].flatMap(xmlQueryParser(_, trail)).toList
+                case _ => (xml \\ selectString).asInstanceOf[NodeSeq].flatMap(xmlQueryParser(_, trail)).toList
+            }
+        }
+    }
+    
+    /**
+     * Converts an XML document into a map
+     */
+    def xmlToMap(xml: Node, trim: Boolean = true, nonEmpty: Boolean = true): Map[String, Any] = {
+        // Parse the node itself
+        val label = xml.label
+        val attributes = xml.attributes.asAttrMap
+        val text = if (trim) xml.text.trim else xml.text
+        
+        // Parse children
+        val children = xml.child.filter(el => if (nonEmpty) !el.text.trim.isEmpty else true).map(child => {
+            // Recurse
+            xmlToMap(child, trim, nonEmpty)
+        })
+        
+        // Return result
+        Map(label -> Map(
+                "attributes" -> attributes,
+                "text" -> text,
+                "children" -> children.toList
+        ))
     }
 }
