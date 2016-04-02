@@ -406,7 +406,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                         SmallestMailboxPool(instanceCount).props(
                                             Props(clazz, refererName, resultName, processorEnumeratees, dr.sourceActor)
                                         ),
-                                        name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + idString
+                                        name = dr.configName.replaceAll("/| ", "_") +  "_" + clazz.getName +  "_" + idString
                                     )
                                 }
                                 else
@@ -414,7 +414,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                         SmallestMailboxPool(instanceCount).props(
                                             Props(clazz, resultName, processorEnumeratees, dr.sourceActor)
                                         ),
-                                        name = dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + idString
+                                        name = dr.configName.replaceAll("/| ", "_") +  "_" + clazz.getName +  "_" + idString
                                     )
                             }
                             

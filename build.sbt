@@ -99,7 +99,10 @@ lazy val mlDependencies = Seq(
 lazy val dlDependencies = Seq(
     cache,
     "org.scalanlp" %% "breeze" % "0.10",
-    "org.deeplearning4j" % "deeplearning4j-core" % "0.0.3.3.4.alpha2",
+    "org.deeplearning4j" % "deeplearning4j-core" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "com.typesafe.akka")),
+    "org.deeplearning4j" % "deeplearning4j-nlp" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "com.typesafe.akka")),
+    "org.nd4j" % "nd4j-x86" % "0.4-rc3.8",
+    "org.nd4j" % "canova-api" % "0.0.0.14",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
