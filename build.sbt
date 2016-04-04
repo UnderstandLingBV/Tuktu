@@ -99,8 +99,8 @@ lazy val mlDependencies = Seq(
 lazy val dlDependencies = Seq(
     cache,
     "org.scalanlp" %% "breeze" % "0.10",
-    "org.deeplearning4j" % "deeplearning4j-core" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "com.typesafe.akka")),
-    "org.deeplearning4j" % "deeplearning4j-nlp" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "com.typesafe.akka")),
+    "org.deeplearning4j" % "deeplearning4j-core" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "org.spark-project"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote")),
+    "org.deeplearning4j" % "deeplearning4j-nlp" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "org.spark-project"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote")),
     "org.nd4j" % "nd4j-x86" % "0.4-rc3.8",
     "org.nd4j" % "canova-api" % "0.0.0.14",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
@@ -235,6 +235,7 @@ lazy val dl = (project in file("modules/deeplearn"))
     .settings(scalaVersion := "2.11.7")
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= dlDependencies)
+    .settings(dependencyOverrides += "io.netty" % "netty" % "3.9.3.Final")
     .settings(EclipseKeys.skipParents in ThisBuild := false)
     .aggregate(api, ml)
     .dependsOn(api, ml)
