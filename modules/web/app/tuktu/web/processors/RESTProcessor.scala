@@ -1,18 +1,18 @@
 package tuktu.web.processors
 
-import play.api.libs.iteratee.Enumeratee
-import tuktu.api._
-import play.api.libs.json.JsObject
-import tuktu.api.BaseProcessor
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+
+import akka.util.Timeout
+import play.api.Play.current
+import play.api.cache.Cache
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import play.api.libs.ws.WS
-import play.api.Play.current
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
-import akka.util.Timeout
-import play.api.cache.Cache
+import tuktu.api._
+import tuktu.api.BaseProcessor
 
 /**
  * Makes REST requests to a URL
@@ -31,7 +31,7 @@ class RESTProcessor(resultName: String) extends BaseProcessor(resultName) {
         requestBody = (config \ "body").asOpt[JsValue]
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Get all future responses 
         val responses = Future.sequence(for (datum <- data.data) yield {
             // Build URL
@@ -56,15 +56,14 @@ class RESTProcessor(resultName: String) extends BaseProcessor(resultName) {
             }
         })
 
-        // Wait for all responses to come in
-        val replies = Await.result(responses, timeout.duration)
-
         // Now combine replies with data
-        new DataPacket(
-            for ((datum, reply) <- data.data.zip(replies)) yield {
-                datum + (resultName -> reply)
-            }
-        )
+        responses.map(replies => {
+            new DataPacket(
+                for ((datum, reply) <- data.data.zip(replies)) yield {
+                    datum + (resultName -> reply)
+                }
+            )
+        })
     })
 
 }
