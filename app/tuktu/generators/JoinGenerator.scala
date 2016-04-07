@@ -80,6 +80,8 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
     var stopPacketCounter = 0
     
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case config: JsValue => {
             // Get the list of nodes to perform the join on, must all be Tuktu nodes
             val nodeList = {

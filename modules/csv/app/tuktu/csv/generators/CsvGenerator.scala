@@ -118,6 +118,8 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
     var csvGenActor: ActorRef = _
 
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case config: JsValue => {
             // Get filename
             val fileName = (config \ "filename").as[String]

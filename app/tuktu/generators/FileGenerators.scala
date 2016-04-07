@@ -82,6 +82,8 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
     var lineGenActor: ActorRef = _
     
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case config: JsValue => {
             // Get filename
             val fileName = (config \ "filename").as[String]
