@@ -30,7 +30,14 @@ class DecisionTreeTrainProcessor(resultName: String) extends BaseMLTrainProcesso
         val records = for (datum <- data) yield {
             // Get the data
             (datum(dataField).asInstanceOf[Seq[Double]].toArray,
-                    datum(labelField).asInstanceOf[Int])
+                    {
+                        datum(labelField) match {
+                            case a: Double => a.toInt
+                            case a: String => a.toInt
+                            case a: Int => a
+                            case a: Any => a.toString.toInt
+                        }
+                    })
         }
         
         // Train the regression model

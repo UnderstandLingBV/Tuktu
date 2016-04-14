@@ -23,16 +23,31 @@ import tuktu.web.js.JSGeneration
 import tuktu.api.WebJsOrderedObject
 
 object Application extends Controller {
+    val source = scala.io.Source.fromFile(Play.application.getFile("public/images/pixel.gif"))(scala.io.Codec.ISO8859)
+    val byteArray = source.map(_.toByte).toArray
+    source.close()
+
     /**
      * Handles a polymorphic JS-request
      */
-    def handleRequest(idOption: Option[String], referer: Option[String], request: Request[AnyContent], isInitial: Boolean): Future[Result] = {
+    def handleRequest(idOption: Option[String], referer: Option[String], request: Request[AnyContent],
+            isInitial: Boolean, image: Boolean = false): Future[Result] = {
         if (idOption.isEmpty && referer.isEmpty)
-            Future { BadRequest("// No referrer found in HTTP headers.") }
+            Future {
+                if (image)
+                    Ok(byteArray).as("image/gif")
+                else
+                    BadRequest("// No referrer found in HTTP headers.")
+            }
         else {
             val id = idOption.getOrElse(referer.get)
             Play.current.configuration.getString("tuktu.webrepo") match {
-                case None => Future { BadRequest("// No repository for JavaScripts and Tuktu flows set in Tuktu configuration.") }
+                case None => Future {
+                    if (image)
+                        Ok(byteArray).as("image/gif")
+                    else
+                        BadRequest("// No repository for JavaScripts and Tuktu flows set in Tuktu configuration.")
+                }
                 case Some(webRepo) => {
                     // Get the referer
                     val referrer = request.headers.get("referer")
@@ -42,7 +57,12 @@ object Application extends Controller {
 
                     // Check if JS actor is running
                     if (!actorRefMap.contains(id))
-                        Future { BadRequest("// The analytics script is not enabled.") }
+                        Future {
+                            if (image)
+                                Ok(byteArray).as("image/gif")
+                            else
+                                BadRequest("// The analytics script is not enabled.")
+                        }
                     else {
                         implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
                         // Get body data and potentially the name of the next flow
@@ -75,7 +95,12 @@ object Application extends Controller {
                         val resultFut = if (isInitial) {
                             // Send the Actor a DataPacket
                             val actorRef = actorRefMap(id)
-                            actorRef ? dataPacket
+                            if (image) {
+                                actorRef ! dataPacket
+                                Future {}
+                            }
+                            else
+                                actorRef ? dataPacket
                         } else {
                             // Since this is not the default flow, we have to see if this one is running, and start
                             // if if this is not the case
@@ -109,7 +134,9 @@ object Application extends Controller {
                         }
 
                         // Return result
-                        resultFut.map {
+                        if (image)
+                            Future { Ok(byteArray).as("image/gif") }
+                        else resultFut.map {
                             case dp: DataPacket =>
                                 // Get all the JS elements and output them one after the other
                                 val jsResult = JSGeneration.PacketToJsBuilder(dp)
@@ -167,5 +194,12 @@ object Application extends Controller {
      */
     def webGet(id: String) = Action.async { implicit request =>
         handleRequest(Some(id), None, request, false)
+    }
+    
+    /**
+     * Serves an image instead of some JS
+     */
+    def imgGet(id: String) = Action.async { implicit request =>
+        handleRequest(Some(id), None, request, false, true)
     }
 }

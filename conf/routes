@@ -60,6 +60,7 @@ GET     /Tuktu.js/:id                       controllers.web.Application.TuktuJsG
 GET     /Tuktu.js                           controllers.web.Application.TuktuJs
 POST    /Tuktu.js/:id                       controllers.web.Application.webGet(id)
 POST    /Tuktu.js                           controllers.web.Application.web
+GET     /Tuktu.gif/:id                      controllers.web.Application.imgGet(id)
 
 # API
 ->      /api/v1                             restapi.Routes

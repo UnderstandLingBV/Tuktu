@@ -25,14 +25,14 @@ class ConvertToNumber(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        for (datum <- data) yield {
+        new DataPacket(for (datum <- data.data) yield {
             val result = datum(field) match {
                 // Convert each element of a sequence
                 case s: Seq[Any] => s.map(any => numberToType(anyToNumber(any)))
                 case any: Any    => numberToType(anyToNumber(any))
             }
             datum + (resultName -> result)
-        }
+        })
     })
 
     private def anyToNumber(any: Any): Number = any match {

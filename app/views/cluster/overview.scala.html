@@ -1,5 +1,5 @@
 @import tuktu.api.ClusterNode
-@(messages: Map[String, List[String]], configRepo: String, homeAddress: String, logLevel: String, timeout: Int, clusterNodes: scala.collection.mutable.Map[String, ClusterNode])
+@(messages: Map[String, List[String]], configRepo: String, homeAddress: String, logLevel: String, timeout: Int, clusterNodes: scala.collection.mutable.Map[String, ClusterNode], otherParams: Map[String, String])
 
 @index("Cluster Info", messages) {
     @clusterMenu()

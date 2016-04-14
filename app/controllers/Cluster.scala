@@ -36,7 +36,8 @@ object Cluster extends Controller {
 
         Ok(views.html.cluster.overview(
                 util.flashMessagesToMap(request),
-                configRepo, homeAddress, logLevel, timeout, clusterNodes
+                configRepo, homeAddress, logLevel, timeout, clusterNodes,
+                Map.empty[String, String]
         ))
     }
     
