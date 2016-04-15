@@ -244,7 +244,7 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
         case None => processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
     }
 
-    def cleanup() = {
+    def cleanup(sendEof: Boolean): Unit = {
         // Send message to the monitor actor
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
                 self,
@@ -255,10 +255,15 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
         Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
             .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) -= self
 
-        channel.eofAndEnd
+        if (sendEof)
+            channel.eofAndEnd
+        else
+            channel.end
         //context.stop(self)
         self ! PoisonPill
     }
+    
+    def cleanup(): Unit = cleanup(true)
     
     def backoff() = {
         cancellable.cancel

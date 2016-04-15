@@ -132,7 +132,7 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
         }
         case sp: StopPacket => {
             Option(lineGenActor) collect { case actor => actor ! PoisonPill }
-            cleanup
+            cleanup(false)
         }
         case ip: InitPacket               => setup
         case data: List[Map[String, Any]] => channel.push(new DataPacket(data))
