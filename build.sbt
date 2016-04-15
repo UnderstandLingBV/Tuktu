@@ -14,7 +14,8 @@ mappings in Universal ++=
 	(file("configs/analytics/localhost").*** pair basic) ++
 	Seq(file("nft.data") -> "nft.data",
 		file("configs/crime_tutorial_example.json") -> "configs/crime_tutorial_example.json",		
-		file("configs/social_tutorial_example.json") -> "configs/social_tutorial_example.json"
+		file("configs/social_tutorial_example.json") -> "configs/social_tutorial_example.json",
+		file("public/images/pixel.gif") -> "public/images/pixel.gif"
 	)
 
 lazy val appResolvers = Seq(
