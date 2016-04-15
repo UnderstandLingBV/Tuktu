@@ -95,6 +95,7 @@ object Application extends Controller {
                         val resultFut = if (isInitial) {
                             // Send the Actor a DataPacket
                             val actorRef = actorRefMap(id)
+                            
                             if (image) {
                                 actorRef ! dataPacket
                                 Future {}
@@ -200,6 +201,6 @@ object Application extends Controller {
      * Serves an image instead of some JS
      */
     def imgGet(id: String) = Action.async { implicit request =>
-        handleRequest(Some(id), None, request, false, true)
+        handleRequest(Some(id), None, request, true, true)
     }
 }
