@@ -16,6 +16,16 @@ import play.api.mvc.Controller
 import tuktu.api._
 import java.nio.file.Paths
 import java.nio.file.Files
+import scala.concurrent.duration.Duration
+import akka.actor.ActorRef
+import akka.actor.ActorLogging
+import akka.actor.Actor
+import akka.actor.Props
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.Concurrent.Channel
+import play.api.libs.iteratee.Concurrent
+import akka.actor.PoisonPill
+import play.api.libs.iteratee.Input
 
 /**
  * Controller for all REST API functionality of Tuktu
@@ -132,31 +142,90 @@ object RESTAPI extends Controller {
     }
     
     /**
+     * Helps in setting up a job and streaming the result back
+     */
+    class jobHelperActor(name: String, config: Option[JsObject], sendData: Option[JsObject], parent: ActorRef) extends Actor with ActorLogging {
+        val (enum, channel) = Concurrent.broadcast[JsObject]
+        
+        def receive() = {
+            case ip: InitPacket => {
+                val generator = (Akka.system.actorSelection("user/TuktuDispatcher") ?
+                        new DispatchRequest(name, config, false, true, true, None)).asInstanceOf[Future[ActorRef]]
+                generator.map {
+                    case gen: ActorRef => {
+                        sendData match {
+                            case None => {}
+                            case Some(data) => gen ! data
+                        }
+                    }
+                }
+                sender ! enum
+            }
+            case dp: DataPacket => dp.data.foreach(datum => channel.push(utils.MapToJsObject(datum, false)))
+            case sp: StopPacket => {
+                channel.push(Input.EOF)
+                self ! PoisonPill
+            }
+        }
+    }
+    
+    /**
      * Starts a job, either by config name, or by provided config file as POST body
      */
     def start() = Action.async { request =>
-        Future {
-            try {
-                // Get job name from post body, or config if there is no name
-                val postBody = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
-                if (postBody.keys.contains("name") && !postBody.keys.contains("config")) {
-                    // We have a config name
-                    Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(
-                            (postBody \ "name").as[String], None, false, false, false, None
-                    )
-                    Ok("")
+        try {
+            // Get job name from post body, or config if there is no name
+            val postBody = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
+            // Should we return the result of this flow or not?
+            val returnResult = (postBody \ "result").asOpt[Boolean].getOrElse(false)
+            
+            // Handle config
+            val config = if (postBody.keys.contains("name") && !postBody.keys.contains("config"))
+                    None
+                else if (postBody.keys.contains("name") && postBody.keys.contains("config"))
+                    Some((postBody \ "config").as[JsObject])
+                else null
+                
+            // See if we need to send data to the actor
+            val sendData = if (postBody.keys.contains("data")) {
+                Some((postBody \ "data").as[JsObject])
+            } else None
+            
+            if (config == null) Future { BadRequest(Json.obj("error" -> "Bad POST body")) }
+            else {
+                // Determine if we need to wait for the result or not
+                if (returnResult) {
+                    // Set up helper actor
+                    val helper = Akka.system.actorOf(Props(classOf[jobHelperActor],
+                            (postBody \ "name").as[String], config, sendData), java.util.UUID.randomUUID.toString)
+                    val fut = (helper ? new InitPacket).asInstanceOf[Future[Enumerator[JsObject]]]
+            
+                    fut.map(enum =>
+                        // Stream the results
+                        Ok.chunked(enum))
+                } else {
+                    sendData match {
+                        case None => {
+                            Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest((postBody \ "name").as[String], config, false, false, false, None)
+                            Future { Ok("") }
+                        }
+                        case Some(data) => {
+                            // We need to send the generator data to kick it off apparently
+                            val gen = Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest((postBody \ "name").as[String], config, false, true, false, None)
+                            gen.map {
+                                case g: ActorRef => {
+                                    g ! new DataPacket(List(utils.JsObjectToMap(data)))
+                                    Ok("")
+                                }
+                                case _: Any => BadRequest(Json.obj("error" -> "Couldn't obtain generator from Dispatcher"))
+                            }
+                        }
+                    }
                 }
-                else if (postBody.keys.contains("name") && postBody.keys.contains("config")) {
-                    // Config is given in the request
-                    Akka.system.actorSelection("user/TuktuDispatcher") ! new DispatchRequest(
-                            (postBody \ "name").as[String], Some((postBody \ "config").as[JsObject]), false, false, false, None
-                    )
-                    Ok("")
-                } else BadRequest(Json.obj("error" -> "Bad POST body"))
             }
-            catch {
-                case e: Throwable => BadRequest(Json.obj("error" -> e.getMessage))
-            }
+        }
+        catch {
+            case e: Throwable => Future { BadRequest(Json.obj("error" -> e.getMessage)) }
         }
     }
     
