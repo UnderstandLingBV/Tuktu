@@ -1,0 +1,23 @@
+{
+	"name": "Remove Empty Packet Processor",
+	"description": "Removes data packets from the stream that contain no data.",
+	"class": "tuktu.processors.RemoveEmptyPacketProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": []
+		}
+	]
+}
