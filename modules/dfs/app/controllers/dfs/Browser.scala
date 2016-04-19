@@ -107,7 +107,7 @@ object Browser extends Controller {
             }
             case tcp: TDFSContentPacket => channel.push(tcp.content)
             case sp: StopPacket => {
-                channel.push(Input.EOF)
+                channel.eofAndEnd()
                 self ! PoisonPill
             }
         }

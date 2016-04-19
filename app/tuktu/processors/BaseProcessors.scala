@@ -934,3 +934,10 @@ class XmlToMapProcessor(resultName: String) extends BaseProcessor(resultName) {
         })
     })
 }
+
+/**
+ * Filters out empty data packets
+ */
+class RemoveEmptyPacketProcessor(resultName: String) extends BaseProcessor(resultName) {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.filter(!_.data.isEmpty)
+}

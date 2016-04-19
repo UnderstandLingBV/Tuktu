@@ -262,11 +262,12 @@ object Dispatcher {
         // First build all Enumeratees
         (
                 idString,
-                for ((nextId, index) <- nextIds.zipWithIndex) yield
+                for ((nextId, index) <- nextIds.zipWithIndex) yield {
                     // Prepend a start packet for the monitor and append a stop packet
                     monitorEnumeratee(idString, index.toString, BeginType) compose
                     buildSequential(nextId, utils.logEnumeratee[DataPacket](idString, configName, nextId), 0, index.toString) compose
-                    monitorEnumeratee(idString, index.toString, EndType),
+                    monitorEnumeratee(idString, index.toString, EndType)
+                },
                 subflows toList
         )
     }

@@ -124,7 +124,7 @@ object Global extends WithFilters(CorsFilter) with GlobalSettings {
      */
     override def onHandlerNotFound(request: RequestHeader) = {
         Future.successful(NotFound(
-            Json.obj("error" -> "API endpoint not found")))
+            Json.obj("error" -> "Endpoint not found")))
     }
 
     /**
@@ -132,7 +132,7 @@ object Global extends WithFilters(CorsFilter) with GlobalSettings {
      */
     override def onBadRequest(request: RequestHeader, error: String) = {
         Future.successful(BadRequest(
-            Json.obj("error" -> "API endpoint not found")))
+            Json.obj("error" -> "Bad request")))
     }
 
     override def onStop(app: Application) {

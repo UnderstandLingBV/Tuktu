@@ -144,18 +144,21 @@ object RESTAPI extends Controller {
     /**
      * Helps in setting up a job and streaming the result back
      */
-    class jobHelperActor(name: String, config: Option[JsObject], sendData: Option[JsObject], parent: ActorRef) extends Actor with ActorLogging {
+    class jobHelperActor(name: String, config: Option[JsObject], sendData: Option[JsObject]) extends Actor with ActorLogging {
         val (enum, channel) = Concurrent.broadcast[JsObject]
         
         def receive() = {
             case ip: InitPacket => {
                 val generator = (Akka.system.actorSelection("user/TuktuDispatcher") ?
-                        new DispatchRequest(name, config, false, true, true, None)).asInstanceOf[Future[ActorRef]]
+                        new DispatchRequest(name, config, false, true, true, Some(self))).asInstanceOf[Future[ActorRef]]
                 generator.map {
                     case gen: ActorRef => {
                         sendData match {
                             case None => {}
-                            case Some(data) => gen ! data
+                            case Some(data) => {
+                                gen ! new DataPacket(List(utils.JsObjectToMap(data)))
+                                gen ! Input.EOF
+                            }
                         }
                     }
                 }
@@ -163,7 +166,7 @@ object RESTAPI extends Controller {
             }
             case dp: DataPacket => dp.data.foreach(datum => channel.push(utils.MapToJsObject(datum, false)))
             case sp: StopPacket => {
-                channel.push(Input.EOF)
+                channel.eofAndEnd()
                 self ! PoisonPill
             }
         }
@@ -202,7 +205,8 @@ object RESTAPI extends Controller {
             
                     fut.map(enum =>
                         // Stream the results
-                        Ok.chunked(enum))
+                        Ok.chunked(enum)
+                    )
                 } else {
                     sendData match {
                         case None => {
