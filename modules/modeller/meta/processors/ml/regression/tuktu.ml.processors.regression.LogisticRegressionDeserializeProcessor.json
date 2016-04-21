@@ -45,16 +45,25 @@
 					"default": false
 				},
 				{
-					"name": "learn_rate",
-					"type": "int",
-					"required": true,
-					"description": "The learning rate."
+					"name": "lambda",
+					"type": "double",
+					"required": false,
+					"description": "The lambda parameter (shrinkage/regularization). Set to > 0 for regularization (typically generalizes better).",
+					"default": 0.0
 				},
 				{
-					"name": "num_iterations",
+					"name": "tolerance",
+					"type": "double",
+					"required": false,
+					"description": "The stopping tolerance criterium for BFGS.",
+					"default": 1E-5
+				},
+				{
+					"name": "max_iterations",
 					"type": "int",
-					"required": true,
-					"description": "The number of iterations of going over the data."
+					"required": false,
+					"description": "The maximum number of iterations.",
+					"default": 500
 				}
 			]
 		}

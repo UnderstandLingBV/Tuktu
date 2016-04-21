@@ -16,46 +16,51 @@ import tuktu.ml.processors.BaseMLApplyProcessor
  * Trains a logistic regression classifier
  */
 class LogisticRegressionTrainProcessor(resultName: String) extends BaseMLTrainProcessor[LogisticRegression](resultName) {
-    var learnRate = 0
-    var nIterations = 0
-    var batchSize = 0
     var dataField = ""
     var labelField = ""
     
+    var lambda: Double = _
+    var tolerance: Double = _
+    var maxIterations: Int = _
+    
+    var trainOnNewData: Boolean = false
+    
     override def initialize(config: JsObject) {
         // Get parameters
-        learnRate = (config \ "learn_rate").as[Int]
-        nIterations = (config \ "num_iterations").as[Int]
-        batchSize = (config \ "batch_size").asOpt[Int].getOrElse(10)
         dataField = (config \ "data_field").as[String]
         labelField = (config \ "label_field").as[String]
+        
+        lambda = (config \ "lambda").asOpt[Double].getOrElse(0.0)
+        tolerance = (config \ "tolerance").asOpt[Double].getOrElse(1E-5)
+        maxIterations = (config \ "max_iterations").asOpt[Int].getOrElse(500)
+        
+        trainOnNewData = (config \ "train_on_new_data").asOpt[Boolean].getOrElse(false)
 
         super.initialize(config)
     }
 
     override def instantiate(): LogisticRegression =
-        new LogisticRegression(learnRate, nIterations)
+        new LogisticRegression(lambda, tolerance, maxIterations)
     
     // Trains the logistic regression classifier
     override def train(data: List[Map[String, Any]], model: LogisticRegression): LogisticRegression = {
-        val records = {
-            val res = for (datum <- data) yield {
-                // Get the data
-                (datum(dataField).asInstanceOf[Seq[Int]].toArray,
-                        datum(labelField).asInstanceOf[Int])
+        for (datum <- data) yield {
+            // Get the data
+            val data = datum(dataField).asInstanceOf[Seq[Double]].toArray
+            val label = datum(labelField) match {
+                case a: Int => a
+                case a: Double => a.toInt
+                case a: Long => a.toInt
+                case a: Any => a.toString.toInt
             }
-            // Batched or not?
-            if (batchSize == 0) Iterator(res)
-            else res.grouped(batchSize)
+            
+            // Add it
+            model.addData(Array(data), Array(label))
         }
         
-        // Further train the regression model
-        records.foreach(record => {
-            // Split data and labels
-            val trainData = record.map(_._1).toArray
-            val labels = record.map(_._2).toArray
-            model.train(trainData, labels, false)
-        })
+        // Check if we need to retrain
+        if (trainOnNewData)
+            model.train
         
         model
     }
@@ -76,7 +81,7 @@ class LogisticRegressionApplyProcessor(resultName: String) extends BaseMLApplyPr
     // Classify using our logistic regression model
     override def applyModel(resultName: String, data: List[Map[String, Any]], model: LogisticRegression): List[Map[String, Any]] = {
         for (datum <- data) yield
-            datum + (resultName -> model.classify(datum(dataField).asInstanceOf[Seq[Int]].toArray))
+            datum + (resultName -> model.classify(datum(dataField).asInstanceOf[Seq[Double]].toArray))
     }
 }
 
@@ -84,19 +89,21 @@ class LogisticRegressionApplyProcessor(resultName: String) extends BaseMLApplyPr
  * Deserializes a logistic regression model
  */
 class LogisticRegressionDeserializeProcessor(resultName: String) extends BaseMLDeserializeProcessor[LogisticRegression](resultName) {
-    var learnRate = 0
-    var nIterations = 0
+    var lambda: Double = _
+    var tolerance: Double = _
+    var maxIterations: Int = _
     
     override def initialize(config: JsObject) {
-        // Get learn rate and iteration count
-        learnRate = (config \ "learn_rate").as[Int]
-        nIterations = (config \ "num_iterations").as[Int]
+        // Get parameters
+        lambda = (config \ "lambda").asOpt[Double].getOrElse(0.0)
+        tolerance = (config \ "tolerance").asOpt[Double].getOrElse(1E-5)
+        maxIterations = (config \ "max_iterations").asOpt[Int].getOrElse(500)
 
         super.initialize(config)
     }
     
     override def deserializeModel(filename: String) = {
-        val model = new LogisticRegression(learnRate, nIterations)
+        val model = new LogisticRegression(lambda, tolerance, maxIterations)
         model.deserialize(filename)
         model
     }

@@ -46,7 +46,7 @@
 				},
 				{
 					"name": "lambda",
-					"description": "The shrinkage/regularization parameter (must be bigger than 0)",
+					"description": "The shrinkage/regularization parameter (must be bigger than or equal to 0)",
 					"type": "double",
 					"required": true
 				}

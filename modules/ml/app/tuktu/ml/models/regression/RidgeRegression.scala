@@ -26,9 +26,8 @@ class RidgeRegression(lambda: Double) extends BaseModel with Operators {
 	    currentLabels ++= y
 	}
     
-    def train() = {
+    def train() =
         model = new regression.RidgeRegression(currentData, currentLabels, lambda)
-    }
 	
 	/**
      * Predicts a Y-value for X-values

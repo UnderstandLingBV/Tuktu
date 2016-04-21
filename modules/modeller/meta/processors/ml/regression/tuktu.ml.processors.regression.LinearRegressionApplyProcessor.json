@@ -35,7 +35,7 @@
 					"name": "data_field",
 					"type": "string",
 					"required": true,
-					"description": "The field the data resides in. Data must be of type Seq[Int]."
+					"description": "The field the data resides in. Data must be of type Seq[Double]."
 				},
 				{
 					"name": "estimate",

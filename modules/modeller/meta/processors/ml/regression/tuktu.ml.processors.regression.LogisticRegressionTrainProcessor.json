@@ -39,29 +39,31 @@
 					"default": false
 				},
 				{
-					"name": "learn_rate",
-					"type": "int",
-					"required": true,
-					"description": "The learning rate."
+					"name": "lambda",
+					"type": "double",
+					"required": false,
+					"description": "The lambda parameter (shrinkage/regularization). Set to > 0 for regularization (typically generalizes better).",
+					"default": 0.0
 				},
 				{
-					"name": "num_iterations",
-					"type": "int",
-					"required": true,
-					"description": "The number of iterations of going over the data."
+					"name": "tolerance",
+					"type": "double",
+					"required": false,
+					"description": "The stopping tolerance criterium for BFGS.",
+					"default": 1E-5
 				},
 				{
-					"name": "batch_size",
+					"name": "max_iterations",
 					"type": "int",
 					"required": false,
-					"description": "The batch size used to iteratively train the model, set to 0 to use all data.",
-					"default": 0
+					"description": "The maximum number of iterations.",
+					"default": 500
 				},
 				{
 					"name": "data_field",
 					"type": "string",
 					"required": true,
-					"description": "The field the data resides in. Data must be of type Seq[Int]."
+					"description": "The field the data resides in. Data must be of type Seq[Double]."
 				},
 				{
 					"name": "label_field",
