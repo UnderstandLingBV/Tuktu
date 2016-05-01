@@ -56,6 +56,13 @@ class DataMonitor extends Actor with ActorLogging {
             for (subflow <- fmp.subflows)
                 subflowMap += subflow.path.toStringWithoutAddress -> fmp.mailbox.path.toStringWithoutAddress
         }
+        case bpnp: BackPressureNotificationPacket => {
+            // Notify the generator(s)
+            // TODO: If a generator is executed multiple times, we should know which instance is actually blocking here
+            if (appMonitor.contains(bpnp.idString)) {
+                appMonitor(bpnp.idString).actors.foreach(actor => actor ! new BackPressurePacket())
+            }
+        }
         case aip: AppInitPacket => {
             if (!appMonitor.contains(aip.uuid))
                 appMonitor = appMonitor.filterNot(_._2.is_expired) + (aip.uuid -> new AppMonitorObject(aip.uuid, aip.instanceCount, aip.timestamp))

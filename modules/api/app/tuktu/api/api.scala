@@ -3,7 +3,6 @@ package tuktu.api
 import scala.collection.GenTraversableOnce
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -21,6 +20,8 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
+import java.util.concurrent.LinkedBlockingQueue
+import scala.concurrent.Future
 
 case class DataPacket(
         data: List[Map[String, Any]]
@@ -44,12 +45,13 @@ case class DispatchRequest(
 )
 
 case class InitPacket()
-
 case class StopPacket()
 
 case class BackPressurePacket()
-
 case class DecreasePressurePacket()
+case class BackPressureNotificationPacket(
+        idString: String
+)
 
 case class ResponsePacket(
         json: JsValue
@@ -222,14 +224,35 @@ abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends B
 abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
-    val pushTimeOut = Play.current.configuration.getInt("tuktu.mailbox.push-timeout").getOrElse(100)
-    private var backOffCount = 1
-    private var cancellable: Cancellable = _
 
     // Add our parent (the Router of this Routee) to cache
     Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
         .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) += self -> context.parent
 
+    var bpSent = false
+    // Back pressure support for Iteratee API->actors
+    val bpProcessors = for (processor <- processors) yield {
+        // Create blocking queue
+        val queue = new LinkedBlockingQueue[Boolean](Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000))
+        
+        // Add the pushing Enumeratee upfront and the pulling Enumeratee at the back
+        Enumeratee.mapM((dp: DataPacket) => Future {
+            // Check if full
+            if (queue.remainingCapacity == 0 && !bpSent) {
+                // Send back pressure packet
+                self ! new BackPressurePacket
+                bpSent = true
+            }
+            
+            queue.put(true)
+            dp
+        }) compose processor compose Enumeratee.mapM((dp: DataPacket) => Future {
+            queue.take
+            bpSent = false
+            dp
+        })
+    }
+    
     // Set up pipeline, either one that sends back the result, or one that just sinks
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     senderActor match {
@@ -239,9 +262,9 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
                 ref ! dp
                 dp
             }) compose Enumeratee.onEOF(() => ref ! new StopPacket)
-            processors.foreach(processor => enumerator |>> (processor compose sendBackEnumeratee) &>> sinkIteratee)
+            bpProcessors.foreach(processor => enumerator |>> (processor compose sendBackEnumeratee) &>> sinkIteratee)
         }
-        case None => processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
+        case None => bpProcessors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
     }
 
     def cleanup(sendEof: Boolean): Unit = {
@@ -264,27 +287,32 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     }
     
     def cleanup(): Unit = cleanup(true)
-    
-    def backoff() = {
-        cancellable.cancel
         
+    // Back pressure handling
+    val backOffInterval = Play.current.configuration.getInt("tuktu.monitor.bounce_ms").getOrElse(20)
+    val maxBackOff = Play.current.configuration.getInt("tuktu.monitor.max_bounce").getOrElse(6)
+    private var backOffCount = 0
+    /**
+     * Backoff method dealing with back-pressure 
+     */
+    def backoff() = {
+        // Also notify our potential sender actor
+        senderActor match {
+            case None => {}
+            case Some(ar) => ar ! new BackPressurePacket()
+        }
         // We are pushing too fast, back off
-        Thread.sleep(backOffCount * pushTimeOut)
+        Thread.sleep(Math.pow(2, backOffCount).toLong * backOffInterval)
         
         // To turn it back down
-        cancellable = Akka.system.scheduler.schedule(pushTimeOut milliseconds,
-                pushTimeOut milliseconds,
-                self,
-                new DecreasePressurePacket())
+        self ! new DecreasePressurePacket()
         
         // Increment
-        backOffCount *= 2
+        if (backOffCount < maxBackOff)
+            backOffCount += 1
     }
     
-    def decBP() {
-        backOffCount /= 2
-        if (backOffCount == 1) cancellable.cancel
-    }
+    def decBP() = if (backOffCount >= 0) backOffCount -= 1 else backOffCount = 0
 
     def setup() = {}
 
