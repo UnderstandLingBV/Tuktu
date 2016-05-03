@@ -25,7 +25,6 @@ object file {
         uri.getScheme match {
             case "file" | "" | null => fileReader(uri)
             case "hdfs"             => hdfsReader(uri)
-            case "tdfs"             => dfsReader(uri)
             case _                  => throw new Exception("Unknown file format")
         }
     }
@@ -56,10 +55,5 @@ object file {
         val fs = FileSystem.get(conf)
         val path = new Path(uri.getPath)
         new BufferedReader(new InputStreamReader(fs.open(path), codec.decoder))
-    }
-
-    def dfsReader(uri: URI)(implicit codec: Codec) = {
-        val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
-        new BufferedDFSReader(new InputStreamReader(new FileInputStream(prefix + "/" + uri.getSchemeSpecificPart), codec.name), uri.getSchemeSpecificPart)
     }
 }

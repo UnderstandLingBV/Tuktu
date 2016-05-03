@@ -28,6 +28,8 @@ import play.api.Logger
  */
 class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case ip: InitPacket => setup
         case config: JsValue => { }
         case sp: StopPacket => cleanup

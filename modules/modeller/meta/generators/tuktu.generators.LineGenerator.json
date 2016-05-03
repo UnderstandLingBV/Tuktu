@@ -86,20 +86,6 @@
 					"type": "int",
 					"default": 1000,
 					"required": false
-				},
-				{
-					"name": "backoff_interval",
-					"description": "After reading this many batches, we backoff for a while to make sure we don't flood the flow.",
-					"type": "int",
-					"default": 1000,
-					"required": false
-				},
-				{
-					"name": "backoff_amount",
-					"description": "This is the amount of milliseconds to backoff for.",
-					"type": "int",
-					"default": 10,
-					"required": false
 				}
 			]
 		}

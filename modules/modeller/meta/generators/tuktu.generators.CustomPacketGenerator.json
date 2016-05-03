@@ -55,7 +55,7 @@
 				},
 				{
 					"name": "packet",
-					"description": "The tuktu data packet (expressed as a JSON array of JSON objects) to send every tick.",
+					"description": "The tuktu data packet (expressed as a JSON array or JSON objects) to send every tick.",
 					"type": "string",
 					"required": true
 				},

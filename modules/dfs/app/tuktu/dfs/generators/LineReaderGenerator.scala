@@ -11,11 +11,15 @@ import tuktu.dfs.actors.TDFSReadInitiateRequest
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import tuktu.dfs.actors.TDFSContentPacket
+import tuktu.api.BackPressurePacket
+import tuktu.api.DecreasePressurePacket
 
 /**
  * Reads a file from TDFS line by line
  */
 class TDFSLineReaderGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var lineOffset = 0
+    
     override def receive() = {
         case config: JsValue => {
             // Get file parameters
@@ -31,11 +35,14 @@ class TDFSLineReaderGenerator(resultName: String, processors: List[Enumeratee[Da
             )
         }
         case tcp: TDFSContentPacket => {
-            // TODO: Incorporate start and end line
+            // Check start- and end line
+            //if (lineOffset >= startLine && lineOffset <= endLine)
             // Make a proper string and output it
             channel.push(new DataPacket(List(Map(resultName -> new String(tcp.content)))))
         }
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
     }
 }

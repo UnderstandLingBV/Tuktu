@@ -27,6 +27,8 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
     var amountSent = new AtomicInteger(0)
     
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case ip: InitPacket => setup
         case config: JsValue => {
             // Get the ticking frequency
@@ -90,6 +92,8 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
     var randomActor: ActorRef = null
     
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case ip: InitPacket => setup
         case config: JsValue => {
             // Get the ticking frequency
@@ -129,6 +133,8 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
     var separate = true
     
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case ip: InitPacket => setup
         case config: JsValue => {
             // Get the values
@@ -163,6 +169,8 @@ class CustomPacketGenerator(resultName: String, processors: List[Enumeratee[Data
     var amountSent = new AtomicInteger(0)
     
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case ip: InitPacket => setup
         case config: JsValue => {
             // Get the ticking frequency
