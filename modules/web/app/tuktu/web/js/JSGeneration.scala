@@ -11,6 +11,8 @@ import tuktu.api.WebJsFunctionObject
 import tuktu.api.WebJsSrcObject
 import tuktu.api.WebJsOrderedObject
 import play.api.Play
+import play.api.cache.Cache
+import play.api.Play.current
 
 object JSGeneration {
     /**
@@ -19,7 +21,7 @@ object JSGeneration {
     def PacketToJsBuilder(dp: DataPacket): (String, Option[String], List[String]) = {
         var nextFlow: Option[String] = None
         val includes = collection.mutable.ListBuffer.empty[String]
-        val jsField = Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")
+        val jsField = Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field"))
         
         val res = (for {
             datum <- dp.data

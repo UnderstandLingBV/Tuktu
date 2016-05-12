@@ -183,7 +183,7 @@ abstract class BaseProcessor(resultName: String) {
 }
 
 abstract class BaseJsProcessor(resultName: String) extends BaseProcessor(resultName) {
-    val jsField = Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")
+    val jsField = Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field"))
     
     def addJsElement[A <: BaseJsObject](datum: Map[String, Any], element: A): Map[String, Any] = {
         // Get the JS elements

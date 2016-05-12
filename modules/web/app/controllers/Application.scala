@@ -80,14 +80,14 @@ object Application extends Controller {
                                 "url" -> referrer.getOrElse(""),
                                 "request" -> request,
                                 "headers" -> request.headers,
-                                Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field") -> new WebJsOrderedObject(List())
+                                Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List())
                             )))
                         else {
                             new DataPacket(List(Map(
                                 // By default, add referer, request and headers
                                 "url" -> referrer.getOrElse(""),
                                 "request" -> request,
-                                Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field") -> new WebJsOrderedObject(List()),
+                                Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List()),
                                 "headers" -> request.headers) ++ bodyData.keys.map(key => key -> utils.JsValueToAny(bodyData \ key))))
                         }
 
@@ -142,8 +142,8 @@ object Application extends Controller {
                                 // Get all the JS elements and output them one after the other
                                 val jsResult = JSGeneration.PacketToJsBuilder(dp)
                                 Ok(views.js.Tuktu(jsResult._2, jsResult._1,
-                                    Play.current.configuration.getString("tuktu.url").get +
-                                    Play.current.configuration.getString("tuktu.jsurl").get + idOption.map('/' + _).getOrElse(""),
+                                    Cache.getAs[String]("web.url").getOrElse("http://localhost:9000/") +
+                                    Cache.getAs[String]("web.jsurl").getOrElse("Tuktu.js") + idOption.map('/' + _).getOrElse(""),
                                     jsResult._3))
                             case _ =>
                                 // Return blank

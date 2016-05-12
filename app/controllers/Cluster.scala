@@ -33,11 +33,22 @@ object Cluster extends Controller {
         val logLevel = Cache.getAs[String]("logLevel").getOrElse(null)
         val timeout = Cache.getAs[Int]("timeout").getOrElse(5)
         val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+        
+        // Fetch all the other parameters
+        val otherParams = List(
+                "webUrl" -> "web.url",
+                "jsurl" -> "web.jsurl",
+                "jsname" -> "web.jsname"
+        ).map(_ match {
+            case (vName, cName) => {
+                vName -> Cache.get(cName).getOrElse("").toString
+            }
+        }).toMap
 
         Ok(views.html.cluster.overview(
                 util.flashMessagesToMap(request),
                 configRepo, homeAddress, logLevel, timeout, clusterNodes,
-                Map.empty[String, String]
+                otherParams
         ))
     }
     

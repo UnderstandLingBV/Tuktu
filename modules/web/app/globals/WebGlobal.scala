@@ -27,6 +27,11 @@ class WebGlobal() extends TuktuGlobal() {
     // Initialize host map
     Cache.set("web.hostmap", collection.mutable.Map[String, ActorRef]())
     val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+
+    // Set other config directives
+    Cache.set("web.url", Play.current.configuration.getString("tuktu.url").getOrElse("http://localhost:9000/"))
+    Cache.set("web.jsurl", Play.current.configuration.getString("tuktu.jsurl").getOrElse("Tuktu.js"))
+    Cache.set("web.jsname", Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field"))
     
     /**
      * Load this on startup. The application is given as parameter
