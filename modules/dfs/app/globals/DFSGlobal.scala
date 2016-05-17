@@ -23,7 +23,7 @@ import tuktu.dfs.actors.DFSPersister
 
 class DFSGlobal() extends TuktuGlobal() {
     def loadFileTable() = {
-        val nftFile = Play.current.configuration.getString("tuktu.dfs.nft_file").getOrElse("nft.data")
+        val nftFile = Cache.getAs[String]("tuktu.dfs.nft_file").getOrElse(Play.current.configuration.getString("tuktu.dfs.nft_file").getOrElse("nft.data"))
         val source = scala.io.Source.fromFile(nftFile)
         val lines = try source.mkString finally source.close()
         // Deserialize
@@ -57,6 +57,10 @@ class DFSGlobal() extends TuktuGlobal() {
         // File table
         Cache.set("tuktu.dfs.NodeFileTable", collection.mutable.Map.empty[String, collection.mutable.ArrayBuffer[Int]])
         Cache.set("tuktu.dfs.NodeFileTable.eofs", collection.mutable.Map.empty[String, Int])
+        Cache.set("tuktu.dfs.blocksize", Play.configuration.getInt("tuktu.dfs.blocksize").getOrElse(64))
+        Cache.set("tuktu.dfs.prefix", Play.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs"))
+        Cache.set("tuktu.dfs.nft_file", Play.configuration.getString("tuktu.dfs.nft_file").getOrElse("nft.data"))
+        
         
         // Load file table into memory
         loadFileTable()

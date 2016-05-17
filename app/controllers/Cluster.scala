@@ -24,23 +24,27 @@ import monitor.DeleteNode
 
 object Cluster extends Controller {
     val clusterParamsMapping = Map(
-            "configRepo" -> "configRepo",
-            "homeAddress" -> "homeAddress",
-            "logLevel" -> "logLevel",
-            "timeout" -> "timeout",
-            "webUrl" -> "web.url",
-            "jsurl" -> "web.jsurl",
-            "jsname" -> "web.jsname",
-            "meta" -> "tuktu.metarepo",
-            "webRepo" -> "web.repo",
-            "logDpContent" -> "mon.log_dp_content",
-            "maxHealthFails" -> "mon.max_health_fails",
-            "healthInterval" -> "mon.health_interval",
-            "finishExp" -> "mon.finish_expiration",
-            "errorExp" -> "mon.error_expiration",
-            "bpBounceMs" -> "mon.bp.bounce_ms",
-            "bpMaxBounce" -> "mon.bp.max_bounce",
-            "bpQSize" -> "mon.bp.blocking_queue_size"
+            "configRepo" -> ("configRepo", "string"),
+            "homeAddress" -> ("homeAddress", "string"),
+            "logLevel" -> ("logLevel", "string"),
+            "timeout" -> ("timeout", "int"),
+            "webUrl" -> ("web.url", "string"),
+            "jsurl" -> ("web.jsurl", "string"),
+            "jsname" -> ("web.jsname", "string"),
+            "meta" -> ("tuktu.metarepo", "string"),
+            "webRepo" -> ("web.repo", "string"),
+            "logDpContent" -> ("mon.log_dp_content", "boolean"),
+            "maxHealthFails" -> ("mon.max_health_fails", "int"),
+            "healthInterval" -> ("mon.health_interval", "int"),
+            "finishExp" -> ("mon.finish_expiration", "long"),
+            "errorExp" -> ("mon.error_expiration", "long"),
+            "bpBounceMs" -> ("mon.bp.bounce_ms", "int"),
+            "bpMaxBounce" -> ("mon.bp.max_bounce", "int"),
+            "bpQSize" -> ("mon.bp.blocking_queue_size", "int"),
+            "dfsBlockSize" -> ("tuktu.dfs.blocksize", "int"),
+            "dfsPrefix" -> ("tuktu.dfs.prefix", "string"),
+            "dfsNft" -> ("tuktu.dfs.nft_file", "string"),
+            "dbRepl" -> ("tuktu.db.replication", "int")
     )
     
     /**
@@ -53,7 +57,7 @@ object Cluster extends Controller {
         // Fetch all the other parameters
         val params = clusterParamsMapping.map(_ match {
             case (vName, cName) => {
-                vName -> Cache.get(cName).getOrElse("").toString
+                vName -> Cache.get(cName._1).getOrElse("").toString
             }
         })
 
@@ -61,38 +65,35 @@ object Cluster extends Controller {
                 util.flashMessagesToMap(request), params, clusterNodes
         ))
     }
-    
-    case class updateClusterClass(
-        configRepo: String, homeAddress: String, logLevel: String, timeout: Int
-    )
-    
-    val updateClusterForm = Form(
-        mapping(
-            "configRepo" -> text.verifying(nonEmpty, minLength(1)),
-            "homeAddress" -> text.verifying(nonEmpty, minLength(5)),
-            "logLevel" -> text.verifying(nonEmpty, minLength(1)),
-            "timeout" -> number
-        ) (updateClusterClass.apply)(updateClusterClass.unapply)
-    )
+
     /**
      * Updates specifics (cached values) for the Tuktu cluster
      */
     def updateCluster() = Action { implicit request => {
-        updateClusterForm.bindFromRequest.fold(
-            formWithErrors => {
-                Redirect(routes.Cluster.overview).flashing("error" -> "Some values were found incorrect.")
-            },
-            cluster => {
-                // Update cache values
-                Cache.set("configRepo", cluster.configRepo)
-                Cache.set("homeAddress", cluster.homeAddress)
-                Cache.set("logLevel", cluster.logLevel)
-                Cache.set("timeout", cluster.timeout)
+        // Get the request's values
+        val newValues = request.body.asFormUrlEncoded
+        newValues match {
+            case None => Redirect(routes.Cluster.overview).flashing("error" -> "Some values were found incorrect.")
+            case Some(newVals) => {
+                newVals.foreach(value => {
+                    // Get the name and the actual value
+                    val fieldName = value._1
+                    val actualVal = value._2.head
+                    
+                    // Find the accompanying cache name
+                    val cacheVar = clusterParamsMapping.filter(_._1 == fieldName).head
+                    cacheVar._2._2 match {
+                        case "int" => Cache.set(cacheVar._2._1, actualVal.toInt)
+                        case "long" => Cache.set(cacheVar._2._1, actualVal.toLong)
+                        case "boolean" => Cache.set(cacheVar._2._1, actualVal.toBoolean)
+                        case _ => Cache.set(cacheVar._2._1, actualVal)
+                    }
+                })
                 
                 // Redirect back to overview
                 Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully updated cluster configuration!"))
             }
-        )
+        }
     }}
     
     /**

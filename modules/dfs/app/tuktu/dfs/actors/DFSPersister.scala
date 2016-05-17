@@ -40,7 +40,7 @@ class DFSPersister extends Actor with ActorLogging {
             )
             // Write out to file
             val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
-                    Play.current.configuration.getString("tuktu.dfs.nft_file").getOrElse("nft.data")), "utf-8"))
+                    Cache.getAs[String]("tuktu.dfs.nft_file").getOrElse(Play.current.configuration.getString("tuktu.dfs.nft_file").getOrElse("nft.data"))), "utf-8"))
             writer.write(json.toString)
             writer.close
         }

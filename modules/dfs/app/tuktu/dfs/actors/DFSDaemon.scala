@@ -210,7 +210,7 @@ class WriterDaemon(tir: TDFSWriteInitiateRequest) extends Actor with ActorLoggin
     var byteCount: Int = 0
     val blockSize = tir.blockSize match {
         case Some(s) => s
-        case _ => Cache.getAs[Int]("dfs.blocksize").getOrElse(64)
+        case _ => Cache.getAs[Int]("tuktu.dfs.blocksize").getOrElse(64)
     }
     
     /**
@@ -289,7 +289,7 @@ class WriterDaemon(tir: TDFSWriteInitiateRequest) extends Actor with ActorLoggin
  * Actual writer actor, a single instance will be created for writing each block of a file
  */
 class BinaryTDFSWriterActor(twr: TDFSWriteRequest) extends Actor with ActorLogging {
-    val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+    val prefix = Cache.getAs[String]("tuktu.dfs.prefix").getOrElse(Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs"))
     
     // Create dirs if required
     val fullname = prefix + "/" + twr.filename + ".part-" + twr.part
@@ -322,7 +322,7 @@ class BinaryTDFSWriterActor(twr: TDFSWriteRequest) extends Actor with ActorLoggi
  * Writes text to a file, like the binary writer, but now as text
  */
 class TextTDFSWriterActor(twr: TDFSWriteRequest) extends Actor with ActorLogging {
-    val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+    val prefix = Cache.getAs[String]("tuktu.dfs.prefix").getOrElse(Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs"))
     
     // Create dirs if required
     val fullname = prefix + "/" + twr.filename + ".part-" + twr.part
@@ -427,7 +427,7 @@ class ReaderDaemon(trr: TDFSReadInitiateRequest, requester: ActorRef) extends Ac
  */
 class TextTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends Actor with ActorLogging {
     case class LineReaderContent(previous: String, current: String)    
-    val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+    val prefix = Cache.getAs[String]("tuktu.dfs.prefix").getOrElse(Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs"))
 
     // Set up the reader
     val reader = new BufferedReader(new InputStreamReader(new FileInputStream(
@@ -471,7 +471,7 @@ class TextTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends Act
  * Reads a binary file from TDFS in a buffered manner
  */
 class BinaryTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends Actor with ActorLogging {
-    val prefix = Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs")
+    val prefix = Cache.getAs[String]("tuktu.dfs.prefix").getOrElse(Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs"))
     
     // Set up the reader
     val reader = new FileInputStream(new File(trr.filename + ".part-" + trr.part))

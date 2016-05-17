@@ -178,22 +178,47 @@
             </a>
         </h3>
         <div class="collapse" id="tdfsSettings">
-        </div>
-        <h3>
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="form-group">
+                        <label for="dfsBlockSize">Block Size (mb)</label>
+                        <input type="text" class="form-control" id="dfsBlockSize" name="dfsBlockSize" value="@{params.get("dfsBlockSize").getOrElse("")}">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="form-group">
+                        <label for="dfsPrefix">Folder Prefix</label>
+                        <input type="text" class="form-control" id="dfsPrefix" name="dfsPrefix" value="@{params.get("dfsPrefix").getOrElse("")}">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="form-group">
+                        <label for="dfsNft">Network File Table File</label>
+                        <input type="text" class="form-control" id="dfsNft" name="dfsNft" value="@{params.get("dfsNft").getOrElse("")}">
+                    </div>
+                </div>
+            </div>
+       </div>
+       <h3>
             <a data-toggle="collapse" href="#dbSettings" aria-expanded="false" aria-controls="dbSettings">
                 TuktuDB Settings
             </a>
         </h3>
         <div class="collapse" id="dbSettings">
-        </div>
-        <h3>
-            <a data-toggle="collapse" href="#apiSettings" aria-expanded="false" aria-controls="apiSettings">
-                API Settings
-            </a>
-        </h3>
-        <div class="collapse" id="apiSettings">
-        </div>
-        <h3 style="padding-top: 50px;">
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="form-group">
+                        <label for="dbRepl">Replication Factor</label>
+                        <input type="text" class="form-control" id="dbRepl" name="dbRepl" value="@{params.get("dbRepl").getOrElse("")}">
+                    </div>
+                </div>
+            </div>
+       </div>
+       <h3 style="padding-top: 50px;">
             Node Settings
         </h3>
         <div class="row">

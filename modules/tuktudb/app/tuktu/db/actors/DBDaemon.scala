@@ -37,8 +37,6 @@ class DBDaemon() extends Actor with ActorLogging {
     // Local in-memory database
     private val tuktudb = collection.mutable.Map[List[Any], collection.mutable.ListBuffer[Map[String, Any]]]()
     
-    // Get replication factor
-    Cache.set("tuktu.db.replication", Play.current.configuration.getInt("tuktu.db.replication"))
     // Get this local node
     val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
     // Get cluster nodes

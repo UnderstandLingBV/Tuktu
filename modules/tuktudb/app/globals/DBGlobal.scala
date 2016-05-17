@@ -13,6 +13,7 @@ import tuktu.api.TuktuGlobal
 import tuktu.db.actors.DBDaemon
 import tuktu.api.DBObject
 import tuktu.api.StoreRequest
+import play.api.Play
 
 /**
  * Starts up the DB Daemon
@@ -23,7 +24,9 @@ class DBGlobal() extends TuktuGlobal() {
      * Load this on startup. The application is given as parameter
      */
     override def onStart(app: Application) = {
-        // Set up the DFS daemon
+        // Get replication factor
+        Cache.set("tuktu.db.replication", Play.current.configuration.getInt("tuktu.db.replication").getOrElse(2))
+        // Set up the DB daemon
         val dbActor = Akka.system.actorOf(Props[DBDaemon], name = "tuktu.db.Daemon")
         dbActor ! new InitPacket
     }
