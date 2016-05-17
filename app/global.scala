@@ -65,8 +65,17 @@ object Global extends WithFilters(CorsFilter) with GlobalSettings {
         Cache.set("configRepo", Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs"))
         // Set location of this node
         Cache.set("homeAddress", Play.current.configuration.getString("akka.remote.netty.tcp.hostname").getOrElse("127.0.0.1"))
-        // Set log level
+        // Set monitoring stuff
         Cache.set("logLevel", Play.current.configuration.getString("tuktu.monitor.level").getOrElse("all"))
+        Cache.set("mon.log_dp_content", Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true))
+        Cache.set("mon.max_health_fails", Play.current.configuration.getInt("tuktu.monitor.max_health_fails").getOrElse(3))
+        Cache.set("mon.health_interval", Play.current.configuration.getInt("tuktu.monitor.health_interval").getOrElse(30))
+        Cache.set("mon.finish_expiration", Play.current.configuration.getLong("tuktu.monitor.finish_expiration").getOrElse(30L))
+        Cache.set("mon.error_expiration", Play.current.configuration.getLong("tuktu.monitor.error_expiration").getOrElse(40320L))
+        // Backpressure
+        Cache.set("mon.bp.bounce_ms", Play.current.configuration.getInt("tuktu.monitor.bounce_ms").getOrElse(20))
+        Cache.set("mon.bp.max_bounce", Play.current.configuration.getInt("tuktu.monitor.max_bounce").getOrElse(6))
+        Cache.set("mon.bp.blocking_queue_size", Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000))
         // Get the cluster setup, which nodes are present
         Cache.set("clusterNodes", {
             val clusterNodes = scala.collection.mutable.Map[String, ClusterNode]()

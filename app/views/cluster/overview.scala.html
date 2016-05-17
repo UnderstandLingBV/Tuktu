@@ -1,5 +1,5 @@
 @import tuktu.api.ClusterNode
-@(messages: Map[String, List[String]], configRepo: String, homeAddress: String, logLevel: String, timeout: Int, clusterNodes: scala.collection.mutable.Map[String, ClusterNode], otherParams: Map[String, String])
+@(messages: Map[String, List[String]], params: Map[String, String], clusterNodes: scala.collection.mutable.Map[String, ClusterNode])
 
 @index("Cluster Info", messages) {
     @clusterMenu()
@@ -9,96 +9,198 @@
     </h2>
     
     <form method="post" action="@routes.Cluster.updateCluster">
-        <h3>
-            General Settings
-        </h3>
         <div class="row">
             <div class="col-xs-12">
                 <div class="form-group">
-                    <label for="meta">Modeller Meta Folder</label>
-                    <input type="text" class="form-control" id="meta" name="meta" value="@{otherParams.get("meta").getOrElse("")}">
+                    <button type="submit" class="btn btn-default">Update Configuration!</button>
                 </div>
             </div>
         </div>
-	    <div class="row">
-	        <div class="col-xs-12">
-	            <div class="form-group">
-	                <label for="configRepo">Configuration Repository</label>
-	                <input type="text" class="form-control" id="configRepo" name="configRepo" value="@configRepo">
+        <h3>
+            <a data-toggle="collapse" href="#generalSettings" aria-expanded="false" aria-controls="generalSettings">
+			    General Settings
+			</a>
+        </h3>
+        <div class="collapse" id="generalSettings">
+	        <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="meta">Modeller Meta Folder</label>
+	                    <input type="text" class="form-control" id="meta" name="meta" value="@{params.get("meta").getOrElse("")}">
+	                </div>
+	            </div>
+	        </div>
+		    <div class="row">
+		        <div class="col-xs-12">
+		            <div class="form-group">
+		                <label for="configRepo">Configuration Repository</label>
+		                <input type="text" class="form-control" id="configRepo" name="configRepo" value="@{params.get("configRepo").getOrElse("")}">
+		            </div>
+		        </div>
+		    </div>
+		    <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="timeout">Timeout</label>
+	                    <input type="text" class="form-control" id="timeout" name="timeout" value="@{params.get("timeout").getOrElse("")}">
+	                </div>
 	            </div>
 	        </div>
 	    </div>
-	    <div class="row">
-            <div class="col-xs-12">
-                <div class="form-group">
-                    <label for="timeout">Timeout</label>
-                    <input type="text" class="form-control" id="timeout" name="timeout" value="@timeout">
+        <h3>
+            <a data-toggle="collapse" href="#webSettings" aria-expanded="false" aria-controls="webSettings">
+                Web Analytics Settings
+            </a>
+        </h3>
+        <div class="collapse" id="webSettings">
+	        <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="webUrl">Tuktu URL</label>
+	                    <input type="text" class="form-control" id="webUrl" name="webUrl" value="@{params.get("webUrl").getOrElse("")}">
+	                </div>
+	            </div>
+	        </div>
+	        <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="webRepo">Web Analytics Repository</label>
+	                    <input type="text" class="form-control" id="webRepo" name="webRepo" value="@{params.get("webRepo").getOrElse("")}">
+	                </div>
+	            </div>
+	        </div>
+	        <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="jsurl">Tuktu JS File Name</label>
+	                    <input type="text" class="form-control" id="jsurl" name="jsurl" value="@{params.get("jsurl").getOrElse("")}">
+	                </div>
+	            </div>
+	        </div>
+	        <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="jsname">JS DataPacket Field Name</label>
+	                    <input type="text" class="form-control" id="jsname" name="jsname" value="@{params.get("jsname").getOrElse("")}">
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+        <h3>
+            <a data-toggle="collapse" href="#monSettings" aria-expanded="false" aria-controls="monSettings">
+                Monitoring Settings
+            </a>
+        </h3>
+        <div class="collapse" id="monSettings">
+	        <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="logLevel">Logging Level</label>
+	                    <input type="text" class="form-control" id="logLevel" name="logLevel" value="@{params.get("logLevel").getOrElse("")}">
+	                </div>
+	            </div>
+	        </div>
+	        <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="logDpContent">Log DataPacket Content</label>
+	                    <input type="text" class="form-control" id="logDpContent" name="logDpContent" value="@{params.get("logDpContent").getOrElse("")}">
+	                </div>
+	            </div>
+	        </div>
+	        <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="maxHealthFails">Max Amount of Health-check Fails</label>
+	                    <input type="text" class="form-control" id="maxHealthFails" name="maxHealthFails" value="@{params.get("maxHealthFails").getOrElse("")}">
+	                </div>
+	            </div>
+	        </div>
+	        <div class="row">
+	            <div class="col-xs-12">
+	                <div class="form-group">
+	                    <label for="healthInterval">Health Interval</label>
+	                    <input type="text" class="form-control" id="healthInterval" name="healthInterval" value="@{params.get("healthInterval").getOrElse("")}">
+	                </div>
+	            </div>
+	        </div>
+	        <div class="row">
+                <div class="col-xs-12">
+                    <div class="form-group">
+                        <label for="finishExp">Finished Jobs Expiration (in minutes)</label>
+                        <input type="text" class="form-control" id="finishExp" name="finishExp" value="@{params.get("finishExp").getOrElse("")}">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="form-group">
+                        <label for="errorExp">Error Logs Expiration (in minutes)</label>
+                        <input type="text" class="form-control" id="errorExp" name="errorExp" value="@{params.get("errorExp").getOrElse("")}">
+                    </div>
+                </div>
+            </div>
+	    </div>
+	    <h3>
+            <a data-toggle="collapse" href="#bpSettings" aria-expanded="false" aria-controls="bpSettings">
+                Backpressure Settings
+            </a>
+        </h3>
+        <div class="collapse" id="bpSettings">
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="form-group">
+                        <label for="bpMaxBounce">Max Bounce Times</label>
+                        <input type="text" class="form-control" id="bpMaxBounce" name="bpMaxBounce" value="@{params.get("bpMaxBounce").getOrElse("")}">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="form-group">
+                        <label for="bpBounceMs">Base Bounce Delay (in milliseconds)</label>
+                        <input type="text" class="form-control" id="bpBounceMs" name="bpBounceMs" value="@{params.get("bpBounceMs").getOrElse("")}">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="form-group">
+                        <label for="bpQSize">Blocking Queue Size</label>
+                        <input type="text" class="form-control" id="bpQSize" name="bpQSize" value="@{params.get("bpQSize").getOrElse("")}">
+                    </div>
                 </div>
             </div>
         </div>
         <h3>
-            Web Analytics Settings
+            <a data-toggle="collapse" href="#tdfsSettings" aria-expanded="false" aria-controls="tdfsSettings">
+                TDFS Settings
+            </a>
         </h3>
-        <div class="row">
-            <div class="col-xs-12">
-                <div class="form-group">
-                    <label for="webUrl">Tuktu URL</label>
-                    <input type="text" class="form-control" id="webUrl" name="webUrl" value="@{otherParams.get("webUrl").getOrElse("")}">
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-xs-12">
-                <div class="form-group">
-                    <label for="webRepo">Web Analytics Repository</label>
-                    <input type="text" class="form-control" id="webRepo" name="webRepo" value="@{otherParams.get("webRepo").getOrElse("")}">
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-xs-12">
-                <div class="form-group">
-                    <label for="jsurl">Tuktu JS File Name</label>
-                    <input type="text" class="form-control" id="jsurl" name="jsurl" value="@{otherParams.get("jsurl").getOrElse("")}">
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-xs-12">
-                <div class="form-group">
-                    <label for="jsname">JS DataPacket Field Name</label>
-                    <input type="text" class="form-control" id="jsname" name="jsname" value="@{otherParams.get("jsname").getOrElse("")}">
-                </div>
-            </div>
+        <div class="collapse" id="tdfsSettings">
         </div>
         <h3>
-            Monitoring Settings
+            <a data-toggle="collapse" href="#dbSettings" aria-expanded="false" aria-controls="dbSettings">
+                TuktuDB Settings
+            </a>
         </h3>
-        <div class="row">
-            <div class="col-xs-12">
-                <div class="form-group">
-                    <label for="logLevel">Logging Level</label>
-                    <input type="text" class="form-control" id="logLevel" name="logLevel" value="@logLevel">
-                </div>
-            </div>
+        <div class="collapse" id="dbSettings">
         </div>
         <h3>
-            TDFS Settings
+            <a data-toggle="collapse" href="#apiSettings" aria-expanded="false" aria-controls="apiSettings">
+                API Settings
+            </a>
         </h3>
-        <h3>
-            TuktuDB Settings
-        </h3>
-        <h3>
-            API Settings
-        </h3>
+        <div class="collapse" id="apiSettings">
+        </div>
         <h3 style="padding-top: 50px;">
-            Cluster Settings
+            Node Settings
         </h3>
         <div class="row">
             <div class="col-xs-12">
                 <div class="form-group">
                     <label for="homeAddress">Current Node Address</label>
-                    <input type="text" class="form-control" id="homeAddress" name=homeAddress value="@homeAddress">
+                    <input type="text" class="form-control" id="homeAddress" name=homeAddress value="@{params.get("homeAddress").getOrElse("")}">
                 </div>
             </div>
         </div>
@@ -122,7 +224,7 @@
 		                    @for((host, node) <- clusterNodes) {
 		                        <tr>
 		                           <td>
-		                              @if(host != homeAddress) {
+		                              @if(host != params.get("homeAddress").getOrElse("")) {
 		                                  <a href="http://@host:@node.UIPort">@host</a>
 		                              } else {
 		                                  @host
@@ -130,7 +232,7 @@
 		                           </td>
 		                           <td>@node.akkaPort</td>
 		                           <td>
-		                              @if(host != homeAddress) {
+		                              @if(host != params.get("homeAddress").getOrElse("")) {
 			                              <a href="@routes.Cluster.removeNode(host)">
 			                                  <span class="glyphicon glyphicon-remove-sign" aria-hidden="true"></span>
 			                              </a>
@@ -146,7 +248,7 @@
 	    <div class="row">
             <div class="col-xs-12">
                 <div class="form-group">
-                    <button type="submit" class="btn btn-default">Update cluster!</button>
+                    <button type="submit" class="btn btn-default">Update Configuration!</button>
                 </div>
             </div>
         </div>

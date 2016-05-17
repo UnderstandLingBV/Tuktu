@@ -4,6 +4,8 @@ import tuktu.api.DataMerger
 import tuktu.api.DataPacket
 import tuktu.api.WebJsOrderedObject
 import play.api.Play
+import play.api.cache.Cache
+import play.api.Play.current
 
 /**
  * This merger iterates over all datapackets' data and merges them by taking
@@ -23,7 +25,7 @@ class SimpleMerger() extends DataMerger() {
  */
 class JSMerger() extends DataMerger() {
     override def merge(packets: List[DataPacket]): DataPacket = {
-        val jsField = Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")
+        val jsField = Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field"))
         
         new DataPacket({
                 // Fold and zip the packets into one

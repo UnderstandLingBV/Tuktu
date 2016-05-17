@@ -115,7 +115,7 @@ class ModellerGlobal() extends TuktuGlobal() {
 
     def setCache() {
         // Cache the meta-repository location and load generator and processor descriptors
-        val metaLocation = Play.current.configuration.getString("tuktu.metarepo").getOrElse("meta")
+        val metaLocation = Cache.getAs[String]("tuktu.metarepo").getOrElse(Play.current.configuration.getString("tuktu.metarepo").getOrElse("meta"))
 
         if (!Files.isDirectory(Paths.get(metaLocation)))
             Logger.error("Meta configs directory not available!")
@@ -136,6 +136,7 @@ class ModellerGlobal() extends TuktuGlobal() {
      * Load this on startup. The application is given as parameter
      */
     override def onStart(app: Application) {
+        Cache.set("tuktu.metarepo", Play.current.configuration.getString("tuktu.metarepo").getOrElse("meta"))
         setCache
         // Load meta info, update every 5 minutes
         Akka.system.scheduler.schedule(5 minutes, 5 minutes) {

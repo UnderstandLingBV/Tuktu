@@ -32,14 +32,14 @@ class WebGlobal() extends TuktuGlobal() {
     Cache.set("web.url", Play.current.configuration.getString("tuktu.url").getOrElse("http://localhost:9000/"))
     Cache.set("web.jsurl", Play.current.configuration.getString("tuktu.jsurl").getOrElse("Tuktu.js"))
     Cache.set("web.jsname", Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field"))
+    Cache.set("web.repo", Play.current.configuration.getString("tuktu.webrepo").getOrElse("configs/analytics"))
     
     /**
      * Load this on startup. The application is given as parameter
      */
     override def onStart(app: Application) = {
         // Get the web analytics configs
-        val webRepo = Play.current.configuration.getString("tuktu.webrepo")
-            .getOrElse("configs/analytics")
+        val webRepo = Cache.getAs[String]("web.repo").getOrElse(Play.current.configuration.getString("tuktu.webrepo").getOrElse("configs/analytics"))
         if (new File(webRepo).exists) {
             val hostFolders = new File(webRepo).listFiles
             // These should all be folders that in turn contain a Tuktu.js file in them

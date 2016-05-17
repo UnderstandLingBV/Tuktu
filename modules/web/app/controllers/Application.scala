@@ -41,7 +41,7 @@ object Application extends Controller {
             }
         else {
             val id = idOption.getOrElse(referer.get)
-            Play.current.configuration.getString("tuktu.webrepo") match {
+            Cache.getAs[String]("web.repo") match {
                 case None => Future {
                     if (image)
                         Ok(byteArray).as("image/gif")

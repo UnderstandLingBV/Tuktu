@@ -23,32 +23,42 @@ import monitor.DeleteNode
 import monitor.DeleteNode
 
 object Cluster extends Controller {
+    val clusterParamsMapping = Map(
+            "configRepo" -> "configRepo",
+            "homeAddress" -> "homeAddress",
+            "logLevel" -> "logLevel",
+            "timeout" -> "timeout",
+            "webUrl" -> "web.url",
+            "jsurl" -> "web.jsurl",
+            "jsname" -> "web.jsname",
+            "meta" -> "tuktu.metarepo",
+            "webRepo" -> "web.repo",
+            "logDpContent" -> "mon.log_dp_content",
+            "maxHealthFails" -> "mon.max_health_fails",
+            "healthInterval" -> "mon.health_interval",
+            "finishExp" -> "mon.finish_expiration",
+            "errorExp" -> "mon.error_expiration",
+            "bpBounceMs" -> "mon.bp.bounce_ms",
+            "bpMaxBounce" -> "mon.bp.max_bounce",
+            "bpQSize" -> "mon.bp.blocking_queue_size"
+    )
+    
     /**
      * Shows cluster status
      */
     def overview() = Action { implicit request =>
         // Get the cluster settings from cache
-        val configRepo = Cache.getAs[String]("configRepo").getOrElse(null)
-        val homeAddress = Cache.getAs[String]("homeAddress").getOrElse(null)
-        val logLevel = Cache.getAs[String]("logLevel").getOrElse(null)
-        val timeout = Cache.getAs[Int]("timeout").getOrElse(5)
         val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
         
         // Fetch all the other parameters
-        val otherParams = List(
-                "webUrl" -> "web.url",
-                "jsurl" -> "web.jsurl",
-                "jsname" -> "web.jsname"
-        ).map(_ match {
+        val params = clusterParamsMapping.map(_ match {
             case (vName, cName) => {
                 vName -> Cache.get(cName).getOrElse("").toString
             }
-        }).toMap
+        })
 
         Ok(views.html.cluster.overview(
-                util.flashMessagesToMap(request),
-                configRepo, homeAddress, logLevel, timeout, clusterNodes,
-                otherParams
+                util.flashMessagesToMap(request), params, clusterNodes
         ))
     }
     

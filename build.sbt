@@ -100,12 +100,12 @@ lazy val mlDependencies = Seq(
 lazy val dlDependencies = Seq(
     cache,
     "org.scalanlp" %% "breeze" % "0.10",
-    "org.deeplearning4j" % "deeplearning4j-core" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "org.spark-project"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote")),
-    "org.deeplearning4j" % "deeplearning4j-nlp" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "org.spark-project"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote")),
+    "org.deeplearning4j" % "deeplearning4j-core" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "org.spark-project"),ExclusionRule(organization = "org.spark-project.akka"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote")),
+    "org.deeplearning4j" % "deeplearning4j-nlp" % "0.4-rc3.8" excludeAll(ExclusionRule(organization = "org.spark-project"),ExclusionRule(organization = "org.spark-project.akka"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote")),
     "org.nd4j" % "nd4j-x86" % "0.4-rc3.8",
     "org.nd4j" % "canova-api" % "0.0.0.14",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
-)
+).map(_.exclude("org.spark-project.akka", ""))
 
 lazy val dlibDependencies = Seq(
     ws,
@@ -331,7 +331,7 @@ lazy val restapi = (project in file("modules/restapi"))
 
 lazy val root = project
     .in(file("."))
-    .enablePlugins(PlayScala)
+    .enablePlugins(PlayScala, LauncherJarPlugin)
     .settings(name := "Tuktu")
     .settings(version := "1.1")
     .settings(scalaVersion := "2.11.7")

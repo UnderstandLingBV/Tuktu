@@ -19,7 +19,7 @@ import scala.xml.NodeSeq
 
 
 object utils {
-    val logDpContent = Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true)
+    val logDpContent = Cache.getAs[Boolean]("mon.log_dp_content").getOrElse(Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true))
     
     /**
      * Enumeratee for error-logging and handling

@@ -40,10 +40,10 @@ class HealthMonitor() extends Actor with ActorLogging {
     })
     
     // Get maximum number of failures
-    val maxFails = Play.current.configuration.getInt("tuktu.monitor.max_health_fails").getOrElse(3)
+    val maxFails = Cache.getAs[Int]("mon.max_health_fails").getOrElse(Play.current.configuration.getInt("tuktu.monitor.max_health_fails").getOrElse(3))
     
     // Set up periodic health checks
-    val interval = Play.current.configuration.getInt("tuktu.monitor.health_interval").getOrElse(30)
+    val interval = Cache.getAs[Int]("mon.health_interval").getOrElse(Play.current.configuration.getInt("tuktu.monitor.health_interval").getOrElse(30))
     Akka.system.scheduler.schedule(
             interval seconds,
             interval seconds,

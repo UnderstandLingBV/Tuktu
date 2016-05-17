@@ -245,7 +245,7 @@ object Dispatcher {
         def buildBranch(
                 nextProcessors: List[Enumeratee[DataPacket, DataPacket]]
         ): Enumeratee[DataPacket, DataPacket] = {
-            val queueSize = Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000)
+            val queueSize = Cache.getAs[Int]("mon.bp.blocking_queue_size").getOrElse(Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000))
             // Set up the broadcast
             val (enumerator, channel) = Concurrent.broadcast[DataPacket]
             

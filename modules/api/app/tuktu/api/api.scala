@@ -109,8 +109,8 @@ case class AppMonitorObject(
         startTime: Long,
         var finished_instances: Int = 0,
         var endTime: Option[Long] = None,
-        expirationTime: Long = play.api.Play.current.configuration.getLong("tuktu.monitor.finish_expiration").getOrElse(30L) * 60 * 1000,
-        errorExpirationTime: Long = play.api.Play.current.configuration.getLong("tuktu.monitor.error_expiration").getOrElse(40320L) * 60 * 1000,
+        expirationTime: Long = Cache.getAs[Long]("mon.finish_expiration").getOrElse(play.api.Play.current.configuration.getLong("tuktu.monitor.finish_expiration").getOrElse(30L)) * 60 * 1000,
+        errorExpirationTime: Long = Cache.getAs[Long]("mon.error_expiration").getOrElse(play.api.Play.current.configuration.getLong("tuktu.monitor.error_expiration").getOrElse(40320L)) * 60 * 1000,
         errors: collection.mutable.Map[String, String] = collection.mutable.Map.empty,
         actors: collection.mutable.Set[ActorRef] = collection.mutable.Set.empty,
         flowDataPacketCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
@@ -233,7 +233,9 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     // Back pressure support for Iteratee API->actors
     val bpProcessors = for (processor <- processors) yield {
         // Create blocking queue
-        val queue = new LinkedBlockingQueue[Boolean](Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000))
+        val queue = new LinkedBlockingQueue[Boolean](
+                Cache.getAs[Int]("mon.bp.blocking_queue_size").getOrElse(Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000))
+        )
         
         // Add the pushing Enumeratee upfront and the pulling Enumeratee at the back
         Enumeratee.mapM((dp: DataPacket) => Future {
@@ -289,8 +291,8 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     def cleanup(): Unit = cleanup(true)
         
     // Back pressure handling
-    val backOffInterval = Play.current.configuration.getInt("tuktu.monitor.bounce_ms").getOrElse(20)
-    val maxBackOff = Play.current.configuration.getInt("tuktu.monitor.max_bounce").getOrElse(6)
+    val backOffInterval = Cache.getAs[Int]("mon.bp.bounce_ms").getOrElse(Play.current.configuration.getInt("tuktu.monitor.bounce_ms").getOrElse(20))
+    val maxBackOff = Cache.getAs[Int]("mon.bp.max_bounce").getOrElse(Play.current.configuration.getInt("tuktu.monitor.max_bounce").getOrElse(6))
     private var backOffCount = 0
     /**
      * Backoff method dealing with back-pressure 
