@@ -1,4 +1,4 @@
-import NativePackagerHelper._
+import NativePackagerHelper._ 
 
 EclipseKeys.createSrc := EclipseCreateSrc.All
 
