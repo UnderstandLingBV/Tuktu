@@ -16,6 +16,7 @@ import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.netaporter.uri.Uri
+import java.net.URLDecoder
 
 class S3CredentialProvider(id: String, key: String) extends AWSCredentials {
     override def getAWSAccessKeyId() = id
@@ -30,7 +31,6 @@ object file {
         uri.getScheme match {
             case "file" | "" | null => fileReader(uri)
             case "hdfs"             => hdfsReader(uri)
-            case "s3"               => s3Reader(uri)
             case _                  => throw new Exception("Unknown file format")
         }
     }
@@ -39,7 +39,10 @@ object file {
      * Wrapper for a string instead of URI
      */
     def genericReader(string: String)(implicit codec: Codec): BufferedReader = {
-        genericReader(Uri.parse(string).toURI)(codec)
+        // Get URI
+        val uri = Uri.parse(string).toURI
+        if (uri.getScheme == "s3") s3Reader(string)(codec)
+        else genericReader(Uri.parse(string).toURI)(codec)
     }
 
     /**
@@ -66,21 +69,24 @@ object file {
     /**
      * Reads from S3
      */
-    def s3Reader(uri: URI)(implicit codec: Codec): BufferedReader = {
-        // Get credentials from URI
+    def s3Reader(address: String)(implicit codec: Codec): BufferedReader = {
+        val split = address.drop(5).split("@")
+        
+        // Get credentials from address, must be URL encoded and before @
         val (id, key) = {
-            val userInfo = uri.getUserInfo.split(":")
-            (userInfo(0), userInfo(1))
+            val userInfo = split.head.split(":")
+            (userInfo(0), URLDecoder.decode(userInfo(1), codec.name))
         }
         
         // Set up S3 client
         val s3Client = new AmazonS3Client(new S3CredentialProvider(id, key))
         
         // Get the actual object
-        val bucketName = uri.getHost
-        val keyName = uri.getPath
+        val parts = split.drop(1).mkString("@").split("/")
+        val bucketName = parts.head
+        val keyName = parts.drop(1).mkString("/")
         val s3Object = s3Client.getObject(new GetObjectRequest(bucketName, keyName))
-        
+
         // Return buffered reader
         new BufferedReader(new InputStreamReader(s3Object.getObjectContent, codec.decoder))
     }
