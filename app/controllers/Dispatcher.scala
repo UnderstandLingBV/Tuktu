@@ -371,7 +371,15 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
             val generators = (config \ "generators").as[List[JsObject]]
             for ((generator, index) <- generators.zipWithIndex) {
                 // Get all fields
-                val generatorName = (generator \ "name").as[String]
+                val generatorName = {
+                    // TDFS selection, must do that here!
+                    if ((generator \ "name").as[String] == "tuktu.generators.LineGenerator") {
+                        if ((generator \ "config" \ "filename").as[String].startsWith("tdfs://")) {
+                            // Replace the generator with the TDFS reader generator
+                            "tuktu.dfs.generators.TDFSLineReaderGenerator"
+                        } else (generator \ "name").as[String]
+                    } else (generator \ "name").as[String]
+                }
                 val generatorConfig = (generator \ "config").as[JsObject]
                 val resultName = (generator \ "result").as[String]
                 val next = (generator \ "next").as[List[String]]

@@ -19,15 +19,21 @@ import tuktu.api.DecreasePressurePacket
  */
 class TDFSLineReaderGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var lineOffset = 0
+    var startLine: Int = _
+    var endLine: Option[Int] = _
     
     override def receive() = {
         case config: JsValue => {
             // Get file parameters
-            val filename = (config \ "filename").as[String]
+            val filename = {
+                val f = (config \ "filename").as[String]
+                if (f.startsWith("tdfs://")) f.drop("tdfs://".size)
+                else f
+            }
             val encoding = (config \ "encoding").asOpt[String]
             // Get start/end line and such
-            val start = (config \ "start_line").asOpt[Int].getOrElse(0)
-            val end = (config \ "end_line").asOpt[Int]
+            startLine = (config \ "start_line").asOpt[Int].getOrElse(0)
+            endLine = (config \ "end_line").asOpt[Int]
             
             // Ask for the actual content from the TDFS daemon
             Akka.system.actorSelection("user/tuktu.dfs.Daemon") ! new TDFSReadInitiateRequest(
@@ -36,9 +42,14 @@ class TDFSLineReaderGenerator(resultName: String, processors: List[Enumeratee[Da
         }
         case tcp: TDFSContentPacket => {
             // Check start- and end line
-            //if (lineOffset >= startLine && lineOffset <= endLine)
-            // Make a proper string and output it
-            channel.push(new DataPacket(List(Map(resultName -> new String(tcp.content)))))
+            if (lineOffset >= startLine && {
+                endLine match {
+                    case None => true
+                    case Some(el) => lineOffset <= el
+                }
+            })
+                // Make a proper string and output it
+                channel.push(new DataPacket(List(Map(resultName -> new String(tcp.content)))))
         }
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
