@@ -17,6 +17,8 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.netaporter.uri.Uri
 import java.net.URLDecoder
+import java.io.FileInputStream
+import java.io.InputStream
 
 class S3CredentialProvider(id: String, key: String) extends AWSCredentials {
     override def getAWSAccessKeyId() = id
@@ -44,6 +46,20 @@ object file {
         if (uri.getScheme == "s3") s3Reader(string)(codec)
         else genericReader(Uri.parse(string).toURI)(codec)
     }
+    
+    /**
+     * Generically reads a binary file
+     */
+    def genericBinaryReader(string: String): InputStream = {
+        val uri = Uri.parse(string).toURI
+        // Determine what to do
+        uri.getScheme match {
+            case "s3" => s3BinaryReader(string)
+            case "file" | "" | null => fileBinaryReader(uri)
+            case "hdfs" => hdfsBinaryReader(uri)
+            case _ => throw new Exception("Unknown file format")
+        }
+    }
 
     /**
      * Reads from Local disk
@@ -53,6 +69,16 @@ object file {
             Source.fromFile(uri.getHost + File.separator + uri.getPath)(codec).bufferedReader
         else
             Source.fromFile(uri.getPath)(codec).bufferedReader
+    }
+    
+    /**
+     * Reads a binary file from local disk
+     */
+    def fileBinaryReader(uri: URI): InputStream = {
+        if (uri.toString.startsWith("//"))
+            new FileInputStream(new File(uri.getHost + File.separator + uri.getPath))
+        else
+            new FileInputStream(new File(uri.getPath))
     }
 
     /**
@@ -67,27 +93,65 @@ object file {
     }
     
     /**
-     * Reads from S3
+     * Reads binary data from HDFS
      */
-    def s3Reader(address: String)(implicit codec: Codec): BufferedReader = {
+    def hdfsBinaryReader(uri: URI): InputStream = {
+        val conf = new Configuration
+        conf.set("fs.defaultFS", uri.getHost + ":" + uri.getPort)
+        val fs = FileSystem.get(conf)
+        val path = new Path(uri.getPath)
+        fs.open(path)
+    }
+    
+    /**
+     * Parses an S3 address to extract id, key, bucket and file name
+     */
+    private def parseS3Address(address: String) = {
         val split = address.drop(5).split("@")
         
         // Get credentials from address, must be URL encoded and before @
         val (id, key) = {
             val userInfo = split.head.split(":")
-            (userInfo(0), URLDecoder.decode(userInfo(1), codec.name))
+            (userInfo(0), URLDecoder.decode(userInfo(1), "utf-8"))
         }
-        
-        // Set up S3 client
-        val s3Client = new AmazonS3Client(new S3CredentialProvider(id, key))
         
         // Get the actual object
         val parts = split.drop(1).mkString("@").split("/")
         val bucketName = parts.head
         val keyName = parts.drop(1).mkString("/")
+        
+        (id, key, bucketName, keyName)
+    }
+    
+    /**
+     * Reads from S3
+     */
+    def s3Reader(address: String)(implicit codec: Codec): BufferedReader = {
+        val (id, key, bucketName, keyName) = parseS3Address(address)
+        
+        // Set up S3 client
+        val s3Client = new AmazonS3Client(new S3CredentialProvider(id, key))
+        
+        // Get the actual object
         val s3Object = s3Client.getObject(new GetObjectRequest(bucketName, keyName))
 
         // Return buffered reader
         new BufferedReader(new InputStreamReader(s3Object.getObjectContent, codec.decoder))
+    }
+    
+    /**
+     * Reads binary data from S3
+     */
+    def s3BinaryReader(address: String): InputStream = {
+        val (id, key, bucketName, keyName) = parseS3Address(address)
+        
+        // Set up S3 client
+        val s3Client = new AmazonS3Client(new S3CredentialProvider(id, key))
+        
+        // Get the actual object
+        val s3Object = s3Client.getObject(new GetObjectRequest(bucketName, keyName))
+        
+        // Return the input stream
+        s3Object.getObjectContent
     }
 }

@@ -1,0 +1,69 @@
+{
+	"name": "Binary File Stream Processor",
+	"description": "Streams binary data into a file and closes it when it's done.",
+	"class": "tuktu.processors.BinaryFileStreamProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "file_name",
+					"description": "The file to be streamed into.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "field_bytes_separator",
+					"description": "A list of bytes (represented by ints) that optionalluy separate the fields per DataPacket. Default is no bytes in between fields.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "int",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "datum_bytes_separator",
+					"description": "Similarly to separating the content of fields inside a DataPacket, this list of bytes separates two distinct datums of a DataPacket. Default is no bytes in between datums.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "int",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "fields",
+					"description": "The fields to be written.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -52,6 +52,49 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
 }
 
 /**
+ * Streams binary data to a file
+ */
+class BinaryFileStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var writer: FileOutputStream = _
+    var fields: List[String] = _
+    var fieldSep: Array[Byte] = _
+    var lineSep: Array[Byte] = _
+
+    override def initialize(config: JsObject) {
+        // Get the location of the file to write to
+        val fileName = (config \ "file_name").as[String]
+
+        // Get the field we need to write out
+        fields = (config \ "fields").as[List[String]]
+        fieldSep = (config \ "field_bytes_separator").asOpt[List[Int]].getOrElse(List()).map(_.toByte).toArray
+        lineSep = (config \ "datum_bytes_separator").asOpt[List[Int]].getOrElse(List()).map(_.toByte).toArray
+
+        writer = new FileOutputStream(fileName)
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        for (datum <- data) {
+            // Write it
+            val output = (for (field <- fields if datum.contains(field)) yield {
+                datum(field) match {
+                    case a: Byte => Array(a)
+                    case a: Array[Byte] => a
+                    case a: List[Byte] => a.toArray
+                    case a: Seq[Byte] => a.toArray
+                }
+            }).foldLeft(Array.empty[Byte])((a, b) => a ++ fieldSep ++ b)
+
+            writer.write(output ++ lineSep)
+        }
+
+        data
+    }) compose Enumeratee.onEOF(() => {
+        writer.flush
+        writer.close
+    })
+}
+
+/**
  * Streams data into a file and closes it when it's done
  */
 class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
@@ -100,6 +143,9 @@ class BatchedFileStreamProcessor(resultName: String) extends BaseProcessor(resul
     })
 }
 
+/**
+ * Read a file in a processor
+ */
 class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fileName: String = _
     var encoding: String = _

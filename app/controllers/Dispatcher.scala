@@ -373,10 +373,14 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                 // Get all fields
                 val generatorName = {
                     // TDFS selection, must do that here!
-                    if ((generator \ "name").as[String] == "tuktu.generators.LineGenerator") {
+                    if ((generator \ "name").as[String] == "tuktu.generators.LineGenerator" ||
+                            (generator \ "name").as[String] == "tuktu.generators.BinaryFileGenerator") {
                         if ((generator \ "config" \ "filename").as[String].startsWith("tdfs://")) {
                             // Replace the generator with the TDFS reader generator
-                            "tuktu.dfs.generators.TDFSLineReaderGenerator"
+                            (generator \ "name").as[String] match {
+                                case "tuktu.generators.LineGenerator" => "tuktu.dfs.generators.TDFSLineReaderGenerator"
+                                case "tuktu.generators.BinaryFileGenerator" => "tuktu.dfs.generators.TDFSBinaryReaderGenerator"
+                            }
                         } else (generator \ "name").as[String]
                     } else (generator \ "name").as[String]
                 }

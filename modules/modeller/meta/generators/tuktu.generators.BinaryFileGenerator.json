@@ -1,0 +1,66 @@
+{
+	"name": "Binary File Generator",
+	"description": "Streams a binary file chunk by chunk.",
+	"class": "tuktu.generators.BinaryFileGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "filename",
+					"description": "The path to the file.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "chunk_size",
+					"description": "The size of the chunks to read (in bytes).",
+					"type": "long",
+					"required": false,
+					"default": 8192
+				}
+			]
+		}
+	]
+}

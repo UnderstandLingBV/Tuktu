@@ -190,6 +190,8 @@ class FileDirectoryReader(parentActor: ActorRef, pathMatcher: PathMatcher, recur
  */
 class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case config: JsValue => {
             // Get config variables
             val filesAndDirs = (config \ "filesAndDirs").asOpt[List[String]].getOrElse(Nil)
@@ -213,6 +215,8 @@ class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
  */
 class XmlGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case config: JsValue => {
             // Get the file name
             val filename = (config \ "file_name").as[String]
@@ -230,6 +234,48 @@ class XmlGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                     else el.text
                 })))))
             else nodes.foreach(el => channel.push(new DataPacket(List(Map(resultName -> el)))))
+        }
+        case sp: StopPacket => cleanup
+        case ip: InitPacket => setup
+    }
+}
+
+/**
+ * Reads a binary file chunk by chunk
+ */
+class BinaryFileGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    override def receive() = {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
+        case config: JsValue => {
+            // Get the file name
+            val fileName = (config \ "filename").as[String]
+            // Chunk size (default 8kb)
+            val chunkSize = (config \ "chunk_size").asOpt[Long].getOrElse(8 * 1024)
+            
+            // Make separate enumerators, for each processor
+            processors.foreach(processor => {
+                // Use Iteratee lib for proper back pressure handling
+                val inputStream = file.genericBinaryReader(fileName)
+            
+                val fileStream: Enumerator[Array[Byte]] = Enumerator.generateM[Array[Byte]] {
+                    Future { Option({
+                        val content = new Array[Byte](8 * 1024)
+                        inputStream.read(content)
+                        content
+                    })}
+                }.andThen(Enumerator.eof)
+
+                // onEOF close the reader and send StopPacket
+                val onEOF = Enumeratee.onEOF[String](() => {
+                    inputStream.close
+                    self ! new StopPacket
+                })
+
+                fileStream |>> (Enumeratee.mapM((bytes: Array[Byte]) => Future {
+                    DataPacket(List(Map(resultName -> bytes)))
+                }) compose processor) &>> sinkIteratee
+            })
         }
         case sp: StopPacket => cleanup
         case ip: InitPacket => setup
