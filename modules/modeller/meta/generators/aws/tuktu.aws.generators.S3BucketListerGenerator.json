@@ -1,0 +1,66 @@
+{
+	"name": "S3 Bucket List Generator",
+	"description": "Lists the keys/filenames of all files inside an S3 bucket, possibly recursive.",
+	"class": "tuktu.aws.generators.S3BucketListerGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "file_name",
+					"description": "The S3 address of the bucket (should be like s3://userid:userkey@bucketname/path/if/present).",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "recursive",
+					"description": "Whether or not to recurse into sub-buckets.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

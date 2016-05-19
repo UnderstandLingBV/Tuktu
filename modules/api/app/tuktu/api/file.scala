@@ -2,8 +2,11 @@ package tuktu.api
 
 import java.io.BufferedReader
 import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
 import java.io.InputStreamReader
 import java.net.URI
+import java.net.URLDecoder
 
 import scala.io.Codec
 import scala.io.Source
@@ -16,9 +19,8 @@ import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.netaporter.uri.Uri
-import java.net.URLDecoder
-import java.io.FileInputStream
-import java.io.InputStream
+import com.amazonaws.regions.Regions
+import com.amazonaws.regions.Region
 
 class S3CredentialProvider(id: String, key: String) extends AWSCredentials {
     override def getAWSAccessKeyId() = id
@@ -106,7 +108,7 @@ object file {
     /**
      * Parses an S3 address to extract id, key, bucket and file name
      */
-    private def parseS3Address(address: String) = {
+    def parseS3Address(address: String) = {
         val split = address.drop(5).split("@")
         
         // Get credentials from address, must be URL encoded and before @
@@ -117,20 +119,52 @@ object file {
         
         // Get the actual object
         val parts = split.drop(1).mkString("@").split("/")
-        val bucketName = parts.head
-        val keyName = parts.drop(1).mkString("/")
+        // Get the region, if set
+        val region = if (List(
+                "us-east-1", "us-west-2", "us-west-1", "eu-west-1", "eu-central-1",
+                "ap-southeast-1", "ap-northeast-1", "ap-southeast-2", "ap-northeast-2",
+                "sa-east-1").contains(parts.head)) {
+            Some(parts.head)
+        } else None
+        val bucketName = region match {
+            case Some(r) => parts.drop(1).head
+            case None => parts.head
+        }
+        val keyName = 
+            region match {
+            case Some(r) => parts.drop(2).mkString("/")
+            case None => parts.drop(1).mkString("/")
+        }
         
-        (id, key, bucketName, keyName)
+        (id, key, region, bucketName, keyName)
+    }
+    
+    /**
+     * Sets S3 region
+     */
+    def setS3Region(region: Option[String], client: AmazonS3Client) = region match {
+        case Some("us-east-1") => client.setRegion(Region.getRegion(Regions.US_EAST_1))
+        case Some("us-west-2") => client.setRegion(Region.getRegion(Regions.US_WEST_1))
+        case Some("us-west-1") => client.setRegion(Region.getRegion(Regions.US_WEST_2))
+        case Some("eu-west-1") => client.setRegion(Region.getRegion(Regions.EU_WEST_1))
+        case Some("eu-central-1") => client.setRegion(Region.getRegion(Regions.EU_CENTRAL_1))
+        case Some("ap-southeast-1") => client.setRegion(Region.getRegion(Regions.AP_SOUTHEAST_1))
+        case Some("ap-northeast-1") => client.setRegion(Region.getRegion(Regions.AP_NORTHEAST_1))
+        case Some("ap-southeast-2") => client.setRegion(Region.getRegion(Regions.AP_SOUTHEAST_2))
+        case Some("ap-northeast-2") => client.setRegion(Region.getRegion(Regions.AP_NORTHEAST_2))
+        case Some("sa-east-1") => client.setRegion(Region.getRegion(Regions.SA_EAST_1))
+        case _ => client.setRegion(Region.getRegion(Regions.DEFAULT_REGION))
     }
     
     /**
      * Reads from S3
      */
     def s3Reader(address: String)(implicit codec: Codec): BufferedReader = {
-        val (id, key, bucketName, keyName) = parseS3Address(address)
+        val (id, key, region, bucketName, keyName) = parseS3Address(address)
         
         // Set up S3 client
         val s3Client = new AmazonS3Client(new S3CredentialProvider(id, key))
+        setS3Region(region, s3Client)
         
         // Get the actual object
         val s3Object = s3Client.getObject(new GetObjectRequest(bucketName, keyName))
@@ -143,10 +177,11 @@ object file {
      * Reads binary data from S3
      */
     def s3BinaryReader(address: String): InputStream = {
-        val (id, key, bucketName, keyName) = parseS3Address(address)
+        val (id, key, region, bucketName, keyName) = parseS3Address(address)
         
         // Set up S3 client
         val s3Client = new AmazonS3Client(new S3CredentialProvider(id, key))
+        setS3Region(region, s3Client)
         
         // Get the actual object
         val s3Object = s3Client.getObject(new GetObjectRequest(bucketName, keyName))
