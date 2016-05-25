@@ -74,7 +74,10 @@ class S3BucketListerGenerator(resultName: String, processors: List[Enumeratee[Da
             // Get S3 stuff
             val (id, key, region, bucket, fileName) = file.parseS3Address((config \ "file_name").as[String])
             // Create S3 client
-            val s3Client = new AmazonS3Client(new S3CredentialProvider(id, key))
+            val s3Client = (id, key) match {
+                case (Some(i), Some(k)) => new AmazonS3Client(new S3CredentialProvider(i, k))
+                case _ => new AmazonS3Client()
+            }
             file.setS3Region(region, s3Client)
             
             // Set up actor to enlist files

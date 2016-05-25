@@ -109,12 +109,16 @@ object file {
      * Parses an S3 address to extract id, key, bucket and file name
      */
     def parseS3Address(address: String) = {
-        val split = address.drop(5).split("@")
+        // Remove s3://
+        val url = address.drop(5)
         
-        // Get credentials from address, must be URL encoded and before @
-        val (id, key) = {
-            val userInfo = split.head.split(":")
-            (userInfo(0), URLDecoder.decode(userInfo(1), "utf-8"))
+        // Check if this address contains authentication credentials
+        val (split, id, key) = {
+            if (url.contains("@")) {
+                // Get credentials from address, must be URL encoded and before @
+                val userInfo = url.split("@").head.split(":")
+                (url.split("@"), Some(userInfo(0)), Some(URLDecoder.decode(userInfo(1), "utf-8")))
+            } else (Array("", url), None, None)
         }
         
         // Get the actual object
@@ -163,7 +167,10 @@ object file {
         val (id, key, region, bucketName, keyName) = parseS3Address(address)
         
         // Set up S3 client
-        val s3Client = new AmazonS3Client(new S3CredentialProvider(id, key))
+        val s3Client = (id, key) match {
+            case (Some(i), Some(k)) => new AmazonS3Client(new S3CredentialProvider(i, k))
+            case _ => new AmazonS3Client()
+        }
         setS3Region(region, s3Client)
         
         // Get the actual object
@@ -180,7 +187,10 @@ object file {
         val (id, key, region, bucketName, keyName) = parseS3Address(address)
         
         // Set up S3 client
-        val s3Client = new AmazonS3Client(new S3CredentialProvider(id, key))
+        val s3Client = (id, key) match {
+            case (Some(i), Some(k)) => new AmazonS3Client(new S3CredentialProvider(i, k))
+            case _ => new AmazonS3Client()
+        }
         setS3Region(region, s3Client)
         
         // Get the actual object
