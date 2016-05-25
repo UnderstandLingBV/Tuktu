@@ -7,3 +7,4 @@ target
 *.class
 *.gitignore
 *.cache-main
+nft.data

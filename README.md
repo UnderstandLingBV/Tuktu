@@ -12,6 +12,7 @@ Tuktu is a big data analytics platform that focuses on ease of use. The idea of 
 - Synchronous and asynchronous processing
 - A visual modeller that allows to create jobs using [drag-and-drop modelling](modules/modeller)
 - Tuktu has its own distributed file system that is very easy to use - alternatively, Tuktu integrates seamlessly with HDFS (and local files of course)
+  - You can use prefixes like `file://`, `hdfs://`, `s3://` and `tdfs://` to seamlessly switch between file systems. 
 - Tuktu also has its own in-memory distributed key-value store for quickly storing and retrieving data. Conceptually, this is close to [Spark](http://spark.apache.org/)'s RDD
 - Tuktu has built-in real-time visualization capabilities for a number of pre-defined visuals
 - Native support for web-analytics
