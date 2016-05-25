@@ -55,9 +55,9 @@
         },
         {
             "id": "showPageViews",
-            "result": "showPageViews",
+            "result": "ShowPageViews",
             "config": {
-                "flow_name": "showPageViews"
+                "flow_name": "ShowPageViews"
             },
             "name": "tuktu.web.processors.analytics.CollectionFlowProcessor",
             "next": []
