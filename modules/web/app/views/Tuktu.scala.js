@@ -31,17 +31,18 @@ var tuktu = function() {
 	 tuktuvars.referrer = document.referrer;
 	 var h = document.getElementsByTagName("head")[0];
      var s = document.createElement("script");
+     
+	 @for(incl <- includes) {
+	   	s = document.createElement("script");
+	   	s.setAttribute("type", "text/javascript");
+	   	s.setAttribute("src", "@incl");
+	   	h.appendChild(s);
+     }
+	 
      s.setAttribute("type", "text/javascript");
      s.innerHTML = "@Html(jsCode)";
      h.appendChild(s);
-     
-     @for(incl <- includes) {
-    	 s = document.createElement("script");
-    	 s.setAttribute("type", "text/javascript");
-    	 s.setAttribute("src", "@incl");
-    	 h.appendChild(s);
-     }
-     
+
      @nextFlow match {
     	 case Some(nf) => {tuktuFlow('@nf');}
     	 case None => {}
