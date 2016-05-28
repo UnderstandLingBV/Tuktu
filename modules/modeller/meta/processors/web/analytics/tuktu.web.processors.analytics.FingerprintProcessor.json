@@ -1,0 +1,22 @@
+{
+	"name": "Fingerprint Processor",
+	"description": "Creates a fingerprint of a web visitor based on browser/mobile/os components",
+	"class": "tuktu.web.processors.analytics.FingerprintProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true
+		}
+	]
+}
