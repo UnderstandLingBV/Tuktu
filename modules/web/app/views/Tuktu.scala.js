@@ -4,11 +4,7 @@ if (typeof tuktuvars === 'undefined') {
 	tuktuvars = {};
 }
 if (typeof jQuery === 'undefined') {
-	var h = document.getElementsByTagName("head")[0];
-    var s = s = document.createElement("script");
-	s.setAttribute("type", "text/javascript");
-	s.setAttribute("src", "//code.jquery.com/jquery-2.2.0.min.js");
-	h.appendChild(s);
+	document.write('<script async=false type="text/javascript" src="//code.jquery.com/jquery-2.2.0.min.js"></script>');
 }
 function tuktuFlow(nf) {
 	var h = document.getElementsByTagName("head")[0];
@@ -30,15 +26,9 @@ function tuktuFlow(nf) {
 var tuktu = function() {
 	 tuktuvars.referrer = document.referrer;
 	 var h = document.getElementsByTagName("head")[0];
-     var s = document.createElement("script");
-     
-	 @for(incl <- includes) {
-	   	s = document.createElement("script");
-	   	s.setAttribute("type", "text/javascript");
-	   	s.setAttribute("src", "@incl");
-	   	h.appendChild(s);
-     }
+     var s;
 	 
+	 s = document.createElement("script");
      s.setAttribute("type", "text/javascript");
      s.innerHTML = "@Html(jsCode)";
      h.appendChild(s);
@@ -47,5 +37,8 @@ var tuktu = function() {
     	 case Some(nf) => {tuktuFlow('@nf');}
     	 case None => {}
      }
+}
+@for(incl <- includes) {
+	 document.write('<script async=false type="text/javascript" src="@incl"></script>');
 }
 tuktu();
