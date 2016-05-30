@@ -251,7 +251,7 @@ class BinaryFileGenerator(resultName: String, processors: List[Enumeratee[DataPa
             // Get the file name
             val fileName = (config \ "filename").as[String]
             // Chunk size (default 8kb)
-            val chunkSize = (config \ "chunk_size").asOpt[Long].getOrElse(8 * 1024)
+            val chunkSize = (config \ "chunk_size").asOpt[Int].getOrElse(8 * 1024)
             
             // Make separate enumerators, for each processor
             processors.foreach(processor => {
@@ -260,7 +260,7 @@ class BinaryFileGenerator(resultName: String, processors: List[Enumeratee[DataPa
             
                 val fileStream: Enumerator[Array[Byte]] = Enumerator.generateM[Array[Byte]] {
                     Future { Option({
-                        val content = new Array[Byte](8 * 1024)
+                        val content = Array.fill[Byte](chunkSize){0}
                         inputStream.read(content)
                         content
                     })}
