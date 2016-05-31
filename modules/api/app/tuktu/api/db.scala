@@ -27,6 +27,7 @@ case class DeleteActionRequest(
         needReply: Boolean
 )
 case class PersistRequest()
+case class OverviewRequest()
 
 /**
  * Responses

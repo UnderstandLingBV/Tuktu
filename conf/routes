@@ -55,6 +55,10 @@ POST    /showConfigsScheduler               controllers.Scheduler.showConfigs
 GET     /dfsw/filebrowser                   controllers.DFSWrapper.index
 ->      /dfs                                dfs.Routes
 
+# DB
+GET     /dbw/browser                        controllers.DBWrapper.index
+->      /db                                 db.Routes
+
 # Web
 GET     /Tuktu.js/:id                       controllers.web.Application.TuktuJsGet(id)
 GET     /Tuktu.js                           controllers.web.Application.TuktuJs

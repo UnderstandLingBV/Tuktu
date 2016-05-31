@@ -27,6 +27,7 @@ import tuktu.api.StoreRequest
 import tuktu.api.utils
 import scala.util.Random
 import tuktu.api.DeleteActionRequest
+import tuktu.api.OverviewRequest
 
 /**
  * Daemon for Tuktu's DB operations
@@ -138,6 +139,9 @@ class DBDaemon() extends Actor with ActorLogging {
         case pp: PersistRequest => {
             // @TODO: Persist to disk
             
+        }
+        case or: OverviewRequest => {
+            sender ! tuktudb.keys.toList
         }
     }
 }
