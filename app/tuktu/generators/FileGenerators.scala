@@ -257,21 +257,26 @@ class BinaryFileGenerator(resultName: String, processors: List[Enumeratee[DataPa
             processors.foreach(processor => {
                 // Use Iteratee lib for proper back pressure handling
                 val inputStream = file.genericBinaryReader(fileName)
-            
-                val fileStream: Enumerator[Array[Byte]] = Enumerator.generateM[Array[Byte]] {
-                    Future { Option({
-                        val content = Array.fill[Byte](chunkSize){0}
-                        inputStream.read(content)
-                        content
-                    })}
-                }.andThen(Enumerator.eof)
 
-                // onEOF close the reader and send StopPacket
-                val onEOF = Enumeratee.onEOF[String](() => {
-                    inputStream.close
-                    self ! new StopPacket
-                })
-
+                val fileStream: Enumerator[Array[Byte]] = {
+                    Enumerator.generateM({
+                        val buffer = new Array[Byte](chunkSize)
+                        val bytesRead = inputStream.read(buffer)
+                        val chunk = bytesRead match {
+                            case -1          => None
+                            case `chunkSize` => Some(buffer)
+                            case read =>
+                                val input = new Array[Byte](read)
+                                System.arraycopy(buffer, 0, input, 0, read)
+                                Some(input)
+                        }
+                        Future.successful(chunk)
+                    }).onDoneEnumerating({
+                        inputStream.close
+                        self ! new StopPacket
+                    })
+                }
+                
                 fileStream |>> (Enumeratee.mapM((bytes: Array[Byte]) => Future {
                     DataPacket(List(Map(resultName -> bytes)))
                 }) compose processor) &>> sinkIteratee
