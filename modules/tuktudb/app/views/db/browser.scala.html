@@ -1,3 +1,17 @@
 @()
+<div id="bucketList"></div>
 
-DB
+<script type="text/javascript">
+    $.ajax({
+        method : "POST",
+        url : "@controllers.db.routes.Browser.mainOverview",
+        data : {
+        }
+    }).done(function(html) {
+        updateBucketList(html);
+    });
+    
+    function updateBucketList(html) {
+        $('#bucketList').html(html);
+    }
+</script>

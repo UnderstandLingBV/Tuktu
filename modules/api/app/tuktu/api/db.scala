@@ -28,6 +28,9 @@ case class DeleteActionRequest(
 )
 case class PersistRequest()
 case class OverviewRequest()
+case class OverviewReply(
+        bucketCounts: Map[List[Any], Int]
+)
 
 /**
  * Responses

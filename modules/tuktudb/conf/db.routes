@@ -4,3 +4,4 @@
 
 # Home page
 GET     /                           controllers.db.Browser.index
+POST    /overview                   controllers.db.Browser.mainOverview

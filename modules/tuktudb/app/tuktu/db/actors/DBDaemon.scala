@@ -28,6 +28,7 @@ import tuktu.api.utils
 import scala.util.Random
 import tuktu.api.DeleteActionRequest
 import tuktu.api.OverviewRequest
+import tuktu.api.OverviewReply
 
 /**
  * Daemon for Tuktu's DB operations
@@ -141,7 +142,7 @@ class DBDaemon() extends Actor with ActorLogging {
             
         }
         case or: OverviewRequest => {
-            sender ! tuktudb.keys.toList
+            sender ! new OverviewReply(tuktudb.map(bucket => (bucket._1, bucket._2.size)).toMap)
         }
     }
 }
