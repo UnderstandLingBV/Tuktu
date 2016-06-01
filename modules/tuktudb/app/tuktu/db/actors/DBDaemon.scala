@@ -142,7 +142,26 @@ class DBDaemon() extends Actor with ActorLogging {
             
         }
         case or: OverviewRequest => {
-            sender ! new OverviewReply(tuktudb.map(bucket => (bucket._1, bucket._2.size)).toMap)
+            if (dbDaemons.size > 1) {
+                // Query all the nodes in the cluster
+                val futs = dbDaemons.filter(_._1 != homeAddress).map(daemon => (daemon._2 ? or).asInstanceOf[Future[OverviewReply]])
+                // Merge everything
+                Future.sequence(futs).map {
+                    case reply: List[OverviewReply] => {
+                        // Get local DB
+                        sender ! new OverviewReply(
+                                tuktudb.drop(or.offset * 50).take(50).map(bucket => (bucket._1, bucket._2.size)).toMap ++
+                                reply.foldLeft(Map.empty[List[Any], Int])((a, b) => a ++ b.bucketCounts.drop(or.offset * 50).take(50))
+                        )
+                    }
+                }
+            }
+            else {
+                // Just local stuff
+                sender ! new OverviewReply(
+                        tuktudb.drop(or.offset * 50).take(50).map(bucket => (bucket._1, bucket._2.size)).toMap
+                )
+            }
         }
     }
 }

@@ -27,7 +27,9 @@ case class DeleteActionRequest(
         needReply: Boolean
 )
 case class PersistRequest()
-case class OverviewRequest()
+case class OverviewRequest(
+        offset: Int
+)
 case class OverviewReply(
         bucketCounts: Map[List[Any], Int]
 )

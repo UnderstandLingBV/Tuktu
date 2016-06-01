@@ -35,7 +35,7 @@ object Browser extends Controller {
      */
     def mainOverview() = Action.async { implicit request =>
         // Fetch the bucket overview
-        val fut = (Akka.system.actorSelection("user/tuktu.db.Daemon") ? new OverviewRequest()).asInstanceOf[Future[OverviewReply]]
+        val fut = (Akka.system.actorSelection("user/tuktu.db.Daemon") ? new OverviewRequest(0)).asInstanceOf[Future[OverviewReply]]
 
         fut.map {
             case or: OverviewReply => {
