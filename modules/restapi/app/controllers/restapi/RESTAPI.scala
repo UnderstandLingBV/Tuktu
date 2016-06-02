@@ -45,7 +45,7 @@ object RESTAPI extends Controller {
             val rts = Play.current.routes map (routes => routes.documentation) getOrElse (Nil)
             for {
                 r <- rts
-                if (r._3.startsWith("controllers.restapi.RESTAPI"))
+                if (r._3.startsWith("controllers.restapi"))
             } yield Json.obj(
                     "url" -> (urlPrefix + r._2),
                     "method" -> r._1
