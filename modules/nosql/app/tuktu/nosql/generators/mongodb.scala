@@ -1,6 +1,7 @@
 package tuktu.nosql.generators
 
 import akka.actor.ActorRef
+import collection.immutable.SortedSet
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Input
@@ -31,19 +32,21 @@ import tuktu.api.InitPacket
 import tuktu.api.StopPacket
 import tuktu.nosql.util.MongoCollectionPool
 import tuktu.nosql.util.MongoPipelineTransformer
-import tuktu.nosql.util.MongoSettings
-import tuktu.nosql.util.MongoTools
+import tuktu.nosql.util.MongoDBSettings
+import tuktu.nosql.util._
 
 class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
-{    
-    var settings: MongoSettings = _
+{   
+    var settings: MongoDBSettings = _
     override def receive() = {
         case config: JsValue => {
             // Get connection properties
-            val hosts = (config \ "hosts").as[List[String]]
+            val hs = (config \ "hosts").as[List[String]]
+            val hosts = SortedSet(hs: _*) 
             val database = (config \ "database").as[String]
             val coll = (config \ "collection").as[String]
-
+            val conn = (config \ "connections").asOpt[Int].getOrElse(10)
+            
             // Get credentials
             val user = (config \ "user").asOpt[String]
             val pwd = (config \ "password").asOpt[String].getOrElse("")
@@ -51,15 +54,15 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
             // Set up connection
-            settings = MongoSettings(hosts, database, coll)
+            settings = MongoDBSettings(hosts, database, coll)
             val fcollection = user match {
-                case None =>MongoTools.getFutureCollection(this, settings)
+                case None => mongoTools.getFutureCollection(settings, conn)
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
+                    mongoTools.getFutureCollection(settings, credentials, scramsha1, conn)
                 }
             }
 
@@ -75,10 +78,10 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 
             val resultFuture = {
                 // Get data based on query and filter
-                val resultData = fcollection.flatMap { collection =>  limit match {
-                    case Some(s) => collection.find(query, filter).sort(sort)
-                        .options(QueryOpts().batchSize(s)).cursor[JsObject](ReadPreference.primary).collect[List](s)
-                    case None => collection.find(query, filter).sort(sort)
+                val resultData = limit match {
+                    case Some(s) => fcollection.flatMap{ collection => collection.find(query, filter).sort(sort)
+                        .options(QueryOpts().batchSize(s)).cursor[JsObject](ReadPreference.primary).collect[List](s) }
+                    case None => fcollection.flatMap{ collection => collection.find(query, filter).sort(sort)
                         .options(QueryOpts().batchSize(batchSize)).cursor[JsObject](ReadPreference.primary).collect[List]()
                 }}
                 // Get futures into JSON
@@ -111,7 +114,7 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                 }
             }
         }
-        case sp: StopPacket => MongoTools.deleteCollection(this, settings); cleanup
+        case sp: StopPacket => cleanup
         case ip: InitPacket => setup
     }
 }
@@ -121,14 +124,16 @@ class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacke
  */
 class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
 {
-    var settings: MongoSettings = _
+    var settings: MongoDBSettings = _
     override def receive() = 
     {
         case config: JsValue => {
             // Get connection properties
-            val hosts = (config \ "hosts").as[List[String]]
+            val hs = (config \ "hosts").as[List[String]]
+            val hosts = SortedSet(hs: _*)
             val database = (config \ "database").as[String]
             val coll = (config \ "collection").as[String]
+            val conn = (config \ "connections").asOpt[Int].getOrElse(10)
 
             // Get credentials
             val user = (config \ "user").asOpt[String]
@@ -137,15 +142,15 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
             val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
             // Set up connection
-            settings = MongoSettings(hosts, database, coll)
-            implicit val collection = user match {
-                case None => MongoTools.getFutureCollection(this, settings) 
+            settings = MongoDBSettings(hosts, database, coll)
+            val fcollection = user match {
+                case None => mongoTools.getFutureCollection(settings, conn) 
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
+                    mongoTools.getFutureCollection(settings, credentials, scramsha1, 10)
                 }
             }
 
@@ -156,22 +161,25 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
             val batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
 
             // prepare aggregation pipeline
-            val resultFuture = collection.flatMap { coll => {
-                import coll.BatchCommands.AggregationFramework.PipelineOperator
-                val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(coll)
-                val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x)(collection=coll) }
-                // Get data based on the aggregation pipeline
-                import coll.BatchCommands.AggregationFramework.AggregationResult
-                val resultData: Future[List[JsObject]] = coll.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
-                // Get futures into JSON
-                resultData.map { resultList =>
-                {
-                    for (resultRow <- resultList) yield {
-                        tuktu.api.utils.JsObjectToMap(resultRow)
-                    }
-                }}
+            val ffresult = fcollection.map{ collection => 
+               {
+                  import collection.BatchCommands.AggregationFramework.PipelineOperator
+                  val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
+                  val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x)(collection=collection) }
+                  // Get data based on the aggregation pipeline
+                  import collection.BatchCommands.AggregationFramework.AggregationResult
+                  val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
+                  // Get futures into JSON
+                  resultData.map { resultList =>
+                  {
+                      for (resultRow <- resultList) yield {
+                          tuktu.api.utils.JsObjectToMap(resultRow)
+                      }
+                  }  
+                }
             }}
             // Handle results
+            val resultFuture = ffresult.flatMap{fresult => fresult}
             resultFuture.onSuccess {
                 case res: List[Map[String, Any]] => {
                     // Determine what to do based on batch or non batch
@@ -189,7 +197,7 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
                 }
             }
         }
-        case sp: StopPacket => MongoTools.deleteCollection(this, settings); cleanup
+        case sp: StopPacket => cleanup
         case ip: InitPacket => setup
     }
 }
@@ -199,13 +207,15 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
  */
 class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
 {
-    var settings: MongoSettings = _
+    var settings: MongoDBSettings = _
     override def receive() = {
         case config: JsValue => {
             // Get connection properties
-            val hosts = (config \ "hosts").as[List[String]]
+            val hs = (config \ "hosts").as[List[String]]
+            val hosts = SortedSet(hs: _*)
             val database = (config \ "database").as[String]
             val coll = (config \ "collection").as[String]
+            val conn = (config \ "connections").asOpt[Int].getOrElse(10)
 
             // Get credentials
             val user = (config \ "user").asOpt[String]
@@ -214,15 +224,15 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
             val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
             // Set up connection
-            settings = MongoSettings(hosts, database, coll)
+            settings = MongoDBSettings(hosts, database, coll)
             val fcollection = user match {
-                case None => MongoTools.getFutureCollection(this, settings)
+                case None => mongoTools.getFutureCollection(settings, conn)
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1) 
+                    mongoTools.getFutureCollection(settings, credentials, scramsha1, conn) 
                 }
             }
             // Get query and filter
@@ -230,8 +240,8 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
             val filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
             val sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
             
-            fcollection.map{ collection =>
-                // Create the enumerator that gets JsObjects
+            // Create the enumerator that gets JsObjects
+            fcollection.map{ collection => 
                 val enumerator: Enumerator[JsObject] = collection.find(query, filter)
                     .sort(sort).cursor[JsObject](ReadPreference.nearest)
                     .enumerate().andThen(Enumerator.eof)
@@ -242,11 +252,11 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
                 
                 // Chain this together
                 processors.foreach(processor => {
-                    enumerator |>> (transformator compose onEOF compose processor) &>> sinkIteratee
+                    enumerator |>> (transformator compose onEOF compose processor) &>> sinkIteratee 
                 })
             }
         }
-        case sp: StopPacket => MongoTools.deleteCollection(this, settings); cleanup
+        case sp: StopPacket => cleanup
         case ip: InitPacket => setup
     }
 }

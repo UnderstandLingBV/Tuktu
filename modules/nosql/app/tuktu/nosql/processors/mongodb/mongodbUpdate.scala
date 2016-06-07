@@ -1,5 +1,6 @@
 package tuktu.nosql.processors.mongodb
 
+import scala.collection.immutable.SortedSet
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import play.api.libs.iteratee.Enumeratee
@@ -9,21 +10,20 @@ import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.core.nodeset.Authenticate
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
-import tuktu.nosql.util.MongoTools
-import tuktu.nosql.util.MongoSettings
+import tuktu.nosql.util._
 import play.api.cache.Cache
 import play.api.Play.current
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.Await
 import play.api.libs.json._
-import tuktu.nosql.util.stringHandler
 
 /**
  * Updates data into MongoDB
  */
-class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultName) {
+class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultName)
+{
     // the collection to write to and its settings
-    var settings: MongoSettings = _
+    var settings: MongoDBSettings = _
     var fcollection: Future[JSONCollection] = _
     // If set to true, creates a new document when no document matches the query criteria. 
     var upsert = false
@@ -34,10 +34,13 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     //  If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document. 
     var multi = false
     var blocking: Boolean = _
+    var conn: Int = _
 
-    override def initialize(config: JsObject) {
+    override def initialize(config: JsObject) 
+    {
         // Set up MongoDB client
-        val hosts = (config \ "hosts").as[List[String]]
+        val hs = (config \ "hosts").as[List[String]]
+        val hosts = SortedSet(hs: _*)
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
         query = (config \ "query").as[String]
@@ -45,6 +48,7 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
         multi = (config \ "multi").asOpt[Boolean].getOrElse(false)
         blocking = (config \ "blocking").asOpt[Boolean].getOrElse(true)
+        conn = (config \ "connections").asOpt[Int].getOrElse(10)
         // Get credentials
         val user = (config \ "user").asOpt[String]
         val pwd = (config \ "password").asOpt[String].getOrElse("")
@@ -52,31 +56,34 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
         // Set up connection
-        settings = MongoSettings(hosts, database, coll)
+        settings = MongoDBSettings(hosts, database, coll)
         fcollection = user match{
-            case None => MongoTools.getFutureCollection(this, settings)
+            case None => mongoTools.getFutureCollection(settings, conn)
             case Some( usr ) => {
                 val credentials = admin match
                 {
                   case true => Authenticate( "admin", usr, pwd )
                   case false => Authenticate( database, usr, pwd )
                 }
-                MongoTools.getFutureCollection(this, settings,credentials, scramsha1)
+                mongoTools.getFutureCollection(settings,credentials, scramsha1, conn)
               }
           }
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (!blocking) {
-        Future {
-            doUpdate(data)
-            data
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        if (!blocking) 
+        {
+            Future {
+                doUpdate(data)
+                data
+            }
+        } else {
+            // Wait for all the updates to be finished
+            doUpdate(data).map {
+                case _ => data
+            }
         }
-    } else {
-        // Wait for all the updates to be finished
-        doUpdate(data).map {
-            case _ => data
-        }
-    }) compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
+    })
     
     
     // Does the actual updating

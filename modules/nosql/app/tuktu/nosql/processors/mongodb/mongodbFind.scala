@@ -15,15 +15,13 @@ import play.modules.reactivemongo.json._
 import play.modules.reactivemongo.json.collection._
 import reactivemongo.api._
 import reactivemongo.core.nodeset.Authenticate
+import scala.collection.immutable.SortedSet
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import tuktu.api._
-import tuktu.nosql.util.MongoTools
-import tuktu.nosql.util.MongoSettings
-import tuktu.nosql.util.sql
-import tuktu.nosql.util.stringHandler
+import tuktu.nosql.util._
 
 /**
  * Queries MongoDB for data
@@ -35,13 +33,16 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     var filter: String = _
     var sort: String = _
     var limit: Option[Int] = _
-    var settings: MongoSettings = _
+    var settings: MongoDBSettings = _
+    var conn: Int = _
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
-        val hosts = (config \ "hosts").as[List[String]]
+        val hs = (config \ "hosts").as[List[String]]
+        val hosts = SortedSet(hs: _*)
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
+        conn = (config \ "connections").asOpt[Int].getOrElse(10)
         
         // Get credentials
         val user = (config \ "user").asOpt[String]
@@ -50,16 +51,16 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
         // Set up connection
-        settings = MongoSettings(hosts, database, coll)
+        settings = MongoDBSettings(hosts, database, coll)
         fcollection = user match{
-            case None => MongoTools.getFutureCollection(this, settings)
+            case None => mongoTools.getFutureCollection(settings, conn)
             case Some( usr ) => {
                 val credentials = admin match
                 {
                   case true => Authenticate( "admin", usr, pwd )
                   case false => Authenticate( database, usr, pwd )
                 }
-                MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
+                mongoTools.getFutureCollection(settings, credentials, scramsha1, conn)
               }
           }
         
@@ -79,12 +80,12 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
             val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
 
             // Get data based on query and filter
-            val resultData: Future[List[JsObject]] = fcollection.flatMap { collection =>  limit match {
-                case Some(s) => collection.find(queryJson, filterJson)
-                    .sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject](ReadPreference.primary).collect[List](s)
-                case None    => collection.find(queryJson, filterJson)
-                    .sort(sortJson).cursor[JsObject](ReadPreference.primary).collect[List]()
-            }}
+            val resultData = limit match {
+                case Some(s) => fcollection.flatMap{ collection => collection.find(queryJson, filterJson)
+                    .sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject](ReadPreference.primary).collect[List](s) }
+                case None    => fcollection.flatMap{ collection => collection.find(queryJson, filterJson)
+                    .sort(sortJson).cursor[JsObject](ReadPreference.primary).collect[List]() }
+            }
 
             resultData.map(resultList => {
                 for (resultRow <- resultList) yield {
@@ -103,7 +104,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 
         // Gather results
         new DataPacket(Await.result(dataFuture, Cache.getAs[Int]("timeout").getOrElse(30) seconds))
-    }) compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
+    })
 }
 
 /**
@@ -115,7 +116,7 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
     // Set up the packet sender actor
     val packetSenderActor = Akka.system.actorOf(Props(classOf[PacketSenderActor], genActor))
     
-    var settings, setts: MongoSettings = _
+    var settings, setts: MongoDBSettings = _
     var credentials: Option[Authenticate] = _
     var scramsha1: Boolean = _
     var query: String = _
@@ -123,13 +124,17 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
     var sort: String = _
     var readPreference: ReadPreference = _
     var keepjson: Boolean = _
-
-    override def initialize(config: JsObject) {
+    var conn: Int = _
+    
+    override def initialize(config: JsObject) 
+    {
         // Set up MongoDB client
-        val hosts = (config \ "hosts").as[List[String]]
+        val hs = (config \ "hosts").as[List[String]]
+        val hosts = SortedSet(hs: _*)
         val db = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
-        settings = MongoSettings(hosts, db, coll)
+        settings = MongoDBSettings(hosts, db, coll)
+        conn = (config \ "connections").asOpt[Int].getOrElse(10)
         
         // Get credentials
         val user = (config \ "user").asOpt[String]
@@ -168,10 +173,12 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
         }
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        doFind(data)
-        data
-    })  compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, setts) }
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        Future {
+            doFind(data)
+            data
+        }
+    })
     
     // Does the actual querying
     def doFind(data: DataPacket) = {
@@ -184,12 +191,12 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
               }
               
               // evaluate settings
-              setts = MongoSettings( settings.hosts, utils.evaluateTuktuString(settings.database, datum), utils.evaluateTuktuString(settings.collection, datum) )
+              setts = MongoDBSettings( settings.hosts.map { host => utils.evaluateTuktuString(host, datum) }, utils.evaluateTuktuString(settings.database, datum), utils.evaluateTuktuString(settings.collection, datum) )
               
               // get collection
               val fcollection = authenticate match{
-                  case None => MongoTools.getFutureCollection(this, setts)
-                  case Some( auth ) => MongoTools.getFutureCollection(this, setts, auth, scramsha1)
+                  case None => mongoTools.getFutureCollection(setts, conn)
+                  case Some( auth ) => mongoTools.getFutureCollection(setts, auth, scramsha1, conn)
               }
               // Evaluate the query and filter strings and convert to JSON
               val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
@@ -197,7 +204,7 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
               val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).as[JsObject]
               
               // query database
-              fcollection.flatMap { collection =>
+              fcollection.flatMap{ collection =>
                 val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson).sort(sortJson).cursor[JsObject](readPreference).enumerate()
                 val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => keepjson match{
                   case true => (packetSenderActor ! (datum + ( resultName -> record )))

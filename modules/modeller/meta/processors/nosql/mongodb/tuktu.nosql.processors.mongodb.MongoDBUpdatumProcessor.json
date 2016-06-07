@@ -32,6 +32,13 @@
 					]
 				},
 				{
+					"name": "conn",
+					"description": "Number of channels (connections) per node.",
+					"type": "int",
+					"required": false,
+					"default": 10
+				},
+				{
 					"name": "database",
 					"description": "The database name.",
 					"type": "string",
