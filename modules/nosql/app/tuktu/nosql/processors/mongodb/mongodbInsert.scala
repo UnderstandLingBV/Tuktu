@@ -1,5 +1,6 @@
 package tuktu.nosql.processors.mongodb
 
+import collection.immutable.SortedSet
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -9,33 +10,37 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json._
 import tuktu.api.{ BaseProcessor, DataPacket }
 import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString }
-import tuktu.nosql.util.{ MongoSettings, MongoTools, stringHandler }
 import reactivemongo.core.nodeset.Authenticate
 import play.modules.reactivemongo.json._
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 import reactivemongo.api.commands.WriteResult
+import tuktu.nosql.util._
 
 /**
  * Inserts data into MongoDB
  */
+
 class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fields = List[String]()
-    var hosts: List[String] = _
+    var hosts: SortedSet[String] = _
     var database: String = _
     var coll: String = _
-    var settings: MongoSettings = _
+    var settings: MongoDBSettings = _
     var timeout: Int = _
     var user: Option[String] = _
     var pwd: String = _
     var admin: Boolean = _
     var scramsha1: Boolean = _
+    var conn: Int = _
 
     override def initialize(config: JsObject) {
         // Set up MongoDB client
-        hosts = (config \ "hosts").as[List[String]]
+        val hs = (config \ "hosts").as[List[String]] 
+        hosts = SortedSet( hs: _* )
         database = (config \ "database").as[String]
         coll = (config \ "collection").as[String]
+        conn = (config \ "connections").asOpt[Int].getOrElse(10)
 
         // Get credentials
         user = (config \ "user").asOpt[String]
@@ -50,7 +55,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        val result = scala.collection.mutable.Map[(List[String], String, String), scala.collection.mutable.ListBuffer[JsObject]]()
+        val result = scala.collection.mutable.Map[(SortedSet[String], String, String), scala.collection.mutable.ListBuffer[JsObject]]()
 
         // Convert to JSON
         for (datum <- data.data) {
@@ -64,24 +69,24 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
 
         // Bulk insert and await
         val futures = for (f <- result) yield {
-            settings = MongoSettings(f._1._1, f._1._2, f._1._3)
+            settings = MongoDBSettings(f._1._1, f._1._2, f._1._3)
             val fcollection = user match {
-                case None => MongoTools.getFutureCollection(this, settings)
+                case None => mongoTools.getFutureCollection(settings, conn)
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
+                    mongoTools.getFutureCollection(settings, credentials, scramsha1, conn)
                 }
             }
-            fcollection.map { _.bulkInsert(f._2.toStream, false) }
+            fcollection.flatMap{ collection => collection.bulkInsert(f._2.toStream, false) } 
         }
         // Wait for all the results to be retrieved
         Await.ready(Future.sequence(futures), timeout seconds)
 
         data
-    })  compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
+    })
 }
 
 /**
@@ -89,22 +94,24 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
  */
 class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
-    var hosts: List[String] = _
+    var hosts: SortedSet[String] = _
     var database: String = _
     var coll: String = _
-    var settings: MongoSettings = _
     var timeout: Int = _
     var user: Option[String] = _
     var pwd: String = _
     var admin: Boolean = _
     var scramsha1: Boolean = _
-
+    var conn: Int = _
+    
     override def initialize(config: JsObject) {
         // Set up MongoDB client
-        hosts = (config \ "hosts").as[List[String]]
+        val hs = (config \ "hosts").as[List[String]]
+        hosts = SortedSet(hs: _*)  
         database = (config \ "database").as[String]
         coll = (config \ "collection").as[String]
-
+        conn = (config \ "connections").asOpt[Int].getOrElse(10)
+        
         // Get credentials
         user = (config \ "user").asOpt[String]
         pwd = (config \ "password").asOpt[String].getOrElse("")
@@ -117,10 +124,10 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
         timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         doInsert(data)
-        data
-    })  compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
+        Future(data)
+    })
     
     // Does the actual inserting
     def doInsert(data: DataPacket) = {
@@ -131,18 +138,18 @@ class MongoDBFieldInsertProcessor(resultName: String) extends BaseProcessor(resu
                 case jobj: JsObject         => jobj
                 case jmap: Map[String, Any] => tuktu.api.utils.MapToJsObject(jmap, false)
             }
-            settings = MongoSettings(hosts.map(evaluateTuktuString(_, datum)), evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum))
+            val settings = MongoDBSettings( (hosts.map(evaluateTuktuString(_, datum))) , evaluateTuktuString(database, datum), evaluateTuktuString(coll, datum))
             val fcollection = user match {
-                case None => MongoTools.getFutureCollection(this, settings)
+                case None => mongoTools.getFutureCollection( settings, conn )
                 case Some(usr) => {
                     val credentials = admin match {
                         case true  => Authenticate("admin", usr, pwd)
                         case false => Authenticate(database, usr, pwd)
                     }
-                    MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
+                    mongoTools.getFutureCollection(settings, credentials, scramsha1, conn)
                 }
             }
-            fcollection.flatMap { collection => collection.insert(jobj) }
-        }) 
+            fcollection.flatMap{collection => collection.insert(jobj)} 
+        })
     }
 }

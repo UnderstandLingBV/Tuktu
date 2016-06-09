@@ -15,29 +15,32 @@ import play.modules.reactivemongo.json.collection._
 import reactivemongo.core.nodeset.Authenticate
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
-import tuktu.nosql.util.MongoTools
-import tuktu.nosql.util.MongoSettings
-import tuktu.nosql.util.stringHandler
+import tuktu.nosql.util._
+import scala.collection.immutable.SortedSet
 import scala.util.Failure
 import scala.util.Success
-
 /**
  * Removes data from MongoDB
  */
-class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultName) {
+class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultName)
+{
     var fcollection: Future[JSONCollection] = _
-    var settings: MongoSettings = _
+    var settings: MongoDBSettings = _
     var query: String = _
     var filter: String = _
     var justOne: Boolean = _
     var timeout: Int = _
     var blocking: Boolean = _
+    var conn: Int = _
 
-    override def initialize(config: JsObject) {
+    override def initialize(config: JsObject) 
+    {
         // Set up MongoDB client
-        val hosts = (config \ "hosts").as[List[String]]
+        val hs = (config \ "hosts").as[List[String]]
+        val hosts = SortedSet(hs: _*)
         val database = (config \ "database").as[String]
         val coll = (config \ "collection").as[String]
+        conn = (config \ "connections").asOpt[Int].getOrElse(10)
 
         // Get credentials
         val user = (config \ "user").asOpt[String]
@@ -46,16 +49,16 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
 
         // Set up connection
-        settings = MongoSettings(hosts, database, coll)
+        settings = MongoDBSettings(hosts, database, coll)
         fcollection = user match{
-            case None => MongoTools.getFutureCollection(this, settings)
+            case None => mongoTools.getFutureCollection(settings, conn)
             case Some( usr ) => {
                 val credentials = admin match
                 {
                   case true => Authenticate( "admin", usr, pwd )
                   case false => Authenticate( database, usr, pwd )
                 }
-                MongoTools.getFutureCollection(this, settings, credentials, scramsha1)
+                mongoTools.getFutureCollection(settings, credentials, scramsha1, conn)
               }
           }
 
@@ -72,17 +75,19 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => if (!blocking) {
-        Future {
-            doRemove(data)
-            data
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        if (!blocking) {
+            Future {
+                doRemove(data)
+                data
+            }
+        } else {
+            // Wait for the removal to be finished
+            doRemove(data).map {
+                case _ => data
+            }
         }
-    } else {
-        // Wait for the removal to be finished
-        doRemove(data).map {
-            case _ => data
-        }
-    }) compose Enumeratee.onEOF { () => MongoTools.deleteCollection(this, settings) }
+    })
     
     
     // Does the actual removal

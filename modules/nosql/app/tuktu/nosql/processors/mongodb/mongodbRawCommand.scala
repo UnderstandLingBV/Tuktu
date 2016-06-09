@@ -10,6 +10,7 @@ import reactivemongo.api._
 import reactivemongo.api.commands.Command
 import reactivemongo.core.commands.SuccessfulAuthentication
 import reactivemongo.core.nodeset.Authenticate
+import scala.collection.immutable.SortedSet
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -19,7 +20,8 @@ import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString }
 /**
  * Provides a helper to run specified database commands (as long as the command result is less than 16MB in size).
  */
-class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resultName) {
+class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resultName)
+{
     var command: String = _
     var db: DefaultDB = _
     var auth: Option[Future[SuccessfulAuthentication]] = _
@@ -83,6 +85,6 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
             }  
         }
         Future.sequence( lfuture ).map{ list => new DataPacket( list ) }
-    }) compose Enumeratee.onEOF { () => connection.close() }
+    })
 
 }

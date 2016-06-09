@@ -1,0 +1,23 @@
+{
+	"name": "MongoDB Cleanup Processor",
+	"description": "Closes all MongodB connections.",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBCleanupProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": []
+		}
+	]
+}
