@@ -7,12 +7,12 @@ GET         /                       controllers.restapi.RESTAPI.index
 
 # Job stuff
 GET         /jobs                   controllers.restapi.RESTAPI.getJobs
-GET         /jobs/config/:name      controllers.restapi.RESTAPI.getConfig(name)
-POST        /jobs/config/:name      controllers.restapi.RESTAPI.setConfig(name)
+GET         /jobs/config/*name      controllers.restapi.RESTAPI.getConfig(name)
+POST        /jobs/config/*name      controllers.restapi.RESTAPI.setConfig(name)
 POST        /job/start              controllers.restapi.RESTAPI.start
 POST        /job/stop               controllers.restapi.RESTAPI.stop
 POST        /job/terminate          controllers.restapi.RESTAPI.terminate
 
 # DFS stuff
-GET         /dfs/get/:name          controllers.restapi.DFS.get(name)
-POST        /dfs/add/:binary/:name  controllers.restapi.DFS.add(name, binary: Boolean)
+GET         /dfs/get/*name          controllers.restapi.DFS.get(name)
+POST        /dfs/add/:binary/*name  controllers.restapi.DFS.add(name, binary: Boolean)
