@@ -98,15 +98,17 @@ object RESTAPI extends Controller {
      */
     def getConfig(name: String) = Action.async { Future {
         // Read config from disk
-        val config = {
+        val filename = Cache.getAs[String]("configRepo").getOrElse("configs") + "/" + name + ".json"
+        if (Files.exists(Paths.get(filename))) {
             val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
                     "/" + name + ".json", "utf-8")
             val cfg = Json.parse(configFile.mkString).as[JsObject]
             configFile.close
-            cfg
+            
+            Ok(cfg)
+        } else {
+            NotFound(Json.obj("error" -> "The specified config file could not be found."))
         }
-        
-        Ok(config)
     }}
     
     /**
