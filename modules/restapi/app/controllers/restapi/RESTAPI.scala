@@ -37,22 +37,23 @@ object RESTAPI extends Controller {
      * Shows API definitions and endpoints
      */
     def index() = Action {
+        val url = Cache.getAs[String]("web.url").getOrElse("http://localhost:9000")
         val prefix = Play.current.configuration.getString("tuktu.restapi.prefix").getOrElse("api")
         val version = Play.current.configuration.getString("tuktu.restapi.version").getOrElse("version")
         // Get the routes
         val routes = {
-            val urlPrefix = prefix + "/" + version
             val rts = Play.current.routes map (routes => routes.documentation) getOrElse (Nil)
             for {
                 r <- rts
                 if (r._3.startsWith("controllers.restapi"))
             } yield Json.obj(
-                    "url" -> (urlPrefix + r._2),
+                    "url" -> r._2,
                     "method" -> r._1
             )
         }
          
         Ok(Json.obj(
+                "api_base_url" -> url,
                 "api_prefix" -> prefix,
                 "api_version" -> version,
                 "api_endpoints" -> routes
