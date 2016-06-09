@@ -6,6 +6,11 @@ import anorm.NamedParameter
 import anorm.SqlParser._
 import anorm.Row
 import anorm.SQL
+import anorm.SqlParser
+import anorm.Iteratees
+import play.api.libs.iteratee.Enumerator
+import scala.concurrent.ExecutionContext.Implicits.global
+import anorm.RowParser
 
 /**
  * Keeps track of connections
@@ -55,7 +60,7 @@ object sql {
             }
         }
     }
-    
+
     /**
      * Turns an SQL row into a Map[String, Any]
      */
@@ -67,8 +72,16 @@ object sql {
     /**
      * Query functions
      */
-    def queryResult(query: String)(conn: Connection) =
-        SQL(query).apply()(conn).toList
+    def streamResult(query: String)(implicit conn: Connection): Enumerator[Row] =
+        Iteratees.from(SQL(query))
+
+    val parser: RowParser[Map[String, Any]] =
+        SqlParser.folder(Map.empty[String, Any]) { (map, value, meta) =>
+            Right(map + (meta.column.qualified -> value))
+        }
+
+    def queryResult(query: String)(implicit conn: Connection) =
+        SQL(query).as(parser.*)
 
     def query(query: String)(conn: Connection) =
         SQL(query).execute()(conn)

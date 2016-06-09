@@ -77,7 +77,8 @@ lazy val socialDependencies = Seq(
 lazy val nosqlDependencies = Seq(
     cache,
     ws,
-    anorm,
+    "com.typesafe.play" %% "anorm" % "2.5.1",
+    "com.typesafe.play" %% "anorm-iteratee" % "2.5.1",
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "mysql" % "mysql-connector-java" % "5.1.38",
     "org.mariadb.jdbc" % "mariadb-java-client" % "1.3.4",
@@ -141,7 +142,6 @@ lazy val vizDependencies = Seq(
 lazy val coreDependencies = Seq(
     filters,
     jdbc,
-    anorm,
     cache,
     ws,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",

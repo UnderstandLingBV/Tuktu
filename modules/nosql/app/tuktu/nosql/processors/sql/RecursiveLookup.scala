@@ -90,10 +90,8 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
 
             // Get the result and use it to fetch new relations
             val parents = queryResult(query)(conn).map(row => {
-                val map = sql.rowToMap(row)
-
                 // Replace the anorm table naming with what we need
-                map.map(elem => {
+                row.map(elem => {
                     // Find the column name that matches and map to variable
                     fetchColumns(elem._1) -> elem._2
                 })

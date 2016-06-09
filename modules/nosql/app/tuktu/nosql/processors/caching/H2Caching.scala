@@ -40,7 +40,7 @@ class H2Caching (resultName: String) extends BaseProcessor(resultName) {
         //for each table, request table structure and copy over all data
         for (table <- tables) {
             // request table info and recreate
-            val createTable = queryResult(s"SHOW CREATE TABLE $dbName.$table")(sqlConn).head[String]("Create Table")
+            val createTable = queryResult(s"SHOW CREATE TABLE $dbName.$table")(sqlConn).head("Create Table").asInstanceOf[String]
             // clean up character encodings
             val createTableCleanedUp = createTable.replaceAll("(?i)character set [^ ]*", "").replaceAll("(?i)default charset=[^ ]*","")
             // execute
@@ -50,7 +50,7 @@ class H2Caching (resultName: String) extends BaseProcessor(resultName) {
             for (row <- queryResult(s"SELECT * FROM $dbName.$table")(sqlConn)) { 
                 tuktu.nosql.util.sql.query(
                         stringHandler.evaluateString("INSERT INTO `" + table + "` VALUES (${values;,})",
-                        Map("values" -> row.asList))
+                        Map("values" -> row.values.toList))
                 )(h2Conn)    
             }
         }
