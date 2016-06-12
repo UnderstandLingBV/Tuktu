@@ -36,11 +36,14 @@ class JSMerger() extends DataMerger() {
                         // We must merge the content of these JS elements
                         val jsFirst = z._1(jsField).asInstanceOf[WebJsOrderedObject]
                         val jsSecond = z._2(jsField).asInstanceOf[WebJsOrderedObject]
+                        // keep track of which keys are duplicate and remove them
+                        val removalKeys = jsFirst.items.flatMap(el => el).toMap.keySet
+                        
                         (z._1 ++ z._2) + (jsField -> {
                             new WebJsOrderedObject({
                                 jsFirst.items ++ jsSecond.items.map(elem => {
-                                    // Make sure we don't get overlapping keys (from the original source packet for example)
-                                    elem.filter(el => !jsFirst.items.flatMap(el => el).contains(el._1))
+                                    // Make sure we don't get overlapping keys (from the original source packet for example)                                    
+                                    elem.filterKeys(!removalKeys.contains(_))
                                 })
                             })
                         })
