@@ -81,6 +81,33 @@
 									"description": "The path of the config file.",
 									"type": "string",
 									"required": true
+								},
+								{
+									"name": "replacements",
+									"description": "Local replacements used to replace Tuktu config strings #{source} by target, in this instance of this config only; will overwrite global replacements of the same name.",
+									"type": "array",
+									"required": false,
+									"parameters": [
+										{
+											"name": "",
+											"type": "object",
+											"required": true,
+											"parameters": [
+												{
+													"name": "source",
+													"description": "The #{key} that will be replaced by the target string below in the invoked configs: #{source} -> target. Can contain Tuktu strings to populate with first Datum.",
+													"type": "string",
+													"required": true
+												},
+												{
+													"name": "target",
+													"description": "The replacement for the source above: #{source} -> target. Can contain Tuktu strings to populate with first Datum.",
+													"type": "string",
+													"required": true
+												}
+											]
+										}
+									]
 								}
 							]
 						}

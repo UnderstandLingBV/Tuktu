@@ -432,10 +432,11 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
         val futs = (for (pipeline <- pipelines) yield Future {
             // Get and evaluate config file
             val path = utils.evaluateTuktuString((pipeline \ "config_path").as[String], datum)
+            val localReplacements = (pipeline \ "replacements").asOpt[List[Map[String, String]]].getOrElse(Nil).map(map => map("source") -> map("target")).toMap
             val processorMap = {
                 val configContent = Files.readAllBytes(Paths.get(Cache.getAs[String]("configRepo").getOrElse("configs"), path + ".json"))
                 val cfg = utils.evaluateTuktuConfig(Json.parse(configContent).as[JsObject],
-                    replacements.map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)))
+                    (replacements ++ localReplacements).map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)))
                 controllers.Dispatcher.buildProcessorMap((cfg \ "processors").as[List[JsObject]])
             }
 
