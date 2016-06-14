@@ -15,5 +15,5 @@ POST        /job/stop               controllers.restapi.RESTAPI.stop
 POST        /job/terminate          controllers.restapi.RESTAPI.terminate
 
 # DFS stuff
-GET         /dfs/get/:name          controllers.restapi.DFS.get(name)
-POST        /dfs/add/:binary/:name  controllers.restapi.DFS.add(name, binary: Boolean)
+GET         /dfs/get/*name          controllers.restapi.DFS.get(name)
+POST        /dfs/add/:binary/*name  controllers.restapi.DFS.add(name, binary: Boolean)
