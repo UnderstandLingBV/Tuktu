@@ -7,9 +7,9 @@ GET         /                       controllers.restapi.RESTAPI.index
 
 # Job stuff
 GET         /jobs                   controllers.restapi.RESTAPI.getJobs
-GET         /jobs/config/:name      controllers.restapi.RESTAPI.getConfig(name)
-POST        /jobs/config/:name      controllers.restapi.RESTAPI.setConfig(name)
-DELETE      /jobs/config/:name      controllers.restapi.RESTAPI.removeConfig(name)
+GET         /jobs/config/*name      controllers.restapi.RESTAPI.getConfig(name)
+POST        /jobs/config/*name      controllers.restapi.RESTAPI.setConfig(name)
+DELETE      /jobs/config/*name      controllers.restapi.RESTAPI.removeConfig(name)
 POST        /job/start              controllers.restapi.RESTAPI.start
 POST        /job/stop               controllers.restapi.RESTAPI.stop
 POST        /job/terminate          controllers.restapi.RESTAPI.terminate
