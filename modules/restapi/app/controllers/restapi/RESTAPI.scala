@@ -130,7 +130,7 @@ object RESTAPI extends Controller {
             val path = Paths.get(configsRepo, withEnding).toAbsolutePath.normalize
             Files.createDirectories(path)
             if (!path.startsWith(configsPath))
-                BadRequest(Json.obj("error" -> "Invalid path/name found."))
+                NotFound(Json.obj("error" -> "Invalid path/name found."))
             else if (Files.exists(path))
                 BadRequest(Json.obj("error" -> "File name already exists."))
             else {
