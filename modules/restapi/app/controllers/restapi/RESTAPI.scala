@@ -1,31 +1,32 @@
 package controllers.restapi
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.ActorRef
+import akka.actor.PoisonPill
+import akka.actor.Props
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
+import play.api.libs.iteratee.Concurrent
+import play.api.libs.iteratee.Concurrent.Channel
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.Input
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.Controller
 import tuktu.api._
-import java.nio.file.Paths
-import java.nio.file.Files
-import scala.concurrent.duration.Duration
-import akka.actor.ActorRef
-import akka.actor.ActorLogging
-import akka.actor.Actor
-import akka.actor.Props
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.iteratee.Concurrent.Channel
-import play.api.libs.iteratee.Concurrent
-import akka.actor.PoisonPill
-import play.api.libs.iteratee.Input
 
 /**
  * Controller for all REST API functionality of Tuktu
@@ -128,8 +129,10 @@ object RESTAPI extends Controller {
             // Check if absolute normalized path starts with configs repo and new file doesnt exist yet
             val path = Paths.get(configsRepo, withEnding).toAbsolutePath.normalize
             Files.createDirectories(path)
-            if (!path.startsWith(configsPath) || Files.exists(path))
+            if (!path.startsWith(configsPath))
                 BadRequest(Json.obj("error" -> "Invalid path/name found."))
+            else if (Files.exists(path))
+                BadRequest(Json.obj("error" -> "File name already exists."))
             else {
                 try {
                     Files.write(path, Json.prettyPrint(config).getBytes("utf-8"))
@@ -140,6 +143,33 @@ object RESTAPI extends Controller {
             }
         } catch {
             case e: Throwable => Future.successful(BadRequest(
+                Json.obj("error" -> e.getMessage)))
+        }
+    }
+    
+    /**
+     * Removes an existing config files
+     */
+    def removeConfig(name: String) = Action.async { request =>
+        try Future {
+            // Get the config from POST
+            val config = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
+            
+            // Store it
+            // Get config repo
+            val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
+            val configsPath = Paths.get(configsRepo).toAbsolutePath.normalize
+
+            // Check if absolute normalized path starts with configs repo and new file doesnt exist yet
+            val path = Paths.get(configsRepo, name).toAbsolutePath.normalize
+            if (!path.startsWith(configsPath))
+                BadRequest(Json.obj("error" -> "Invalid path/name found."))
+            else {
+                Files.delete(path)
+                Ok("")
+            }
+        } catch {
+            case e: Exception => Future.successful(BadRequest(
                 Json.obj("error" -> e.getMessage)))
         }
     }
