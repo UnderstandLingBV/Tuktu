@@ -128,13 +128,13 @@ object RESTAPI extends Controller {
             val withEnding = if (name.endsWith(".json")) name else name + ".json"
             // Check if absolute normalized path starts with configs repo and new file doesnt exist yet
             val path = Paths.get(configsRepo, withEnding).toAbsolutePath.normalize
-            Files.createDirectories(path)
             if (!path.startsWith(configsPath))
                 NotFound(Json.obj("error" -> "Invalid path/name found."))
             else if (Files.exists(path))
                 BadRequest(Json.obj("error" -> "File name already exists."))
             else {
                 try {
+                    Files.createDirectories(path.getParent)
                     Files.write(path, Json.prettyPrint(config).getBytes("utf-8"))
                     Ok("")
                 } catch {
