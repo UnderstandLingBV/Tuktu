@@ -26,7 +26,7 @@ class SimpleMerger() extends DataMerger() {
 class JSMerger() extends DataMerger() {
     override def merge(packets: List[DataPacket]): DataPacket = {
         val jsField = Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field"))
-        
+
         new DataPacket({
                 // Fold and zip the packets into one
                 val x = packets.map(packet => packet.data)
@@ -37,13 +37,13 @@ class JSMerger() extends DataMerger() {
                         val jsFirst = z._1(jsField).asInstanceOf[WebJsOrderedObject]
                         val jsSecond = z._2(jsField).asInstanceOf[WebJsOrderedObject]
                         // keep track of which keys are duplicate and remove them
-                        val removalKeys = jsFirst.items.flatMap(el => el).toMap.keySet
-                        
+                        val removalKeys = jsFirst.items.flatMap(el => el.keySet)
+
                         (z._1 ++ z._2) + (jsField -> {
                             new WebJsOrderedObject({
                                 jsFirst.items ++ jsSecond.items.map(elem => {
-                                    // Make sure we don't get overlapping keys (from the original source packet for example)                                    
-                                    elem.filterKeys(!removalKeys.contains(_))
+                                    // Make sure we don't get overlapping keys (from the original source packet for example)
+                                    elem -- removalKeys
                                 })
                             })
                         })
@@ -68,7 +68,7 @@ class PaddingMerger() extends DataMerger() {
                  * still not equal, we repeat the packet smallest in size
                  */
                 val maxSize = packets.maxBy(pckt => pckt.data.size).data.size
-                
+
                 // Go over all packets, padding where required
                 packets.map(packet => packet.data).fold(Nil)((x, y) => {
                     // Check size difference
