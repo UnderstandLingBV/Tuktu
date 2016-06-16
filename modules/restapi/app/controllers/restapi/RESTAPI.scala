@@ -33,7 +33,7 @@ import tuktu.api._
  */
 object RESTAPI extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    
+
     /**
      * Shows API definitions and endpoints
      */
@@ -52,7 +52,7 @@ object RESTAPI extends Controller {
                     "method" -> r._1
             )
         }
-         
+
         Ok(Json.obj(
                 "api_base_url" -> url,
                 "api_prefix" -> prefix,
@@ -60,7 +60,7 @@ object RESTAPI extends Controller {
                 "api_endpoints" -> routes
         ))
     }
-    
+
     /**
      * List all jobs, running and finished
      */
@@ -93,7 +93,7 @@ object RESTAPI extends Controller {
             }
         }
     }
-    
+
     /**
      * Gets the config for a specific job
      */
@@ -111,15 +111,15 @@ object RESTAPI extends Controller {
             NotFound(Json.obj("error" -> "The specified config file could not be found."))
         }
     }}
-    
+
     /**
      * Sets a config
      */
-    def setConfig(name: String) = Action.async { request => 
+    def setConfig(name: String) = Action.async { request =>
         try Future {
             // Get the config from POST
             val config = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
-            
+
             // Store it
             // Get config repo
             val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
@@ -146,24 +146,22 @@ object RESTAPI extends Controller {
                 Json.obj("error" -> e.getMessage)))
         }
     }
-    
+
     /**
      * Removes an existing config files
      */
     def removeConfig(name: String) = Action.async { request =>
         try Future {
-            // Get the config from POST
-            val config = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
-            
-            // Store it
             // Get config repo
             val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
             val configsPath = Paths.get(configsRepo).toAbsolutePath.normalize
 
-            // Check if absolute normalized path starts with configs repo and new file doesnt exist yet
+            // Check if absolute normalized path starts with config repo and if file exists
             val path = Paths.get(configsRepo, name).toAbsolutePath.normalize
             if (!path.startsWith(configsPath))
                 BadRequest(Json.obj("error" -> "Invalid path/name found."))
+            else if (!Files.exists(path))
+                NotFound(Json.obj("error" -> "The specified config file could not be found."))
             else {
                 Files.delete(path)
                 Ok("")
@@ -173,13 +171,13 @@ object RESTAPI extends Controller {
                 Json.obj("error" -> e.getMessage)))
         }
     }
-    
+
     /**
      * Helps in setting up a job and streaming the result back
      */
     class jobHelperActor(name: String, config: Option[JsObject], sendData: Option[JsObject]) extends Actor with ActorLogging {
         val (enum, channel) = Concurrent.broadcast[JsObject]
-        
+
         def receive() = {
             case ip: InitPacket => {
                 val generator = (Akka.system.actorSelection("user/TuktuDispatcher") ?
@@ -204,7 +202,7 @@ object RESTAPI extends Controller {
             }
         }
     }
-    
+
     /**
      * Starts a job, either by config name, or by provided config file as POST body
      */
@@ -214,19 +212,19 @@ object RESTAPI extends Controller {
             val postBody = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
             // Should we return the result of this flow or not?
             val returnResult = (postBody \ "result").asOpt[Boolean].getOrElse(false)
-            
+
             // Handle config
             val config = if (postBody.keys.contains("name") && !postBody.keys.contains("config"))
                     None
                 else if (postBody.keys.contains("name") && postBody.keys.contains("config"))
                     Some((postBody \ "config").as[JsObject])
                 else null
-                
+
             // See if we need to send data to the actor
             val sendData = if (postBody.keys.contains("data")) {
                 Some((postBody \ "data").as[JsObject])
             } else None
-            
+
             if (config == null) Future { BadRequest(Json.obj("error" -> "Bad POST body")) }
             else {
                 // Determine if we need to wait for the result or not
@@ -235,7 +233,7 @@ object RESTAPI extends Controller {
                     val helper = Akka.system.actorOf(Props(classOf[jobHelperActor],
                             (postBody \ "name").as[String], config, sendData), java.util.UUID.randomUUID.toString)
                     val fut = (helper ? new InitPacket).asInstanceOf[Future[Enumerator[JsObject]]]
-            
+
                     fut.map(enum =>
                         // Stream the results
                         Ok.chunked(enum)
@@ -265,7 +263,7 @@ object RESTAPI extends Controller {
             case e: Throwable => Future { BadRequest(Json.obj("error" -> e.getMessage)) }
         }
     }
-    
+
     /**
      * Stops a job (gracefully)
      */
@@ -273,12 +271,12 @@ object RESTAPI extends Controller {
         // We need the job's UUID
         val postBody = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
         val uuid = (postBody \ "uuid").as[String]
-        
+
         // Monitor stops jobs
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(uuid, "stop")
         Future { Ok("") }
     }
-    
+
     /**
      * Terminates a job (ungracefully)
      */
@@ -286,7 +284,7 @@ object RESTAPI extends Controller {
         // We need the job's UUID
         val postBody = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
         val uuid = (postBody \ "uuid").as[String]
-        
+
         // Monitor stops jobs
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(uuid, "kill")
         Future { Ok("") }
