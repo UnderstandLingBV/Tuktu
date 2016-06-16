@@ -2,11 +2,6 @@ import NativePackagerHelper._
 
 EclipseKeys.createSrc := EclipseCreateSrc.All
 
-// For running tests, comment the following line
-javaOptions in Universal ++= Seq(
-	"-Xmax-classfile-name 100" 
-)
-
 mappings in Universal ++= 
 	directory("documentation") ++
 	directory("images") ++
