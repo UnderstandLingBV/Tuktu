@@ -1,0 +1,48 @@
+{
+	"name": "Term Adder Processor",
+	"description": "Adds a term to a vocabulary of the in-memory vocabulary bank.",
+	"class": "tuktu.dlib.processors.vocabularies.TermAdderProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "vocabulary",
+					"description": "The name of the vocabulary to which the new term must be added.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "source",
+					"description": "The source term to add.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "target",
+					"description": "The target term to add.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "language",
+					"description": "The language of the target term.",
+					"type": "string",
+					"required": false
+				}
+			]
+		}
+	]
+}

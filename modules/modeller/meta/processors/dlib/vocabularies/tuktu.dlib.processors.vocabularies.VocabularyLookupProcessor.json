@@ -1,0 +1,42 @@
+{
+	"name": "Vocabulary Lookup Processor",
+	"description": "Looks up a vocabulary term in a vocabulary of the in-memory vocabulary bank.",
+	"class": "tuktu.dlib.processors.vocabularies.VocabularyLookupProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "term",
+					"description": "The source term to look up in the vocabulary.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "language",
+					"description": "The language of the target term.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "name",
+					"description": "The name of the vocabulary.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
