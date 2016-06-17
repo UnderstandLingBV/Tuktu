@@ -34,6 +34,11 @@ import tuktu.api.OverviewReply
  * Daemon for Tuktu's DB operations
  */
 class DBDaemon() extends Actor with ActorLogging {
+    // helper case class to get Overview from each node seperately
+    case class InternalOverview(
+        offset: Int
+    )    
+    
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Local in-memory database
@@ -142,26 +147,19 @@ class DBDaemon() extends Actor with ActorLogging {
             
         }
         case or: OverviewRequest => {
-            if (dbDaemons.size > 1) {
-                // Query all the nodes in the cluster
-                val futs = dbDaemons.filter(_._1 != homeAddress).map(daemon => (daemon._2 ? or).asInstanceOf[Future[OverviewReply]])
-                // Merge everything
-                Future.sequence(futs).map {
-                    case reply: List[OverviewReply] => {
-                        // Get local DB
-                        sender ! new OverviewReply(
-                                tuktudb.drop(or.offset * 50).take(50).map(bucket => (bucket._1, bucket._2.size)).toMap ++
-                                reply.foldLeft(Map.empty[List[Any], Int])((a, b) => a ++ b.bucketCounts.drop(or.offset * 50).take(50))
-                        )
-                    }
-                }
-            }
-            else {
-                // Just local stuff
-                sender ! new OverviewReply(
-                        tuktudb.drop(or.offset * 50).take(50).map(bucket => (bucket._1, bucket._2.size)).toMap
-                )
-            }
+            // need to store original sender
+            val originalSender = sender
+            
+            val requests = dbDaemons.map(_._2 ? new InternalOverview(or.offset)).asInstanceOf[Seq[Future[OverviewReply]]]
+
+            Future.fold(requests)(Map.empty[List[Any],Int])(_ ++ _.bucketCounts).map {
+                result => originalSender ! new OverviewReply(result) 
+            }            
+        }
+        case or: InternalOverview => {
+            sender ! new OverviewReply(
+                    tuktudb.drop(or.offset * 50).take(50).map(bucket => (bucket._1, bucket._2.size)).toMap
+            )
         }
     }
 }
