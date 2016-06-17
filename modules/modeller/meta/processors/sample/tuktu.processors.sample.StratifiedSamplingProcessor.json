@@ -1,0 +1,37 @@
+{
+	"name": "Stratified Sampling Processor",
+	"description": "Takes stratified data from a DataPacket, equaling the class counts.",
+	"class": "tuktu.processors.sample.StratifiedSamplingProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "class_field",
+					"description": "The name of the field that contains the class values upon which stratified sampling should be based.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "random",
+					"description": "Whether or not to take random strata. If set to false, the order inside the DataPacket will be maintained and the datums picked will be the first ones encountered.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}
