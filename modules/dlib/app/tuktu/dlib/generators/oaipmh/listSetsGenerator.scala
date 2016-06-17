@@ -73,6 +73,8 @@ class ListSetsGenerator ( resultName: String, processors: List[Enumeratee[DataPa
     var flatten: Boolean = _
     override def receive() = 
     {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case config: JsValue => 
         {
           // Get the ListRecords parameters        

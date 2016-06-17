@@ -1,0 +1,30 @@
+{
+	"name": "Vocabulary Remover Processor",
+	"description": "Removes a vocabulary from the in-memory vocabulary bank.",
+	"class": "tuktu.dlib.processors.vocabularies.VocabularyRemoverProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "vocabulary",
+					"description": "The name of the vocabulary to remove.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

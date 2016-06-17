@@ -1,0 +1,36 @@
+{
+	"name": "Vocabulary Loader Processor",
+	"description": "Loads a vocabulary into the in-memory vocabulary bank.",
+	"class": "tuktu.dlib.processors.vocabularies.VocabularyLoaderProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "vocabulary",
+					"description": "The field that contains the vocabulary to load.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "name",
+					"description": "The name of the vocabulary to load.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

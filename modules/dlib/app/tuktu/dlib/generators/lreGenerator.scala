@@ -70,6 +70,8 @@ class LREGenerator( resultName: String, processors: List[Enumeratee[DataPacket, 
 {
     override def receive() = 
     {
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case config: JsValue => 
         {
             // Get the LRE query parameters

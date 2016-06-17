@@ -64,7 +64,9 @@ class ListMetadataFormatsGenerator ( resultName: String, processors: List[Enumer
     var toj: Boolean = _
     var flatten: Boolean = _
     override def receive() = 
-    {
+    {  
+        case dpp: DecreasePressurePacket => decBP
+        case bpp: BackPressurePacket => backoff
         case config: JsValue => 
         {
           // Get the ListRecords parameters        
