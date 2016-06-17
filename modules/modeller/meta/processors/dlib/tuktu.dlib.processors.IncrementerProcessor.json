@@ -1,0 +1,31 @@
+{
+	"name": "Incrementer Processor",
+	"description": "Increments a field integer value by 1 starting from an initial value.",
+	"class": "tuktu.dlib.processors.IncrementerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "initial",
+					"description": "The initial value from which the incrementation starts.",
+					"type": "int",
+					"required": false,
+					"default": 0
+				}
+			]
+		}
+	]
+}
