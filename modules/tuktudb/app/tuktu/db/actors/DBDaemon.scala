@@ -30,15 +30,15 @@ import tuktu.api.DeleteActionRequest
 import tuktu.api.OverviewRequest
 import tuktu.api.OverviewReply
 
+// helper case class to get Overview from each node separately
+case class InternalOverview(
+    offset: Int
+)
+
 /**
  * Daemon for Tuktu's DB operations
  */
-class DBDaemon() extends Actor with ActorLogging {
-    // helper case class to get Overview from each node seperately
-    case class InternalOverview(
-        offset: Int
-    )    
-    
+class DBDaemon() extends Actor with ActorLogging {    
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Local in-memory database
