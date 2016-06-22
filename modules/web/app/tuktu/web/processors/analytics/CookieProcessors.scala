@@ -23,14 +23,14 @@ class SetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName)
     var expires: Option[String] = _
     var path: Option[String] = _
     var onlyIfNotExists: Boolean = _
-    
+
     override def initialize(config: JsObject) {
         value = (config \ "value").as[String]
         expires = (config \ "expires").asOpt[String]
         path = (config \ "path").asOpt[String]
         onlyIfNotExists = (config \ "only_if_not_exists").asOpt[Boolean].getOrElse(true)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
             // Evaluate
@@ -43,35 +43,35 @@ class SetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName)
                 case Some(p) => Some(utils.evaluateTuktuString(p, datum))
                 case None => None
             }
-            
+
             // Check if we need to set only if the cookie doesnt exist, or always
             if (onlyIfNotExists) {
                 addJsElements(datum, List(
                     new WebJsFunctionObject(
                             "setCookie" + resultName,
                             List(""),
-                            """var name = '""" + resultName + """' + "=";""" +
-                                """var ca = document.cookie.split(';');""" +
-                                """for(var i=0; i<ca.length; i++) {""" +
-                                    """var c = ca[i];""" +
-                                    """while (c.charAt(0)==' ') c = c.substring(1);""" +
-                                    """if (c.indexOf(name) == 0) return c.substring(name.length,c.length);""" +
-                                """}""" +
-                                """return "";"""
+                            "var n='" + resultName + "=';" +
+                                "var ca=document.cookie.split(';');" +
+                                "for(var i=0;i<ca.length;i++){" +
+                                    "var c=ca[i];" +
+                                    "while(c.charAt(0)===' ')c=c.substring(1);" +
+                                    "if(c.indexOf(n)===0)return c.substring(n.length);" +
+                                "}" +
+                                "return '';"
                     ),
                     new WebJsCodeObject(
-                            "if (setCookie" + resultName + "() === \"\") {document.cookie=\"" +
+                            "if(setCookie" + resultName + "()===''){document.cookie='" +
                             resultName + "=" + cValue + {
                                 cExpires match {
-                                    case Some(e) => "; expires=" + e
+                                    case Some(e) => ";expires=" + e
                                     case None => ""
                                 }
                             } + {
                                 cPath match {
-                                    case Some(p) => "; path=" + p
+                                    case Some(p) => ";path=" + p
                                     case None => ""
                                 }
-                            } + "\";}"
+                            } + "';}"
                     )
                 ))
             }
@@ -80,15 +80,15 @@ class SetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName)
                         "document.cookie=\"" +
                         resultName + "=" + cValue + {
                             cExpires match {
-                                case Some(e) => "; expires=" + e
+                                case Some(e) => ";expires=" + e
                                 case None => ""
                             }
                         } + {
                             cPath match {
-                                case Some(p) => "; path=" + p
+                                case Some(p) => ";path=" + p
                                 case None => ""
                             }
-                        } + "\""
+                        } + "\";"
                 ))
             }
         }
@@ -100,28 +100,28 @@ class SetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName)
  */
 class GetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName) {
     var name: String = _
-    
+
     override def initialize(config: JsObject) {
         name = (config \ "name").as[String]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
             // Evaluate
             val cName = utils.evaluateTuktuString(name, datum)
-            
+
             addJsElements(datum, List(
                 new WebJsFunctionObject(
                         "getCookie" + resultName,
                         List(""),
-                        """var name = '""" + cName + """' + "=";""" +
-                            """var ca = document.cookie.split(';');""" +
-                            """for(var i=0; i<ca.length; i++) {""" +
-                                """var c = ca[i];""" +
-                                """while (c.charAt(0)==' ') c = c.substring(1);""" +
-                                """if (c.indexOf(name) == 0) return c.substring(name.length,c.length);""" +
-                            """}""" +
-                            """return "";"""
+                        "var n='" + cName + "=';" +
+                            "var ca=document.cookie.split(';');" +
+                            "for(var i=0;i<ca.length;i++){" +
+                                "var c=ca[i];" +
+                                "while(c.charAt(0)===' ')c=c.substring(1);" +
+                                "if(c.indexOf(n)===0)return c.substring(n.length);" +
+                            "}" +
+                            "return '';"
                 ),
                 new WebJsObject(
                         "getCookie" + resultName + "()", true
@@ -138,7 +138,8 @@ class GetAllCookiesProcessor(resultName: String) extends BaseJsProcessor(resultN
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
             addJsElement(datum, new WebJsObject(
-                    "document.cookie.split(';').map(function(elem) {" +
+                    "document.cookie.split(';').map(function(elem){" +
+                    "while(elem.charAt(0)===' ')elem=elem.substring(1);" +
                     "var res={};var splt=elem.split('=');" +
                     "res[splt[0]]=splt.slice(1,splt.length).join('=');" +
                     "return res;})", true
@@ -152,11 +153,11 @@ class GetAllCookiesProcessor(resultName: String) extends BaseJsProcessor(resultN
  */
 class FlattenCookiesProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
-    
+
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Get the cookies and make them first-class citizen
         new DataPacket(for (datum <- data.data) yield {
