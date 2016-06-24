@@ -26,7 +26,7 @@ class TDFSBinaryReaderGenerator(resultName: String, processors: List[Enumeratee[
             
             // Ask for the actual content from the TDFS daemon
             Akka.system.actorSelection("user/tuktu.dfs.Daemon") ! new TDFSReadInitiateRequest(
-                    filename, true, None            
+                    filename, true, None, Some(64 * 1024)
             )
         }
         case tcp: TDFSContentPacket => channel.push(new DataPacket(List(Map(resultName -> tcp.content))))

@@ -96,7 +96,7 @@ object Browser extends Controller {
 
         def receive() = {
             case ip: InitPacket => {
-                Akka.system.actorSelection("user/tuktu.dfs.Daemon") ! new TDFSReadInitiateRequest(filename, false, None)
+                Akka.system.actorSelection("user/tuktu.dfs.Daemon") ! new TDFSReadInitiateRequest(filename, false, None, Some(64 * 1024))
 
                 // Set up enumerator and channel
                 val res = Concurrent.broadcast[Array[Byte]]

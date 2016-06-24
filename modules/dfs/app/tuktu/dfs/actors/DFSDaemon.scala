@@ -37,7 +37,8 @@ case class TDFSWriteInitiateRequest(
 case class TDFSReadInitiateRequest(
         filename: String,
         binary: Boolean,
-        encoding: Option[String]
+        encoding: Option[String],
+        chunkSize: Option[Int]
 )
 case class TDFSWriteRequest(
         filename: String,
@@ -50,7 +51,8 @@ case class TDFSReadRequest(
         filename: String,
         part: Int,
         binary: Boolean,
-        encoding: Option[String]
+        encoding: Option[String],
+        chunkSize: Option[Int]
 )
 case class TDFSContentPacket(
         content: Array[Byte]
@@ -376,7 +378,7 @@ class ReaderDaemon(trr: TDFSReadInitiateRequest, requester: ActorRef) extends Ac
                 else
                     "akka.tcp://application@" + clusterNode._2.host  + ":" + clusterNode._2.akkaPort + "/user/tuktu.dfs.Daemon"
             Akka.system.actorSelection(location) ! new TDFSReadRequest(
-                    trr.filename, currentCount, trr.binary, trr.encoding
+                    trr.filename, currentCount, trr.binary, trr.encoding, trr.chunkSize
             )
         })
     }
@@ -479,7 +481,7 @@ class BinaryTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends A
     self ! doRead
     
     def doRead() = {
-        val content = new Array[Byte](8 * 1024)
+        val content = new Array[Byte](trr.chunkSize.getOrElse(8 * 1024))
         val res = reader.read(content)
         new TDFSBinaryReadContentPacket(content, res)
     }

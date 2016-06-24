@@ -37,7 +37,7 @@ class TDFSLineReaderGenerator(resultName: String, processors: List[Enumeratee[Da
             
             // Ask for the actual content from the TDFS daemon
             Akka.system.actorSelection("user/tuktu.dfs.Daemon") ! new TDFSReadInitiateRequest(
-                    filename, false, encoding
+                    filename, false, encoding, None
             )
         }
         case tcp: TDFSContentPacket => {
