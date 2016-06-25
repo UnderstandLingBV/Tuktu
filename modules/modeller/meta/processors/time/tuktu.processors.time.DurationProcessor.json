@@ -1,0 +1,36 @@
+{
+	"name": "Duration Processor",
+	"class": "tuktu.processors.time.DurationProcessor",
+	"description": "Calculate the number of days between two dates expressed in ISO 8601 format (e.g., 2016-06-24).",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "start",
+					"description": "The starting date.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "end",
+					"description": "The ending date.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
