@@ -26,7 +26,7 @@
 				},
 				{
 					"name": "datetime_field",
-					"description": "The field which contains a formatted datetime.",
+					"description": "The field which contains a formatted datetime, a datetime object, or a long timestamp.",
 					"type": "string",
 					"required": true
 				},

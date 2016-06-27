@@ -5,8 +5,8 @@ import play.api.libs.iteratee.Enumeratee
 import tuktu.api._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import com.github.nscala_time.time.Imports._
-import org.joda.time.format.DateTimeFormatter
+import org.joda.time.DateTime
+import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
 import play.api.libs.json.JsString
 import java.util.Locale
 
@@ -45,7 +45,7 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
         years = (config \ "time" \ "years").asOpt[Int].getOrElse(0)
 
         // make sure at least a timeframe is set
-        if (seconds + minutes + hours + days + months + years == 0)
+        if (List(millis.abs, seconds.abs, minutes.abs, hours.abs, days.abs, months.abs, years.abs).max == 0)
             seconds = 1
 
         dateTimeFormatter = DateTimeFormat.forPattern(datetimeFormat).withLocale(Locale.forLanguageTag(datetimeLocale))
@@ -53,22 +53,29 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
-            // Make string of it
-            val str = datum(datetimeField) match {
-                case a: String   => a
-                case a: JsString => a.value
-                case a: Any      => a.toString
+            val dt = datum(datetimeField) match {
+                case l: Long      => new DateTime(l)
+                case dt: DateTime => dt
+                case any => {
+                    // Make string of it
+                    val str = any match {
+                        case a: String   => a
+                        case a: JsString => a.value
+                        case a: Any      => a.toString
+                    }
+
+                    // Parse
+                    dateTimeFormatter.parseDateTime(tuktu.api.utils.evaluateTuktuString(str, datum))
+                }
             }
 
-            // Prase
-            val dt = dateTimeFormatter.parseDateTime(tuktu.api.utils.evaluateTuktuString(str, datum))
             val newDate = {
                 if (years > 0) {
                     val currentYear = dt.year.roundFloorCopy
                     currentYear.minusYears(currentYear.year.get % years)
                 } else if (months > 0) {
                     val currentMonth = dt.monthOfYear.roundFloorCopy
-                    currentMonth.minusMonths(currentMonth.month.get % months)
+                    currentMonth.minusMonths(currentMonth.monthOfYear.get % months)
                 } else if (days > 0) {
                     val currentDay = dt.dayOfYear.roundFloorCopy
                     currentDay.minusDays(currentDay.dayOfYear.get % days)
