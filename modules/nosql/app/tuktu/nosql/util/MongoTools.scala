@@ -51,20 +51,20 @@ object mongoTools
     
     def getConnection(hosts: SortedSet[String], nbConn: Int): MongoConnection = 
     {
-        connections.getOrElseUpdate(hosts, {
-            driver.connection( hosts.toList, MongoConnectionOptions( nbChannelsPerNode = nbConn ) )
-        })
+        val conns = driver.connection( hosts.toList, MongoConnectionOptions( nbChannelsPerNode = nbConn ) )
+        connections.put(hosts, conns)
+        conns
     }
     
     def getConnection(hosts: SortedSet[String], scramsha1: Boolean, nbConn: Int): MongoConnection = 
     {
-        connections.getOrElseUpdate(hosts, {
-            val conOpts = scramsha1 match{
-                case true => MongoConnectionOptions( authMode = ScramSha1Authentication, nbChannelsPerNode = nbConn )
-                case false => MongoConnectionOptions( authMode = CrAuthentication, nbChannelsPerNode = nbConn )
-            }
-            driver.connection(hosts.toList, options = conOpts)
-        })
+        val conOpts = scramsha1 match{
+          case true => MongoConnectionOptions( authMode = ScramSha1Authentication, nbChannelsPerNode = nbConn )
+          case false => MongoConnectionOptions( authMode = CrAuthentication, nbChannelsPerNode = nbConn )
+        }
+        val conns = driver.connection(hosts.toList, options = conOpts)
+        connections.put(hosts, conns)
+        conns
     }
     
     
