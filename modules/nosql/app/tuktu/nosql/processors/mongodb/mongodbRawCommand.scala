@@ -20,8 +20,7 @@ import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString }
 /**
  * Provides a helper to run specified database commands (as long as the command result is less than 16MB in size).
  */
-class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resultName)
-{
+class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resultName) {
     var command: String = _
     var db: DefaultDB = _
     var auth: Option[Future[SuccessfulAuthentication]] = _

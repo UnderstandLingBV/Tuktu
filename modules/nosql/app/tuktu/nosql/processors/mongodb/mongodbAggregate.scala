@@ -61,14 +61,14 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         val fCollection = MongoPool.getCollection(conn, db, collection)
-        fCollection.flatMap {collection =>
+        fCollection.flatMap {coll =>
             // Prepare aggregation pipeline
-            import collection.BatchCommands.AggregationFramework.PipelineOperator
-            val transformer = new MongoPipelineTransformer()(collection)
-            val pipeline = tasks.map { x => transformer.json2task(x)(collection=collection) }
+            import coll.BatchCommands.AggregationFramework.PipelineOperator
+            val transformer = new MongoPipelineTransformer()(coll)
+            val pipeline = tasks.map { x => transformer.json2task(x)(collection=coll) }
 
             // Get data from Mongo
-            val resultData = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
+            val resultData = coll.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
             resultData.map { resultList => new DataPacket(for (resultRow <- resultList) yield { tuktu.api.utils.JsObjectToMap(resultRow) }) }
         }
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))

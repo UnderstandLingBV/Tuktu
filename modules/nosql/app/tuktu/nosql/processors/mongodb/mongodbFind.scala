@@ -34,7 +34,6 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     
     var db: String = _
     var collection: String = _
-    var tasks: List[JsObject] = _
     
     var query: String = _
     var filter: String = _
@@ -62,9 +61,6 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         db = (config \ "db").as[String]
         collection = (config \ "collection").as[String]
         
-        // Get aggregation tasks
-        tasks = (config \ "tasks").as[List[JsObject]]
-        
         // Get query and filter
         query = (config \ "query").as[String]
         filter = (config \ "filter").asOpt[String].getOrElse("{}")
@@ -77,10 +73,13 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        // Get collection
-        val fCollection = MongoPool.getCollection(conn, db, collection)
-        val results = fCollection.flatMap {collection =>
-            Future.sequence(for (datum <- data.data) yield {
+        val results = Future.sequence(for (datum <- data.data) yield {
+            val dbEval = utils.evaluateTuktuString(db, datum)
+            val collEval = utils.evaluateTuktuString(collection, datum)
+            
+            // Get collection
+            val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
+            fCollection.flatMap(collection => {
                 // Evaluate the query and filter strings and convert to JSON
                 val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
                 val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
@@ -98,7 +97,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
                 // Get the results in
                 resultData.map(resultList => for (resultRow <- resultList) yield datum + (resultName -> tuktu.api.utils.JsObjectToMap(resultRow)))
             })
-        }
+        })
         
         results.map(datums => new DataPacket(datums.flatten))
     })
@@ -107,111 +106,77 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 /**
  * Queries MongoDB for data and streams the resulting records.
  */
-class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName)
-{
+class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    // Set up the packet sender actor
-    val packetSenderActor = Akka.system.actorOf(Props(classOf[PacketSenderActor], genActor))
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
     
-    var settings, setts: MongoDBSettings = _
-    var credentials: Option[Authenticate] = _
-    var scramsha1: Boolean = _
+    var db: String = _
+    var collection: String = _
+    
     var query: String = _
     var filter: String = _
     var sort: String = _
-    var readPreference: ReadPreference = _
-    var keepjson: Boolean = _
-    var conn: Int = _
     
-    override def initialize(config: JsObject) 
-    {
-        // Set up MongoDB client
-        val hs = (config \ "hosts").as[List[String]]
-        val hosts = SortedSet(hs: _*)
-        val db = (config \ "database").as[String]
-        val coll = (config \ "collection").as[String]
-        settings = MongoDBSettings(hosts, db, coll)
-        conn = (config \ "connections").asOpt[Int].getOrElse(10)
-        
+    // Set up the packet sender actor
+    val packetSenderActor = Akka.system.actorOf(Props(classOf[PacketSenderActor], genActor))
+    
+    override def initialize(config: JsObject) {
+        // Get hosts
+        nodes = (config \ "hosts").as[List[String]]
+        // Get connection properties
+        val opts = (config \ "mongo_options").asOpt[JsObject]
+        val mongoOptions = MongoPool.parseMongoOptions(opts)
         // Get credentials
-        val user = (config \ "user").asOpt[String]
-        val pwd = (config \ "password").asOpt[String].getOrElse("")
-        val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-        
-        scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
-
-        // Set up connection
-        credentials = user match{
+        val authentication = (config \ "auth").asOpt[JsObject]
+        val auth = authentication match {
             case None => None
-            case Some( usr ) => {
-                admin match
-                {
-                  case true => Option(Authenticate( "admin", usr, pwd ))
-                  case false => Option(Authenticate( db, usr, pwd ))
-                }
-            }
+            case Some(a) => Some(Authenticate(
+                    (a \ "db").as[String],
+                    (a \ "user").as[String],
+                    (a \ "password").as[String]
+            ))
         }
+        
+        // DB and collection
+        db = (config \ "db").as[String]
+        collection = (config \ "collection").as[String]
         
         // Get query and filter
         query = (config \ "query").as[String]
         filter = (config \ "filter").asOpt[String].getOrElse("{}")
         sort = (config \ "sort").asOpt[String].getOrElse("{}")
         
-        // Get read preference and keepJson
-        keepjson = (config \ "keepAsJson").asOpt[Boolean].getOrElse(true)
-        val readPref = (config \ "readPreference").asOpt[String].getOrElse("nearest")
-        readPreference = readPref match{
-          case "nearest" => ReadPreference.nearest
-          case "primary" => ReadPreference.primary
-          case "primaryPreferred" => ReadPreference.primaryPreferred
-          case "secondary" => ReadPreference.secondary
-          case "secondaryPreferred" => ReadPreference.secondaryPreferred
-          case _ => ReadPreference.nearest
-        }
+        // Get the connection
+        val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+        conn = Await.result(fConnection, timeout.duration)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        Future {
-            doFind(data)
-            data
-        }
-    })
-    
-    // Does the actual querying
-    def doFind(data: DataPacket) = {
-        // Update data into MongoDB
-        Future.sequence(data.data.map(datum => {
-            // evaluate credentials if needed
-              val authenticate: Option[Authenticate] = credentials match{
-                  case None => None
-                  case Some(cred) => Option( Authenticate(utils.evaluateTuktuString(cred.db, datum), utils.evaluateTuktuString(cred.user, datum), utils.evaluateTuktuString(cred.password, datum) ) )
-              }
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        for (datum <- data.data) {
+            val dbEval = utils.evaluateTuktuString(db, datum)
+            val collEval = utils.evaluateTuktuString(collection, datum)
+            
+            // Get collection
+            val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
+            fCollection.map {collection =>
+                // Evaluate the query and filter strings and convert to JSON
+                val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
+                val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
+                val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
               
-              // evaluate settings
-              setts = MongoDBSettings( settings.hosts.map { host => utils.evaluateTuktuString(host, datum) }, utils.evaluateTuktuString(settings.database, datum), utils.evaluateTuktuString(settings.collection, datum) )
-              
-              // get collection
-              val fcollection = authenticate match{
-                  case None => mongoTools.getFutureCollection(setts, conn)
-                  case Some( auth ) => mongoTools.getFutureCollection(setts, auth, scramsha1, conn)
-              }
-              // Evaluate the query and filter strings and convert to JSON
-              val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
-              val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
-              val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).as[JsObject]
-              
-              // query database
-              fcollection.flatMap{ collection =>
-                val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson).sort(sortJson).cursor[JsObject](readPreference).enumerate()
-                val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach { record => keepjson match{
-                  case true => (packetSenderActor ! (datum + ( resultName -> record )))
-                  case false => (packetSenderActor ! (datum + ( resultName -> tuktu.api.utils.JsObjectToMap(record) )))
-                }}
+                // Query database and forward to our actor
+                val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson)
+                    .sort(sortJson).cursor[JsObject]().enumerate()
+                val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach(record => {
+                    packetSenderActor ! (datum + (resultName -> tuktu.api.utils.JsObjectToMap(record)))
+                })
                 enumerator.run(pushRecords)
-              }
-        }))
-    }
-    
+            }
+        }
+        
+        data
+    })
 }
 
 /**
