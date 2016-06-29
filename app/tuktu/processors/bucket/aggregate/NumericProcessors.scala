@@ -126,20 +126,10 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
 }
 
 /**
- * Counts the amount of values in a bucket
+ * Counts the amount of Datums in a DataPacket
  */
 class CountProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
-    var field = ""
-
-    override def initialize(config: JsObject) {
-        field = (config \ "field").as[String]
-    }
-
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(List(Map(field -> data.data.size)))
-    })
-
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        List(Map(field -> data.asInstanceOf[List[Map[String, Int]]].foldLeft(0)(_ + _(field))))
+        List(Map(resultName -> data.size))
     }
 }
