@@ -30,129 +30,38 @@ import tuktu.api.BaseGenerator
 import tuktu.api.DataPacket
 import tuktu.api.InitPacket
 import tuktu.api.StopPacket
-import tuktu.nosql.util.MongoCollectionPool
 import tuktu.nosql.util.MongoPipelineTransformer
-import tuktu.nosql.util.MongoDBSettings
 import tuktu.nosql.util._
-
-class MongoDBGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
-{   
-    var settings: MongoDBSettings = _
-    override def receive() = {
-        case config: JsValue => {
-            // Get connection properties
-            val hs = (config \ "hosts").as[List[String]]
-            val hosts = SortedSet(hs: _*) 
-            val database = (config \ "database").as[String]
-            val coll = (config \ "collection").as[String]
-            val conn = (config \ "connections").asOpt[Int].getOrElse(10)
-            
-            // Get credentials
-            val user = (config \ "user").asOpt[String]
-            val pwd = (config \ "password").asOpt[String].getOrElse("")
-            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-            val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
-
-            // Set up connection
-            settings = MongoDBSettings(hosts, database, coll)
-            val fcollection = user match {
-                case None => mongoTools.getFutureCollection(settings, conn)
-                case Some(usr) => {
-                    val credentials = admin match {
-                        case true  => Authenticate("admin", usr, pwd)
-                        case false => Authenticate(database, usr, pwd)
-                    }
-                    mongoTools.getFutureCollection(settings, credentials, scramsha1, conn)
-                }
-            }
-
-            // Get query and filter
-            val query = (config \ "query").as[JsObject]
-            val filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
-            val sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
-
-            // Batch all the results before pushing it on the channel
-            val batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
-            val limit = (config \ "limit").asOpt[Int]
-            val batchSize = (config \ "batch_size").asOpt[Int].getOrElse(50)
-
-            val resultFuture = {
-                // Get data based on query and filter
-                val resultData = limit match {
-                    case Some(s) => fcollection.flatMap{ collection => collection.find(query, filter).sort(sort)
-                        .options(QueryOpts().batchSize(s)).cursor[JsObject](ReadPreference.primary).collect[List](s) }
-                    case None => fcollection.flatMap{ collection => collection.find(query, filter).sort(sort)
-                        .options(QueryOpts().batchSize(batchSize)).cursor[JsObject](ReadPreference.primary).collect[List]()
-                }}
-                // Get futures into JSON
-                resultData.map { resultList =>
-                    {
-                        for (resultRow <- resultList) yield {
-                            tuktu.api.utils.JsObjectToMap(resultRow)
-                        }
-                    }
-                }
-            }
-
-            // Handle results
-            resultFuture.onSuccess {
-                case res: List[Map[String, Any]] => {
-                    // Determine what to do based on batch or non batch
-                    if (batch)
-                        channel.push(new DataPacket(res))
-                    else
-                        res.foreach(row => channel.push(new DataPacket(List(row))))
-
-                    self ! new StopPacket()
-                }
-                case _ => self ! new StopPacket()
-            }
-            resultFuture.onFailure {
-                case e: Throwable => {
-                    Logger.error("Error executing MongoDB Query", e)
-                    self ! new StopPacket
-                }
-            }
-        }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
-    }
-}
+import reactivemongo.api.FailoverStrategy
+import play.modules.reactivemongo.json.collection.JSONCollection
 
 /**
  * Generator for MongoDB aggregations
  */
-class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
-{
-    var settings: MongoDBSettings = _
-    override def receive() = 
-    {
+class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
+    
+    override def receive() = {
         case config: JsValue => {
+            // Get hosts
+            nodes = (config \ "hosts").as[List[String]]
             // Get connection properties
-            val hs = (config \ "hosts").as[List[String]]
-            val hosts = SortedSet(hs: _*)
-            val database = (config \ "database").as[String]
-            val coll = (config \ "collection").as[String]
-            val conn = (config \ "connections").asOpt[Int].getOrElse(10)
-
+            val opts = (config \ "mongo_options").asOpt[JsObject]
+            val mongoOptions = MongoPool.parseMongoOptions(opts)
             // Get credentials
-            val user = (config \ "user").asOpt[String]
-            val pwd = (config \ "password").asOpt[String].getOrElse("")
-            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-            val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
-
-            // Set up connection
-            settings = MongoDBSettings(hosts, database, coll)
-            val fcollection = user match {
-                case None => mongoTools.getFutureCollection(settings, conn) 
-                case Some(usr) => {
-                    val credentials = admin match {
-                        case true  => Authenticate("admin", usr, pwd)
-                        case false => Authenticate(database, usr, pwd)
-                    }
-                    mongoTools.getFutureCollection(settings, credentials, scramsha1, 10)
-                }
+            val authentication = (config \ "auth").asOpt[JsObject]
+            val auth = authentication match {
+                case None => None
+                case Some(a) => Some(Authenticate(
+                        (a \ "db").as[String],
+                        (a \ "user").as[String],
+                        (a \ "password").as[String]
+                ))
             }
+            
+            // Get the connection
+            val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
 
             // Get tasks
             val tasks = (config \ "tasks").as[List[JsObject]]
@@ -161,25 +70,32 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
             val batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
 
             // prepare aggregation pipeline
-            val ffresult = fcollection.map{ collection => 
-               {
-                  import collection.BatchCommands.AggregationFramework.PipelineOperator
-                  val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
-                  val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x)(collection=collection) }
-                  // Get data based on the aggregation pipeline
-                  import collection.BatchCommands.AggregationFramework.AggregationResult
-                  val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
-                  // Get futures into JSON
-                  resultData.map { resultList =>
-                  {
-                      for (resultRow <- resultList) yield {
-                          tuktu.api.utils.JsObjectToMap(resultRow)
-                      }
-                  }  
+            val resultFuture = fConnection.flatMap {connection => 
+                conn = connection
+                val fCollection = MongoPool.getCollection(connection, (config \ "db").as[String], (config \ "collection").as[String])
+                fCollection.onFailure {
+                    case _ => self ! new StopPacket
                 }
-            }}
+                fCollection.flatMap { collection: JSONCollection => {
+                        import collection.BatchCommands.AggregationFramework.PipelineOperator
+                        import collection.BatchCommands.AggregationFramework.AggregationResult
+                        
+                        val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
+                        val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x)(collection=collection) }
+                        // Get data based on the aggregation pipeline
+                        val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
+                        resultData.onFailure {
+                            case _ => self ! new StopPacket
+                        }
+                        // Get futures into JSON
+                        resultData.map {resultList =>
+                            for (resultRow <- resultList) yield tuktu.api.utils.JsObjectToMap(resultRow)
+                        }
+                    }
+                }
+            }
+            
             // Handle results
-            val resultFuture = ffresult.flatMap{fresult => fresult}
             resultFuture.onSuccess {
                 case res: List[Map[String, Any]] => {
                     // Determine what to do based on batch or non batch
@@ -187,6 +103,7 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
                         channel.push(new DataPacket(res))
                     else
                         res.foreach(row => channel.push(new DataPacket(List(row))))
+                    self ! new StopPacket()
                 }
                 case _ => self ! new StopPacket()
             }
@@ -197,7 +114,11 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
                 }
             }
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => {
+            if (conn != null)
+                MongoPool.releaseConnection(nodes, conn)
+            cleanup
+        }
         case ip: InitPacket => setup
     }
 }
@@ -205,58 +126,67 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
 /**
  * Generator for MongoDB finds
  */
-class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
-{
-    var settings: MongoDBSettings = _
+class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
+    
     override def receive() = {
         case config: JsValue => {
+            // Get hosts
+            nodes = (config \ "hosts").as[List[String]]
             // Get connection properties
-            val hs = (config \ "hosts").as[List[String]]
-            val hosts = SortedSet(hs: _*)
-            val database = (config \ "database").as[String]
-            val coll = (config \ "collection").as[String]
-            val conn = (config \ "connections").asOpt[Int].getOrElse(10)
-
+            val opts = (config \ "mongo_options").asOpt[JsObject]
+            val mongoOptions = MongoPool.parseMongoOptions(opts)
             // Get credentials
-            val user = (config \ "user").asOpt[String]
-            val pwd = (config \ "password").asOpt[String].getOrElse("")
-            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-            val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
-
-            // Set up connection
-            settings = MongoDBSettings(hosts, database, coll)
-            val fcollection = user match {
-                case None => mongoTools.getFutureCollection(settings, conn)
-                case Some(usr) => {
-                    val credentials = admin match {
-                        case true  => Authenticate("admin", usr, pwd)
-                        case false => Authenticate(database, usr, pwd)
-                    }
-                    mongoTools.getFutureCollection(settings, credentials, scramsha1, conn) 
-                }
+            val authentication = (config \ "auth").asOpt[JsObject]
+            val auth = authentication match {
+                case None => None
+                case Some(a) => Some(Authenticate(
+                        (a \ "db").as[String],
+                        (a \ "user").as[String],
+                        (a \ "password").as[String]
+                ))
             }
+            
+            // Get the connection
+            val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+            
             // Get query and filter
             val query = (config \ "query").as[JsObject]
             val filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
             val sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
             
-            // Create the enumerator that gets JsObjects
-            fcollection.map{ collection => 
-                val enumerator: Enumerator[JsObject] = collection.find(query, filter)
-                    .sort(sort).cursor[JsObject](ReadPreference.nearest)
-                    .enumerate().andThen(Enumerator.eof)
-                // Transformator to turn the JsObjects into DataPackets
-                val transformator: Enumeratee[JsObject, DataPacket] = Enumeratee.mapM(record => Future {DataPacket(List(tuktu.api.utils.JsObjectToMap(record)))})
-                // onEOF close the reader and send StopPacket
-                val onEOF = Enumeratee.onEOF[DataPacket](() => self ! new StopPacket)
-                
-                // Chain this together
-                processors.foreach(processor => {
-                    enumerator |>> (transformator compose onEOF compose processor) &>> sinkIteratee 
-                })
+            // Continue when we have a connection set up
+            fConnection.map { connection =>
+                conn = connection
+                val fCollection = MongoPool.getCollection(connection, (config \ "db").as[String], (config \ "collection").as[String])
+                fCollection.onSuccess {
+                    case collection: JSONCollection => {
+                        val enumerator = collection.find(query, filter)
+                                .sort(sort).cursor[JsObject](ReadPreference.nearest)
+                                .enumerate().andThen(Enumerator.eof)
+                        // Transformator to turn the JsObjects into DataPackets
+                        val transformator: Enumeratee[JsObject, DataPacket] = Enumeratee.mapM(record => Future {DataPacket(List(tuktu.api.utils.JsObjectToMap(record)))})
+                        // onEOF close the reader and send StopPacket
+                        val onEOF = Enumeratee.onEOF[DataPacket](() => self ! new StopPacket)
+                        
+                        // Chain this together
+                        processors.foreach(processor => {
+                            enumerator |>> (transformator compose onEOF compose processor) &>> sinkIteratee 
+                        })
+                    }
+                    case _ => self ! new StopPacket
+                }
+                fCollection.onFailure {
+                    case _ => self ! new StopPacket
+                }
             }
         }
-        case sp: StopPacket => cleanup
+        case sp: StopPacket => {
+            if (conn != null)
+                MongoPool.releaseConnection(nodes, conn)
+            cleanup
+        }
         case ip: InitPacket => setup
     }
 }
@@ -264,60 +194,66 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
 /**
  * A Generator to list the collections in a database (requires MongoDB 3.0 or higher)
  */
-class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
-{
-    var connection: reactivemongo.api.MongoConnection = _
+class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
     
     override def receive() = {
         case config: JsValue => {
+            // Get hosts
+            nodes = (config \ "hosts").as[List[String]]
             // Get connection properties
-            val dbHosts = (config \ "hosts").as[List[String]]
-            val dbName = (config \ "database").as[String]
-            
+            val opts = (config \ "mongo_options").asOpt[JsObject]
+            val mongoOptions = MongoPool.parseMongoOptions(opts)
             // Get credentials
-            val user = (config \ "user").asOpt[String]
-            val pwd = (config \ "password").asOpt[String].getOrElse("")
-            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-            
-            // Authenticate and set up connection
-            def typesafeConfig: com.typesafe.config.Config = play.api.libs.concurrent.Akka.system.settings.config
-            val driver = new reactivemongo.api.MongoDriver(Some(typesafeConfig))
-            
-            connection = user match{
-                case None => driver.connection(dbHosts)
-                case Some( u ) => driver.connection(dbHosts, options = MongoConnectionOptions( authMode = ScramSha1Authentication ))
-            }
-            
-            val db = connection(dbName)
-            val auth = user match {
+            val authentication = (config \ "auth").asOpt[JsObject]
+            val auth = authentication match {
                 case None => None
-                case Some( u ) => Option({ admin match {
-                    case false => db.authenticate(u, pwd)(timeout.duration)
-                    case true => connection( "admin" ).authenticate(u, pwd)(timeout.duration) }})
-            }
-
-            // Get command
-            val command = Json.obj( "listCollections" -> 1 )
-            val runner = Command.run(JSONSerializationPack)
-            
-            val futureResult: Future[JsObject] = auth match{
-                case None => runner.apply(db, runner.rawCommand(command)).one[JsObject]
-                case Some( a ) => a.flatMap { _ => runner.apply(db, runner.rawCommand(command)).one[JsObject] }
+                case Some(a) => Some(Authenticate(
+                        (a \ "db").as[String],
+                        (a \ "user").as[String],
+                        (a \ "password").as[String]
+                ))
             }
             
-            val futureCollections = futureResult.map{ result => (result \\ "name").map { coll => coll.as[String] } }
-            futureCollections.onSuccess {
-                case collections: List[String] => collections.foreach{ collection => channel.push(new DataPacket(List( Map(resultName -> collection) ))) } 
-                case _ => self ! new StopPacket
-            }
-            futureCollections.onFailure {
-                case e: Throwable => {
-                    e.printStackTrace
-                    self ! new StopPacket
+            // Get the connection
+            val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+            fConnection.map { connection =>
+                conn = connection
+                // Get DB
+                val fDb = connection.database((config \ "db").as[String])
+                fDb.onFailure {
+                    case _ => self ! new StopPacket
                 }
-            }         
+                fDb.map {db => 
+                    // Get command
+                    val command = Json.obj("listCollections" -> 1)
+                    val runner = Command.run(JSONSerializationPack)
+                    // Run it
+                    val futureResult = runner(db, runner.rawCommand(command)).one[JsObject]
+                    
+                    val futureCollections = futureResult.map{ result => (result \\ "name").map { coll => coll.as[String] } }
+                    futureCollections.onSuccess {
+                        case collections: List[String] => {
+                            collections.foreach{ collection => channel.push(new DataPacket(List( Map(resultName -> collection) ))) }
+                            self ! new StopPacket
+                        }
+                        case _ => self ! new StopPacket
+                    }
+                    futureCollections.onFailure {
+                        case e: Throwable => {
+                            e.printStackTrace
+                            self ! new StopPacket
+                        }
+                    }
+                }
+            }
         }
-        case sp: StopPacket => connection.close; cleanup
+        case sp: StopPacket => {
+            if (conn != null)
+                MongoPool.releaseConnection(nodes, conn)
+            cleanup
+        }
         case ip: InitPacket => setup
     }
 }
@@ -325,58 +261,66 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
 /**
  * A Generator to run a raw database command
  */
-class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) 
-{
-    var connection: MongoConnection = _
+class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
+    
     override def receive() = {
         case config: JsValue => {
+            // Get hosts
+            nodes = (config \ "hosts").as[List[String]]
             // Get connection properties
-            val dbHosts = (config \ "hosts").as[List[String]]
-            val dbName = (config \ "database").as[String]
-            
+            val opts = (config \ "mongo_options").asOpt[JsObject]
+            val mongoOptions = MongoPool.parseMongoOptions(opts)
             // Get credentials
-            val user = (config \ "user").asOpt[String]
-            val pwd = (config \ "password").asOpt[String].getOrElse("")
-            val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-            
-            // Authenticate and set up connection
-            def typesafeConfig: com.typesafe.config.Config = play.api.libs.concurrent.Akka.system.settings.config
-            val driver = new reactivemongo.api.MongoDriver(Some(typesafeConfig))
-            
-            connection = user match{
-                case None => driver.connection(dbHosts)
-                case Some( u ) => driver.connection(dbHosts, options = MongoConnectionOptions( authMode = ScramSha1Authentication ))
-            }
-            
-            val db = connection(dbName)
-            val auth = user match {
+            val authentication = (config \ "auth").asOpt[JsObject]
+            val auth = authentication match {
                 case None => None
-                case Some( u ) => Option({ admin match {
-                    case false => db.authenticate(u, pwd)(timeout.duration)
-                    case true => connection( "admin" ).authenticate(u, pwd)(timeout.duration) }})
+                case Some(a) => Some(Authenticate(
+                        (a \ "db").as[String],
+                        (a \ "user").as[String],
+                        (a \ "password").as[String]
+                ))
             }
-
-          // Get command
-          val command = (config \ "command").as[JsObject]
-          val runner = Command.run(JSONSerializationPack)
-          
-          val futureResult: Future[JsObject] = auth match{
-                case None => runner.apply(db, runner.rawCommand(command)).one[JsObject]
-                case Some( a ) => a.flatMap { _ => runner.apply(db, runner.rawCommand(command)).one[JsObject] }
-            }
-          
-          futureResult.onSuccess {
-              case result: JsObject => channel.push(new DataPacket(List( Map(resultName -> result) )))
-              case _ => self ! new StopPacket
-          }
-          futureResult.onFailure {
-                case e: Throwable => {
-                    e.printStackTrace
-                    self ! new StopPacket
+            
+            // Get the connection
+            val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+            fConnection.map { connection =>
+                conn = connection
+                // Get DB
+                val fDb = connection.database((config \ "db").as[String])
+                fDb.onFailure {
+                    case _ => self ! new StopPacket
                 }
-            }         
+                fDb.map {db => 
+                    // Get command
+                    val command = (config \ "command").as[JsObject]
+                    val runner = Command.run(JSONSerializationPack)
+                    // Run it
+                    val futureResult = runner(db, runner.rawCommand(command)).one[JsObject]
+                    
+                    val futureCollections = futureResult.map{ result => (result \\ "name").map { coll => coll.as[String] } }
+                    futureCollections.onSuccess {
+                        case collections: List[String] => {
+                            collections.foreach{ collection => channel.push(new DataPacket(List( Map(resultName -> collection) ))) }
+                            self ! new StopPacket
+                        }
+                        case _ => self ! new StopPacket
+                    }
+                    futureCollections.onFailure {
+                        case e: Throwable => {
+                            e.printStackTrace
+                            self ! new StopPacket
+                        }
+                    }
+                }
+            }
         }
-        case sp: StopPacket => connection.close; cleanup
+        case sp: StopPacket => {
+            if (conn != null)
+                MongoPool.releaseConnection(nodes, conn)
+            cleanup
+        }
         case ip: InitPacket => setup
     }
 }

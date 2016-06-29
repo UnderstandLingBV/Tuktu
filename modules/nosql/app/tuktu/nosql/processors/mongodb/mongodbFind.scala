@@ -28,82 +28,79 @@ import tuktu.nosql.util._
  */
 // TODO: Support dynamic querying, is now static
 class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fcollection: Future[JSONCollection] = _
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
+    
+    var db: String = _
+    var collection: String = _
+    var tasks: List[JsObject] = _
+    
     var query: String = _
     var filter: String = _
     var sort: String = _
     var limit: Option[Int] = _
-    var settings: MongoDBSettings = _
-    var conn: Int = _
-
+    
     override def initialize(config: JsObject) {
-        // Set up MongoDB client
-        val hs = (config \ "hosts").as[List[String]]
-        val hosts = SortedSet(hs: _*)
-        val database = (config \ "database").as[String]
-        val coll = (config \ "collection").as[String]
-        conn = (config \ "connections").asOpt[Int].getOrElse(10)
-        
+        // Get hosts
+        nodes = (config \ "hosts").as[List[String]]
+        // Get connection properties
+        val opts = (config \ "mongo_options").asOpt[JsObject]
+        val mongoOptions = MongoPool.parseMongoOptions(opts)
         // Get credentials
-        val user = (config \ "user").asOpt[String]
-        val pwd = (config \ "password").asOpt[String].getOrElse("")
-        val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-        val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
-
-        // Set up connection
-        settings = MongoDBSettings(hosts, database, coll)
-        fcollection = user match{
-            case None => mongoTools.getFutureCollection(settings, conn)
-            case Some( usr ) => {
-                val credentials = admin match
-                {
-                  case true => Authenticate( "admin", usr, pwd )
-                  case false => Authenticate( database, usr, pwd )
-                }
-                mongoTools.getFutureCollection(settings, credentials, scramsha1, conn)
-              }
-          }
+        val authentication = (config \ "auth").asOpt[JsObject]
+        val auth = authentication match {
+            case None => None
+            case Some(a) => Some(Authenticate(
+                    (a \ "db").as[String],
+                    (a \ "user").as[String],
+                    (a \ "password").as[String]
+            ))
+        }
+        
+        // DB and collection
+        db = (config \ "db").as[String]
+        collection = (config \ "collection").as[String]
+        
+        // Get aggregation tasks
+        tasks = (config \ "tasks").as[List[JsObject]]
         
         // Get query and filter
         query = (config \ "query").as[String]
         filter = (config \ "filter").asOpt[String].getOrElse("{}")
         sort = (config \ "sort").asOpt[String].getOrElse("{}")
         limit = (config \ "limit").asOpt[Int]
+        
+        // Get the connection
+        val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+        conn = Await.result(fConnection, timeout.duration)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        // Get data from MongoDB and sequence
-        val resultListFutures = Future.sequence(for (datum <- data.data) yield {
-            // Evaluate the query and filter strings and convert to JSON
-            val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
-            val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
-            val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
-
-            // Get data based on query and filter
-            val resultData = limit match {
-                case Some(s) => fcollection.flatMap{ collection => collection.find(queryJson, filterJson)
-                    .sort(sortJson).options(QueryOpts().batchSize(s)).cursor[JsObject](ReadPreference.primary).collect[List](s) }
-                case None    => fcollection.flatMap{ collection => collection.find(queryJson, filterJson)
-                    .sort(sortJson).cursor[JsObject](ReadPreference.primary).collect[List]() }
-            }
-
-            resultData.map(resultList => {
-                for (resultRow <- resultList) yield {
-                    tuktu.api.utils.JsObjectToMap(resultRow)
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        // Get collection
+        val fCollection = MongoPool.getCollection(conn, db, collection)
+        val results = fCollection.flatMap {collection =>
+            Future.sequence(for (datum <- data.data) yield {
+                // Evaluate the query and filter strings and convert to JSON
+                val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
+                val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
+                val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
+                
+                // Get data based on query and filter
+                val resultData = limit match {
+                    case Some(lmt) => collection.find(queryJson, filterJson)
+                        .sort(sortJson).options(QueryOpts().batchSize(lmt))
+                        .cursor[JsObject]().collect[List](lmt)
+                    case None    => collection.find(queryJson, filterJson)
+                        .sort(sortJson).cursor[JsObject]().collect[List]()
                 }
+                
+                // Get the results in
+                resultData.map(resultList => for (resultRow <- resultList) yield datum + (resultName -> tuktu.api.utils.JsObjectToMap(resultRow)))
             })
-        })
-
-        // Iterate over result futures
-        val dataFuture = resultListFutures.map(resultList => {
-            // Combine result with data
-            for ((result, datum) <- resultList.zip(data.data)) yield {
-                datum + (resultName -> result)
-            }
-        })
-
-        // Gather results
-        new DataPacket(Await.result(dataFuture, Cache.getAs[Int]("timeout").getOrElse(30) seconds))
+        }
+        
+        results.map(datums => new DataPacket(datums.flatten))
     })
 }
 

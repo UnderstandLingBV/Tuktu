@@ -12,63 +12,64 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import tuktu.api._
 import tuktu.nosql.util._
+import scala.concurrent.Await
+import play.api.cache.Cache
+import akka.util.Timeout
+import play.api.Play.current
+import scala.concurrent.duration.DurationInt
 
 /**
  * Aggregate data using the MongoDB aggregation pipeline
  */
-class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(resultName)
-{
-    var settings: MongoDBSettings = _
+class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
+    
+    var db: String = _
+    var collection: String = _
     var tasks: List[JsObject] = _
-    var user: Option[String] = _
-    var pwd: String = _
-    var admin: Boolean = _
-    var scramsha1: Boolean = _
-    var conn: Int = _
 
-    override def initialize(config: JsObject) 
-    {
-        // Get hosts, database and collection
-        val hs = (config \ "hosts").as[List[String]]
-        val hosts = SortedSet(hs: _*)
-        val database = (config \ "database").as[String]
-        val coll = (config \ "collection").as[String]
-        conn = (config \ "connections").asOpt[Int].getOrElse(10)
-
+    override def initialize(config: JsObject) {
+        // Get hosts
+        nodes = (config \ "hosts").as[List[String]]
+        // Get connection properties
+        val opts = (config \ "mongo_options").asOpt[JsObject]
+        val mongoOptions = MongoPool.parseMongoOptions(opts)
         // Get credentials
-        user = (config \ "user").asOpt[String]
-        pwd = (config \ "password").asOpt[String].getOrElse("")
-        admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-        scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
-
-        // Prepare connection settings
-        settings = MongoDBSettings(hosts, database, coll)
-
+        val authentication = (config \ "auth").asOpt[JsObject]
+        val auth = authentication match {
+            case None => None
+            case Some(a) => Some(Authenticate(
+                    (a \ "db").as[String],
+                    (a \ "user").as[String],
+                    (a \ "password").as[String]
+            ))
+        }
+        
+        // DB and collection
+        db = (config \ "db").as[String]
+        collection = (config \ "collection").as[String]
+        
         // Get aggregation tasks
         tasks = (config \ "tasks").as[List[JsObject]]
+        
+        // Get the connection
+        val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+        conn = Await.result(fConnection, timeout.duration)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        val fcollection = user match {
-            case None => mongoTools.getFutureCollection(settings, conn)
-            case Some(usr) => {
-                val credentials = admin match {
-                    case true  => Authenticate("admin", usr, pwd)
-                    case false => Authenticate(settings.database, usr, pwd)
-                }
-                mongoTools.getFutureCollection(settings, credentials, scramsha1, conn)
-            }
-        }
-        val ffdp = fcollection.map{ collection =>
-          import collection.BatchCommands.AggregationFramework.PipelineOperator
-          // Prepare aggregation pipeline
-          val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
-          val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x)(collection=collection) }
-          // Get data from Mongo
-          val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
-          resultData.map { resultList => new DataPacket(for (resultRow <- resultList) yield { tuktu.api.utils.JsObjectToMap(resultRow) }) }
-        }
-        ffdp.flatMap{ dp => dp}
-    })
+        val fCollection = MongoPool.getCollection(conn, db, collection)
+        fCollection.flatMap {collection =>
+            // Prepare aggregation pipeline
+            import collection.BatchCommands.AggregationFramework.PipelineOperator
+            val transformer = new MongoPipelineTransformer()(collection)
+            val pipeline = tasks.map { x => transformer.json2task(x)(collection=collection) }
 
+            // Get data from Mongo
+            val resultData = collection.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
+            resultData.map { resultList => new DataPacket(for (resultRow <- resultList) yield { tuktu.api.utils.JsObjectToMap(resultRow) }) }
+        }
+    }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }

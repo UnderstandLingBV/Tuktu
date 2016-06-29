@@ -30,35 +30,35 @@ import tuktu.api._
 
 class MongoPipelineTransformer(implicit collection: JSONCollection) {
     def json2task(jobj: JsObject)(implicit collection: JSONCollection): collection.BatchCommands.AggregationFramework.PipelineOperator = {
-            import collection.BatchCommands.AggregationFramework.{
-                AggregationResult,
-                PipelineOperator,
-                Skip,
-                Limit,
-                Unwind,
-                Out,
-                Sort,
-                SortOrder,
-                Match,
-                Project,
-                Group
-            }
-
-            val keys: Set[String] = jobj.keys
-
-            val result: PipelineOperator = keys.head match {
-                case "$skip"    => Skip(jobj.\("$skip").as[Int])
-                case "$limit"   => Limit(jobj.\("$limit").as[Int])
-                case "$unwind"  => Unwind(jobj.\("$unwind").as[String]) // Unwind prepends field names with '$'
-                case "$out"     => Out(jobj.\("$out").as[String])
-                case "$sort"    => Sort(getSortOrder(jobj.\("$sort").as[JsObject]): _*)
-                case "$match"   => Match(jobj.\("$match").as[JsObject])
-                case "$project" => Project(jobj.\("$project").as[JsObject])
-                case "$group"   => getGroup(jobj.\("$group").as[JsObject])
-            }
-            return result
-
+        import collection.BatchCommands.AggregationFramework.{
+            AggregationResult,
+            PipelineOperator,
+            Skip,
+            Limit,
+            Unwind,
+            Out,
+            Sort,
+            SortOrder,
+            Match,
+            Project,
+            Group
         }
+
+        val keys: Set[String] = jobj.keys
+
+        val result: PipelineOperator = keys.head match {
+            case "$skip"    => Skip(jobj.\("$skip").as[Int])
+            case "$limit"   => Limit(jobj.\("$limit").as[Int])
+            case "$unwind"  => Unwind(jobj.\("$unwind").as[String]) // Unwind prepends field names with '$'
+            case "$out"     => Out(jobj.\("$out").as[String])
+            case "$sort"    => Sort(getSortOrder(jobj.\("$sort").as[JsObject]): _*)
+            case "$match"   => Match(jobj.\("$match").as[JsObject])
+            case "$project" => Project(jobj.\("$project").as[JsObject])
+            case "$group"   => getGroup(jobj.\("$group").as[JsObject])
+        }
+        return result
+
+    }
 
     def getGroup(jobj: JsObject)(implicit collection: JSONCollection): collection.BatchCommands.AggregationFramework.PipelineOperator =
         {
