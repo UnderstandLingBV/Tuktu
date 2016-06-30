@@ -16,7 +16,15 @@
 		{
 			"name": "config",
 			"type": "object",
-			"required": true
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field under which the result is returned.",
+					"type": "string",
+					"required": true
+				}
+			]
 		}
 	]
 }
