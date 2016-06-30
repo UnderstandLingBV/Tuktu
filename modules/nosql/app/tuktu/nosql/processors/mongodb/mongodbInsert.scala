@@ -62,6 +62,10 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         
         // Wait for updates to complete?
         waitForCompletion = (config \ "wait_for_completion").asOpt[Boolean].getOrElse(false)
+        
+        // Get the connection
+        val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+        conn = Await.result(fConnection, timeout.duration)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
@@ -79,14 +83,14 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         // Execute per DB/Collection pair
         val resultFut = Future.sequence(for {
             (dbEval, collectionMap) <- jsons
-            (collEval, jsons) <- collectionMap
+            (collEval, queries) <- collectionMap
         } yield {
             val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
-            fCollection.flatMap(coll => coll.bulkInsert(jsons.map(_._3).toStream, false))
+            fCollection.flatMap(coll => coll.bulkInsert(queries.map(_._3).toStream, false))
         })
 
         // Continue directly or wait?
         if (waitForCompletion) resultFut.map { _ => data }
         else Future { data }
-    })
+    }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }

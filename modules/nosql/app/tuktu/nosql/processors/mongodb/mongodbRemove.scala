@@ -19,48 +19,45 @@ import tuktu.nosql.util._
 import scala.collection.immutable.SortedSet
 import scala.util.Failure
 import scala.util.Success
+import reactivemongo.api.MongoConnection
+import akka.util.Timeout
+import tuktu.api.utils
+
 /**
  * Removes data from MongoDB
  */
-class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultName)
-{
-    var fcollection: Future[JSONCollection] = _
-    var settings: MongoDBSettings = _
+class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
+    
+    var db: String = _
+    var collection: String = _
+    
     var query: String = _
-    var filter: String = _
     var justOne: Boolean = _
-    var timeout: Int = _
-    var blocking: Boolean = _
-    var conn: Int = _
-
-    override def initialize(config: JsObject) 
-    {
-        // Set up MongoDB client
-        val hs = (config \ "hosts").as[List[String]]
-        val hosts = SortedSet(hs: _*)
-        val database = (config \ "database").as[String]
-        val coll = (config \ "collection").as[String]
-        conn = (config \ "connections").asOpt[Int].getOrElse(10)
-
+    var waitForCompletion: Boolean = _
+    
+    override def initialize(config: JsObject) {
+        // Get hosts
+        nodes = (config \ "hosts").as[List[String]]
+        // Get connection properties
+        val opts = (config \ "mongo_options").asOpt[JsObject]
+        val mongoOptions = MongoPool.parseMongoOptions(opts)
         // Get credentials
-        val user = (config \ "user").asOpt[String]
-        val pwd = (config \ "password").asOpt[String].getOrElse("")
-        val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-        val scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
-
-        // Set up connection
-        settings = MongoDBSettings(hosts, database, coll)
-        fcollection = user match{
-            case None => mongoTools.getFutureCollection(settings, conn)
-            case Some( usr ) => {
-                val credentials = admin match
-                {
-                  case true => Authenticate( "admin", usr, pwd )
-                  case false => Authenticate( database, usr, pwd )
-                }
-                mongoTools.getFutureCollection(settings, credentials, scramsha1, conn)
-              }
-          }
+        val authentication = (config \ "auth").asOpt[JsObject]
+        val auth = authentication match {
+            case None => None
+            case Some(a) => Some(Authenticate(
+                    (a \ "db").as[String],
+                    (a \ "user").as[String],
+                    (a \ "password").as[String]
+            ))
+        }
+        
+        // DB and collection
+        db = (config \ "db").as[String]
+        collection = (config \ "collection").as[String]
 
         // Get query and filter
         query = (config \ "query").as[String]
@@ -69,33 +66,34 @@ class MongoDBRemoveProcessor(resultName: String) extends BaseProcessor(resultNam
         justOne = (config \ "just_one").asOpt[Boolean].getOrElse(false)
         
         // Wait for deletion to complete?
-        blocking = (config \ "blocking").asOpt[Boolean].getOrElse(true)
-
-        // Maximum time out
-        timeout = (config \ "timeout").asOpt[Int].getOrElse(Cache.getAs[Int]("timeout").getOrElse(30))
+        waitForCompletion = (config \ "wait_for_completion").asOpt[Boolean].getOrElse(false)
+        
+        // Get the connection
+        val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+        conn = Await.result(fConnection, timeout.duration)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        if (!blocking) {
-            Future {
-                doRemove(data)
-                data
-            }
-        } else {
-            // Wait for the removal to be finished
-            doRemove(data).map {
-                case _ => data
-            }
-        }
-    })
-    
-    
-    // Does the actual removal
-    def doRemove(data: DataPacket) = {
         // Remove data from MongoDB
-        val queries = (for (datum <- data.data) yield {
-            Json.parse(stringHandler.evaluateString(query, datum, "\"", ""))
-        }).distinct
-        fcollection.flatMap{ collection => collection.remove[JsObject](Json.obj("$or" -> queries), firstMatchOnly = justOne) }
-    } 
+        val jsons = (for (datum <- data.data) yield {
+            (
+                    utils.evaluateTuktuString(db, datum),
+                    utils.evaluateTuktuString(collection, datum),
+                    Json.parse(stringHandler.evaluateString(query, datum, "\"", ""))
+            )
+        }).toList.groupBy(_._1).map(elem => elem._1 -> elem._2.groupBy(_._2))
+        
+        // Execute per DB/Collection pair
+        val resultFut = Future.sequence(for {
+            (dbEval, collectionMap) <- jsons
+            (collEval, queries) <- collectionMap
+        } yield {
+            val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
+            fCollection.flatMap(coll => coll.remove[JsObject](Json.obj("$or" -> queries.map(_._3).distinct), firstMatchOnly = justOne))
+        })
+        
+        // Continue directly or wait?
+        if (waitForCompletion) resultFut.map { _ => data }
+        else Future { data }
+    }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }

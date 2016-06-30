@@ -194,7 +194,7 @@ object file {
         setS3Region(region, s3Client)
         
         // Get the actual object
-        val s3Object = s3Client.getObject(new GetObjectRequest(bucketName, keyName))
+        lazy val s3Object = s3Client.getObject(new GetObjectRequest(bucketName, keyName))
         
         // Return the input stream
         s3Object.getObjectContent

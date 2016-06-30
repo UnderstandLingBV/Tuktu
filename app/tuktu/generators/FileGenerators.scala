@@ -98,7 +98,7 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                 // Make separate enumerators, for each processor
                 processors.foreach(processor => {
                     // Use Iteratee lib for proper back pressure handling
-                    val bufferedReader = file.genericReader(fileName)(Codec(encoding))
+                    lazy val bufferedReader = file.genericReader(fileName)(Codec(encoding))
                 
                     val fileStream: Enumerator[String] = Enumerator.generateM[String] {
                         Future { Option(bufferedReader.readLine) }

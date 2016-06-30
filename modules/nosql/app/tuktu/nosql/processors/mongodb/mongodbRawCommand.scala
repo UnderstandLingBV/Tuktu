@@ -16,74 +16,72 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import tuktu.api._
 import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString }
+import tuktu.nosql.util.MongoPool
+import scala.concurrent.Await
 
 /**
  * Provides a helper to run specified database commands (as long as the command result is less than 16MB in size).
  */
 class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var command: String = _
-    var db: DefaultDB = _
-    var auth: Option[Future[SuccessfulAuthentication]] = _
-    var resultOnly: Boolean = _
-    var connection: MongoConnection = _
-    
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
+    
+    var db: String = _
+    
+    var command: String = _
+    var resultOnly: Boolean = _
 
     override def initialize(config: JsObject) {
-        // Prepare db connection
-        val dbHosts = (config \ "hosts").as[List[String]]
-        val dbName = (config \ "database").as[String]
-        
+        // Get hosts
+        nodes = (config \ "hosts").as[List[String]]
+        // Get connection properties
+        val opts = (config \ "mongo_options").asOpt[JsObject]
+        val mongoOptions = MongoPool.parseMongoOptions(opts)
         // Get credentials
-        // http://reactivemongo.org/releases/0.11/documentation/tutorial/connect-database.html
-        val user = (config \ "user").asOpt[String]
-        val pwd = (config \ "password").asOpt[String].getOrElse("")
-        val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-        // val scramsha1 = (config \ "ScramSha1").as[Boolean]
-        
-        def typesafeConfig: com.typesafe.config.Config = play.api.libs.concurrent.Akka.system.settings.config
-        val driver = new MongoDriver(Some(typesafeConfig))
-        
-        connection = user match{
-            case None => driver.connection(dbHosts)
-            case Some( u ) => driver.connection(dbHosts, options = MongoConnectionOptions( authMode = ScramSha1Authentication ))
-        }
-        
-        db = connection( dbName )
-        auth = user match {
+        val authentication = (config \ "auth").asOpt[JsObject]
+        val auth = authentication match {
             case None => None
-            case Some( u ) => Option({ admin match {
-                case false => db.authenticate(u, pwd)(timeout.duration)
-                case true => connection( "admin" ).authenticate(u, pwd)(timeout.duration) }})
+            case Some(a) => Some(Authenticate(
+                    (a \ "db").as[String],
+                    (a \ "user").as[String],
+                    (a \ "password").as[String]
+            ))
         }
+        
+        // DB and collection
+        db = (config \ "db").as[String]
         
         // Get command
         command = (config \ "command").as[String]
-
         // Get result format
         resultOnly = (config \ "resultOnly").asOpt[Boolean].getOrElse(false)
+        
+        // Get the connection
+        val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+        conn = Await.result(fConnection, timeout.duration)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        val lfuture: List[Future[Map[String,Any]]] = data.data.map{ datum =>
-            val runner = Command.run(JSONSerializationPack)
-            val jcommand = Json.parse( evaluateTuktuString(command, datum) ).as[JsObject]
-            val futureResult: Future[JsObject] = auth match{
-                case None => runner.apply(db, runner.rawCommand(jcommand)).one[JsObject]
-                case Some( a ) => a.flatMap { _ => runner.apply(db, runner.rawCommand(jcommand)).one[JsObject] }
-            }
-            futureResult.map{ result =>
-                if (resultOnly) 
-                {
-                    datum + (resultName -> (result \ "result"))
-                } 
-                else 
-                {
-                    datum + (resultName -> result)
+        val futs = Future.sequence(for (datum <- data.data) yield {
+            val dbEval = utils.evaluateTuktuString(db, datum)
+            
+            // Get collection
+            val fDb = conn.database(dbEval)
+            fDb.flatMap(d => {
+                // Set up the runner
+                val runner = Command.run(JSONSerializationPack)
+                // Get the command
+                val jcommand = Json.parse(evaluateTuktuString(command, datum)).as[JsObject]
+                val result = runner(d, runner.rawCommand(jcommand)).one[JsObject]
+                    
+                result.map {r =>
+                    if (resultOnly) datum + (resultName -> (r \ "result"))
+                    else datum + (resultName -> r)
                 }
-            }  
-        }
-        Future.sequence( lfuture ).map{ list => new DataPacket( list ) }
-    })
+            })
+        })
+        futs.map(result => new DataPacket(result))
+    }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 
 }

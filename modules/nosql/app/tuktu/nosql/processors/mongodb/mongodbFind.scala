@@ -79,7 +79,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
             
             // Get collection
             val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
-            fCollection.flatMap(collection => {
+            fCollection.flatMap(coll => {
                 // Evaluate the query and filter strings and convert to JSON
                 val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
                 val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
@@ -87,10 +87,10 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
                 
                 // Get data based on query and filter
                 val resultData = limit match {
-                    case Some(lmt) => collection.find(queryJson, filterJson)
+                    case Some(lmt) => coll.find(queryJson, filterJson)
                         .sort(sortJson).options(QueryOpts().batchSize(lmt))
                         .cursor[JsObject]().collect[List](lmt)
-                    case None    => collection.find(queryJson, filterJson)
+                    case None    => coll.find(queryJson, filterJson)
                         .sort(sortJson).cursor[JsObject]().collect[List]()
                 }
                 
@@ -100,7 +100,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         })
         
         results.map(datums => new DataPacket(datums.flatten))
-    })
+    }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }
 
 /**
@@ -176,7 +176,7 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
         }
         
         data
-    })
+    }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }
 
 /**
