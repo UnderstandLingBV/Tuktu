@@ -160,19 +160,19 @@
 						{
 							"name": "db",
 							"type": "string",
-							"required": true,
+							"required": false,
 							"description": "The authentication database name."
 						},
 						{
 							"name": "user",
 							"type": "string",
-							"required": true,
+							"required": false,
 							"description": "The username."
 						},
 						{
 							"name": "password",
 							"type": "string",
-							"required": true,
+							"required": false,
 							"description": "The password."
 						}
 					]
