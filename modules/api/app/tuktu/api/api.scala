@@ -46,6 +46,7 @@ case class DispatchRequest(
 
 case class InitPacket()
 case class StopPacket()
+case class ErrorPacket()
 
 case class BackPressurePacket()
 case class DecreasePressurePacket()

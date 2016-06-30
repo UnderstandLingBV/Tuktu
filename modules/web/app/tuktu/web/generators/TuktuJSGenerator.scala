@@ -53,6 +53,8 @@ class TuktuJSGenerator(
             }
             
             sourceActor ! d
+            // Remove this requester from the list.
+            Cache.getOrElse("JSGenerator.requesters", 30)(collection.mutable.ListBuffer.empty[ActorRef]) -= sourceActor
             
             d
         })
@@ -68,6 +70,10 @@ class TuktuJSGenerator(
             Cache.getOrElse[collection.mutable.Map[String, ActorRef]]("web.hostmap")(collection.mutable.Map.empty) += (referer -> self)
         }
         case config: JsValue => {}
+        case error: ErrorPacket => {
+          // Inform all the requesters that an error occurred.
+          Cache.getOrElse("JSGenerator.requesters", 30)(collection.mutable.ListBuffer.empty[ActorRef]).foreach { x => x ! error }
+        }
         case sp: StopPacket => {
             // Remove ourselves from the cache
             Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
@@ -86,6 +92,9 @@ class TuktuJSGenerator(
             self ! PoisonPill
         }
         case dp: DataPacket => {
+            // Keep track of all senders, in case of errors
+            Cache.getOrElse("JSGenerator.requesters", 30)(collection.mutable.ListBuffer.empty[ActorRef]) += sender 
+          
             // Push to all async processors
             channel.push(dp)
 
