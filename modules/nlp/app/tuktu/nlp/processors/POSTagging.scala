@@ -61,5 +61,5 @@ class POSTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
                 }
             }
         }).filter(_.nonEmpty)
-    }) compose Enumeratee.filter((data: DataPacket) => data.nonEmpty)
+    })
 }

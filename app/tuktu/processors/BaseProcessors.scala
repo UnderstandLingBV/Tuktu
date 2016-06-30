@@ -57,18 +57,14 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
 class FieldRemoveProcessor(resultName: String) extends BaseProcessor(resultName) {
     // The list of top-level fields to remove
     var fields: List[String] = _
-    var ignoreEmptyDatums = false
-    var ignoreEmptyDataPackets = false
 
     override def initialize(config: JsObject) {
         fields = (config \ "fields").asOpt[List[String]].getOrElse(Nil)
-        ignoreEmptyDatums = (config \ "ignore_empty_datums").asOpt[Boolean].getOrElse(false)
-        ignoreEmptyDataPackets = (config \ "ignore_empty_datapackets").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        (for (datum <- data) yield datum -- fields).filterNot(ignoreEmptyDatums && _.isEmpty)
-    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmptyDataPackets && data.isEmpty)
+        (for (datum <- data) yield datum -- fields)
+    })
 }
 
 /**
@@ -342,8 +338,6 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                 // Filter data
                 data.data.filter(datum => evaluateExpressions(datum, expressions))
             })
-    }) compose Enumeratee.filter((data: DataPacket) => {
-        filterEmpty && data.data.nonEmpty
     })
 }
 
@@ -626,25 +620,23 @@ class FlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
 }
 
 /**
- * Takes a (JSON) sequence object and returns packets for each of the values in it
+ * Takes a sequence object and returns packets for each of the values in it
  */
 class SequenceExploderProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var field = ""
-    var ignoreEmpty = true
+    var field: String = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
-        ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket((for (datum <- data.data) yield {
+        data.flatMap(datum => {
             // Get the field and explode it
             val values = datum(field).asInstanceOf[Seq[Any]]
 
             for (value <- values) yield datum + (field -> value)
-        }).flatten)
-    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmpty && data.isEmpty)
+        })
+    })
 }
 
 /**
@@ -673,14 +665,12 @@ class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultNa
  * Assumes the data is a List[Map[_]] and gets one specific field from the map to remain in the list
  */
 class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var listField = ""
-    var mapField = ""
-    var ignoreEmpty = true
+    var listField: String = _
+    var mapField: String = _
 
     override def initialize(config: JsObject) {
         listField = (config \ "list_field").as[String]
         mapField = (config \ "map_field").as[String]
-        ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -696,21 +686,19 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
 
             datum + (resultName -> newList)
         }
-    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmpty && data.isEmpty)
+    })
 }
 
 /**
  * Assumes the data is a List[Map[_]] and gets specific fields from the map to remain in the list
  */
 class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var listField = ""
+    var listField: String = _
     var mapFields: List[String] = _
-    var ignoreEmpty = true
 
     override def initialize(config: JsObject) {
         listField = (config \ "list_field").as[String]
         mapFields = (config \ "map_fields").as[List[String]]
-        ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -735,7 +723,7 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
             // Add to our total result
             datum -- mapFields ++ resultMap.map(elem => elem._1 -> elem._2.toList)
         }
-    }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmpty && data.isEmpty)
+    })
 }
 
 /**
@@ -767,7 +755,7 @@ class ContainsAllFilterProcessor(resultName: String) extends BaseProcessor(resul
             if (containsSet.isEmpty) datum
             else Map[String, Any]()
         }).filter(_.nonEmpty)
-    }) compose Enumeratee.filter((data: DataPacket) => data.nonEmpty)
+    })
 }
 
 /**
@@ -795,7 +783,7 @@ class MapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName
  * Sends a DataPacket's content to an Akka actor given by an actor path
  */
 class AkkaSenderProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var actor_path = ""
+    var actor_path: String = _
 
     override def initialize(config: JsObject) {
         actor_path = (config \ "actor_path").as[String]
@@ -864,7 +852,7 @@ class AbsentFieldsFilterProcessor(resultName: String) extends BaseProcessor(resu
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         data.filter(datum => fields.subsetOf(datum.keySet))
-    }) compose Enumeratee.filterNot((data: DataPacket) => data.isEmpty)
+    })
 }
 
 /**
@@ -873,9 +861,9 @@ class AbsentFieldsFilterProcessor(resultName: String) extends BaseProcessor(resu
 class UUIDAdderProcessor(resultName: String) extends BaseProcessor(resultName) {
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             datum + (resultName -> java.util.UUID.randomUUID.toString)
-        })
+        }
     })
 }
 
@@ -890,11 +878,11 @@ class FieldsToListProcessor(resultName: String) extends BaseProcessor(resultName
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             datum + (resultName -> fields.map(field => {
                 datum(field)
             }).toList)
-        })
+        }
     })
 }
 
@@ -915,18 +903,26 @@ class XmlToMapProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             if (flattened)
                 datum ++ utils.xmlToMap(datum(field).asInstanceOf[scala.xml.Node], trim, nonEmpty)
             else    
                 datum + (resultName -> utils.xmlToMap(datum(field).asInstanceOf[scala.xml.Node], trim, nonEmpty))
-        })
+        }
     })
 }
 
 /**
- * Filters out empty data packets
+ * Filters out empty datums and data packets
  */
 class RemoveEmptyPacketProcessor(resultName: String) extends BaseProcessor(resultName) {
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.filter(!_.data.isEmpty)
+    var removeEmptyDatums: Boolean = _
+
+    override def initialize(config: JsObject) {
+        removeEmptyDatums = (config \ "remove_empty_datums").asOpt[Boolean].getOrElse(false)
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        data.filterNot { datum => removeEmptyDatums && datum.isEmpty }
+    }) compose Enumeratee.filter(!_.data.isEmpty)
 }

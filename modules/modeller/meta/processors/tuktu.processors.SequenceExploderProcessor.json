@@ -1,6 +1,6 @@
 {
 	"name": "Sequence Exploder Processor",
-	"description": "Takes a (JSON) sequence object and returns packets for each of the values in it overwriting the original sequence.",
+	"description": "Takes a sequence object and returns packets for each of the values in it overwriting the original sequence.",
 	"class": "tuktu.processors.SequenceExploderProcessor",
 	"parameters": [
 		{
@@ -22,14 +22,7 @@
 					"name": "field",
 					"description": "The field containing a sequence object.",
 					"type": "string",
-					"required": false
-				},
-				{
-					"name": "ignore_empty",
-					"description": "If set to true, will only continue with non-empty values, otherwise those will be filtered out.",
-					"type": "boolean",
-					"required": false,
-					"default": true
+					"required": true
 				}
 			]
 		}

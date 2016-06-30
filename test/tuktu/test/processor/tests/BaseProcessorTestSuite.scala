@@ -44,16 +44,13 @@ class BaseProcessorTestSuite extends PlaySpec {
         "remove fields that are specified" in {
             // Processor
             val proc = new FieldRemoveProcessor("result")
-            
+
             // Config
-            val config = Json.parse("""
-                {"fields":["key1", "key2"],
-                "ignore_empty_datapackets": true,
-                "ignore_empty_datums": true
-            }""").as[JsObject]
-            
+            val config = Json.parse("""{"fields":["key1", "key2"]}""").as[JsObject]
+
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(
+                new DataPacket(List(
                     Map("key1" -> "val1", "key2" -> "val2"),
                     Map("key3" -> "val3")
                 )),
@@ -61,12 +58,18 @@ class BaseProcessorTestSuite extends PlaySpec {
                     Map("key1" -> "val1", "key2" -> "val2")
                 ))
             )
-            
+
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(
+                new DataPacket(List(
+                    Map(),
                     Map("key3" -> "val3")
-            )))
-            
+                )),
+                new DataPacket(List(
+                    Map()
+                ))
+            )
+
             new BaseProcessorTest()(proc, config, input, output)
         }
     }

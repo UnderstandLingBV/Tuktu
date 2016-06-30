@@ -100,8 +100,6 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
             // Append the tags
             datum + (resultName -> tags)
         })
-    }) compose Enumeratee.filter((data: DataPacket) => {
-        data.data.size > 0
     })
 }
 
@@ -174,8 +172,6 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
         } yield {
             datum + (resultName -> tags)
         })
-    }) compose Enumeratee.filter((data: DataPacket) => {
-        data.data.size > 0
     })
 }
 
