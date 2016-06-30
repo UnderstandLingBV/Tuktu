@@ -185,7 +185,7 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
         case sp: StopPacket => {
             if (conn != null)
                 MongoPool.releaseConnection(nodes, conn)
-            cleanup
+            cleanup(false)
         }
         case ip: InitPacket => setup
     }
