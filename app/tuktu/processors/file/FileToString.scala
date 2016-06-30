@@ -18,7 +18,6 @@ class FileToString(resultName: String) extends BaseProcessor(resultName) {
     var charset = ""
     /** The field the file is processed in. */
     var field = ""
-    var overwrite = false
     var drop = 0
     var dropRight = 0
     val separator = "\n"
@@ -26,7 +25,6 @@ class FileToString(resultName: String) extends BaseProcessor(resultName) {
     override def initialize(config: JsObject) {
         charset = (config \ "charset").asOpt[String].getOrElse("utf-8")
         field = (config \ "file_field").as[String]
-        overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
         drop = (config \ "drop").asOpt[Int].getOrElse(0)
         dropRight = (config \ "drop_right").asOpt[Int].getOrElse(0)
     }
@@ -39,10 +37,7 @@ class FileToString(resultName: String) extends BaseProcessor(resultName) {
             file.close
 
             // Parse JSON and append
-            if (overwrite)
-                datum + (field -> content)
-            else
-                datum + (resultName -> content)
+            datum + (resultName -> content)
         })
     })
 }

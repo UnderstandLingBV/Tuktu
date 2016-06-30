@@ -18,8 +18,6 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
 
     // the field containing the datetime
     var datetimeField: String = _
-    // do we append or overwrite the datetimeField
-    var overwrite: Boolean = _
 
     var millis: Int = _
     var seconds: Int = _
@@ -35,7 +33,7 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
         val datetimeFormat = (config \ "datetime_format").as[String]
         datetimeField = (config \ "datetime_field").as[String]
         val datetimeLocale = (config \ "datetime_locale").as[String]
-        overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
+
         millis = (config \ "time" \ "millis").asOpt[Int].getOrElse(0)
         seconds = (config \ "time" \ "seconds").asOpt[Int].getOrElse(0)
         minutes = (config \ "time" \ "minutes").asOpt[Int].getOrElse(0)
@@ -94,10 +92,7 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
                 }
             }
 
-            datum + {
-                if (overwrite) datetimeField -> newDate
-                else resultName -> newDate
-            }
+            datum + (resultName -> newDate)
         }
     })
 }

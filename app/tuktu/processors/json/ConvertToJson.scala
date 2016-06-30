@@ -15,20 +15,14 @@ import tuktu.api.utils.MapToJsObject
 class ConvertFieldToJson(resultName: String) extends BaseProcessor(resultName) {
     /** The field containing the value to be converted to JSON. */
     var field: String = _
-    /** Append the data */
-    var append: Boolean = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
-        append = (config \ "append").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
-            if (!append)
-                datum + (field -> MapToJsObject(datum) \ field)
-            else
-                datum + (resultName -> MapToJsObject(datum) \ field)
+            datum + (resultName -> MapToJsObject(datum) \ field)
         }
     })
 }

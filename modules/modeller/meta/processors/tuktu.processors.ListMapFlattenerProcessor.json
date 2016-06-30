@@ -36,13 +36,6 @@
 					"type": "boolean",
 					"required": false,
 					"default": true
-				},
-				{
-					"name": "overwrite",
-					"description": "Whether or not to overwrite the original list_field.",
-					"type": "boolean",
-					"required": false,
-					"default": true
 				}
 			]
 		}

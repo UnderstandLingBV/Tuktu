@@ -651,14 +651,12 @@ class SequenceExploderProcessor(resultName: String) extends BaseProcessor(result
  * Splits a string up into a list of values based on a separator
  */
 class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var field = ""
-    var separator = ""
-    var overwrite = false
+    var field: String = _
+    var separator: String = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         separator = (config \ "separator").as[String]
-        overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -666,9 +664,7 @@ class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultNa
             // Get the field and explode it
             val values = datum(field).toString.split(separator).toList
 
-            datum + {
-                if (overwrite) field -> values else resultName -> values
-            }
+            datum + (resultName -> values)
         }
     })
 }
@@ -680,13 +676,11 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
     var listField = ""
     var mapField = ""
     var ignoreEmpty = true
-    var overwrite = true
 
     override def initialize(config: JsObject) {
         listField = (config \ "list_field").as[String]
         mapField = (config \ "map_field").as[String]
         ignoreEmpty = (config \ "ignore_empty").asOpt[Boolean].getOrElse(true)
-        overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(true)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -700,11 +694,7 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
                 listItem(mapField)
             })
 
-            // Return new list rather than old
-            if (overwrite)
-                datum + (listField -> newList)
-            else
-                datum + (resultName -> newList)
+            datum + (resultName -> newList)
         }
     }) compose Enumeratee.filterNot((data: DataPacket) => ignoreEmpty && data.isEmpty)
 }
@@ -716,7 +706,6 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
     var listField = ""
     var mapFields: List[String] = _
     var ignoreEmpty = true
-    var overwrite = true
 
     override def initialize(config: JsObject) {
         listField = (config \ "list_field").as[String]
