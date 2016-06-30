@@ -497,14 +497,12 @@ class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             fields match {
-                case Some(fs) => datum + (resultName -> (datum.collect {
-                    case (key: String, value: Any) if fs.contains(key) => value
-                }).toList)
-                case None => datum + (resultName -> datum.map(_._2).toList)
+                case Some(fs) => datum + (resultName -> fs.map(field => datum(field)))
+                case None     => datum + (resultName -> datum.toList.sortBy(_._1).map(_._2))
             }
-        })
+        }
     })
 }
 
