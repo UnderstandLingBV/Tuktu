@@ -18,87 +18,93 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.Await
 import play.api.libs.json._
 import tuktu.api.utils.MapToJsObject
+import reactivemongo.api.MongoConnection
+import tuktu.api.utils
+import akka.util.Timeout
 
 /**
  * Updates datum into MongoDB (assuming it was initially found in MongoDB)
  */
-class MongoDBUpdatumProcessor(resultName: String) extends BaseProcessor(resultName)
-{
-    var settings, setts: MongoDBSettings = _
-    var credentials: Option[Authenticate] = _
-    var scramsha1: Boolean = _
+class MongoDBUpdatIfExistsProcessor(resultName: String) extends BaseProcessor(resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
+    
+    var field: Option[String] = _
+    
+    var db: String = _
+    var collection: String = _
+    
+    var waitForCompletion: Boolean = _
+    
     // If set to true, creates a new document when no document matches the _id key. 
     var upsert: Boolean = _
-    var blocking: Boolean = _
-    var field: Option[String] = _
-    var conn: Int = _
     
-    override def initialize(config: JsObject) 
-    {
-        // Set up MongoDB client
-        val hs = (config \ "hosts").as[List[String]]
-        val hosts = SortedSet(hs: _*)
-        val database = (config \ "database").as[String]
-        val coll = (config \ "collection").as[String]
-        settings = MongoDBSettings(hosts, database, coll)
-        conn = (config \ "connections").asOpt[Int].getOrElse(10)
+    override def initialize(config: JsObject) {
+        // Get hosts
+        nodes = (config \ "hosts").as[List[String]]
+        // Get connection properties
+        val opts = (config \ "mongo_options").asOpt[JsObject]
+        val mongoOptions = MongoPool.parseMongoOptions(opts)
+        // Get credentials
+        val authentication = (config \ "auth").asOpt[JsObject]
+        val auth = authentication match {
+            case None => None
+            case Some(a) => Some(Authenticate(
+                    (a \ "db").as[String],
+                    (a \ "user").as[String],
+                    (a \ "password").as[String]
+            ))
+        }
+        
+        // DB and collection
+        db = (config \ "db").as[String]
+        collection = (config \ "collection").as[String]
         
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
-        blocking = (config \ "blocking").asOpt[Boolean].getOrElse(true)
-        // Get credentials
-        val user = (config \ "user").asOpt[String]
-        val pwd = (config \ "password").asOpt[String].getOrElse("")
-        val admin = (config \ "admin").asOpt[Boolean].getOrElse(true)
-        credentials = user match
-        {
-            case None => None
-            case Some( usr ) => {
-                admin match
-                {
-                  case true => Option(Authenticate( "admin", usr, pwd ))
-                  case false => Option(Authenticate( database, usr, pwd ))
-                }
-            }
-        }
-        scramsha1 = (config \ "ScramSha1").asOpt[Boolean].getOrElse(true)
         // Use field instead of datum?
         field = (config \ "field").asOpt[String]
-    }
-    
-    // Does the actual updating
-    def doUpdate(data: DataPacket) = {
-        // Update data into MongoDB
-        Future.sequence(data.data.map(datum => {
-            setts = MongoDBSettings( settings.hosts.map{ host => tuktu.api.utils.evaluateTuktuString(host, datum)}, tuktu.api.utils.evaluateTuktuString(settings.database, datum), tuktu.api.utils.evaluateTuktuString(settings.collection, datum))
-            val fcollection = credentials match{
-                case None => mongoTools.getFutureCollection(setts, conn)
-                case Some( creds ) => mongoTools.getFutureCollection(setts, creds, scramsha1, conn)
-            }
-            val updater = field match
-            {
-              case None => MapToJsObject( datum )
-              case Some( f ) => datum(f) match{
-                 case j: JsObject => j
-                 case m: Map[String, Any] => MapToJsObject( m ) 
-              }
-            }
-            val selector = Json.obj( "_id" ->   (updater \ "_id") )
-            fcollection.flatMap{ collection => collection.update(selector, updater, upsert = upsert) }
-        }))
+        
+        // Wait for updates to complete?
+        waitForCompletion = (config \ "wait_for_completion").asOpt[Boolean].getOrElse(false)
+        
+        // Get the connection
+        val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+        conn = Await.result(fConnection, timeout.duration)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        if (!blocking) 
-        {
-            Future {
-                doUpdate(data)
-                data
-            }
-        } else {
-            // Wait for all the updates to be finished
-            doUpdate(data).map {
-                case _ => data
-            }
-        }
-     })
+        val jsons = (for (datum <- data.data) yield {
+            (
+                utils.evaluateTuktuString(db, datum),
+                utils.evaluateTuktuString(collection, datum),
+                {
+                    val updater = field match {
+                        case None => MapToJsObject(datum)
+                        case Some( f ) => datum(f) match {
+                            case j: JsObject => j
+                            case m: Map[String, Any] => MapToJsObject(m) 
+                        }
+                    }
+                    
+                    // Return updater and ID
+                    (updater, Json.obj("_id" ->  (updater \ "_id")))
+                }
+            )
+        }).toList.groupBy(_._1).map(elem => elem._1 -> elem._2.groupBy(_._2))
+        
+        // Execute per DB/Collection pair
+        val resultFut = Future.sequence(for {
+            (dbEval, collectionMap) <- jsons
+            (collEval, queries) <- collectionMap
+            (updater, selector) <- queries.map(_._3)
+        } yield {
+            val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
+            fCollection.flatMap(coll => coll.update(selector, updater, upsert = upsert))
+        })
+
+        // Continue directly or wait?
+        if (waitForCompletion) resultFut.map { _ => data }
+        else Future { data }
+     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }
