@@ -80,6 +80,9 @@ object Application extends Controller {
                                 // By default, add referer, request and headers
                                 "url" -> referrer.getOrElse(""),
                                 "request" -> request,
+                                "request_path" -> request.path,
+                                "request_uri" -> request.uri,
+                                "request_host" -> request.host,
                                 "headers" -> request.headers,
                                 Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List())
                             )))
@@ -88,6 +91,9 @@ object Application extends Controller {
                                 // By default, add referer, request and headers
                                 "url" -> referrer.getOrElse(""),
                                 "request" -> request,
+                                "request_path" -> request.path,
+                                "request_uri" -> request.uri,
+                                "request_host" -> request.host,
                                 Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List()),
                                 "headers" -> request.headers) ++ bodyData.keys.map(key => key -> utils.JsValueToAny(bodyData \ key))))
                         }
