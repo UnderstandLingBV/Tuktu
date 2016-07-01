@@ -29,13 +29,6 @@
 					"description": "The separator used to split on.",
 					"type": "string",
 					"required": true
-				},
-				{
-					"name": "overwrite",
-					"type": "boolean",
-					"description": "Whether the original value in field should be overwritten (true) or whether the result should be appended as a separate field resultName (false).",
-					"required": false,
-					"default": false
 				}
 			]
 		}

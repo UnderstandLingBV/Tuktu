@@ -18,12 +18,10 @@ class FileToJson(resultName: String) extends BaseProcessor(resultName) {
     var charset: String = _
     /** The field the file is processed in. */
     var field: String = _
-    var overwrite: Boolean = _
 
     override def initialize(config: JsObject) {
         charset = (config \ "charset").asOpt[String].getOrElse("utf-8")
         field = (config \ "file_field").as[String]
-        overwrite = (config \ "overwrite").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -34,10 +32,7 @@ class FileToJson(resultName: String) extends BaseProcessor(resultName) {
             file.close
 
             // Parse JSON and append
-            if (overwrite)
-                datum + (field -> Json.parse(content))
-            else
-                datum + (resultName -> Json.parse(content))
+            datum + (resultName -> Json.parse(content))
         }
     })
 }

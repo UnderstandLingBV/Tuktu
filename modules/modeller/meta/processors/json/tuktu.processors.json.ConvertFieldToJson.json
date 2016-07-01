@@ -23,13 +23,6 @@
 					"description": "The field containing the value to be converted to JSON.",
 					"type": "string",
 					"required": true
-				},
-				{
-					"name": "append",
-					"description": "Append the data as resultName or overwrite field.",
-					"type": "boolean",
-					"required": false,
-					"default": false
 				}
 			]
 		}

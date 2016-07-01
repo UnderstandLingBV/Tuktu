@@ -21,6 +21,7 @@ import tuktu.api.utils
 import tuktu.api.WebJsNextFlow
 import tuktu.web.js.JSGeneration
 import tuktu.api.WebJsOrderedObject
+import tuktu.api.ErrorPacket
 
 object Application extends Controller {
     val source = scala.io.Source.fromFile(Play.application.getFile("public/images/pixel.gif"))(scala.io.Codec.ISO8859)
@@ -145,6 +146,8 @@ object Application extends Controller {
                                     Cache.getAs[String]("web.url").getOrElse("http://localhost:9000/") +
                                     Cache.getAs[String]("web.jsurl").getOrElse("Tuktu.js") + idOption.map('/' + _).getOrElse(""),
                                     jsResult._3))
+                            case error: ErrorPacket =>
+                                BadRequest("Internal error occured")
                             case _ =>
                                 // Return blank
                                 Ok("").as("text/javascript")

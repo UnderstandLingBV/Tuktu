@@ -1,6 +1,6 @@
 {
 	"name": "Count Processor",
-	"description": "Counts the amount of values in a bucket.",
+	"description": "Counts the amount of Datums in a DataPacket.",
 	"class": "tuktu.processors.bucket.aggregate.CountProcessor",
 	"parameters": [
 		{

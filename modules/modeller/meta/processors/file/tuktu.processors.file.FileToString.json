@@ -44,15 +44,7 @@
 					"type": "int",
 					"required": false,
 					"default": 0
-				},
-				{
-					"name": "overwrite",
-					"description": "Overwrite file field with the parsed JSON.",
-					"type": "boolean",
-					"required": false,
-					"default": false
 				}
-
 			]
 		}
 	]

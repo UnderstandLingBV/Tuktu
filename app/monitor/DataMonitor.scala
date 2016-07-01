@@ -92,6 +92,7 @@ class DataMonitor extends Actor with ActorLogging {
             appMonitor.get(enp.uuid) collect {
                 case app => {
                     app.errors += enp.processorName -> ("Error happened at flow: " + enp.configName + ", processor: " + enp.processorName + ", id: " + enp.uuid + ", on Input:\n" + enp.input.take(1000) + { if (enp.input.size > 1000) " [...]" else "" } + "\n" + enp.error.toString)
+                    app.actors.foreach(_ ! new ErrorPacket)
                     app.actors.foreach(_ ! new StopPacket)
                 }
             }

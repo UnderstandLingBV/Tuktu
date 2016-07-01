@@ -31,20 +31,6 @@
 							"required": true
 						}
 					]
-				},
-				{
-					"name": "ignore_empty_datums",
-					"description": "Ignore empty datums within each DataPacket.",
-					"type": "boolean",
-					"required": false,
-					"default": false
-				},
-				{
-					"name": "ignore_empty_datapackets",
-					"description": "Ignore empty DataPackets. DataPackets which consist of empty datums only are not ignored if ignore_empty_datums isn't true.",
-					"type": "boolean",
-					"required": false,
-					"default": false
 				}
 			]
 		}

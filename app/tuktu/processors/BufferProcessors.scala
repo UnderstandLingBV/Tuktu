@@ -68,8 +68,7 @@ class SizeBufferProcessor(resultName: String) extends BaseProcessor(resultName) 
     ) yield new DataPacket(dps.flatMap(data => data.data))
 
     // Use the iteratee and Enumeratee.grouped
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets) compose
-        Enumeratee.filter(!_.data.isEmpty)
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
 }
 
 /**
@@ -117,8 +116,7 @@ class EOFBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
     ) yield new DataPacket(dps.flatMap(data => data.data))
 
     // Use the iteratee and Enumeratee.grouped
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets) compose
-        Enumeratee.filter(!_.data.isEmpty)
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
 }
 
 /**
@@ -219,5 +217,5 @@ class DataPacketSplitterProcessor(resultName: String) extends BaseProcessor(resu
                 for (datum <- data.data) yield
                     new DataPacket(List(datum))
         )
-    }) compose Enumeratee.filter(!_.data.isEmpty)
+    })
 }

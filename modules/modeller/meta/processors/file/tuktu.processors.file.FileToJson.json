@@ -25,13 +25,6 @@
 					"required": true
 				},
 				{
-					"name": "overwrite",
-					"description": "Overwrite file field with the parsed JSON.",
-					"type": "boolean",
-					"required": false,
-					"default": false
-				},
-				{
 					"name": "charset",
 					"description": "Charset that will be used to decode the file.",
 					"type": "string",
