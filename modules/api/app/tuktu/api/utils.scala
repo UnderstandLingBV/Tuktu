@@ -16,6 +16,7 @@ import scala.xml.XML
 import scala.xml.Elem
 import scala.xml.Node
 import scala.xml.NodeSeq
+import scala.collection.mutable.ArrayBuffer
 
 
 object utils {
@@ -249,9 +250,11 @@ object utils {
         case a: Date       => if (!mongo) a else Json.obj("$date" -> a.getTime)
         case a: DateTime   => if (!mongo) a else Json.obj("$date" -> a.getMillis)
         case a: JsValue    => a
+        case a: (Any, Any) => MapToJsObject(Map(a._1 -> a._2), mongo)
         case a: Seq[_]     => SeqToJsArray(a, mongo)
         case a: Array[_]   => SeqToJsArray(a, mongo)
         case a: Map[_, _]  => MapToJsObject(a, mongo)
+        case a: Iterable[_] => SeqToJsArray(a.toSeq, mongo)
         case _             => if (a == null) "null" else a.toString
     }
 

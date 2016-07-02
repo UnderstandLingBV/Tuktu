@@ -473,15 +473,74 @@ class StringImploderProcessor(resultName: String) extends BaseProcessor(resultNa
                 // Get the array of strings
                 val value = {
                     val someVal = utils.fieldParser(datum, fields, None)
-                    if (someVal.isInstanceOf[JsValue])
-                        someVal.asInstanceOf[JsValue].as[Traversable[String]]
-                    else if (someVal.isInstanceOf[Array[String]])
-                        someVal.asInstanceOf[Array[String]].toTraversable
-                    else
-                        someVal.asInstanceOf[Traversable[String]]
+                    someVal match {
+                        case sl: JsValue => sl.as[Traversable[String]]
+                        case sl: Array[String] => sl.toTraversable
+                        case sl: Array[Any] => sl.map(_.toString).toTraversable
+                        case _ => someVal.asInstanceOf[Traversable[String]]
+                    }
                 }
                 // Overwrite top-level field
                 fields.head -> value.mkString(sep)
+            })
+        }
+    })
+}
+
+/**
+ * Implodes a list of tuples into a string
+ */
+class TupleListStringImploder(resultName: String) extends BaseProcessor(resultName) {
+    var fieldList: List[JsObject] =_
+    override def initialize(config: JsObject) {
+        fieldList = (config \ "fields").as[List[JsObject]]
+    }
+    
+    def doConversion(elem: List[Any], sep: String) = {
+        elem.map(el => el match {
+            case b: (Any, Any) => b._1.toString + sep + b._2.toString
+            case b: (Any, Any, Any) => b._1.toString + sep + b._2.toString + sep + b._3.toString
+            case b: (Any, Any, Any, Any) => b._1.toString + sep + b._2.toString + sep + b._3.toString +
+                sep + b._4.toString
+            case b: (Any, Any, Any, Any, Any) => b._1.toString + sep + b._2.toString + sep + b._3.toString +
+                sep + b._4.toString + sep + b._5.toString
+            case b: (Any, Any, Any, Any, Any, Any) => b._1.toString + sep + b._2.toString + sep + b._3.toString +
+                sep + b._4.toString + sep + b._5.toString + sep + b._6.toString
+            case b: (Any, Any, Any, Any, Any, Any, Any) => b._1.toString + sep + b._2.toString + sep + b._3.toString +
+                sep + b._4.toString + sep + b._5.toString + sep + b._6.toString + sep + b._7.toString
+            case b: (Any, Any, Any, Any, Any, Any, Any, Any) => b._1.toString + sep + b._2.toString + sep +
+                b._3.toString + sep + b._4.toString + sep + b._5.toString + sep + b._6.toString + sep + b._7.toString +
+                sep + b._8.toString
+            case b: (Any, Any, Any, Any, Any, Any, Any, Any, Any) => b._1.toString + sep + b._2.toString + sep +
+                b._3.toString + sep + b._4.toString + sep + b._5.toString + sep + b._6.toString + sep + b._7.toString +
+                sep + b._8.toString + sep + b._9.toString
+            // Should we ever need more?
+            case b: (Any, Any, Any, Any, Any, Any, Any, Any, Any, Any) => b._1.toString + sep + b._2.toString + sep +
+                b._3.toString + sep + b._4.toString + sep + b._5.toString + sep + b._6.toString + sep + b._7.toString +
+                sep + b._8.toString + sep + b._9.toString + sep + b._10.toString
+        })
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        for (datum <- data) yield {
+            // Find out which fields we should extract
+            datum ++ (for (fieldObject <- fieldList) yield {
+                // Get fields and separator
+                val fields = (fieldObject \ "path").as[List[String]]
+                val sep = (fieldObject \ "separator").as[String]
+                // Get the tuples
+                val value = {
+                    val someVal = utils.fieldParser(datum, fields, None)
+                    someVal match {
+                        case a: (Any, Any) => a._1.toString + sep + a._2.toString
+                        case a: Seq[_] => doConversion(a.toList, sep)
+                        case a: Map[Any, Any] => doConversion(a.toList, sep)
+                        case a: Iterable[_] => doConversion(a.toList, sep)
+                        case a: Any => a
+                    }
+                }
+                // Overwrite top-level field
+                fields.head -> value
             })
         }
     })

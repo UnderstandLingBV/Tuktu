@@ -8,3 +8,4 @@ target
 *.gitignore
 *.cache-main
 nft.data
+/bin/

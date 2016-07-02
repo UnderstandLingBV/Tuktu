@@ -1,0 +1,58 @@
+{
+	"name": "Tuple List String Imploder",
+	"description": "Takes a tuple or a list of tuples and concatenates the values of the tuple(s) into a string with a specified separator.",
+	"class": "tuktu.processors.TupleListStringImploder",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The arrays to be imploded.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "path",
+									"description": "The path to the tuple field. The result will overwrite its top-level ancestor.",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"type": "string",
+											"required": true
+										}
+									]
+								},
+								{
+									"name": "separator",
+									"description": "The separator character used between elements.",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}
