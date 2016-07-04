@@ -6,7 +6,7 @@ import org.apache.poi.ss.usermodel.Row
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsArray
-import au.com.bytecode.opencsv.CSVReader
+import com.opencsv.CSVReader
 import play.api.Logger
 
 case class ParseNode(

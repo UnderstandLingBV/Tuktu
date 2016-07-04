@@ -6,14 +6,14 @@ import java.io.OutputStreamWriter
 import java.io.StringWriter
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import au.com.bytecode.opencsv.CSVWriter
+import com.opencsv.CSVWriter
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
-import au.com.bytecode.opencsv.CSVReader
+import com.opencsv.CSVReader
 import java.io.StringReader
 
 /**

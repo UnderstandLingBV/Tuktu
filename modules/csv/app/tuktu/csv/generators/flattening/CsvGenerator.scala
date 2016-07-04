@@ -5,7 +5,7 @@ import akka.actor.ActorLogging
 import akka.actor.ActorRef
 import akka.actor.PoisonPill
 import akka.actor.Props
-import au.com.bytecode.opencsv.CSVReader
+import com.opencsv.CSVReader
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Enumeratee

@@ -2,7 +2,7 @@ package tuktu.csv.generators
 
 import scala.io.Codec
 import akka.actor._
-import au.com.bytecode.opencsv.CSVReader
+import com.opencsv.CSVReader
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee._

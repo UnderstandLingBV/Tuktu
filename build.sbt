@@ -55,7 +55,7 @@ lazy val nlpDependencies = Seq(
 lazy val csvDependencies = Seq(
     cache,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
-    "net.sf.opencsv" % "opencsv" % "2.0",
+    "com.opencsv" % "opencsv" % "3.8",
     "org.apache.poi" % "poi" % "3.11-beta2",
     "org.apache.poi" % "poi-ooxml" % "3.11-beta2"
 )
@@ -140,7 +140,6 @@ lazy val coreDependencies = Seq(
     cache,
     ws,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
-    "net.sf.opencsv" % "opencsv" % "2.0",
     "org.codehaus.groovy" % "groovy-all" % "2.2.1",
     "com.typesafe.akka" %% "akka-remote" % "2.3.6",
     "com.typesafe.akka" %% "akka-testkit" % "2.3.6",
