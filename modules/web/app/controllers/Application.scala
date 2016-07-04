@@ -52,6 +52,7 @@ object Application extends Controller {
                 case Some(webRepo) => {
                     // Get the referer
                     val referrer = request.headers.get("referer")
+                    
                     // Get actual actor
                     val actorRefMap = Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
                         .getOrElse(collection.mutable.Map[String, ActorRef]())
@@ -84,6 +85,7 @@ object Application extends Controller {
                                 "request_uri" -> request.uri,
                                 "request_host" -> request.host,
                                 "headers" -> request.headers,
+                                "cookies" -> request.cookies.map(c => c.name -> c.value).toMap,
                                 Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List())
                             )))
                         else {
@@ -94,6 +96,7 @@ object Application extends Controller {
                                 "request_path" -> request.path,
                                 "request_uri" -> request.uri,
                                 "request_host" -> request.host,
+                                "cookies" -> request.cookies.map(c => c.name -> c.value).toMap,
                                 Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List()),
                                 "headers" -> request.headers) ++ bodyData.keys.map(key => key -> utils.JsValueToAny(bodyData \ key))))
                         }
@@ -140,10 +143,20 @@ object Application extends Controller {
                                 }
                             }
                         }
+                        
+                        // Check if we need to add session/user ID or not
+                        val cookies = (request.cookies.get("t_s_id") match {
+                            case None if (Cache.getAs[Boolean]("web.set_cookies").getOrElse(true)) =>
+                                List(Cookie("t_s_id", java.util.UUID.randomUUID.toString))
+                            case _ => List()
+                        }) ++ (request.cookies.get("t_u_id") match {
+                            case None if (Cache.getAs[Boolean]("web.set_cookies").getOrElse(true)) =>
+                                List(Cookie("t_u_id", java.util.UUID.randomUUID.toString, Some(Int.MaxValue)))
+                            case _ => List()
+                        })
 
                         // Return result
-                        if (image)
-                            Future { Ok(byteArray).as("image/gif") }
+                        if (image) Future { Ok(byteArray).as("image/gif").withCookies(cookies: _*) }
                         else resultFut.map {
                             case dp: DataPacket =>
                                 // Get all the JS elements and output them one after the other
@@ -152,6 +165,7 @@ object Application extends Controller {
                                     Cache.getAs[String]("web.url").getOrElse("http://localhost:9000/") +
                                     Cache.getAs[String]("web.jsurl").getOrElse("Tuktu.js") + idOption.map('/' + _).getOrElse(""),
                                     jsResult._3))
+                                .withCookies(cookies: _*)
                             case error: ErrorPacket =>
                                 BadRequest("Internal error occured")
                             case _ =>

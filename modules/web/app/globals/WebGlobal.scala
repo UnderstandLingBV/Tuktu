@@ -33,6 +33,7 @@ class WebGlobal() extends TuktuGlobal() {
     Cache.set("web.jsurl", Play.current.configuration.getString("tuktu.jsurl").getOrElse("Tuktu.js"))
     Cache.set("web.jsname", Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field"))
     Cache.set("web.repo", Play.current.configuration.getString("tuktu.webrepo").getOrElse("configs/analytics"))
+    Cache.set("web.set_cookies", Play.current.configuration.getBoolean("tuktu.web.set_id_cookies").getOrElse(true))
     
     /**
      * Load this on startup. The application is given as parameter
