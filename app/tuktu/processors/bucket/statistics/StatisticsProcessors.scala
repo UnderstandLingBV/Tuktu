@@ -32,7 +32,7 @@ object StatHelper {
         }
 
         // Return the means
-        sums.map(sum => sum._1 -> sum._2 / data.size).toMap
+        sums.mapValues { sum => sum / data.size }.toMap
     }
 
     /**
@@ -49,7 +49,7 @@ object StatHelper {
         }
 
         // Return variances
-        varSums.map(sum => sum._1 -> sum._2 / data.size).toMap
+        varSums.mapValues { sum => sum / data.size }.toMap
     }
 }
 
@@ -57,7 +57,7 @@ object StatHelper {
  * Computes the mean over a field containing numerical values
  */
 class MeanProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
-    var fields = List[String]()
+    var fields: List[String] = _
 
     override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
@@ -73,7 +73,7 @@ class MeanProcessor(resultName: String) extends BaseBucketProcessor(resultName) 
  * Computes the median over a field containing numerical values
  */
 class MedianProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
-    var fields = List[String]()
+    var fields: List[String] = _
 
     override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
@@ -101,7 +101,7 @@ class MedianProcessor(resultName: String) extends BaseBucketProcessor(resultName
  * Computes the mode over a field containing numerical values
  */
 class ModeProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
-    var fields = List[String]()
+    var fields: List[String] = _
 
     override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
@@ -127,7 +127,7 @@ class ModeProcessor(resultName: String) extends BaseBucketProcessor(resultName) 
  * Computes the midrange over a field containing numerical values
  */
 class MidrangeProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
-    var fields = List[String]()
+    var fields: List[String] = _
     // Keep track of min, max
     var mins = collection.mutable.Map[String, Double]().withDefaultValue(Double.MaxValue)
     var maxs = collection.mutable.Map[String, Double]().withDefaultValue(Double.MinValue)
@@ -289,5 +289,22 @@ class CorrelationMatrixProcessor(resultName: String) extends BaseBucketProcessor
             case Some(field) => Map(resultName -> correlationMatrix,field -> new PearsonsCorrelation(values).getCorrelationPValues.getData.toSeq.map(_.toSeq))
             case None => Map(resultName -> correlationMatrix)
         })   
+    }
+}
+
+/**
+ * Counts occurrences of values in a DataPacket and returns Map("key" -> Any, "amount" -> Int)
+ */
+class CountValuesProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
+    var fields: List[String] = _
+
+    override def initialize(config: JsObject) {
+        fields = (config \ "fields").as[List[String]]
+    }
+
+    override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
+        List((for (field <- fields) yield {
+            field -> data.groupBy { datum => datum(field) }.map { case (key, list) => Map("key" -> key, "amount" -> list.size) }
+        }).toMap)
     }
 }
