@@ -75,7 +75,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
                 utils.evaluateTuktuString(collection, datum),
                 fields match { // Convert to JSON
                     case Nil => MapToJsObject(datum, true)
-                    case _   => MapToJsObject(datum.filter(elem => fields.contains(elem._1)), true)
+                    case _   => MapToJsObject(datum.filterKeys(key => fields.contains(key)), true)
                 }
             )
         }).toList.groupBy(_._1).map(elem => elem._1 -> elem._2.groupBy(_._2))
