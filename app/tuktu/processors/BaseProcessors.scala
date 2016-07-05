@@ -440,15 +440,24 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
  * Dumps the data to console
  */
 class ConsoleWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var prettify = false
+    var prettify: Boolean = _
+    var fields: List[String] = _
 
     override def initialize(config: JsObject) {
         prettify = (config \ "prettify").asOpt[Boolean].getOrElse(false)
+        fields = (config \ "fields").asOpt[List[String]].getOrElse(Nil)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        if (prettify) println(Json.prettyPrint(Json.toJson(data.data.map(datum => utils.MapToJsObject(datum)))))
-        else println(data + "\r\n")
+        val filtered = fields match {
+            case Nil => data
+            case _   => data.map(datum => datum.filterKeys { key => fields.contains(key) })
+        }
+
+        if (prettify)
+            println(Json.prettyPrint(Json.toJson(filtered.data.map(datum => utils.MapToJsObject(datum)))))
+        else
+            println(filtered + "\r\n")
 
         data
     })
@@ -693,6 +702,24 @@ class SequenceExploderProcessor(resultName: String) extends BaseProcessor(result
 
             for (value <- values) yield datum + (field -> value)
         })
+    })
+}
+
+/**
+ * Wraps either the whole list of Datums of a DataPacket under a new result name as a whole, or each datum under a new result name separately
+ */
+class DataPacketWrapperProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var as_whole: Boolean = _
+
+    override def initialize(config: JsObject) {
+        as_whole = (config \ "as_whole").asOpt[Boolean].getOrElse(true)
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        if (as_whole)
+            new DataPacket(List(Map(resultName -> data.data)))
+        else
+            data.map(datum => Map(resultName -> datum))
     })
 }
 

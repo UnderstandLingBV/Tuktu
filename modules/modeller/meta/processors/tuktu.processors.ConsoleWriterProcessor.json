@@ -24,6 +24,20 @@
 					"description": "Try to prettify the result written to console.",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "fields",
+					"description": "The fields to be printed. Leave empty to print everything.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "field",
+							"description": "The field to be printed.",
+							"type": "string",
+							"required": true
+						}
+					]
 				}
 			]
 		}

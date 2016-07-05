@@ -1,0 +1,31 @@
+{
+	"name": "DataPacket Wrapper Processor",
+	"description": "Wraps either the whole list of Datums of a DataPacket under a new result name as a whole, or each datum under a new result name separately.",
+	"class": "tuktu.processors.DataPacketWrapperProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "as_whole",
+					"description": "If true, wraps the whole list of datums into a single datum under result: result -> List(datums). Otherwise, each datum gets separately wrapped under result: result -> datum.",
+					"type": "boolean",
+					"required": false,
+					"default": true 
+				}
+			]
+		}
+	]
+}
