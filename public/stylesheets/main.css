@@ -1,11 +1,23 @@
 body {
-    padding-top: 50px;
-    height: 100%;
-    font-size: 14px;
+	padding-top: 50px;
+	height: 100%;
+	font-size: 14px;
 }
 
 .data-modal {
-	width: 80%;
+	width: 90%;
+
+	/* Warning: Needed for oldIE support, but words are broken up letter-by-letter */
+	-ms-word-break: break-all;
+	word-break: break-all;
+
+	/* Non standard for webkit */
+	word-break: break-word;
+
+	-webkit-hyphens: auto;
+	-moz-hyphens: auto;
+	-ms-hyphens: auto;
+	hyphens: auto;
 }
 
 a:hover, a:focus, img, img:hover, img:focus {
@@ -13,75 +25,75 @@ a:hover, a:focus, img, img:hover, img:focus {
 }
 
 .navbar-fixed-top {
-    padding-left: 100px;
-    padding-right: 100px;
+	padding-left: 100px;
+	padding-right: 100px;
 }
 
 @media screen and (max-width: 768px) {
-    body {
-        font-size: 12px;
-    }
-    .navbar-fixed-top {
-        padding-left: 50px;
-        padding-right: 50px;
-    }
+	body {
+		font-size: 12px;
+	}
+	.navbar-fixed-top {
+		padding-left: 50px;
+		padding-right: 50px;
+	}
 }
 
 @media screen and (max-width: 1024px) {
-    .navbar-fixed-top {
-        padding-left: 80px;
-        padding-right: 80px;
-    }
+	.navbar-fixed-top {
+		padding-left: 80px;
+		padding-right: 80px;
+	}
 }
 
 .navbar {
-    color: #333;
-    background: #eee;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+	color: #333;
+	background: #eee;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
 .navbar a {
-    color: #999;
+	color: #999;
 }
 
 .navbar-brand {
-    padding-top: 8px;
-    padding-bottom: 0;
-    padding-left: 0;
-    padding-right: 0;
+	padding-top: 8px;
+	padding-bottom: 0;
+	padding-left: 0;
+	padding-right: 0;
 }
 
-.navbar-default .navbar-nav>li>a {
-    color: #333;
+.navbar-default .navbar-nav > li > a {
+	color: #333;
 }
 
-.navbar-default .navbar-nav>li>a:hover,.navbar-default .navbar-nav>li>a:focus {
-    color: #ddd;
-    background: #777;
-    box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
+.navbar-default .navbar-nav > li > a:hover, .navbar-default .navbar-nav > li > a:focus {
+	color: #ddd;
+	background: #777;
+	box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
 }
 
 .navbar-nav > li > a:hover, .navbar-nav > li > a:focus {
-    color: #ddd;
-    background: #777;
-    box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
+	color: #ddd;
+	background: #777;
+	box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
 }
 
 .active {
-    font-weight: bold;
-    text-decoration: underline;
+	font-weight: bold;
+	text-decoration: underline;
 }
 
 #sidebar-wrapper {
 	width: 250px;
 	color: #333;
-    background: #eee;
-    box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
+	background: #eee;
+	box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
 }
 
 .sidebar-nav li a:hover {
 	color: #ddd;
-    background: #777;
+	background: #777;
 }
 
 .sidebar-brand {
