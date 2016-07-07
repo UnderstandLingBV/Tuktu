@@ -1,0 +1,69 @@
+{
+	"name": "File Rotating Stream Processor",
+	"description": "Streams data into a file, rotates it based on a given scheme.",
+	"class": "tuktu.processors.FileRotatingStreamProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "file_name",
+					"description": "The file to be streamed into, it's important to add a formatter in the filename. For example \"log-[yyyy-MM-dd-HH-mm].txt.\"",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "encoding",
+					"description": "The encoding used for writing.",
+					"type": "string",
+					"required": false,
+					"default": "utf-8"
+				},
+				{
+					"name": "rotation_time",
+					"description": "How much time in between rotations, e.g. \"1 hour\"",
+					"type": "string",
+					"required": true					
+				},
+				{
+					"name": "field_separator",
+					"description": "The field separator character.",
+					"type": "string",
+					"required": false,
+					"default": ","
+				},
+				{
+					"name": "line_separator",
+					"description": "The line separator character, default is newline (\\r\\n).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "fields",
+					"description": "The fields to be written.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}

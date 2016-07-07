@@ -13,6 +13,10 @@ import tuktu.api.utils
 import scala.io.Codec
 import scala.io.Source
 import java.io.BufferedReader
+import scala.concurrent.duration.Duration
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 
 /**
  * Streams data into a file and closes it when it's done
@@ -49,6 +53,81 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
         writer.flush
         writer.close
     })
+}
+
+/**
+ * Streams data into a file and rotates it
+ */
+class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var writer: BufferedWriter = _
+    var fields: List[String] = _
+    var fieldSep: String = _
+    var lineSep: String = _
+    var duration: Duration = _
+    var fileName: String = _
+    var encoding: String = _
+    var started: Date = _
+    
+    val dateExtractor = """\[(.*)]""".r
+
+    override def initialize(config: JsObject) {
+        // Get the location of the file to write to
+        fileName = (config \ "file_name").as[String]
+        encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
+        duration = Duration((config \ "rotation_time").as[String])
+        
+        // Get the field we need to write out
+        fields = (config \ "fields").as[List[String]]
+        fieldSep = (config \ "field_separator").asOpt[String].getOrElse(",")
+        lineSep = (config \ "line_separator").asOpt[String].getOrElse("\r\n")
+                
+        started = Calendar.getInstance.getTime
+
+        getWriter
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        val now = Calendar.getInstance.getTime
+        
+        // check for rotation
+        if(now.getTime - started.getTime > duration.toMillis) {
+          val cal = Calendar.getInstance
+          cal.setTimeInMillis(started.getTime + duration.toMillis)          
+          started = cal.getTime
+          getWriter
+        }
+        
+        for (datum <- data) {
+            // Write it
+            val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
+
+            writer.write(output + lineSep)
+        }
+
+        data
+    }) compose Enumeratee.onEOF(() => {
+        closeWriter
+    })
+    
+    def getWriter = {      
+      closeWriter
+      writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getFileName), encoding))
+    }
+    
+    def closeWriter = {
+      try {
+        writer.flush
+        writer.close
+      } catch { 
+        case _ : Throwable => () 
+      }
+    }
+    
+    def getFileName = {
+      val formatter = new SimpleDateFormat(dateExtractor.findFirstMatchIn(fileName).get.group(1))
+      val now = formatter.format(Calendar.getInstance.getTime)
+      dateExtractor.replaceAllIn(fileName, now)
+    }
 }
 
 /**
