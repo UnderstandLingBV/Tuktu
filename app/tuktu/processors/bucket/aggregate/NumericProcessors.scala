@@ -27,16 +27,17 @@ class MinProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
             // Get the minimum based on type information
             List(
                 firstElem match {
-                    case a: String  => data.minBy(elem => elem(field) match { case b: String => b })
-                    case a: Char    => data.minBy(elem => elem(field) match { case b: Char => b })
-                    case a: Short   => data.minBy(elem => elem(field) match { case b: Short => b })
-                    case a: Byte    => data.minBy(elem => elem(field) match { case b: Byte => b })
-                    case a: Int     => data.minBy(elem => elem(field) match { case b: Int => b })
-                    case a: Integer => data.minBy(elem => elem(field) match { case b: Integer => b })
-                    case a: Double  => data.minBy(elem => elem(field) match { case b: Double => b })
-                    case a: Float   => data.minBy(elem => elem(field) match { case b: Float => b })
-                    case a: Long    => data.minBy(elem => elem(field) match { case b: Long => b })
-                    case _          => throw new Exception
+                    case a: String     => data.minBy(elem => elem(field) match { case b: String => b })
+                    case a: Char       => data.minBy(elem => elem(field) match { case b: Char => b })
+                    case a: Short      => data.minBy(elem => elem(field) match { case b: Short => b })
+                    case a: Byte       => data.minBy(elem => elem(field) match { case b: Byte => b })
+                    case a: Int        => data.minBy(elem => elem(field) match { case b: Int => b })
+                    case a: Integer    => data.minBy(elem => elem(field) match { case b: Integer => b })
+                    case a: Double     => data.minBy(elem => elem(field) match { case b: Double => b })
+                    case a: Float      => data.minBy(elem => elem(field) match { case b: Float => b })
+                    case a: Long       => data.minBy(elem => elem(field) match { case b: Long => b })
+                    case a: BigDecimal => data.minBy(elem => elem(field) match { case b: BigDecimal => b })
+                    case _             => throw new Exception(firstElem.getClass.toString + " is not supported")
                 }
             )
         }
@@ -63,16 +64,17 @@ class MaxProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
             // Get the maximum based on type information
             List(
                 firstElem match {
-                    case a: String  => data.maxBy(elem => elem(field) match { case b: String => b })
-                    case a: Char    => data.maxBy(elem => elem(field) match { case b: Char => b })
-                    case a: Short   => data.maxBy(elem => elem(field) match { case b: Short => b })
-                    case a: Byte    => data.maxBy(elem => elem(field) match { case b: Byte => b })
-                    case a: Int     => data.maxBy(elem => elem(field) match { case b: Int => b })
-                    case a: Integer => data.maxBy(elem => elem(field) match { case b: Integer => b })
-                    case a: Double  => data.maxBy(elem => elem(field) match { case b: Double => b })
-                    case a: Float   => data.maxBy(elem => elem(field) match { case b: Float => b })
-                    case a: Long    => data.maxBy(elem => elem(field) match { case b: Long => b })
-                    case _          => throw new Exception
+                    case a: String     => data.maxBy(elem => elem(field) match { case b: String => b })
+                    case a: Char       => data.maxBy(elem => elem(field) match { case b: Char => b })
+                    case a: Short      => data.maxBy(elem => elem(field) match { case b: Short => b })
+                    case a: Byte       => data.maxBy(elem => elem(field) match { case b: Byte => b })
+                    case a: Int        => data.maxBy(elem => elem(field) match { case b: Int => b })
+                    case a: Integer    => data.maxBy(elem => elem(field) match { case b: Integer => b })
+                    case a: Double     => data.maxBy(elem => elem(field) match { case b: Double => b })
+                    case a: Float      => data.maxBy(elem => elem(field) match { case b: Float => b })
+                    case a: Long       => data.maxBy(elem => elem(field) match { case b: Long => b })
+                    case a: BigDecimal => data.maxBy(elem => elem(field) match { case b: BigDecimal => b })
+                    case _             => throw new Exception(firstElem.getClass.toString + " is not supported")
                 }
             )
         }
