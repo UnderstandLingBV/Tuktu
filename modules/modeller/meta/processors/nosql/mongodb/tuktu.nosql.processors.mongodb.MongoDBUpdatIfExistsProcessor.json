@@ -1,7 +1,7 @@
 {
-	"name": "MongoDB Updatum Processor",
+	"name": "MongoDB Update If Exists Processor",
 	"description": "Updates data initially found in MongoDB with the content of the current tuktu datum.",
-	"class": "tuktu.nosql.processors.mongodb.MongoDBUpdatumProcessor",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBUpdatIfExistsProcessor",
 	"parameters": [
 		{
 			"name": "id",
