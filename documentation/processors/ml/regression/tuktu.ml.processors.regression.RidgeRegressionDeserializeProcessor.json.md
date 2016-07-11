@@ -20,5 +20,5 @@ Deserializes a Ridge regression model.
     - If set to true, processing only continues after the model has been loaded into memory (sync). If false, processing continues immediately, not knowing when the model has been materialized.
 
     * **lambda** *(type: double)* `[Required]`
-    - The shrinkage/regularization parameter (must be bigger than 0)
+    - The shrinkage/regularization parameter (must be bigger than or equal to 0)
 

@@ -11,13 +11,10 @@ Floors a given timestamp, based on the time fields; e.g. floored to the nearest 
     - The datetime format to parse the given field with.
 
     * **datetime_field** *(type: string)* `[Required]`
-    - The field which contains a formatted datetime.
+    - The field which contains a formatted datetime, a datetime object, or a long timestamp.
 
     * **datetime_locale** *(type: string)* `[Required]`
     - The locale of the datetime format to parse the field with.
-
-    * **overwrite** *(type: boolean)* `[Optional, default = false]`
-    - Overwrite the datetime field with the normalized timestamp, or save it under result.
 
     * **time** *(type: object)* `[Required]`
 

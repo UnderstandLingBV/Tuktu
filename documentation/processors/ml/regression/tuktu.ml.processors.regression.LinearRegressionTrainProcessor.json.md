@@ -17,8 +17,8 @@ Trains a linear regression model.
     - Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.
 
     * **data_field** *(type: string)* `[Required]`
-    - The field the data resides in. Data must be of type Seq[Int].
+    - The field the data resides in. Data must be of type Seq[Double].
 
     * **label_field** *(type: string)* `[Required]`
-    - The field the label is in. Value must be an integer.
+    - The field the label is in. Value must be a double.
 

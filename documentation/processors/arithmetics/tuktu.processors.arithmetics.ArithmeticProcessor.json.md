@@ -10,7 +10,7 @@ Calculates the result of the given formula.
     * **calculate** *(type: string)* `[Required]`
     - The formula which is calculated.
 
-    * **do_rounding** *(type: boolean)* `[Optional]`
+    * **do_rounding** *(type: boolean)* `[Optional, default = false]`
     - Round the result
 
     * **number_of_decimals** *(type: int)* `[Optional, default = 0]`

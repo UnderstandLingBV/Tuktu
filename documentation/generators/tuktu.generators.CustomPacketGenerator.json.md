@@ -23,7 +23,7 @@ Generates a custom tuktu data packet every tick
     - Tick interval in which to send the data packets, in milliseconds.
 
     * **packet** *(type: string)* `[Required]`
-    - The tuktu data packet (expressed as a JSON array of JSON objects) to send every tick.
+    - The tuktu data packet (expressed as a JSON array or JSON objects) to send every tick.
 
     * **json** *(type: boolean)* `[Optional, default = true]`
     - Keep values as JSON?

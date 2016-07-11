@@ -16,17 +16,17 @@ Trains a logistic regression model.
     * **wait_for_store** *(type: boolean)* `[Optional, default = false]`
     - Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.
 
-    * **learn_rate** *(type: int)* `[Required]`
-    - The learning rate.
+    * **lambda** *(type: double)* `[Optional, default = 0]`
+    - The lambda parameter (shrinkage/regularization). Set to > 0 for regularization (typically generalizes better).
 
-    * **num_iterations** *(type: int)* `[Required]`
-    - The number of iterations of going over the data.
+    * **tolerance** *(type: double)* `[Optional, default = 0.00001]`
+    - The stopping tolerance criterium for BFGS.
 
-    * **batch_size** *(type: int)* `[Optional, default = 0]`
-    - The batch size used to iteratively train the model, set to 0 to use all data.
+    * **max_iterations** *(type: int)* `[Optional, default = 500]`
+    - The maximum number of iterations.
 
     * **data_field** *(type: string)* `[Required]`
-    - The field the data resides in. Data must be of type Seq[Int].
+    - The field the data resides in. Data must be of type Seq[Double].
 
     * **label_field** *(type: string)* `[Required]`
     - The field the label is in. Value must be an integer.

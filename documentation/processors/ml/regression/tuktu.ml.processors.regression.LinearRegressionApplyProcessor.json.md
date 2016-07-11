@@ -14,7 +14,7 @@ Applies a Linear regression model to data.
     - Will this model be cleaned up once EOF is reached.
 
     * **data_field** *(type: string)* `[Required]`
-    - The field the data resides in. Data must be of type Seq[Int].
+    - The field the data resides in. Data must be of type Seq[Double].
 
     * **estimate** *(type: boolean)* `[Optional, default = true]`
     - If set to true, the coefficients of the regression model are estimated before applying the model. If set to false, it is assumed that the model is deserialized from pre-stored coefficients.

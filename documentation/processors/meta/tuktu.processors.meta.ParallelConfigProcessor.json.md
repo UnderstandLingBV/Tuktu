@@ -36,6 +36,17 @@ Starts parallel processor pipelines through generic configs, which are merged up
         * **config_path** *(type: string)* `[Required]`
         - The path of the config file.
 
+        * **replacements** *(type: array)* `[Optional]`
+        - Local replacements used to replace Tuktu config strings #{source} by target, in this instance of this config only; will overwrite global replacements of the same name.
+
+          * **[UNNAMED]** *(type: object)* `[Required]`
+
+            * **source** *(type: string)* `[Required]`
+            - The #{key} that will be replaced by the target string below in the invoked configs: #{source} -> target. Can contain Tuktu strings to populate with first Datum.
+
+            * **target** *(type: string)* `[Required]`
+            - The replacement for the source above: #{source} -> target. Can contain Tuktu strings to populate with first Datum.
+
     * **replacements** *(type: array)* `[Optional]`
     - The replacements used to replace Tuktu config strings #{source} by target.
 

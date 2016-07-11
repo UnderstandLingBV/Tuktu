@@ -13,9 +13,3 @@ Takes a list of maps and flattens it by reading out a specific key of that map. 
     * **map_field** *(type: string)* `[Required]`
     - The name of the field that needs to be extracted from the separate maps.
 
-    * **ignore_empty** *(type: boolean)* `[Optional, default = true]`
-    - If set to true, will only continue with non-empty values
-
-    * **overwrite** *(type: boolean)* `[Optional, default = true]`
-    - Whether or not to overwrite the original list_field.
-

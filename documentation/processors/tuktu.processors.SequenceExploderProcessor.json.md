@@ -1,5 +1,5 @@
 ### tuktu.processors.SequenceExploderProcessor
-Takes a (JSON) sequence object and returns packets for each of the values in it overwriting the original sequence.
+Takes a sequence object and returns packets for each of the values in it overwriting the original sequence.
 
   * **id** *(type: string)* `[Required]`
 
@@ -7,9 +7,6 @@ Takes a (JSON) sequence object and returns packets for each of the values in it 
 
   * **config** *(type: object)* `[Required]`
 
-    * **field** *(type: string)* `[Optional]`
+    * **field** *(type: string)* `[Required]`
     - The field containing a sequence object.
-
-    * **ignore_empty** *(type: boolean)* `[Optional, default = true]`
-    - If set to true, will only continue with non-empty values, otherwise those will be filtered out.
 

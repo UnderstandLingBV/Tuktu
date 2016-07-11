@@ -1,0 +1,12 @@
+### tuktu.dlib.processors.vocabularies.VocabularyRemoverProcessor
+Removes a vocabulary from the in-memory vocabulary bank.
+
+  * **id** *(type: string)* `[Required]`
+
+  * **result** *(type: string)* `[Required]`
+
+  * **config** *(type: object)* `[Required]`
+
+    * **vocabulary** *(type: string)* `[Required]`
+    - The name of the vocabulary to remove.
+

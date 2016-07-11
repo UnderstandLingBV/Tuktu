@@ -19,9 +19,12 @@ Deserializes a logistic regression model.
     * **wait_for_load** *(type: boolean)* `[Optional, default = false]`
     - If set to true, processing only continues after the model has been loaded into memory (sync). If false, processing continues immediately, not knowing when the model has been materialized.
 
-    * **learn_rate** *(type: int)* `[Required]`
-    - The learning rate.
+    * **lambda** *(type: double)* `[Optional, default = 0]`
+    - The lambda parameter (shrinkage/regularization). Set to > 0 for regularization (typically generalizes better).
 
-    * **num_iterations** *(type: int)* `[Required]`
-    - The number of iterations of going over the data.
+    * **tolerance** *(type: double)* `[Optional, default = 0.00001]`
+    - The stopping tolerance criterium for BFGS.
+
+    * **max_iterations** *(type: int)* `[Optional, default = 500]`
+    - The maximum number of iterations.
 

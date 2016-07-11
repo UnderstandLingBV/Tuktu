@@ -19,6 +19,3 @@ Parses a file to String.
     * **drop_right** *(type: int)* `[Optional, default = 0]`
     - Drop last lines
 
-    * **overwrite** *(type: boolean)* `[Optional, default = false]`
-    - Overwrite file field with the parsed JSON.
-

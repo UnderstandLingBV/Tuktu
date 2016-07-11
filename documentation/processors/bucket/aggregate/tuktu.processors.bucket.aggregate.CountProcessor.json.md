@@ -1,5 +1,5 @@
 ### tuktu.processors.bucket.aggregate.CountProcessor
-Counts the amount of values in a bucket.
+Counts the amount of Datums in a DataPacket.
 
   * **id** *(type: string)* `[Required]`
 

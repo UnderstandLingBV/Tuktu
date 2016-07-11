@@ -1,5 +1,5 @@
-### tuktu.nosql.processors.mongodb.MongoDBFindStreamProcessor
-Executes a query with a filter on a given list of nodes and streams the results.
+### tuktu.nosql.processors.mongodb.MongoDBUpdatIfExistsProcessor
+Updates data initially found in MongoDB with the content of the current tuktu datum.
 
   * **id** *(type: string)* `[Required]`
 
@@ -18,14 +18,14 @@ Executes a query with a filter on a given list of nodes and streams the results.
     * **collection** *(type: string)* `[Required]`
     - The name of the collection to query.
 
-    * **query** *(type: JsObject)* `[Required]`
-    - Find the documents matching these given criteria.
+    * **field** *(type: string)* `[Optional]`
+    - If present, use data from this field instead of the whole datum.
 
-    * **filter** *(type: JsObject)* `[Optional]`
-    - Filter results by this projection.
+    * **upsert** *(type: boolean)* `[Optional]`
+    - If set to true, creates a new document when no document matches the query criteria. If set to false, does not insert a new document when no match is found.
 
-    * **sort** *(type: JsObject)* `[Optional]`
-    - Sort results by this projection.
+    * **wait_for_completion** *(type: boolean)* `[Optional, default = false]`
+    - Whether or not to wait for all the updates to finish.
 
     * **mongo_options** *(type: object)* `[Optional]`
     - All possible mongo options, all optional.

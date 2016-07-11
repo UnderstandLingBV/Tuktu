@@ -14,5 +14,5 @@ Applies a logistic regression model to data.
     - Will this model be cleaned up once EOF is reached.
 
     * **data_field** *(type: string)* `[Required]`
-    - The field the data resides in. Data must be of type Seq[Int].
+    - The field the data resides in. Data must be of type Seq[Double].
 
