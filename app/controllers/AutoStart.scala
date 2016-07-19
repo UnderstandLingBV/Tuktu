@@ -14,6 +14,8 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import tuktu.api.DispatchRequest
 
+import tuktu.api.scheduler._
+
 /**
  * Load flows from an autostart file and either immediately start running them or
  * schedule them based on the cron settings.

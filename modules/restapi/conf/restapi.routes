@@ -17,3 +17,9 @@ POST        /job/terminate          controllers.restapi.RESTAPI.terminate
 # DFS stuff
 GET         /dfs/get/*name          controllers.restapi.DFS.get(name)
 POST        /dfs/add/:binary/*name  controllers.restapi.DFS.add(name, binary: Boolean)
+
+# Scheduling stuff
+GET         /scheduling             controllers.restapi.Scheduling.overview()
+POST        /scheduling/terminate   controllers.restapi.Scheduling.terminate()
+POST        /scheduling/simple      controllers.restapi.Scheduling.simple()
+POST        /scheduling/cron        controllers.restapi.Scheduling.cron()

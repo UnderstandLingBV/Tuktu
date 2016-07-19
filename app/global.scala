@@ -12,7 +12,7 @@ import akka.util.Timeout
 import controllers.AutoStart
 import controllers.Dispatcher
 import controllers.FlowManagerActor
-import controllers.TuktuScheduler
+import tuktu.api.scheduler.TuktuScheduler
 import monitor.DataMonitor
 import monitor.HealthMonitor
 import play.api.Application

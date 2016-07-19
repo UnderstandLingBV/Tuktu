@@ -1,25 +1,20 @@
-package controllers
+package tuktu.api.scheduler
 
 import java.util.Calendar
-
 import scala.collection.mutable.Map
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
-
 import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
-
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
-import akka.actor.Cancellable
 import akka.actor.actorRef2Scala
 import akka.util.Timeout
-import akka.util.Timeout.durationToTimeout
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
-
+import tuktu.api.DispatchRequest
 import tuktu.api.DispatchRequest
 
 case class DelayedScheduler(

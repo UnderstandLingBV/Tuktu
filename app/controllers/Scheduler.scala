@@ -1,28 +1,31 @@
 package controllers
 
+import java.io.File
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
-import akka.actor._
+import scala.concurrent.duration.FiniteDuration
+
+import akka.actor.ActorSelection.toScala
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play
 import play.api.Play.current
-import play.api.Play.current
 import play.api.cache.Cache
-import play.api.data._
-import play.api.data.Forms._
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.data.validation.Constraints._
+import play.api.data.Form
+import play.api.data.Forms.list
+import play.api.data.Forms.mapping
+import play.api.data.Forms.text
+import play.api.data.validation.Constraints.minLength
+import play.api.data.validation.Constraints.nonEmpty
 import play.api.libs.concurrent.Akka
 import play.api.mvc.Action
 import play.api.mvc.Controller
 import tuktu.api.DispatchRequest
 import tuktu.utils.util
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration.FiniteDuration
-import java.io.File
+import tuktu.api.scheduler._
 
 object Scheduler extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)

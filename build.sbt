@@ -40,7 +40,8 @@ lazy val apiDependencies = Seq(
     "com.amazonaws" % "aws-java-sdk-s3" % "1.11.1",
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "org.apache.hadoop" % "hadoop-client" % "2.6.0" excludeAll(ExclusionRule(organization = "org.slf4j")),
-    "com.netaporter" %% "scala-uri" % "0.4.7"
+    "com.netaporter" %% "scala-uri" % "0.4.7",
+    "com.enragedginger" %% "akka-quartz-scheduler" % "1.3.0-akka-2.3.x"
 )
 
 lazy val nlpDependencies = Seq(
@@ -147,7 +148,6 @@ lazy val coreDependencies = Seq(
     "joda-time" % "joda-time" % "2.7",
     "org.apache.commons" % "commons-math3" % "3.5",
     "org.reflections" % "reflections" % "0.9.10",
-    "com.enragedginger" %% "akka-quartz-scheduler" % "1.3.0-akka-2.3.x",
     "com.github.lucarosellini.rJava" % "JRIEngine" % "0.9-7",
     "com.github.lucarosellini.rJava" % "JRI" % "0.9-7"
 )
