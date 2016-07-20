@@ -27,6 +27,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.Controller
 import tuktu.api._
+import akka.pattern.ask
 
 /**
  * Controller for all REST API functionality of Tuktu
@@ -276,6 +277,30 @@ object RESTAPI extends Controller {
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(uuid, "stop")
         Future { Ok("") }
     }
+    
+    /**
+     * Stops jobs based on a config name
+     */
+    def stopByName() = Action.async { request =>
+        // Get the config name
+        val name = (request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject] \ "name").as[String]
+        
+        val monActor = Akka.system.actorSelection("user/TuktuMonitor")
+        
+        // Get the monitoring overview
+        val fut = (monActor ? new MonitorOverviewRequest()).asInstanceOf[Future[MonitorOverviewResult]]
+        fut.map{flows =>
+            // Filter out the ones we need
+            val flowsToStop = flows.runningJobs.filter(flow => flow._2.configName == name).map(_._1)
+            
+            // Stop them 1 by 1
+            flowsToStop.foreach(flow => monActor ! new AppMonitorUUIDPacket(flow, "stop"))
+            
+            Ok(Json.obj(
+                    "stoppped_flows" -> Json.arr(flowsToStop)
+            ))
+        }
+    }
 
     /**
      * Terminates a job (ungracefully)
@@ -288,5 +313,29 @@ object RESTAPI extends Controller {
         // Monitor stops jobs
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(uuid, "kill")
         Future { Ok("") }
+    }
+    
+    /**
+     * Terminates jobs by name
+     */
+    def terminateByName() = Action.async { request =>
+        // Get the config name
+        val name = (request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject] \ "name").as[String]
+        
+        val monActor = Akka.system.actorSelection("user/TuktuMonitor")
+        
+        // Get the monitoring overview
+        val fut = (monActor ? new MonitorOverviewRequest()).asInstanceOf[Future[MonitorOverviewResult]]
+        fut.map{flows =>
+            // Filter out the ones we need
+            val flowsToStop = flows.runningJobs.filter(flow => flow._2.configName == name).map(_._1)
+            
+            // Stop them 1 by 1
+            flowsToStop.foreach(flow => monActor ! new AppMonitorUUIDPacket(flow, "kill"))
+            
+            Ok(Json.obj(
+                    "stoppped_flows" -> Json.arr(flowsToStop)
+            ))
+        }
     }
 }

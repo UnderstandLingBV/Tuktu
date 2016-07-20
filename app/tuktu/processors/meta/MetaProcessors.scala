@@ -449,7 +449,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
             // Run our data through each Enumeratee and return the result chunk
             for (enumeratee <- enumeratees) yield {
                 val inclMonitor = Enumeratee.mapM((data: DataPacket) => Future {
-                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, 1)
+                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, "Parallel Config Processor - Unknown", 1)
                     data
                 }) compose enumeratee compose Enumeratee.onEOF(() => 
                     Akka.system.actorSelection("user/TuktuMonitor") ! new AppStopPacket(idString)

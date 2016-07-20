@@ -12,7 +12,9 @@ POST        /jobs/config/*name      controllers.restapi.RESTAPI.setConfig(name)
 DELETE      /jobs/config/*name      controllers.restapi.RESTAPI.removeConfig(name)
 POST        /job/start              controllers.restapi.RESTAPI.start
 POST        /job/stop               controllers.restapi.RESTAPI.stop
+POST        /job/stopByName         controllers.restapi.RESTAPI.stopByName
 POST        /job/terminate          controllers.restapi.RESTAPI.terminate
+POST        /job/terminateByName    controllers.restapi.RESTAPI.terminateByName
 
 # DFS stuff
 GET         /dfs/get/*name          controllers.restapi.DFS.get(name)

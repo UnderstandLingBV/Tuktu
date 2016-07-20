@@ -37,6 +37,9 @@ case class Overview()
 case class KillRequest(
         name: String        
 )
+case class KillByNameRequest(
+        name: String
+)
 
 abstract class Schedule(actor: ActorRef) {
     def description: String = ???
@@ -63,7 +66,7 @@ class CronSchedule(actor: ActorRef, scheduler: CronScheduler, quartzScheduler: Q
 class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     // a list of active schedulers
-    var schedulers = Map[String, Schedule]()
+    var schedulers = Map[String, (String, Schedule)]()
 
     val quartzScheduler = QuartzSchedulerExtension(Akka.system)
 
@@ -73,18 +76,24 @@ class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
         }
         case schedule: SimpleScheduler => {
             // If overwriting, cancel old schedule
-            if (schedulers.contains(schedule.name)) schedulers(schedule.name).cancel
+            if (schedulers.contains(schedule.name)) schedulers(schedule.name)._2.cancel
             // Add new schedule
-            schedulers += schedule.name -> new SimpleSchedule(actor, schedule)
+            schedulers += schedule.name -> (schedule.dispatchRequest.configName, new SimpleSchedule(actor, schedule))
         }
         case schedule: CronScheduler => {
             val uniqueName = schedule.name + "_" + java.util.UUID.randomUUID.toString
-            schedulers += uniqueName -> new CronSchedule(actor, schedule, quartzScheduler, uniqueName)
+            schedulers += uniqueName -> (schedule.dispatchRequest.configName, new CronSchedule(actor, schedule, quartzScheduler, uniqueName))
         }
-        case _: Overview => sender ! schedulers.mapValues(_.description).toList.sorted
+        case _: Overview => sender ! schedulers.mapValues(_._2.description).toList.sorted
         case kr: KillRequest => {
-            schedulers(kr.name).cancel
+            schedulers(kr.name)._2.cancel
             schedulers -= kr.name
+        }
+        case kr: KillByNameRequest => {
+            // Get all the ones that are scheduled for this config name
+            val namesToStop = schedulers.filter(schedule => schedule._2._1 == kr.name).map(_._2._1)
+            namesToStop.foreach(name => schedulers(name)._2.cancel)
+            schedulers --= namesToStop
         }
         case _ => {}
     }
