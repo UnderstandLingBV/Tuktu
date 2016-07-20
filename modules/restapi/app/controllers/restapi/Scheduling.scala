@@ -49,7 +49,7 @@ object Scheduling extends Controller {
      * Terminate a scheduled job by name
      */
     def terminate() = Action.async { implicit request =>
-        val name = (request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject] \ "name").as[String]
+        val name = (request.body.asJson.getOrElse(Json.obj()).as[JsObject] \ "name").as[String]
         scheduler ! new KillRequest(name)
         Future { Ok(Json.obj()) }
     }
@@ -58,7 +58,7 @@ object Scheduling extends Controller {
      * Schedule (multiple) simple jobs
      */
     def simple()  = Action.async { implicit request =>
-        val json = request.body.asJson.getOrElse(Json.arr()).asInstanceOf[List[JsObject]]
+        val json = request.body.asJson.getOrElse(Json.arr()).as[List[JsObject]]
         
         json.foreach(job => {
             // Get parameters we need
@@ -76,7 +76,7 @@ object Scheduling extends Controller {
      * Schedules (multiple) cron jobs
      */
     def cron()  = Action.async { implicit request =>
-        val json = request.body.asJson.getOrElse(Json.arr()).asInstanceOf[List[JsObject]]
+        val json = request.body.asJson.getOrElse(Json.arr()).as[List[JsObject]]
         
         json.foreach(job => {
             // Start cron job
