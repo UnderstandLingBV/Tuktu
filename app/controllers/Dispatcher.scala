@@ -162,6 +162,7 @@ object Dispatcher {
                 // Notify the monitor so we can recover from errors
                 Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(
                         subIdString,
+                        configName,
                         1,
                         Some(generator)
                 )
@@ -463,7 +464,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                             Akka.system.eventStream.subscribe(watcher, classOf[DeadLetter])
 
                             // Notify the monitor so we can recover from errors
-                            Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, instanceCount, Some(actorRef))
+                            Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, dr.configName, instanceCount, Some(actorRef))
                             // Send all subflows
                             Akka.system.actorSelection("user/TuktuMonitor") ! new SubflowMapPacket(actorRef, subflows)
 

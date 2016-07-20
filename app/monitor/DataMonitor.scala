@@ -65,7 +65,12 @@ class DataMonitor extends Actor with ActorLogging {
         }
         case aip: AppInitPacket => {
             if (!appMonitor.contains(aip.uuid))
-                appMonitor = appMonitor.filterNot(_._2.is_expired) + (aip.uuid -> new AppMonitorObject(aip.uuid, aip.instanceCount, aip.timestamp))
+                appMonitor = appMonitor.filterNot(_._2.is_expired) + (aip.uuid -> new AppMonitorObject(
+                        aip.uuid,
+                        aip.configName,
+                        aip.instanceCount,
+                        aip.timestamp
+                ))
             aip.mailbox.collect {
                 case mailbox => {
                     appMonitor(aip.uuid).actors += mailbox

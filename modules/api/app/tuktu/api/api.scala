@@ -106,6 +106,7 @@ case class ProcessorMonitorPacket(
 
 case class AppMonitorObject(
         uuid: String,
+        configName: String,
         instances: Int,
         startTime: Long,
         var finished_instances: Int = 0,
@@ -152,6 +153,7 @@ case class RemoveMonitorEventListener()
 
 case class AppInitPacket(
         uuid: String,
+        configName: String,
         instanceCount: Int,
         mailbox: Option[ActorRef] = None,
         timestamp: Long = System.currentTimeMillis
