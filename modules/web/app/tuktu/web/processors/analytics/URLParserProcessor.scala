@@ -51,9 +51,11 @@ class URLParserProcessor(resultName: String) extends BaseProcessor(resultName) {
  */
 class URLQueryStringParserProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
+    var flatten: Boolean = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
+        flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -62,7 +64,10 @@ class URLQueryStringParserProcessor(resultName: String) extends BaseProcessor(re
             val url = new URI(datum(field).asInstanceOf[String])
             val params = URLEncodedUtils.parse(url, "UTF-8")
 
-            datum + (resultName -> params.map(nvp => nvp.getName -> nvp.getValue))
+            datum ++ (
+                    if (flatten) params.map(nvp => nvp.getName -> nvp.getValue).toMap
+                    else Map(resultName -> params.map(nvp => nvp.getName -> nvp.getValue).toList)
+            )
         })
     })
 }

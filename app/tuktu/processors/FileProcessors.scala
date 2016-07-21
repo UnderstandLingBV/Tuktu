@@ -67,7 +67,8 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
     var fileName: String = _
     var encoding: String = _
     var started: Date = _
-    
+    var first = true
+
     val dateExtractor = """\[(.*)]""".r
 
     override def initialize(config: JsObject) {
@@ -75,58 +76,66 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
         fileName = (config \ "file_name").as[String]
         encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
         duration = Duration((config \ "rotation_time").as[String])
-        
+
         // Get the field we need to write out
         fields = (config \ "fields").as[List[String]]
         fieldSep = (config \ "field_separator").asOpt[String].getOrElse(",")
         lineSep = (config \ "line_separator").asOpt[String].getOrElse("\r\n")
-                
-        started = Calendar.getInstance.getTime
 
-        getWriter
+        started = Calendar.getInstance.getTime
+        
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        val now = Calendar.getInstance.getTime
-        
-        // check for rotation
-        if(now.getTime - started.getTime > duration.toMillis) {
-          val cal = Calendar.getInstance
-          cal.setTimeInMillis(started.getTime + duration.toMillis)          
-          started = cal.getTime
-          getWriter
-        }
-        
-        for (datum <- data) {
-            // Write it
-            val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
-
-            writer.write(output + lineSep)
+        if (data.data.size > 0) {
+            val now = Calendar.getInstance.getTime
+            
+            // Set the filename
+            fileName = utils.evaluateTuktuString(fileName, data.data.head)
+            if (first) {
+                getWriter
+                first = false
+            }
+    
+            // check for rotation
+            if (now.getTime - started.getTime > duration.toMillis) {
+                val cal = Calendar.getInstance
+                cal.setTimeInMillis(started.getTime + duration.toMillis)
+                started = cal.getTime
+                getWriter
+            }
+    
+            for (datum <- data) {
+                // Write it
+                val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
+    
+                writer.write(output + lineSep)
+            }
         }
 
         data
     }) compose Enumeratee.onEOF(() => {
         closeWriter
     })
-    
-    def getWriter = {      
-      closeWriter
-      writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getFileName), encoding))
+
+    def getWriter = {
+        closeWriter
+        writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getFileName), encoding))
     }
-    
+
     def closeWriter = {
-      try {
-        writer.flush
-        writer.close
-      } catch { 
-        case _ : Throwable => () 
-      }
+        try {
+            writer.flush
+            writer.close
+        } catch {
+            case _: Throwable => ()
+        }
     }
-    
+
     def getFileName = {
-      val formatter = new SimpleDateFormat(dateExtractor.findFirstMatchIn(fileName).get.group(1))
-      val now = formatter.format(Calendar.getInstance.getTime)
-      dateExtractor.replaceAllIn(fileName, now)
+        val formatter = new SimpleDateFormat(dateExtractor.findFirstMatchIn(fileName).get.group(1))
+        val now = formatter.format(Calendar.getInstance.getTime)
+        dateExtractor.replaceAllIn(fileName, now)
     }
 }
 
@@ -156,10 +165,10 @@ class BinaryFileStreamProcessor(resultName: String) extends BaseProcessor(result
             // Write it
             val output = (for (field <- fields if datum.contains(field)) yield {
                 datum(field) match {
-                    case a: Byte => Array(a)
+                    case a: Byte        => Array(a)
                     case a: Array[Byte] => a
-                    case a: List[Byte] => a.toArray
-                    case a: Seq[Byte] => a.toArray
+                    case a: List[Byte]  => a.toArray
+                    case a: Seq[Byte]   => a.toArray
                 }
             }).foldLeft(Array.empty[Byte])((a, b) => a ++ fieldSep ++ b)
 

@@ -23,6 +23,13 @@
 					"description": "The field that contains the URL to parse.",
 					"type": "string",
 					"required": true
+				},
+				{
+					"name": "flatten",
+					"description": "Whether or not to add the query string parameters as top-level citizen (true) or not (false).",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}
