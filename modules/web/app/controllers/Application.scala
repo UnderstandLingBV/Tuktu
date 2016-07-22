@@ -84,6 +84,7 @@ object Application extends Controller {
                                 "request_path" -> request.path,
                                 "request_uri" -> request.uri,
                                 "request_host" -> request.host,
+                                "request_remoteAddress" -> request.remoteAddress,
                                 "headers" -> request.headers,
                                 "cookies" -> request.cookies.map(c => c.name -> c.value).toMap,
                                 Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List())
@@ -96,6 +97,7 @@ object Application extends Controller {
                                 "request_path" -> request.path,
                                 "request_uri" -> request.uri,
                                 "request_host" -> request.host,
+                                "request_remoteAddress" -> request.remoteAddress,
                                 "cookies" -> request.cookies.map(c => c.name -> c.value).toMap,
                                 Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List()),
                                 "headers" -> request.headers) ++ bodyData.keys.map(key => key -> utils.JsValueToAny(bodyData \ key))))
