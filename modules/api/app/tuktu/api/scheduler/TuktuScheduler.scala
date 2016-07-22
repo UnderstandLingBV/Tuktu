@@ -38,7 +38,7 @@ case class KillRequest(
         name: String        
 )
 case class KillByNameRequest(
-        name: String
+        configName: String
 )
 
 abstract class Schedule(actor: ActorRef) {
@@ -86,13 +86,15 @@ class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
         }
         case _: Overview => sender ! schedulers.mapValues(_._2.description).toList.sorted
         case kr: KillRequest => {
-            schedulers(kr.name)._2.cancel
+            schedulers.get(kr.name).collect { case (_, schedule) => schedule.cancel }
             schedulers -= kr.name
         }
         case kr: KillByNameRequest => {
-            // Get all the ones that are scheduled for this config name
-            val namesToStop = schedulers.filter(schedule => schedule._2._1 == kr.name).map(_._2._1)
-            namesToStop.foreach(name => schedulers(name)._2.cancel)
+            // Get all the ones that are scheduled for this configName, cancel them, and remove them from schedulers
+            val namesToStop = for ((name, (configName, schedule)) <- schedulers if configName == kr.configName) yield {
+                schedule.cancel
+                name
+            }
             schedulers --= namesToStop
         }
         case _ => {}
