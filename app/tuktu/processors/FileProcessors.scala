@@ -26,6 +26,7 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
     var fields: List[String] = _
     var fieldSep: String = _
     var lineSep: String = _
+    var append: Boolean = _
 
     override def initialize(config: JsObject) {
         // Get the location of the file to write to
@@ -36,8 +37,9 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
         fields = (config \ "fields").as[List[String]]
         fieldSep = (config \ "field_separator").asOpt[String].getOrElse(",")
         lineSep = (config \ "line_separator").asOpt[String].getOrElse("\r\n")
+        append = (config \ "append").asOpt[Boolean].getOrElse(false)
 
-        writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), encoding))
+        writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName, append), encoding))
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -68,6 +70,7 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
     var encoding: String = _
     var started: Date = _
     var first = true
+    var append: Boolean = _
 
     val dateExtractor = """\[(.*)]""".r
 
@@ -84,6 +87,7 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
 
         started = Calendar.getInstance.getTime
         
+        append = (config \ "append").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -120,7 +124,7 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
 
     def getWriter = {
         closeWriter
-        writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getFileName), encoding))
+        writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getFileName, append), encoding))
     }
 
     def closeWriter = {

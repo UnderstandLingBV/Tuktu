@@ -109,6 +109,7 @@ case class AppMonitorObject(
         configName: String,
         instances: Int,
         startTime: Long,
+        stopOnError: Boolean,
         var finished_instances: Int = 0,
         var endTime: Option[Long] = None,
         expirationTime: Long = Cache.getAs[Long]("mon.finish_expiration").getOrElse(play.api.Play.current.configuration.getLong("tuktu.monitor.finish_expiration").getOrElse(30L)) * 60 * 1000,
@@ -155,6 +156,7 @@ case class AppInitPacket(
         uuid: String,
         configName: String,
         instanceCount: Int,
+        stopOnError: Boolean,
         mailbox: Option[ActorRef] = None,
         timestamp: Long = System.currentTimeMillis
 )

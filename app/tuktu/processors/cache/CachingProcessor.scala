@@ -61,7 +61,7 @@ class CachingProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         // Build the processor pipeline for this generator
         val (idString, proc) = {
-            val pipeline = controllers.Dispatcher.buildEnums(List(startProcessor), processorMap, None, "Caching Processor - Unknown")
+            val pipeline = controllers.Dispatcher.buildEnums(List(startProcessor), processorMap, None, "Caching Processor - Unknown", true)
             (pipeline._1, pipeline._2.head)
         }
 

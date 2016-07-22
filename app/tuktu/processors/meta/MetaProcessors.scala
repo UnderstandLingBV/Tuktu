@@ -347,7 +347,7 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
 
             // Build the processor pipeline for this generator
             val (idString, processor) = {
-                val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Parallel Processor - Unknown")
+                val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Parallel Processor - Unknown", true)
                 (pipeline._1, pipeline._2.head)
             }
             // Set up the actor that will execute this processor
@@ -444,12 +444,12 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
             val start = (pipeline \ "start").as[List[String]]
 
             // Build the processor pipeline for this generator
-            val (idString, enumeratees, subflows) = controllers.Dispatcher.buildEnums(start, processorMap, None, "Parallel Config Processor - Unknown")
+            val (idString, enumeratees, subflows) = controllers.Dispatcher.buildEnums(start, processorMap, None, "Parallel Config Processor - Unknown", true)
 
             // Run our data through each Enumeratee and return the result chunk
             for (enumeratee <- enumeratees) yield {
                 val inclMonitor = Enumeratee.mapM((data: DataPacket) => Future {
-                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, "Parallel Config Processor - Unknown", 1)
+                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, "Parallel Config Processor - Unknown", 1, true)
                     data
                 }) compose enumeratee compose Enumeratee.onEOF(() => 
                     Akka.system.actorSelection("user/TuktuMonitor") ! new AppStopPacket(idString)

@@ -69,7 +69,8 @@ class DataMonitor extends Actor with ActorLogging {
                         aip.uuid,
                         aip.configName,
                         aip.instanceCount,
-                        aip.timestamp
+                        aip.timestamp,
+                        aip.stopOnError
                 ))
             aip.mailbox.collect {
                 case mailbox => {
@@ -98,7 +99,7 @@ class DataMonitor extends Actor with ActorLogging {
                 case app => {
                     app.errors += enp.processorName -> ("Error happened at flow: " + enp.configName + ", processor: " + enp.processorName + ", id: " + enp.uuid + ", on Input:\n" + enp.input.take(1000) + { if (enp.input.size > 1000) " [...]" else "" } + "\n" + enp.error.toString)
                     app.actors.foreach(_ ! new ErrorPacket)
-                    app.actors.foreach(_ ! new StopPacket)
+                    if (app.stopOnError) app.actors.foreach(_ ! new StopPacket)
                 }
             }
         }

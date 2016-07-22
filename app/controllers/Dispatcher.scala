@@ -73,7 +73,8 @@ object Dispatcher {
             nextIds: List[String],
             processorMap: Map[String, ProcessorDefinition],
             genActor: Option[ActorRef],
-            configName: String
+            configName: String,
+            stopOnError: Boolean
     ): (String, List[Enumeratee[DataPacket, DataPacket]], List[ActorRef]) = {
         // Get log level
         val logLevel = Cache.getAs[String]("logLevel").getOrElse("none")
@@ -164,6 +165,7 @@ object Dispatcher {
                         subIdString,
                         configName,
                         1,
+                        stopOnError,
                         Some(generator)
                 )
                 // Add to subflow list
@@ -389,6 +391,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                 val resultName = (generator \ "result").as[String]
                 val next = (generator \ "next").as[List[String]]
                 val nodeAddress = (generator \ "nodes").asOpt[List[JsObject]]
+                val stopOnError = (generator \ "stop_on_error").asOpt[Boolean].getOrElse(true)
 
                 // Parse the nodes field to see where this generator should be constructed
                 val nodeList = nodeHandler.handleNodes(nodeAddress.getOrElse(Nil))
@@ -426,7 +429,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     } else {
                         if (!startRemotely) {
                             // Build the processor pipeline for this generator
-                            val (idString, processorEnumeratees, subflows) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor, dr.configName)
+                            val (idString, processorEnumeratees, subflows) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor, dr.configName, stopOnError)
 
                             // Set up the generator
                             val clazz = Class.forName(generatorName)
@@ -464,7 +467,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                             Akka.system.eventStream.subscribe(watcher, classOf[DeadLetter])
 
                             // Notify the monitor so we can recover from errors
-                            Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, dr.configName, instanceCount, Some(actorRef))
+                            Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, dr.configName, instanceCount, stopOnError, Some(actorRef))
                             // Send all subflows
                             Akka.system.actorSelection("user/TuktuMonitor") ! new SubflowMapPacket(actorRef, subflows)
 

@@ -137,7 +137,7 @@ class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends Buffer
 
         // Build the processor pipeline for this generator
         val (idString, processor) = {
-            val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Concurrent Processor - Unknown")
+            val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Concurrent Processor - Unknown", true)
             (pipeline._1, pipeline._2.head)
         }
         
