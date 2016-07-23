@@ -61,7 +61,7 @@ class FileStreamProcessor(resultName: String) extends BaseProcessor(resultName) 
  * Streams data into a file and rotates it
  */
 class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var writer: BufferedWriter = _
+    var writers = collection.mutable.Map.empty[String, BufferedWriter]
     var fields: List[String] = _
     var fieldSep: String = _
     var lineSep: String = _
@@ -69,7 +69,6 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
     var fileName: String = _
     var encoding: String = _
     var started: Date = _
-    var first = true
     var append: Boolean = _
 
     val dateExtractor = """\[(.*)]""".r
@@ -95,51 +94,53 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
             val now = Calendar.getInstance.getTime
             
             // Set the filename
-            fileName = utils.evaluateTuktuString(fileName, data.data.head)
-            if (first) {
-                getWriter
-                first = false
-            }
+            val evalFn = utils.evaluateTuktuString(fileName, data.data.head)
+            if (!writers.contains(evalFn)) writers += evalFn -> getWriter(evalFn)
     
-            // check for rotation
+            // Check for rotation
             if (now.getTime - started.getTime > duration.toMillis) {
                 val cal = Calendar.getInstance
                 cal.setTimeInMillis(started.getTime + duration.toMillis)
                 started = cal.getTime
-                getWriter
+                writers += evalFn -> getWriter(evalFn)
             }
     
             for (datum <- data) {
                 // Write it
-                val output = (for (field <- fields if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
+                val output = fields match {
+                    case Nil => datum.map(_._2.toString).mkString(fieldSep)
+                    case fs: List[String] => (for (field <- fs if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
+                }
     
-                writer.write(output + lineSep)
+                writers(evalFn).write(output + lineSep)
             }
         }
 
         data
     }) compose Enumeratee.onEOF(() => {
-        closeWriter
+        for (fn <- writers) closeWriter(fn._1)
     })
 
-    def getWriter = {
-        closeWriter
-        writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getFileName, append), encoding))
+    def getWriter(fn: String) = {
+        closeWriter(fn)
+        new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getFileName(fn), append), encoding))
     }
 
-    def closeWriter = {
-        try {
-            writer.flush
-            writer.close
-        } catch {
-            case _: Throwable => ()
+    def closeWriter(fn: String) = {
+        if (writers.contains(fn)) {
+            try {
+                writers(fn).flush
+                writers(fn).close
+            } catch {
+                case _: Throwable => ()
+            }
         }
     }
 
-    def getFileName = {
-        val formatter = new SimpleDateFormat(dateExtractor.findFirstMatchIn(fileName).get.group(1))
+    def getFileName(fn: String) = {
+        val formatter = new SimpleDateFormat(dateExtractor.findFirstMatchIn(fn).get.group(1))
         val now = formatter.format(Calendar.getInstance.getTime)
-        dateExtractor.replaceAllIn(fileName, now)
+        dateExtractor.replaceAllIn(fn, now)
     }
 }
 
