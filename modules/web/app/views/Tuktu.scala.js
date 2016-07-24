@@ -4,7 +4,12 @@ if (typeof tuktuvars === 'undefined') {
 	tuktuvars = {};
 }
 if (typeof jQuery === 'undefined') {
-	document.write('<script async=false type="text/javascript" src="//code.jquery.com/jquery-2.2.0.min.js"></script>');
+	var h = document.getElementsByTagName("head")[0];
+	var s = document.createElement("script");
+	s.setAttribute("type", "text/javascript");
+	s.setAttribute("async", "false");
+	s.src = "//code.jquery.com/jquery-2.2.0.min.js";
+	h.appendChild(s);
 }
 function tuktuFlow(nf) {
 	var h = document.getElementsByTagName("head")[0];
