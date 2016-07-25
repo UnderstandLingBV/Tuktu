@@ -3,14 +3,15 @@ var tuktuvars;
 if (typeof tuktuvars === 'undefined') {
 	tuktuvars = {};
 }
-if (typeof jQuery === 'undefined') {
+function appendScript(link) {
 	var h = document.getElementsByTagName("head")[0];
 	var s = document.createElement("script");
 	s.setAttribute("type", "text/javascript");
 	s.setAttribute("async", "false");
-	s.src = "//code.jquery.com/jquery-2.2.0.min.js";
+	s.src=link;
 	h.appendChild(s);
 }
+if (typeof jQuery === 'undefined') {appendScript("//code.jquery.com/jquery-2.2.0.min.js");}
 function tuktuFlow(nf) {
 	var h = document.getElementsByTagName("head")[0];
     var s = document.createElement("script");
@@ -43,7 +44,5 @@ var tuktu = function() {
     	 case None => {}
      }
 }
-@for(incl <- includes) {
-	 document.write('<script async=false type="text/javascript" src="@incl"></script>');
-}
+@for(incl <- includes) {appendScript("@incl");}
 tuktu();
