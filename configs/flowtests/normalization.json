@@ -1,0 +1,57 @@
+{
+    "generators": [
+        {
+            "result": "data",
+            "config": {
+                "values": [
+                    "6",
+                    "10",
+                    "-10",
+                    "-6"
+                ]
+            },
+            "name": "tuktu.generators.ListGenerator",
+            "next": [
+                "eofbuffer"
+            ]
+        }
+    ],
+    "processors": [
+        {
+            "id": "eofbuffer",
+            "result": "eofbuffer",
+            "config": {},
+            "name": "tuktu.processors.EOFBufferProcessor",
+            "next": [
+                "normTrain"
+            ]
+        },
+        {
+            "id": "normTrain",
+            "result": "norm",
+            "config": {
+                "model_name": "normalization_test_flow",
+                "destroy_on_eof": false,
+                "wait_for_store": true,
+                "min": -1,
+                "max": 1
+            },
+            "name": "tuktu.ml.processors.preprocessing.NormalizationTrainProcessor",
+            "next": [
+                "normApply"
+            ]
+        },
+        {
+            "id": "normApply",
+            "result": "data",
+            "config": {
+                "model_name": "normalization_test_flow",
+                "fields": [
+                    "data"
+                ]
+            },
+            "name": "tuktu.ml.processors.preprocessing.NormalizationApplyProcessor",
+            "next": []
+        }
+    ]
+}

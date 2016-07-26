@@ -129,7 +129,7 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
         // Build the processor pipeline for this generator
         val (enums, actors) = {
             val builtEnums = {
-                val e = Dispatcher.buildEnums(next, processorMap, None, "")._2
+                val e = Dispatcher.buildEnums(next, processorMap, None, "", false)._2
                 // Special case: check for empty processor list and simply add a dummy processor
                 if (e.isEmpty) {
                     val dummy: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => dp)

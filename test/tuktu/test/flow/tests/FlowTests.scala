@@ -20,12 +20,12 @@ class FlowTests extends PlaySpec with OneAppPerSuite {
     "Normalization flow" must {
         "normalize values to range [-1, 1]" in {
             val data = List(new DataPacket(List(
-                    Map("num" -> 0.6666666666666667),
+                    Map("num" -> 0.6),
                     Map("num" -> 1.0),
                     Map("num" -> -1.0),
-                    Map("num" -> 0.8499999999999999)
+                    Map("num" -> -0.6)
             )))
-            new BaseFlowTester(Akka.system)(List(data), "flowtests/dummy")
+            new BaseFlowTester(Akka.system)(List(data), "flowtests/normalization")
         }
     }
 }

@@ -31,11 +31,20 @@ object testUtil {
                     val w = expected.asInstanceOf[List[Any]]
                     v.zip(w).forall(elems => inspectValue(elems._1, elems._2))
                 }
-                case _: Any => obtained.toString == expected.toString
+                // Rounding errors
+                case v: Double => Math.abs(v - expected.asInstanceOf[Double]) < 0.000000001
+                case _: Any => expected match {
+                    // Rounding errors
+                    case v: Double => Math.abs(v - obtained.asInstanceOf[Double]) < 0.000000001
+                    case _: Any => obtained.toString == expected.toString
+                }
             }
         } catch {
             // TODO: Maybe differentiate on types of exceptions?
-            case e: Throwable => false
+            case e: Throwable => {
+                e.printStackTrace()
+                false
+            }
         }
     }
 }
