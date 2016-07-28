@@ -52,7 +52,16 @@
 		{
 			"name": "config",
 			"type": "object",
-			"required": true
+			"required": true,
+			"parameters": [
+				{
+					"name": "add_ip",
+					"type": "boolean",
+					"required": false,
+					"default": false,
+					"description": "Should the IP be added to the DataPacket?"
+				}
+			]
 		}
 	]
 }
