@@ -22,6 +22,7 @@ import tuktu.api.WebJsNextFlow
 import tuktu.web.js.JSGeneration
 import tuktu.api.WebJsOrderedObject
 import tuktu.api.ErrorPacket
+import tuktu.api.RequestPacket
 
 object Application extends Controller {
     val source = scala.io.Source.fromFile(Play.application.getFile("public/images/pixel.gif"))(scala.io.Codec.ISO8859)
@@ -50,8 +51,7 @@ object Application extends Controller {
                         BadRequest("// No repository for JavaScripts and Tuktu flows set in Tuktu configuration.")
                 }
                 case Some(webRepo) => {
-                    // Get the referer
-                    val referrer = request.headers.get("referer")
+
                     
                     // Get actual actor
                     val actorRefMap = Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
@@ -67,39 +67,6 @@ object Application extends Controller {
                         }
                     else {
                         implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-                        // Get body data and potentially the name of the next flow
-                        val (bodyData, flowName) = {
-                            val params = request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject]
-                            (
-                                (params \ "d").asOpt[JsObject].getOrElse(Json.obj()),
-                                (params \ "f").asOpt[String])
-                        }
-
-                        // Set up the data packet
-                        val dataPacket = if (isInitial)
-                            new DataPacket(List(Map(
-                                // By default, add referer, request and headers
-                                "url" -> referrer.getOrElse(""),
-                                "request" -> request,
-                                "request_path" -> request.path,
-                                "request_uri" -> request.uri,
-                                "request_host" -> request.host,
-                                "headers" -> request.headers,
-                                "cookies" -> request.cookies.map(c => c.name -> c.value).toMap,
-                                Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List())
-                            )))
-                        else {
-                            new DataPacket(List(Map(
-                                // By default, add referer, request and headers
-                                "url" -> referrer.getOrElse(""),
-                                "request" -> request,
-                                "request_path" -> request.path,
-                                "request_uri" -> request.uri,
-                                "request_host" -> request.host,
-                                "cookies" -> request.cookies.map(c => c.name -> c.value).toMap,
-                                Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List()),
-                                "headers" -> request.headers) ++ bodyData.keys.map(key => key -> utils.JsValueToAny(bodyData \ key))))
-                        }
 
                         // See if we need to start a new flow or if we can send to the running actor
                         val resultFut = if (isInitial) {
@@ -107,19 +74,19 @@ object Application extends Controller {
                             val actorRef = actorRefMap(id)
                             
                             if (image) {
-                                actorRef ! dataPacket
+                                actorRef ! RequestPacket(request, isInitial)
                                 Future {}
                             }
                             else
-                                actorRef ? dataPacket
+                                actorRef ? RequestPacket(request, isInitial)
                         } else {
                             // Since this is not the default flow, we have to see if this one is running, and start
                             // if if this is not the case
 
                             // Flow name must be set
-                            flowName match {
+                            (request.body.asJson.getOrElse(Json.obj()).asInstanceOf[JsObject] \"f").asOpt[String] match {
                                 case None => {
-                                    // Flow name is gone, this cant be
+                                    // Flow name is gone, this can't be
                                     Future {}
                                 }
                                 case Some(fn) => {
@@ -139,7 +106,7 @@ object Application extends Controller {
                                     }
 
                                     // Send the Actor a DataPacket containing the referrer
-                                    actorRefMap(id + "." + fn) ? dataPacket
+                                    actorRefMap(id + "." + fn) ? RequestPacket(request, isInitial)
                                 }
                             }
                         }

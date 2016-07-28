@@ -22,6 +22,8 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import java.util.concurrent.LinkedBlockingQueue
 import scala.concurrent.Future
+import play.api.mvc.Request
+import play.api.mvc.AnyContent
 
 case class DataPacket(
         data: List[Map[String, Any]]
@@ -56,6 +58,11 @@ case class BackPressureNotificationPacket(
 
 case class ResponsePacket(
         json: JsValue
+)
+
+case class RequestPacket(
+        request: Request[AnyContent],
+        isInitial: Boolean
 )
 
 case class HealthCheck()
