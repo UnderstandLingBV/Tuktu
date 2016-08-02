@@ -62,9 +62,9 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         collection = (config \ "collection").as[String]
         
         // Get query and filter
-        query = (config \ "query").as[String]
-        filter = (config \ "filter").asOpt[String].getOrElse("{}")
-        sort = (config \ "sort").asOpt[String].getOrElse("{}")
+        query = (config \ "query").as[JsObject].toString
+        filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj()).toString
+        sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj()).toString
         limit = (config \ "limit").asOpt[Int]
         
         // Get the connection
@@ -143,9 +143,9 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
         collection = (config \ "collection").as[String]
         
         // Get query and filter
-        query = (config \ "query").as[String]
-        filter = (config \ "filter").asOpt[String].getOrElse("{}")
-        sort = (config \ "sort").asOpt[String].getOrElse("{}")
+        query = (config \ "query").as[JsObject].toString
+        filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj()).toString
+        sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj()).toString
         
         // Get the connection
         val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
