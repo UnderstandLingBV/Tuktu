@@ -167,16 +167,24 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
               
                 // Query database and forward to our actor
                 val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson)
-                    .sort(sortJson).cursor[JsObject]().enumerate()
-                val pushRecords: Iteratee[JsObject, Unit] = Iteratee.foreach(record => {
-                    packetSenderActor ! (datum + (resultName -> tuktu.api.utils.JsObjectToMap(record)))
-                })
-                enumerator.run(pushRecords)
+                    .sort(sortJson).cursor[JsObject]().enumerate().andThen(Enumerator.eof)
+
+                // Chain the stuff together with proper forwarding and EOF handling
+                enumerator |>> (
+                        Enumeratee.mapM[JsObject](record => Future {
+                            packetSenderActor ! (datum + (resultName -> tuktu.api.utils.JsObjectToMap(record)))
+                            record
+                        })
+                ) &>> Iteratee.ignore
+                //enumerator.run(pushRecords)
             }
         }
         
         data
-    }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
+    }) compose Enumeratee.onEOF(() => {
+        packetSenderActor ! new StopPacket
+        MongoPool.releaseConnection(nodes, conn)
+    })
 }
 
 /**
@@ -189,7 +197,6 @@ class PacketSenderActor(remoteGenerator: ActorRef) extends Actor with ActorLoggi
         case sp: StopPacket => {
             remoteGenerator ! sp
             self ! PoisonPill
-            println( "stopped" )
         }
         case datum: Map[String, Any] => {
             // Directly forward
