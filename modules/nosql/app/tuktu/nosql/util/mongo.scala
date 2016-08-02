@@ -45,18 +45,21 @@ object MongoPool {
             case c: graceKill => {
                 val sNodes = c.nodes
                 val connection = c.connection
-                if (nodesPerConnection(sNodes)(connection) < 1) {
-                    // We are the last one, clean up
-                    nodesPerConnection(sNodes) -= connection
-
-                    connection.close
-                }
+                if (nodesPerConnection.contains(sNodes))
+                    if (nodesPerConnection(sNodes).contains(connection))
+                        if (nodesPerConnection(sNodes)(connection) < 1) {
+                            // We are the last one, clean up
+                            nodesPerConnection(sNodes) -= connection
+                            if (nodesPerConnection(sNodes).isEmpty) nodesPerConnection -= sNodes
+        
+                            connection.close
+                        }
             }
         }
 
         def getConnection(nodes: List[String], mongoOptions: MongoConnectionOptions, auth: Option[Authenticate]): Future[MongoConnection] = {
             val sNodes = nodes.sorted
-
+            
             def createConnection: Future[MongoConnection] = {
                 // Create a new connection with a new lease
                 val connection = driver.connection(nodes, mongoOptions)
