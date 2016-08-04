@@ -99,7 +99,7 @@ object MongoPool {
             val sNodes = nodes.sorted
 
             // Get the lease
-            this.synchronized {
+            
                 val leaseCount = nodesPerConnection(sNodes)(connection) - 1
                 nodesPerConnection(sNodes) += connection -> (leaseCount)
 
@@ -108,7 +108,7 @@ object MongoPool {
                         self ! graceKill(sNodes, connection)
                     }
                 }
-            }
+            
         }
     }
 
