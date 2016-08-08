@@ -74,8 +74,8 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
                 // Get data from Mongo
                 val resultData = coll.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
                 resultData.map { resultList =>
-                    if (resultList.size == 0) datum
-                    else datum + (resultName -> resultList.map(resultRow => tuktu.api.utils.JsObjectToMap(resultRow)))
+                    if (resultList.size == 0) datum + (resultName -> List.empty[JsObject])
+                    else datum + (resultName -> resultList)
                 }
             }
         })

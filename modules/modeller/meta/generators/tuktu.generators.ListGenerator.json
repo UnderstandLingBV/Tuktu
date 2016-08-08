@@ -73,6 +73,13 @@
 					"required": false,
 					"description": "Send each item separately, or as one big list.",
 					"default": true
+				},
+				{
+					"name": "type",
+					"type": "string",
+					"required": false,
+					"description": "What the type of the message is. Can be one of JsObject, JsArray, String, Boolean, Double, Int",
+					"default": "String"
 				}
 			]
 		}

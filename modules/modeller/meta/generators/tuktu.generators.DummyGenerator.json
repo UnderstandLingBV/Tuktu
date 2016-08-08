@@ -77,6 +77,13 @@
 					"type": "int",
 					"required": false,
 					"description":"The maximum amount of messages to be sent."
+				},
+				{
+					"name": "type",
+					"type": "string",
+					"required": false,
+					"description": "What the type of the message is. Can be one of JsObject, JsArray, String, Boolean, Double, Int",
+					"default": "String"
 				}
 			]
 		}

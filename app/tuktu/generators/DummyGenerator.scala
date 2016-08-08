@@ -17,6 +17,17 @@ import scala.concurrent.duration.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import play.api.Logger
 
+object DummyHelper {
+    def valToType(value: String, outputType: String) = outputType match {
+        case "double" => value.toDouble
+        case "int" => value.toInt
+        case "boolean" => value.toBoolean
+        case "jsobject" => Json.parse(value).as[JsObject]
+        case "jsarray" => Json.parse(value).as[JsArray]
+        case _ => value
+    }
+}
+
 /**
  * Just generates dummy strings every tick
  */
@@ -25,6 +36,7 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
     var message: String = null
     var maxAmount: Option[Int] = None
     var amountSent = new AtomicInteger(0)
+    var outputType: String = _
     
     override def receive() = {
         case dpp: DecreasePressurePacket => decBP
@@ -38,6 +50,8 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
             
             // See if we need to stop at some point
             maxAmount = (config \ "max_amount").asOpt[Int]
+            
+            outputType = (config \ "type").asOpt[String].getOrElse("string").toLowerCase
             
             // Determine initial waiting time before sending
             val initialDelay = {
@@ -65,10 +79,10 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
                     if (amountSent.getAndIncrement >= amnt)
                             self ! new StopPacket
                     else
-                        channel.push(new DataPacket(List(Map(resultName -> message))))
+                        channel.push(new DataPacket(List(Map(resultName -> DummyHelper.valToType(message, outputType)))))
                 }
                 case None => {
-                    channel.push(new DataPacket(List(Map(resultName -> message))))
+                    channel.push(new DataPacket(List(Map(resultName -> DummyHelper.valToType(message, outputType)))))
                 }
             }
         }
@@ -131,6 +145,7 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
     var randomActor: ActorRef = null
     var vals = List[String]()
     var separate = true
+    var outputType: String = _
     
     override def receive() = {
         case dpp: DecreasePressurePacket => decBP
@@ -140,6 +155,7 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             // Get the values
             vals = (config \ "values").as[List[String]]
             separate = (config \ "separate").asOpt[Boolean].getOrElse(true)
+            outputType = (config \ "type").asOpt[String].getOrElse("string").toLowerCase
             
             // Send message to self
             self ! 0
@@ -147,12 +163,12 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
         case sp: StopPacket => cleanup
         case num: Int => {
             if(separate) {
-              channel.push(new DataPacket(List(Map(resultName -> vals(num)))))
+              channel.push(new DataPacket(List(Map(resultName -> DummyHelper.valToType(vals(num), outputType)))))
               // See if we're done or not
               if (num < vals.size - 1) self ! (num + 1)
               else self ! new StopPacket
             } else {
-                channel.push(new DataPacket(List(Map(resultName -> vals))))
+                channel.push(new DataPacket(List(Map(resultName -> vals.map(DummyHelper.valToType(_, outputType))))))
                 self ! new StopPacket
             }
         }
