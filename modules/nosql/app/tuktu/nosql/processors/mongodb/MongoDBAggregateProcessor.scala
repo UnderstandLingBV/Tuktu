@@ -17,6 +17,7 @@ import play.api.cache.Cache
 import akka.util.Timeout
 import play.api.Play.current
 import scala.concurrent.duration.DurationInt
+import play.api.libs.json.Json
 
 /**
  * Aggregate data using the MongoDB aggregation pipeline
@@ -61,15 +62,24 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         val fCollection = MongoPool.getCollection(conn, db, collection)
-        fCollection.flatMap {coll =>
-            // Prepare aggregation pipeline
-            import coll.BatchCommands.AggregationFramework.PipelineOperator
-            val transformer = new MongoPipelineTransformer()(coll)
-            val pipeline = tasks.map { x => transformer.json2task(x)(collection=coll) }
-
-            // Get data from Mongo
-            val resultData = coll.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
-            resultData.map { resultList => new DataPacket(for (resultRow <- resultList) yield { tuktu.api.utils.JsObjectToMap(resultRow) }) }
-        }
+        val newData = Future.sequence(for (datum <- data.data) yield {
+            fCollection.flatMap {coll =>
+                // Prepare aggregation pipeline
+                import coll.BatchCommands.AggregationFramework.PipelineOperator
+                val transformer = new MongoPipelineTransformer()(coll)
+                val pipeline = tasks.map { task =>
+                    transformer.json2task(Json.parse(utils.evaluateTuktuString(task.toString, datum)).as[JsObject])(collection=coll) 
+                }
+    
+                // Get data from Mongo
+                val resultData = coll.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
+                resultData.map { resultList =>
+                    if (resultList.size == 0) datum
+                    else datum + (resultName -> resultList.map(resultRow => tuktu.api.utils.JsObjectToMap(resultRow)))
+                }
+            }
+        })
+        
+        newData.map(nd => new DataPacket(nd))
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }

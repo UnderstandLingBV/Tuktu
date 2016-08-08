@@ -25,6 +25,15 @@ import scala.collection.GenTraversableOnce
 import play.api.libs.iteratee.Enumerator
 
 /**
+ * Doesn't do anything
+ */
+class SkipProcessor(resultName: String) extends BaseProcessor(resultName) {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        data
+    })
+}
+
+/**
  * Filters specific fields from the data tuple
  */
 class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
@@ -163,7 +172,12 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
             val newData = (for {
                 fieldItem <- fieldList
                 default = (fieldItem \ "default").asOpt[JsValue]
-                fields = (fieldItem \ "path").as[List[String]]
+                fields = {
+                    val p = (fieldItem \ "path").as[List[String]]
+                    if (p.size == 1)
+                        utils.evaluateTuktuString(p.head, datum).split("\\.").toList
+                    else p.map(utils.evaluateTuktuString(_, datum))
+                }
                 fieldName = (fieldItem \ "result").as[String]
                 field = fields.head
                 if (fields.size > 0 && datum.contains(field))
