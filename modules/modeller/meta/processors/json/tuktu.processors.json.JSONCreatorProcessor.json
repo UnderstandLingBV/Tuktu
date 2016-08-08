@@ -1,0 +1,30 @@
+{
+	"name": "JSON Creator Processor",
+	"description": "Creates a JSON element and allows to insert evaluated Tuktu strings.",
+	"class": "tuktu.processors.json.JSONCreatorProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "json",
+					"description": "The string representation of the JSON element.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
