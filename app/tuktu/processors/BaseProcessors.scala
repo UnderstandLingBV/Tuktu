@@ -34,6 +34,23 @@ class SkipProcessor(resultName: String) extends BaseProcessor(resultName) {
 }
 
 /**
+ * Gets the head of a list of one of the DataPacket's elements
+ */
+class HeadOfListProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field: String = _
+
+    override def initialize(config: JsObject) {
+        field = (config \ "field").as[String]
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            datum + (resultName -> datum(field).asInstanceOf[Seq[Any]].head)
+        })
+    })
+}
+
+/**
  * Filters specific fields from the data tuple
  */
 class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName) {

@@ -1,0 +1,30 @@
+{
+	"name": "Head Of List Processor",
+	"description": "Gets the head element of a list within a DataPacket.",
+	"class": "tuktu.processors.HeadOfListProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "string",
+					"description": "The field containing the list.",
+					"required": true
+				}
+			]
+		}
+	]
+}
