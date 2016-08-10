@@ -149,7 +149,8 @@ lazy val coreDependencies = Seq(
     "org.apache.commons" % "commons-math3" % "3.5",
     "org.reflections" % "reflections" % "0.9.10",
     "com.github.lucarosellini.rJava" % "JRIEngine" % "0.9-7",
-    "com.github.lucarosellini.rJava" % "JRI" % "0.9-7"
+    "com.github.lucarosellini.rJava" % "JRI" % "0.9-7",
+    "com.lihaoyi" %% "fastparse" % "0.3.7"
 )
 
 lazy val tuktuDBDependencies = Seq(

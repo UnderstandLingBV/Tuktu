@@ -25,14 +25,11 @@ class ArithmeticProcessor(resultName: String) extends BaseProcessor(resultName) 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             val formula = utils.evaluateTuktuString(calculate, datum)
-            val result = tuktu.utils.ArithmeticParser.readExpression(formula)
-            if (result.isDefined)
-                if (doRounding)
-                    datum + (resultName -> (math rint result.get() * math.pow(10, numberOfDecimals)) / math.pow(10, numberOfDecimals))
-                else
-                    datum + (resultName -> result.get())
+            val result = tuktu.utils.ArithmeticParser(formula)
+            if (doRounding)
+                datum + (resultName -> (math rint result * math.pow(10, numberOfDecimals)) / math.pow(10, numberOfDecimals))
             else
-                datum
+                datum + (resultName -> result)
         }
     })
 }
