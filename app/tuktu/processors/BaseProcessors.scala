@@ -283,7 +283,8 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                             // Replace expression with values
                             val replacedExpression = evaluateTuktuString(e.value, datum)
                             // Evaluate
-                            val result = tuktu.utils.PredicateParser(replacedExpression)
+                            val parser = new tuktu.utils.TuktuPredicateParser(datum)
+                            val result = parser(replacedExpression)
 
                             // Negate or not?
                             if (exprType == "negate") !result else result
