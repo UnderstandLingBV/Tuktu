@@ -283,38 +283,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                             // Replace expression with values
                             val replacedExpression = evaluateTuktuString(e.value, datum)
                             // Evaluate
-                            // @TODO: Expand later using Scala parser combinators
-                            val result = {
-                                // Support for different operators; order is relevant
-                                if (replacedExpression.contains("<=")) {
-                                    val split = replacedExpression.split("<=").map(_.trim)
-                                    (1 until split.length).forall(i => split(i - 1) <= split(i))
-                                } else if (replacedExpression.contains(">=")) {
-                                    val split = replacedExpression.split(">=").map(_.trim)
-                                    (1 until split.length).forall(i => split(i - 1) >= split(i))
-                                } else if (replacedExpression.contains("==")) {
-                                    val split = replacedExpression.split("==").map(_.trim)
-                                    (1 until split.length).forall(i => split(i - 1) == split(i))
-                                } else if (replacedExpression.contains("!=")) {
-                                    val split = replacedExpression.split("!=").map(_.trim)
-                                    (1 until split.length).forall(i => split(i - 1) != split(i))
-                                } else if (replacedExpression.contains("<>")) {
-                                    val split = replacedExpression.split("<>").map(_.trim)
-                                    (1 until split.length).forall(i => split(i - 1) != split(i))
-                                } else if (replacedExpression.contains('=')) {
-                                    val split = replacedExpression.split('=').map(_.trim)
-                                    (1 until split.length).forall(i => split(i - 1) == split(i))
-                                } else if (replacedExpression.contains('<')) {
-                                    val split = replacedExpression.split('<').map(_.trim)
-                                    (1 until split.length).forall(i => split(i - 1) < split(i))
-                                } else if (replacedExpression.contains('>')) {
-                                    val split = replacedExpression.split('>').map(_.trim)
-                                    (1 until split.length).forall(i => split(i - 1) > split(i))
-                                } else {
-                                    Logger.warn("Redundant simple filter expression: " + replacedExpression)
-                                    true
-                                }
-                            }
+                            val result = tuktu.utils.PredicateParser(replacedExpression)
 
                             // Negate or not?
                             if (exprType == "negate") !result else result
