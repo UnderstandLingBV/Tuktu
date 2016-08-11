@@ -252,65 +252,45 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
  */
 class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
     /**
-     * Evaluates a number of expressions
+     * Evaluates an expression
      */
-    private def evaluateExpressions(datum: Map[String, Any], expressions: List[JsObject]): Boolean = {
-        def evaluateExpression(expression: JsObject): Boolean = {
-            // Get type, and/or and sub expressions, if any
-            val exprType = (expression \ "type").as[String]
-            val andOr = (expression \ "and_or").asOpt[String].getOrElse("and")
-            val evalExpr = (expression \ "expression").as[JsValue]
+    def evaluateExpression(datum: Map[String, Any], expression: String, expressionType: String): Boolean = {
+        expressionType match {
+            case "groovy" => {
+                // Replace expression with values
+                val replacedExpression = evaluateTuktuString(expression, datum)
 
-            // See what the actual expression looks like
-            evalExpr match {
-                case e: JsString => {
-                    // A real expression that we need to evaluate, based on the type of evaluation
-                    exprType match {
-                        case "groovy" => {
-                            // Replace expression with values
-                            val replacedExpression = evaluateTuktuString(e.value, datum)
-
-                            try {
-                                Eval.me(replacedExpression).asInstanceOf[Boolean]
-                            } catch {
-                                case e: Throwable => {
-                                    Logger.error("Incorrect groovy expression: " + replacedExpression, e)
-                                    true
-                                }
-                            }
-                        }
-                        case _ => {
-                            // Replace expression with values
-                            val replacedExpression = evaluateTuktuString(e.value, datum)
-                            // Evaluate
-                            val parser = new tuktu.utils.TuktuPredicateParser(datum)
-                            val result = parser(replacedExpression)
-
-                            // Negate or not?
-                            if (exprType == "negate") !result else result
-                        }
+                try {
+                    Eval.me(replacedExpression).asInstanceOf[Boolean]
+                } catch {
+                    case e: Throwable => {
+                        Logger.error("Incorrect groovy expression: " + replacedExpression, e)
+                        true
                     }
                 }
-                case e: JsArray => {
-                    // We have sub elements, process all of them
-                    if (andOr == "or") e.as[List[JsObject]].exists(expr => evaluateExpression(expr))
-                    else e.as[List[JsObject]].forall(expr => evaluateExpression(expr))
-                }
-                case _ => true
+            }
+            case _ => {
+                // Replace expression with values
+                val replacedExpression = evaluateTuktuString(expression, datum)
+                // Evaluate
+                val parser = new tuktu.utils.TuktuPredicateParser(datum)
+                val result = parser(replacedExpression)
+
+                // Negate or not?
+                if (expressionType == "negate") !result else result
             }
         }
-
-        // Go over all expressions and evaluate them
-        expressions.exists(expr => evaluateExpression(expr))
     }
 
-    var expressions: List[JsObject] = _
+    var expression: String = _
+    var expressionType: String = _
     var batch: Boolean = _
     var batchMinCount: Int = _
     var filterEmpty: Boolean = _
 
     override def initialize(config: JsObject) {
-        expressions = (config \ "expressions").as[List[JsObject]]
+        expression = (config \ "expression").as[String]
+        expressionType = (config \ "type").as[String]
         batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
         batchMinCount = (config \ "batch_min_count").asOpt[Int].getOrElse(1)
         filterEmpty = (config \ "filter_empty").asOpt[Boolean].getOrElse(true)
@@ -327,7 +307,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                     else datums match {
                         case Nil => false
                         case datum :: tail => {
-                            if (evaluateExpressions(datum, expressions)) helper(tail, remaining - 1, matches + 1)
+                            if (evaluateExpression(datum, expression, expressionType)) helper(tail, remaining - 1, matches + 1)
                             else helper(tail, remaining - 1, matches)
                         }
                     }
@@ -337,7 +317,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                 else List()
             } else {
                 // Filter data
-                data.data.filter(datum => evaluateExpressions(datum, expressions))
+                data.data.filter(datum => evaluateExpression(datum, expression, expressionType))
             })
     })
 }

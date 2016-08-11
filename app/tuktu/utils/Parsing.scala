@@ -2,6 +2,7 @@ package tuktu.utils
 
 import fastparse.WhitespaceApi
 import play.api.libs.json.JsValue
+import play.api.libs.json.JsObject
 
 object ArithmeticParser {
     val White = WhitespaceApi.Wrapper {
@@ -100,7 +101,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     val functions: P[Boolean] = P(
             (
                     (
-                        "containsField(" | "isNumeric(" | "isJson(" | "isNull("
+                        "containsField(" | "isNumeric(" | "isJson(" | "isNull(" | "containsJsonField("
                     ).! ~/ strings ~ ")"
             ) | (
                     ("isEmpty(".! ~/ ")".!)
@@ -120,6 +121,19 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
             case ("isNull(", field) => datum(field) match {
                 case null => true
                 case _ => false
+            }
+            case ("containsJsonField(", field) => {
+                // Get the field name and the JSON path
+                val (key, path) = {
+                    val spl = field.split(",")
+                    (spl(0), spl(1).split("\\.").toList)
+                }
+                // See if the key is there
+                if (datum.contains(field)) {
+                    // Traverse the JSON path
+                    val json = datum(field).asInstanceOf[JsObject]
+                    tuktu.api.utils.jsonParser(json, path, Some(null)) != Some(null)
+                } else false
             }
             case ("isEmpty(", ")") => datum.isEmpty
         }
