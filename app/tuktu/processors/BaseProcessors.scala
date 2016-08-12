@@ -248,6 +248,29 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 /**
+ * Evaluates nested Tuktu expressions in a string until no more exist
+ */
+class EvaluateNestedTuktuExpressionsProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var expr: String = _
+    override def initialize(config: JsObject) {
+        expr = (config \ "expression").as[String]
+    }
+    
+    def evalHelper(string: String, datum: Map[String, Any]): String = {
+        val newString = utils.evaluateTuktuString(string, datum)
+        if (newString != string)
+            evalHelper(newString, datum)
+        else newString
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            datum + (resultName -> evalHelper(expr, datum))
+        })
+    })
+}
+
+/**
  * Parses a predicate and adds its evaluation (true/false) to the DP
  */
 class PredicateProcessor(resultName: String) extends BaseProcessor(resultName) {

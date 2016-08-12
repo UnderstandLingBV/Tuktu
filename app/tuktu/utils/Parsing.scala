@@ -111,7 +111,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     val functions: P[Boolean] = P(
             (
                     (
-                        "containsField(" | "isNumeric(" | "isJson(" | "isNull(" | "containsJsonField("
+                        "containsField(" | "isNumeric(" | "isJson(" | "isNull(" | "containsJsonField(" | "containsJsonFields("
                     ).! ~/ strings ~ ")"
             ) | (
                     ("isEmpty(".! ~/ ")".!)
@@ -143,6 +143,21 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                     // Traverse the JSON path
                     val json = datum(field).asInstanceOf[JsObject]
                     tuktu.api.utils.jsonParser(json, path, Some(null)) != Some(null)
+                } else false
+            }
+            case ("containsJsonFields(", field) => {
+                // Get the field name and the JSON paths
+                val (key, paths) = {
+                    val spl = field.split(",")
+                    (spl(0), spl.drop(1).map(_.split("\\.").toList))
+                }
+                // See if the key is there
+                if (datum.contains(field)) {
+                    // Traverse the JSON paths
+                    paths.forall { path =>
+                        val json = datum(field).asInstanceOf[JsObject]
+                        tuktu.api.utils.jsonParser(json, path, Some(null)) != Some(null)
+                    }
                 } else false
             }
             case ("isEmpty(", ")") => datum.isEmpty
