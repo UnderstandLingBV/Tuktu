@@ -106,7 +106,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     import White._
     
     // Strings
-    val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.')).rep(1).!.map(_.toString))
+    val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.', ',')).rep(1).!.map(_.toString))
     // All Tuktu-defined functions
     val functions: P[Boolean] = P(
             (

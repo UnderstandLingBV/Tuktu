@@ -835,8 +835,9 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        for (datum <- data) yield {
+        new DataPacket(for (datum <- data.data) yield {
             // Get the list field's value
+            val q = datum(listField)
             val listValue = datum(listField).asInstanceOf[List[Map[String, Any]]]
 
             // Keep map of results
@@ -854,8 +855,8 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
             })
 
             // Add to our total result
-            datum -- mapFields ++ resultMap.map(elem => elem._1 -> elem._2.toList)
-        }
+            datum ++ resultMap.map(elem => elem._1 -> elem._2.toList).toMap
+        })
     })
 }
 

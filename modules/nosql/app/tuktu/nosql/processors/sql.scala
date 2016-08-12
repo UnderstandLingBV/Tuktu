@@ -19,6 +19,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var driver: String = _
     var query: String = _
     var append: Boolean = _
+    var separate: Boolean = _
     var distinct: Boolean = _
     
     var connDef: ConnectionDefinition = null
@@ -34,6 +35,9 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         // Append result or not?
         append = (config \ "append").asOpt[Boolean].getOrElse(false)
+        
+        // Seperate datum for each result row?
+        separate = (config \ "separate").asOpt[Boolean].getOrElse(true)
 
         // Only query distinct setups
         distinct = (config \ "distinct").asOpt[Boolean].getOrElse(false)
@@ -87,9 +91,9 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         // If we have to append data, zip datums with query results, otherwise return DataPacket untouched
         if (append) {
-            new DataPacket(data.data.zip(results).map(tuple => tuple._1 + (resultName -> tuple._2)))
-        } else {
-            data
-        }
+            if (separate)
+                new DataPacket(data.data.zip(results).flatMap(tuple => tuple._2.map(row => tuple._1 + (resultName -> row))))
+            else new DataPacket(data.data.zip(results).map(tuple => tuple._1 + (resultName -> tuple._2)))
+        } else data
     }) compose Enumeratee.onEOF(() => if (connDef != null) releaseConnection(connDef))
 }

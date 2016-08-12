@@ -55,6 +55,13 @@
 					"default": false
 				},
 				{
+					"name": "separate",
+					"description": "If a select query is used and multiple result rows are given, either make a datum for each row (true) or concatenate all rows as a list in the datum (false).",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
 					"name": "distinct",
 					"description": "Only execute distinct queries within each DataPacket once, and reuse results if append is true.",
 					"type": "boolean",
