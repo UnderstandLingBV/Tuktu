@@ -3,7 +3,11 @@ package tuktu.utils
 import fastparse.WhitespaceApi
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsObject
+import tuktu.processors.bucket.statistics.StatHelper
 
+/**
+ * Performs arithmetics over a string representation
+ */
 object ArithmeticParser {
     val White = WhitespaceApi.Wrapper {
         import fastparse.all._
@@ -36,6 +40,9 @@ object ArithmeticParser {
     }
 }
 
+/**
+ * Parses Boolean predicates
+ */
 object PredicateParser {
     val White = WhitespaceApi.Wrapper {
         import fastparse.all._
@@ -87,6 +94,9 @@ object PredicateParser {
     }
 }
 
+/**
+ * Parses Boolean predicates over a datum
+ */
 class TuktuPredicateParser(datum: Map[String, Any]) {
     val White = WhitespaceApi.Wrapper {
         import fastparse.all._
@@ -109,7 +119,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
         ).map {
             case ("containsField(", field) => datum.contains(field)
             case ("isNumeric(", field) => try {
-                    datum(field).toString.toDouble
+                    StatHelper.anyToDouble(datum(field))
                     true
                 } catch {
                     case e: Exception => false
@@ -174,6 +184,69 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     }
 
     def apply(str: String): Boolean = {
+        expr.parse(str).get.value
+    }
+}
+
+/**
+ * Performs arithmetics and aggregations over entire DataPackets
+ */
+class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
+    val White = WhitespaceApi.Wrapper {
+        import fastparse.all._
+        NoTrace(" ".rep)
+    }
+    import fastparse.noApi._
+    import White._
+    
+    // Strings
+    val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.')).rep(1).!.map(_.toString))
+    // All Tuktu-defined arithmetic functions
+    val functions: P[Double] = P(
+            (
+                    (
+                        "avg(" | "median(" | "sum(" | "count("
+                    ).! ~/ strings ~ ")"
+            )
+        ).map {
+            case ("avg(", field) => StatHelper.getMeans(data, List(field))(field)
+            case ("median(", field) => {
+                val sortedData = data.map(datum => StatHelper.anyToDouble(datum(field))).sorted
+
+                // Find the mid element
+                val n = sortedData.size
+                if (n % 2 == 0) {
+                    // Get the two elements and average them
+                    val n2 = n / 2
+                    val n1 = n2 - 1
+                    (sortedData(n1) + sortedData(n2)) / 2
+                } else
+                    sortedData((n - 1) / 2)
+            }
+            case ("sum(", field) => data.foldLeft(0.0)((a,b) => a + StatHelper.anyToDouble(b(field)))
+            case ("count(", field) => data.foldLeft(0)((a,b) => a + 1)
+        }
+    
+    // Allow all sorts of numbers, negative and scientific notation
+    val number: P[Double] = P(CharIn('-' :: '.' :: 'e' :: ('0' to '9').toList).rep(1).!.map(_.toDouble))
+    val parens: P[Double] = P("(" ~/ addSub ~ ")")
+    val factor: P[Double] = P(number | parens | functions)
+
+    val divMul: P[Double] = P(factor ~ (CharIn("*/").! ~/ factor).rep).map(eval)
+    val addSub: P[Double] = P(divMul ~ (CharIn("+-").! ~/ divMul).rep).map(eval)
+    val expr: P[Double] = P((addSub | factor) ~ End)
+
+    def eval(tree: (Double, Seq[(String, Double)])) = {
+        val (base, ops) = tree
+        ops.foldLeft(base) {
+            case (left, (op, right)) => op match {
+                case "+" => left + right case "-" => left - right
+                case "*" => left * right case "/" => left / right
+            }
+        }
+    }
+
+    def apply(str: String) = {
         expr.parse(str).get.value
     }
 }

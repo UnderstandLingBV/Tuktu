@@ -1,0 +1,30 @@
+{
+	"name": "Predicate Processor",
+	"description": "Parses a predicate and returns true/false as result.",
+	"class": "tuktu.processors.PredicateProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "predicate",
+					"description": "The predicate to evaluate.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

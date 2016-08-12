@@ -33,3 +33,24 @@ class ArithmeticProcessor(resultName: String) extends BaseProcessor(resultName) 
         }
     })
 }
+
+/**
+ * Computes arithmetics and some generic aggregation functions
+ */
+class ArithmeticAggregateProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var calculate: String = _
+    var numberOfDecimals: Int = _
+    var doRounding: Boolean = _
+    
+    override def initialize(config: JsObject) {
+        calculate = (config \ "calculate").as[String]
+        numberOfDecimals = (config \ "number_of_decimals").asOpt[Int].getOrElse(0)
+        doRounding = (config \ "do_rounding").asOpt[Boolean].getOrElse(false)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        // Compute on entire DataPacket
+        val res = new tuktu.utils.TuktuArithmeticsParser(data.data)(calculate)
+        new DataPacket(data.data.map(datum => datum + (resultName -> res)))
+    })
+}

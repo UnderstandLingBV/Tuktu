@@ -248,6 +248,25 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 /**
+ * Parses a predicate and adds its evaluation (true/false) to the DP
+ */
+class PredicateProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var predicate: String = _
+    
+    override def initialize(config: JsObject) {
+        predicate = (config \ "predicate").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        new DataPacket(for (datum <- data.data) yield {
+            // Get the predicate parser
+            val p = new tuktu.utils.TuktuPredicateParser(datum)
+            datum + (resultName -> utils.evaluateTuktuString(predicate, datum))
+        })
+    })
+}
+
+/**
  * Filters out data packets that satisfy a certain condition
  */
 class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName) {

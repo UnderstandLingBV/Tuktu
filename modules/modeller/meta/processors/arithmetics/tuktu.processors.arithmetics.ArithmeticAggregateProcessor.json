@@ -1,0 +1,44 @@
+{
+	"name": "Arithmetics Aggregate Processor",
+	"description": "Calculates the result of the given formula, allows for aggregation over an entire DataPacket.",
+	"class": "tuktu.processors.arithmetics.ArithmeticAggregateProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "calculate",
+					"description": "The formula which is calculated, can use aggregation functions mean(field), sum(field), median(field) and count(field).",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "do_rounding",
+					"description": "Round the result",
+					"type": "boolean",
+					"default": false,
+					"required": false
+				},
+				{
+					"name": "number_of_decimals",
+					"description": "How many figures to round to.",
+					"type": "int",
+					"default": 0,
+					"required": false
+				}
+			]
+		}
+	]
+}
