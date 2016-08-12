@@ -1,0 +1,36 @@
+{
+	"name": "List JSON Fetcher Processor",
+	"description": "Fetches JSON elements based on names given in a list of strings.",
+	"class": "tuktu.processors.ListJsonFetcherProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the names of the JSON elements to fetch.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "default",
+					"description": "Default value to use.",
+					"type": "any",
+					"required": false
+				}
+			]
+		}
+	]
+}

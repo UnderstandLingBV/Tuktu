@@ -1,0 +1,30 @@
+{
+	"name": "Evaluate Nested Tuktu Expressions Processor",
+	"description": "Evaluates nested Tuktu expressions until everything is evaluated.",
+	"class": "tuktu.processors.EvaluateNestedTuktuExpressionsProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "expression",
+					"description": "String representing what to evalaute.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

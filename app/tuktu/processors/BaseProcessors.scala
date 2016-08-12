@@ -208,6 +208,32 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
 }
 
 /**
+ * Gets a list of JSON Objects and fetches a single field to put it as top-level citizen of the data
+ */
+class ListJsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field: String = _
+    var default: Option[JsValue] = _
+
+    override def initialize(config: JsObject) {
+        field = (config \ "field").as[String]
+        default = (config \ "default").asOpt[JsValue]
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        for (datum <- data) yield {
+            // Get the field and paths
+            val paths = datum(field).asInstanceOf[Seq[String]]
+            // Get the JSON values
+            datum ++ paths.map(path => 
+                (path, {
+                    utils.fieldParser(datum, path.split("\\.").toList, default)
+                })
+            ).toMap
+        }
+    })
+}
+
+/**
  * Renames a single field
  */
 class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName) {
