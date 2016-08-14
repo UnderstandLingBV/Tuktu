@@ -49,8 +49,8 @@ object utils {
         if (vars.isEmpty) {
             str
         } else {
-            // determine max length for performance reasons
-            val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
+            // determine max length for performance reasons, include the ,true option
+            val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length + ",true".size
             val result = new StringBuilder
             // a temporary buffer to determine if we need to replace this
             val buffer = new StringBuilder
@@ -85,6 +85,7 @@ object utils {
                                 val split = buffer.substring(prefixSize).split(",")
                                 (split(0), split(1).toBoolean)
                             } else (buffer.substring(prefixSize), false)
+                            
                             // Apply with variable in vars, or leave it be if it cannot be found
                             val value = if (vars.contains(varName)) {
                                 (vars(varName) match {

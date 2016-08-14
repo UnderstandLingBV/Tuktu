@@ -45,7 +45,9 @@ class HeadOfListProcessor(resultName: String) extends BaseProcessor(resultName) 
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         new DataPacket(for (datum <- data.data) yield {
-            datum + (resultName -> datum(field).asInstanceOf[Seq[Any]].head)
+            val value = datum(field).asInstanceOf[Seq[Any]]
+            if (value.size > 0) datum + (resultName -> value.head)
+            else datum
         })
     })
 }
