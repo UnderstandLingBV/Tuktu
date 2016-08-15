@@ -1,0 +1,23 @@
+{
+	"name": "Datum Merge Processor",
+	"description": "Merges all datums inside a DataPacket into a single datum.",
+	"class": "tuktu.processors.DatumMergeProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": []
+		}
+	]
+}
