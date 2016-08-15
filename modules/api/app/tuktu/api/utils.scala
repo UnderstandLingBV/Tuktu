@@ -431,4 +431,44 @@ object utils {
                 "children" -> children.toList
         ))
     }
+    
+    /**
+     * Recursive function to merge two JSON objects
+     */
+    def mergeJson(a: JsObject, b: JsObject): JsObject = {
+        def merge(existingObject: JsObject, otherObject: JsObject): JsObject = {
+            val result = existingObject.value ++ otherObject.value.map {
+                case (otherKey, otherValue) =>
+                    val maybeExistingValue = existingObject.value.get(otherKey)
+
+                    val newValue = (maybeExistingValue, otherValue) match {
+                        case (Some(e: JsObject), o: JsObject) => merge(e, o)
+                        case _                                => otherValue
+                    }
+                    otherKey -> newValue
+            }
+            JsObject(result.toSeq)
+        }
+        merge(a, b)
+    }
+    
+    /**
+     * Merges maps and JSON intertwined
+     */
+    def mergeMap(a: Map[String, Any], b: Map[String, Any]) = {
+        def merge(existingObject: Map[String, Any], otherObject: Map[String, Any]): Map[String, Any] = {
+            existingObject ++ otherObject.map {
+                case (otherKey, otherValue) =>
+                    val maybeExistingValue = existingObject.get(otherKey)
+
+                    val newValue = (maybeExistingValue, otherValue) match {
+                        case (Some(e: JsObject), o: JsObject) => mergeJson(e, o)
+                        case (Some(e: Map[String, Any]), o: Map[String, Any]) => merge(e, o)
+                        case _                                => otherValue
+                    }
+                    otherKey -> newValue
+            }
+        }
+        merge(a, b)
+    }
 }

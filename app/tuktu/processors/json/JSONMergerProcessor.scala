@@ -7,6 +7,7 @@ import scala.concurrent.Future
 import tuktu.api.DataPacket
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.Json
+import tuktu.api.utils
 
 /**
  * Merges multiple JSON objects together in one
@@ -23,29 +24,9 @@ class JSONMergerProcessor(resultName: String) extends BaseProcessor(resultName) 
             // Get the data fields
             val objects = fields.map(field => datum(field).asInstanceOf[JsObject])
             // Merge them one by one
-            val json = objects.foldLeft(Json.obj())((a, b) => mergeJson(a, b))
+            val json = objects.foldLeft(Json.obj())((a, b) => utils.mergeJson(a, b))
 
             datum + (resultName -> json)
         })
     })
-
-    /**
-     * Recursive function to merge two JSON objects
-     */
-    def mergeJson(a: JsObject, b: JsObject): JsObject = {
-        def merge(existingObject: JsObject, otherObject: JsObject): JsObject = {
-            val result = existingObject.value ++ otherObject.value.map {
-                case (otherKey, otherValue) =>
-                    val maybeExistingValue = existingObject.value.get(otherKey)
-
-                    val newValue = (maybeExistingValue, otherValue) match {
-                        case (Some(e: JsObject), o: JsObject) => merge(e, o)
-                        case _                                => otherValue
-                    }
-                    otherKey -> newValue
-            }
-            JsObject(result.toSeq)
-        }
-        merge(a, b)
-    }
 }
