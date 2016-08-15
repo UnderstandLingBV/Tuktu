@@ -23,7 +23,7 @@ class JSONMergerProcessor(resultName: String) extends BaseProcessor(resultName) 
             // Get the data fields
             val objects = fields.map(field => datum(field).asInstanceOf[JsObject])
             // Merge them one by one
-            val json = objects.foldLeft(Json.obj())((a, b) => mergeJson(b, a))
+            val json = objects.foldLeft(Json.obj())((a, b) => mergeJson(a, b))
 
             datum + (resultName -> json)
         })
