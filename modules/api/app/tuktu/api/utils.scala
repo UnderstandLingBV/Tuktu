@@ -125,6 +125,13 @@ object utils {
                                         }
                                         v
                                     }
+                                    case v: JsString => {
+                                        if (removeQuotesForNonString) {
+                                            result.setLength(result.length - 1)
+                                            skipQuote = true
+                                        }
+                                        v
+                                    }
                                     case v: Any => v.toString
                                 }).toString
                             } else buffer + "}"
