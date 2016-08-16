@@ -456,7 +456,7 @@ object utils {
             }
             JsObject(result.toSeq)
         }
-        merge(a, b)
+        merge(a, b)        
     }
     
     /**

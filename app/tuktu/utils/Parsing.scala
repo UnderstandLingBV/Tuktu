@@ -166,7 +166,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     val literal: P[Boolean] = P(("true" | "false").!.map(_.toBoolean))
     val parens: P[Boolean] = P("(" ~/ (andOr | arithExpr) ~ ")")
     val neg: P[Boolean] = P(("!(" ~/ andOr ~ ")") | ("!" ~/ literal)).map(!_)
-    val factor: P[Boolean] = P(literal | neg | parens | functions | arithExpr | stringExpr)
+    val factor: P[Boolean] = P(literal | neg | parens | functions | stringExpr | arithExpr)
 
     // Evaluate arithmetic expressions on numbers using the ArithmeticParser
     val arithExpr: P[Boolean] = P((ArithmeticParser.addSub | ArithmeticParser.parens) ~/ ("<" | ">" | ">=" | "<=" | "==" | "!=").! ~ (ArithmeticParser.addSub | ArithmeticParser.parens))
