@@ -21,7 +21,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var append: Boolean = _
     var separate: Boolean = _
     var distinct: Boolean = _
-    
+
     var connDef: ConnectionDefinition = null
     var conn: Connection = null
 
@@ -35,7 +35,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         // Append result or not?
         append = (config \ "append").asOpt[Boolean].getOrElse(false)
-        
+
         // Seperate datum for each result row?
         separate = (config \ "separate").asOpt[Boolean].getOrElse(true)
 
@@ -59,19 +59,21 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                 query_results((evalQuery, evalUrl, evalUser, evalPassword, evalDriver))
             else {
                 // Initialize
-                if (connDef == null)
+                if (connDef == null) {
                     connDef = new ConnectionDefinition(evalUrl, evalUser, evalPassword, evalDriver)
-                
+                    // Get connection from pool
+                    conn = getConnection(connDef)
+                }
+
                 // Check change
                 if (connDef.url != evalUrl || connDef.user != evalUser || connDef.password != evalPassword || connDef.driver != evalDriver) {
                     // Give back
                     releaseConnection(connDef)
                     connDef = new ConnectionDefinition(evalUrl, evalUser, evalPassword, evalDriver)
+                    // Get connection from pool
+                    conn = getConnection(connDef)
                 }
-                    
-                // Get connection from pool
-                conn = getConnection(connDef)
-                
+
                 // See if we need to append or not
                 if (append) {
                     val res = queryResult(evalQuery)(conn)
@@ -80,7 +82,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                         query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> res
                     res
                 } else {
-                   tuktu.nosql.util.sql.query(evalQuery)(conn)
+                    tuktu.nosql.util.sql.query(evalQuery)(conn)
                     // Add to query results, only if distinct
                     if (distinct)
                         query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> Nil
