@@ -10,54 +10,57 @@ import anorm.SqlParser
 import anorm.Iteratees
 import play.api.libs.iteratee.Enumerator
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.concurrent.TrieMap
 import anorm.RowParser
 
 /**
  * Keeps track of connections
  */
 object sql {
-    case class PoolCounter(
-        pool: BasicDataSource,
-        users: Int)
-
     case class ConnectionDefinition(
         url: String,
         user: String,
         password: String,
         driver: String)
 
-    var pools = collection.mutable.Map[ConnectionDefinition, PoolCounter]()
+    var pools = TrieMap[ConnectionDefinition, TrieMap[BasicDataSource, Int]]()
 
     // Gets a single connection
     def getConnection(conn: ConnectionDefinition, minSize: Int = 5, maxSize: Int = 10) = {
-        // Check if pool exists
-        if (!pools.contains(conn)) {
-            // Create connection
-            val connectionPool = new BasicDataSource()
-            connectionPool.setDriverClassName(conn.driver)
-            connectionPool.setUrl(conn.url)
-            connectionPool.setUsername(conn.user)
-            connectionPool.setPassword(conn.password)
-            connectionPool.setInitialSize(minSize)
-            connectionPool.setMaxIdle(maxSize)
-
-            // Add this pool
-            pools += conn -> new PoolCounter(connectionPool, 0)
+        // Check if a pool exists which still has open slots
+        pools.get(conn).flatMap { map =>
+            map.find { case (basicDataSource, _) => basicDataSource.getNumActive < minSize }
+        } match {
+            case Some((basicDataSource, _)) => basicDataSource.getConnection
+            case None => {
+                // Create new source
+                val connectionPool = new BasicDataSource()
+                connectionPool.setDriverClassName(conn.driver)
+                connectionPool.setUrl(conn.url)
+                connectionPool.setUsername(conn.user)
+                connectionPool.setPassword(conn.password)
+                connectionPool.setInitialSize(minSize)
+                connectionPool.setMaxIdle(maxSize)
+                pools.getOrElseUpdate(conn, TrieMap()) += connectionPool -> 1
+                connectionPool.getConnection
+            }
         }
-        pools += conn -> new PoolCounter(pools(conn).pool, pools(conn).users + 1)
-
-        // Return the damn thing
-        pools(conn).pool.getConnection
     }
 
-    // Relieve
-    def releaseConnection(conn: ConnectionDefinition) = {
-        if (pools.contains(conn)) {
-            pools += conn -> new PoolCounter(pools(conn).pool, pools(conn).users - 1)
-            if (pools(conn).users == 0) {
-                pools(conn).pool.close
-                pools -= conn
-            }
+    // Releases a connection, and closes its BasicDataSource if it has no more active connections
+    def releaseConnection(connDef: ConnectionDefinition, conn: Connection) = {
+        conn.close
+        pools.get(connDef).collect {
+            case map =>
+                map.foreach {
+                    case (basicDataSource, _) =>
+                        // Check if BasicDataSource has no active connections
+                        if (basicDataSource.getNumActive == 0) {
+                            // Close it and remove it from map
+                            basicDataSource.close
+                            map -= basicDataSource
+                        }
+                }
         }
     }
 

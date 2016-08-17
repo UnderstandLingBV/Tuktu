@@ -68,7 +68,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                 // Check change
                 if (connDef.url != evalUrl || connDef.user != evalUser || connDef.password != evalPassword || connDef.driver != evalDriver) {
                     // Give back
-                    releaseConnection(connDef)
+                    releaseConnection(connDef, conn)
                     connDef = new ConnectionDefinition(evalUrl, evalUser, evalPassword, evalDriver)
                     // Get connection from pool
                     conn = getConnection(connDef)
@@ -97,5 +97,5 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                 new DataPacket(data.data.zip(results).flatMap(tuple => tuple._2.map(row => tuple._1 + (resultName -> row))))
             else new DataPacket(data.data.zip(results).map(tuple => tuple._1 + (resultName -> tuple._2)))
         } else data
-    }) compose Enumeratee.onEOF(() => if (connDef != null) releaseConnection(connDef))
+    }) compose Enumeratee.onEOF(() => if (connDef != null) releaseConnection(connDef, conn))
 }

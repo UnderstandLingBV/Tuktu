@@ -73,7 +73,7 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
                     datum ++ ancestor
                 })
         })
-    }) compose Enumeratee.onEOF(() => releaseConnection(connDef))
+    }) compose Enumeratee.onEOF(() => releaseConnection(connDef, conn))
 
     /**
      * This function recursively finds all ancestors until there are no more, no cycle detection here though!

@@ -26,14 +26,14 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
 
             // Load the driver, set up the client
-            val conn = ConnectionDefinition(url, user, password, driver)
-            val connection = sql.getConnection(conn)
+            val connDef = ConnectionDefinition(url, user, password, driver)
+            val connection = sql.getConnection(connDef)
 
             // Build the enumerator to query SQL
             val rowEnumerator = sql.streamResult(query)(connection).andThen(Enumerator.eof)
             // Stop packet upon termination
             val onEOF = Enumeratee.onEOF[Row](() => {
-                sql.releaseConnection(conn)
+                sql.releaseConnection(connDef, connection)
                 self ! new StopPacket
             })
             // Enumeratee to turn the Row into a DP

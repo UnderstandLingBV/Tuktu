@@ -71,7 +71,7 @@ class SQLBulkProcessor(resultName: String) extends BaseProcessor(resultName) {
         // Check change
         if (connDef.url != evalUrl || connDef.user != evalUser || connDef.password != evalPassword || connDef.driver != evalDriver) {
             // Give back
-            releaseConnection(connDef)
+            releaseConnection(connDef, conn)
             connDef = new ConnectionDefinition(evalUrl, evalUser, evalPassword, evalDriver)
             // Get connection from pool
             conn = getConnection(connDef)
@@ -110,5 +110,5 @@ class SQLBulkProcessor(resultName: String) extends BaseProcessor(resultName) {
         bulkQuery(anormStatement, parameters)(conn)
         
         data
-    }) compose Enumeratee.onEOF(() => if (connDef != null) releaseConnection(connDef))
+    }) compose Enumeratee.onEOF(() => if (connDef != null) releaseConnection(connDef, conn))
 }
