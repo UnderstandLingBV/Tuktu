@@ -82,6 +82,8 @@ object Dispatcher {
         val idString = java.util.UUID.randomUUID.toString
         // Keep track of all subflows
         val subflows = collection.mutable.ListBuffer.empty[ActorRef]
+        // Keep track of instantiated processors
+        val instantiatedProcessors = collection.mutable.Map[String, Any]()
         
         /**
          * Builds a chain of processors recursively
@@ -95,7 +97,7 @@ object Dispatcher {
             // Get processor definition
             val pd = processorMap(procName)
             
-            // Initialize the processor
+            // Get class of the processor
             val procClazz = Class.forName(pd.name)
             
             // Check if this processor is a bufferer
@@ -172,17 +174,28 @@ object Dispatcher {
                 subflows += generator
                 
                 // Instantiate the processor now
-                val iClazz = procClazz.getConstructor(
-                        classOf[ActorRef],
-                        classOf[String]
-                ).newInstance(
-                        generator,
-                        pd.resultName
-                )
-
-                // Initialize the processor first
-                val initMethod = procClazz.getMethods.find(m => m.getName == "initialize").get
-                initMethod.invoke(iClazz, pd.config)
+                val iClazz = {
+                    // Check if we already converted this processor or not
+                    if (instantiatedProcessors.contains(procName)) instantiatedProcessors(procName)
+                    else {
+                        val ic = procClazz.getConstructor(
+                                classOf[ActorRef],
+                                classOf[String]
+                        ).newInstance(
+                                generator,
+                                pd.resultName
+                        )
+                        
+                        // Initialize the processor first
+                        val initMethod = procClazz.getMethods.find(m => m.getName == "initialize").get
+                        initMethod.invoke(ic, pd.config)
+                        
+                        // Update mapping
+                        instantiatedProcessors += procName -> ic
+                        
+                        ic
+                    }
+                }
 
                 // Add method to all our entries so far
                 val method = procClazz.getMethods.find(m => m.getName == "processor").get
@@ -202,12 +215,23 @@ object Dispatcher {
             }
             else {
                 // 'Regular' processor
-                val iClazz = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
+                val iClazz = {
+                    // Check if we already converted this processor or not
+                    if (instantiatedProcessors.contains(procName)) instantiatedProcessors(procName)
+                    else {
+                        val ic = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
+                        
+                        // Initialize the processor first
+                        val initMethod = procClazz.getMethods.find(m => m.getName == "initialize").get
+                        initMethod.invoke(ic, pd.config)
+                        // Update mapping
+                        instantiatedProcessors += procName -> ic
+                        
+                        ic
+                    }
+                }
 
-                // Initialize the processor first
-                val initMethod = procClazz.getMethods.find(m => m.getName == "initialize").get
-                initMethod.invoke(iClazz, pd.config)
-
+                // Get Enumeratee
                 val method = procClazz.getMethods.find(m => m.getName == "processor").get
                 val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
 
