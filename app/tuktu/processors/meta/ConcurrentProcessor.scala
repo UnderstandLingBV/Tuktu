@@ -25,6 +25,7 @@ import akka.remote.routing.RemoteRouterConfig
 import akka.routing.RoundRobinPool
 import akka.actor.Address
 import akka.routing.Broadcast
+import scala.util.hashing.MurmurHash3
 
 /**
  * Actor that deals with parallel processing
@@ -94,11 +95,13 @@ class IntermediateActor(genActor: ActorRef, node: ClusterNode, instanceCount: In
 class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
     var intermediateActors = List.empty[ActorRef]
     var actorOffset = 0
+    var anchorFields: Option[List[String]] = _
 
     override def initialize(config: JsObject) {
         // Process config
         val start = (config \ "start").as[String]
         val procs = (config \ "pipeline").as[List[JsObject]]
+        anchorFields = (config \ "anchor_fields").asOpt[List[String]]
         
         // Get the number concurrent instances
         val instanceCount = (config \ "instances").as[Int]
@@ -145,11 +148,31 @@ class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends Buffer
         intermediateActors = for (node <- nodes) yield
             Akka.system.actorOf(Props(classOf[IntermediateActor], genActor, node._2, instanceCount, processor))
     }
+    
+    /**
+     * Hashes anchored data to an actor
+     */
+    def anchorToActorHasher(packet: Map[String, Any], keys: List[String], maxSize: Int) = {
+        val keyString = (for (key <- keys) yield packet(key).toString).mkString
+        Math.abs(MurmurHash3.stringHash(keyString) % maxSize)
+    }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        // Send data to our actor
-        intermediateActors(actorOffset) ! data
-        actorOffset = (actorOffset + 1) % intermediateActors.size
+        // If anchor fields are set, we always need to stream the data to the same actor
+        anchorFields match {
+            case Some(aFields) => {
+                // Hash anchor fields to node/actor
+                data.data.foreach(datum => {
+                    val offset = anchorToActorHasher(datum, aFields, intermediateActors.size)
+                    intermediateActors(offset) ! new DataPacket(List(datum))
+                })
+            }
+            case None => {
+                // Send data to our actor
+                intermediateActors(actorOffset) ! data
+                actorOffset = (actorOffset + 1) % intermediateActors.size
+            }
+        }
         
         data
     }) compose Enumeratee.onEOF(() => {
