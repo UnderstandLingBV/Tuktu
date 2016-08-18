@@ -125,7 +125,8 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
     def getWriter(fn: String) = {
         closeWriter(fn)
         val filename = getFileName(fn)
-        new File(filename).getParentFile.mkdirs
+        val parent = new File(filename).getParentFile
+        if (!parent.exists) parent.mkdirs
         new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getFileName(fn), append), encoding))
     }
 
