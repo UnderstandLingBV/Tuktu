@@ -45,6 +45,20 @@
 					"required": true
 				},
 				{
+					"name": "anchor_fields",
+					"description": "If you want to anchor datums, specify the fields to anchor on. Note that once anchoring is enable, DataPackets with multiple datums will inevitably be chopped up into DataPackets for each single datum of the original.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"description": "A field to anchor on.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
 					"name": "pipeline",
 					"description": "The actual pipeline of processors.",
 					"type": "array",
