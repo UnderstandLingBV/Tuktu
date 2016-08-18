@@ -17,6 +17,7 @@ import scala.concurrent.duration.Duration
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import java.io.File
 
 /**
  * Streams data into a file and closes it when it's done
@@ -123,6 +124,8 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
 
     def getWriter(fn: String) = {
         closeWriter(fn)
+        val filename = getFileName(fn)
+        new File(filename).mkdirs
         new BufferedWriter(new OutputStreamWriter(new FileOutputStream(getFileName(fn), append), encoding))
     }
 
