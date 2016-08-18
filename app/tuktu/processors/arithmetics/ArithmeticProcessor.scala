@@ -50,7 +50,8 @@ class ArithmeticAggregateProcessor(resultName: String) extends BaseProcessor(res
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         // Compute on entire DataPacket
-        val res = new tuktu.utils.TuktuArithmeticsParser(data.data)(calculate)
+        val formula = utils.evaluateTuktuString(calculate, data.data.headOption.getOrElse(Map.empty))
+        val res = new tuktu.utils.TuktuArithmeticsParser(data.data)(formula)
         new DataPacket(data.data.map(datum => datum + (resultName -> res)))
     })
 }
