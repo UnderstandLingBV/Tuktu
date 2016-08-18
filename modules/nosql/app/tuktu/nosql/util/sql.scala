@@ -11,6 +11,7 @@ import anorm.Iteratees
 import play.api.libs.iteratee.Enumerator
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.HashSet
 import anorm.RowParser
 
 /**
@@ -23,15 +24,22 @@ object sql {
         password: String,
         driver: String)
 
-    var pools = TrieMap[ConnectionDefinition, TrieMap[BasicDataSource, Int]]()
+    val pools = TrieMap[ConnectionDefinition, HashSet[BasicDataSource]]()
 
     // Gets a single connection
-    def getConnection(conn: ConnectionDefinition, minSize: Int = 5, maxSize: Int = 10) = {
+    def getConnection(conn: ConnectionDefinition, minSize: Int = 5, maxSize: Int = 10): Connection = {
         // Check if a pool exists which still has open slots
         pools.get(conn).flatMap { map =>
-            map.find { case (basicDataSource, _) => basicDataSource.getNumActive < minSize }
+            map.find { basicDataSource => basicDataSource.getNumActive < minSize }
         } match {
-            case Some((basicDataSource, _)) => basicDataSource.getConnection
+            case Some(basicDataSource) => {
+                if (basicDataSource.isClosed) {
+                    // It's closed, remove it and try again
+                    pools.get(conn).collect { case set => set -= basicDataSource }
+                    getConnection(conn, minSize, maxSize)
+                } else
+                    basicDataSource.getConnection
+            }
             case None => {
                 // Create new source
                 val connectionPool = new BasicDataSource()
@@ -41,7 +49,7 @@ object sql {
                 connectionPool.setPassword(conn.password)
                 connectionPool.setInitialSize(minSize)
                 connectionPool.setMaxIdle(maxSize)
-                pools.getOrElseUpdate(conn, TrieMap()) += connectionPool -> 1
+                pools.getOrElseUpdate(conn, HashSet.empty) += connectionPool
                 connectionPool.getConnection
             }
         }
@@ -51,16 +59,17 @@ object sql {
     def releaseConnection(connDef: ConnectionDefinition, conn: Connection) = {
         conn.close
         pools.get(connDef).collect {
-            case map =>
-                map.foreach {
-                    case (basicDataSource, _) =>
-                        // Check if BasicDataSource has no active connections
-                        if (basicDataSource.getNumActive == 0) {
-                            // Close it and remove it from map
-                            basicDataSource.close
-                            map -= basicDataSource
-                        }
+            case set =>
+                set.foreach { basicDataSource =>
+                    // Check if BasicDataSource has no active connections
+                    if (basicDataSource.getNumActive == 0) {
+                        // Close it and remove it from set
+                        set -= basicDataSource
+                        basicDataSource.close
+                    }
                 }
+                if (set.isEmpty)
+                    pools -= connDef
         }
     }
 
