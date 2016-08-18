@@ -26,7 +26,7 @@
 				},
 				{
 					"name": "expression",
-					"description": "The expression to evaluate, can be arithmetics, boolean logic and simple predicates like. Supported predicates are: containsField(field), which searches for the presence of a field -- isNumeric(field), which checks if the field is numeric -- isJson(field), which checks if the field is JSON -- isNull(field), which checks if the field is null -- containsJsonField(field,json.path.name), which checks if the JsObject in field contains the JSON path json.path.name -- isEmpty(), which checks if the datum is empty (ie. contains no keys).",
+					"description": "The expression to evaluate, can be arithmetics, boolean logic and simple predicates like. Supported predicates are: containsFields(field.path.name,...), which checks the presence of all given field paths -- isNumeric(field), which checks if the field is numeric -- isJSON(field.path.name,...), which checks if all given paths exists and are JSON values -- isNull(field), which checks if the field is null -- isEmpty(), which checks if the datum is empty (ie. contains no keys).",
 					"type": "string",
 					"required": true
 				},

@@ -4,6 +4,7 @@ import fastparse.WhitespaceApi
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsObject
 import tuktu.processors.bucket.statistics.StatHelper
+import scala.util.{ Try, Success, Failure }
 
 /**
  * Performs arithmetics over a string representation
@@ -111,58 +112,34 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     val functions: P[Boolean] = P(
             (
                     (
-                        "containsField(" | "containsFields(" | "isNumeric(" | "isJson(" | "isNull(" | "containsJsonField(" | "containsJsonFields("
+                        "containsFields(" | "isNumeric(" | "isNull(" | "isJSON("
                     ).! ~/ strings ~ ")"
             ) | (
                     ("isEmpty(".! ~/ ")".!)
             )
         ).map {
-            case ("containsField(", field) => datum.contains(field)
             case ("containsFields(", fields) => fields.split(',').forall { string =>
+                // Get the path and evaluate it against the datum
                 val path = string.split('.').toList
                 tuktu.api.utils.fieldParser(datum, path, Some(null)) != null
             }
-            case ("isNumeric(", field) => try {
+            case ("isNumeric(", field) => Try {
                     StatHelper.anyToDouble(datum(field))
-                    true
-                } catch {
-                    case e: Exception => false
+                } match {
+                    case Success(double) => true
+                    case Failure(_throw) => false
                 }
-            case ("isJson(", field) => datum(field) match {
-                case a: JsValue => true
-                case _          => false
-            }
             case ("isNull(", field) => datum(field) match {
                 case null => true
                 case _    => false
             }
-            case ("containsJsonField(", field) => {
-                // Get the field name and the JSON path
-                val (key, path) = {
-                    val spl = field.split(",")
-                    (spl(0), spl(1).split("\\.").toList)
+            case ("isJSON(", fields) => {
+                fields.split(',').forall { string =>
+                    // Get the path, evaluate it against the datum, and check if it's JSON
+                    val path = string.split('.').toList
+                    val result = tuktu.api.utils.fieldParser(datum, path, Some(null))
+                    result != null && result.isInstanceOf[JsValue]
                 }
-                // See if the key is there
-                if (datum.contains(key)) {
-                    // Traverse the JSON path
-                    val json = datum(key).asInstanceOf[JsObject]
-                    tuktu.api.utils.jsonParser(json, path, Some(null)) != null
-                } else false
-            }
-            case ("containsJsonFields(", field) => {
-                // Get the field name and the JSON paths
-                val (key, paths) = {
-                    val spl = field.split(",")
-                    (spl(0), spl.drop(1).map(_.split("\\.").toList))
-                }
-                // See if the key is there
-                if (datum.contains(key)) {
-                    // Traverse the JSON paths
-                    val json = datum(key).asInstanceOf[JsObject]
-                    paths.forall { path =>
-                        tuktu.api.utils.jsonParser(json, path, Some(null)) != null
-                    }
-                } else false
             }
             case ("isEmpty(", ")") => datum.isEmpty
         }
