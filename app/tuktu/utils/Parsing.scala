@@ -15,7 +15,7 @@ object ArithmeticParser {
     }
     import fastparse.noApi._
     import White._
-    
+
     // Allow all sorts of numbers, negative and scientific notation
     val number: P[Double] = P(CharIn('-' :: '.' :: 'e' :: ('0' to '9').toList).rep(1).!.map(_.toDouble))
     val parens: P[Double] = P("(" ~/ addSub ~ ")")
@@ -50,7 +50,7 @@ object PredicateParser {
     }
     import fastparse.noApi._
     import White._
-    
+
     // Boolean base logic
     val literal: P[Boolean] = P(("true" | "false").!.map(_.toBoolean))
     val parens: P[Boolean] = P("(" ~/ (andOr | arithExpr) ~ ")")
@@ -68,7 +68,7 @@ object PredicateParser {
                 case "==" => left == right case "!=" => left != right
             }
         }
-    
+
     // Evaluate string expressions
     val stringExpr: P[Boolean] = P(strings ~/ ("==" | "!=").! ~ strings)
         .map {
@@ -104,7 +104,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     }
     import fastparse.noApi._
     import White._
-    
+
     // Strings
     val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.', ',')).rep(1).!.map(_.toString))
     // All Tuktu-defined functions
@@ -126,11 +126,11 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                 }
             case ("isJson(", field) => datum(field) match {
                 case a: JsValue => true
-                case _ => false
+                case _          => false
             }
             case ("isNull(", field) => datum(field) match {
                 case null => true
-                case _ => false
+                case _    => false
             }
             case ("containsJsonField(", field) => {
                 // Get the field name and the JSON path
@@ -139,9 +139,9 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                     (spl(0), spl(1).split("\\.").toList)
                 }
                 // See if the key is there
-                if (datum.contains(field)) {
+                if (datum.contains(key)) {
                     // Traverse the JSON path
-                    val json = datum(field).asInstanceOf[JsObject]
+                    val json = datum(key).asInstanceOf[JsObject]
                     tuktu.api.utils.jsonParser(json, path, Some(null)) != Some(null)
                 } else false
             }
@@ -152,10 +152,10 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                     (spl(0), spl.drop(1).map(_.split("\\.").toList))
                 }
                 // See if the key is there
-                if (datum.contains(field)) {
+                if (datum.contains(key)) {
                     // Traverse the JSON paths
+                    val json = datum(key).asInstanceOf[JsObject]
                     paths.forall { path =>
-                        val json = datum(field).asInstanceOf[JsObject]
                         tuktu.api.utils.jsonParser(json, path, Some(null)) != Some(null)
                     }
                 } else false
@@ -177,7 +177,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                 case "==" => left == right case "!=" => left != right
             }
         }
-    
+
     // Evaluate string expressions
     val stringExpr: P[Boolean] = P(strings ~/ ("==" | "!=").! ~ strings)
         .map {
@@ -213,7 +213,7 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     }
     import fastparse.noApi._
     import White._
-    
+
     // Strings
     val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.')).rep(1).!.map(_.toString))
     // All Tuktu-defined arithmetic functions
@@ -241,7 +241,7 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
             case ("sum(", field) => data.foldLeft(0.0)((a,b) => a + StatHelper.anyToDouble(b(field)))
             case ("count(", field) => data.foldLeft(0)((a,b) => a + 1)
         }
-    
+
     // Allow all sorts of numbers, negative and scientific notation
     val number: P[Double] = P(CharIn('-' :: '.' :: 'e' :: ('0' to '9').toList).rep(1).!.map(_.toDouble))
     val parens: P[Double] = P("(" ~/ addSub ~ ")")
