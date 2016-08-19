@@ -21,7 +21,7 @@ import scala.collection.mutable.ArrayBuffer
 
 object utils {
     val logDpContent = Cache.getAs[Boolean]("mon.log_dp_content").getOrElse(Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true))
-    
+
     /**
      * Enumeratee for error-logging and handling
      * @param idString A string used to identify the flow this logEnumeratee is part of. A mapping exists
@@ -61,8 +61,7 @@ object utils {
                 if (skipQuote) {
                     // Skip the closing quote of the string encapsulating a non-string variable
                     skipQuote = false
-                }
-                else {
+                } else {
                     if (buffer.length == 0) {
                         if (currentChar.equals('$')) {
                             buffer.append(currentChar)
@@ -85,7 +84,7 @@ object utils {
                                 val split = buffer.substring(prefixSize).split(",")
                                 (split(0), split(1).toBoolean)
                             } else (buffer.substring(prefixSize), false)
-                            
+
                             // Apply with variable in vars, or leave it be if it cannot be found
                             val value = if (vars.contains(varName)) {
                                 (vars(varName) match {
@@ -237,30 +236,19 @@ object utils {
      * Recursively traverses a path of keys until it finds a value (or fails to traverse,
      * in which case a default value is used)
      */
-    def fieldParser(input: Map[String, Any], path: List[String], defaultValue: Option[JsValue]): Any = path match {
-        case Nil => input
-        case someKey :: Nil => {
-            if (input.contains(someKey))
-                input(someKey)
-            else
-                defaultValue.getOrElse(null)
+    def fieldParser(input: Map[String, Any], path: List[String], defaultValue: Option[Any] = None): Option[Any] = path match {
+        case Nil => Some(input)
+        case someKey :: Nil => input.get(someKey) match {
+            case Some(a) => Some(a)
+            case None    => defaultValue
         }
-        case someKey :: trailPath => {
-            // Get the remainder
-            if (input.contains(someKey)) {
-                // See if we can cast it
-                try {
-                    if (input(someKey).isInstanceOf[JsValue])
-                        jsonParser(input(someKey).asInstanceOf[JsValue], trailPath, defaultValue)
-                    else
-                        fieldParser(input(someKey).asInstanceOf[Map[String, Any]], trailPath, defaultValue)
-                } catch {
-                    case e: ClassCastException => defaultValue.getOrElse(null)
-                }
-            } else {
-                // Couldn't find it
-                defaultValue.getOrElse(null)
-            }
+        case someKey :: trailPath => input.get(someKey).collect {
+            // Handle remainder depending on type
+            case js: JsValue           => jsonParser(js, trailPath, defaultValue.map { default => AnyToJsValue(default) })
+            case map: Map[String, Any] => fieldParser(map, trailPath, defaultValue)
+        }.flatten match {
+            case Some(a) => Some(a)
+            case None    => defaultValue
         }
     }
 
@@ -268,24 +256,12 @@ object utils {
      * Recursively traverses a JSON object of keys until it finds a value (or fails to traverse,
      * in which case a default value is used)
      */
-    def jsonParser(json: JsValue, jsPath: List[String], defaultValue: Option[JsValue]): JsValue = jsPath match {
-        case List() => json
-        case js :: trailPath => {
-            // Get the remaining value from the json
-            val newJson = (json \ js).asOpt[JsValue]
-            newJson match {
-                case Some(nj) => {
-                    // Recurse into new JSON
-                    jsonParser(nj, trailPath, defaultValue)
-                }
-                case None => {
-                    // Couldn't find it, return the best we can
-                    defaultValue match {
-                        case Some(value) => value
-                        case None        => json
-                    }
-                }
-            }
+    def jsonParser(json: JsValue, jsPath: List[String], defaultValue: Option[JsValue] = None): Option[JsValue] = jsPath match {
+        case Nil => Some(json)
+        case js :: trailPath => (json \ js).asOpt[JsValue] match {
+            // Handle the remaining path from the json
+            case Some(nj) => jsonParser(nj, trailPath, defaultValue)
+            case None     => defaultValue
         }
     }
 
@@ -299,24 +275,24 @@ object utils {
      * Turns Any into a JsValueWrapper to use by Json.arr and Json.obj
      */
     private def AnyToJsValueWrapper(a: Any, mongo: Boolean = false): Json.JsValueWrapper = a match {
-        case a: Boolean    => a
-        case a: String     => a
-        case a: Char       => a.toString
-        case a: Short      => a
-        case a: Int        => a
-        case a: Long       => a
-        case a: Float      => a
-        case a: Double     => a
-        case a: BigDecimal => a
-        case a: Date       => if (!mongo) a else Json.obj("$date" -> a.getTime)
-        case a: DateTime   => if (!mongo) a else Json.obj("$date" -> a.getMillis)
-        case a: JsValue    => a
-        case a: (Any, Any) => MapToJsObject(Map(a._1 -> a._2), mongo)
-        case a: Seq[_]     => SeqToJsArray(a, mongo)
-        case a: Array[_]   => SeqToJsArray(a, mongo)
-        case a: Map[_, _]  => MapToJsObject(a, mongo)
+        case a: Boolean     => a
+        case a: String      => a
+        case a: Char        => a.toString
+        case a: Short       => a
+        case a: Int         => a
+        case a: Long        => a
+        case a: Float       => a
+        case a: Double      => a
+        case a: BigDecimal  => a
+        case a: Date        => if (!mongo) a else Json.obj("$date" -> a.getTime)
+        case a: DateTime    => if (!mongo) a else Json.obj("$date" -> a.getMillis)
+        case a: JsValue     => a
+        case a: (_, _)      => MapToJsObject(Map(a._1 -> a._2), mongo)
+        case a: Map[_, _]   => MapToJsObject(a, mongo)
+        case a: Seq[_]      => SeqToJsArray(a, mongo)
+        case a: Array[_]    => SeqToJsArray(a, mongo)
         case a: Iterable[_] => SeqToJsArray(a.toSeq, mongo)
-        case _             => if (a == null) "null" else a.toString
+        case _              => if (a == null) "null" else a.toString
     }
 
     /**
@@ -399,23 +375,23 @@ object utils {
             case None => clusterNodes
         }
     }
-    
+
     /**
      * Gets data from an XML document based on a query that iteratively selects fields or attributes
      */
     def xmlQueryParser(xml: Node, query: List[JsObject]): List[Node] = query match {
         case Nil => List(xml)
-        case selector::trail => {
+        case selector :: trail => {
             // Get the element based on the type of selector
             val selectType = (selector \ "type").as[String]
             val selectString = (selector \ "string").as[String]
             selectType match {
                 case "\\" => (xml \ selectString).asInstanceOf[NodeSeq].flatMap(xmlQueryParser(_, trail)).toList
-                case _ => (xml \\ selectString).asInstanceOf[NodeSeq].flatMap(xmlQueryParser(_, trail)).toList
+                case _    => (xml \\ selectString).asInstanceOf[NodeSeq].flatMap(xmlQueryParser(_, trail)).toList
             }
         }
     }
-    
+
     /**
      * Converts an XML document into a map
      */
@@ -424,13 +400,13 @@ object utils {
         val label = xml.label
         val attributes = xml.attributes.asAttrMap
         val text = if (trim) xml.text.trim else xml.text
-        
+
         // Parse children
         val children = xml.child.filter(el => if (nonEmpty) !el.text.trim.isEmpty else true).map(child => {
             // Recurse
             xmlToMap(child, trim, nonEmpty)
         })
-        
+
         // Return result
         Map(label -> Map(
                 "attributes" -> attributes,
@@ -438,7 +414,7 @@ object utils {
                 "children" -> children.toList
         ))
     }
-    
+
     /**
      * Recursive function to merge two JSON objects
      */
@@ -456,9 +432,9 @@ object utils {
             }
             JsObject(result.toSeq)
         }
-        merge(a, b)        
+        merge(a, b)
     }
-    
+
     /**
      * Merges maps and JSON intertwined
      */
@@ -471,7 +447,7 @@ object utils {
                     val newValue = (maybeExistingValue, otherValue) match {
                         case (Some(e: JsObject), o: JsObject) => mergeJson(e, o)
                         case (Some(e: Map[String, Any]), o: Map[String, Any]) => merge(e, o)
-                        case _                                => otherValue
+                        case _ => otherValue
                     }
                     otherKey -> newValue
             }

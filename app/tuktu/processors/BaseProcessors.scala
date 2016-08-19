@@ -113,7 +113,7 @@ class FieldCopyProcessor(resultName: String) extends BaseProcessor(resultName) {
                 path = (copy \ "path").as[List[String]]
                 result = (copy \ "result").as[String]
             } yield {
-                result -> utils.fieldParser(datum, path, null)
+                result -> utils.fieldParser(datum, path).getOrElse(null)
             })
         }
     })
@@ -194,15 +194,16 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
                 fields = {
                     val p = (fieldItem \ "path").as[List[String]]
                     if (p.size == 1)
-                        utils.evaluateTuktuString(p.head, datum).split("\\.").toList
-                    else p.map(utils.evaluateTuktuString(_, datum))
+                        utils.evaluateTuktuString(p.head, datum).split('.').toList
+                    else
+                        p.map(utils.evaluateTuktuString(_, datum))
                 }
                 fieldName = (fieldItem \ "result").as[String]
                 field = fields.head
                 if (fields.size > 0 && datum.contains(field))
             } yield {
-                fieldName -> utils.fieldParser(datum, fields, default)
-            }).toMap
+                fieldName -> utils.fieldParser(datum, fields, default).get
+            })
 
             datum ++ newData
         }
@@ -226,11 +227,9 @@ class ListJsonFetcherProcessor(resultName: String) extends BaseProcessor(resultN
             // Get the field and paths
             val paths = datum(field).asInstanceOf[Seq[String]]
             // Get the JSON values
-            datum ++ paths.map(path => 
-                (path, {
-                    utils.fieldParser(datum, path.split("\\.").toList, default)
-                })
-            ).toMap
+            datum ++ paths.map { path => 
+                path -> utils.fieldParser(datum, path.split('.').toList, default).get
+            }
         }
     })
 }
@@ -262,7 +261,7 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
                 f = fields.headOption.getOrElse("")
                 if (f.nonEmpty && datum.contains(f))
             } {
-                mutableDatum += result -> utils.fieldParser(datum, fields, null)
+                mutableDatum += result -> utils.fieldParser(datum, fields).getOrElse(null)
                 cleanUp += f
                 dontCleanUp += result
             }
@@ -532,7 +531,7 @@ class StringImploderProcessor(resultName: String) extends BaseProcessor(resultNa
                 val sep = (fieldObject \ "separator").as[String]
                 // Get the array of strings
                 val value = {
-                    val someVal = utils.fieldParser(datum, fields, None)
+                    val someVal = utils.fieldParser(datum, fields).get
                     someVal match {
                         case sl: JsValue => sl.as[Traversable[String]]
                         case sl: Array[String] => sl.toTraversable
@@ -590,7 +589,7 @@ class TupleListStringImploder(resultName: String) extends BaseProcessor(resultNa
                 val sep = (fieldObject \ "separator").as[String]
                 // Get the tuples
                 val value = {
-                    val someVal = utils.fieldParser(datum, fields, None)
+                    val someVal = utils.fieldParser(datum, fields).get
                     someVal match {
                         case a: (Any, Any) => a._1.toString + sep + a._2.toString
                         case a: Seq[_] => doConversion(a.toList, sep)
@@ -663,7 +662,7 @@ class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(result
                 val sep = (fieldObject \ "separator").as[String]
                 // Get the actual value
                 val values = {
-                    val arr = utils.fieldParser(datum, fields, None)
+                    val arr = utils.fieldParser(datum, fields).get
                     if (arr.isInstanceOf[JsValue])
                         arr.asInstanceOf[JsValue].as[Traversable[JsObject]]
                     else
@@ -671,7 +670,7 @@ class JsObjectImploderProcessor(resultName: String) extends BaseProcessor(result
                 }
                 // Now iterate over the objects
                 val gluedValue = values.map(value => {
-                    utils.jsonParser(value, subpath, None).as[JsString].value
+                    utils.jsonParser(value, subpath).get.as[JsString].value
                 }).mkString(sep)
                 // Replace top-level field
                 fields.head -> gluedValue

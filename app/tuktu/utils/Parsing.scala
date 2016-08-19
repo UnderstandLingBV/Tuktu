@@ -121,7 +121,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
             case ("containsFields(", fields) => fields.split(',').forall { string =>
                 // Get the path and evaluate it against the datum
                 val path = string.split('.').toList
-                tuktu.api.utils.fieldParser(datum, path, Some(null)) != null
+                tuktu.api.utils.fieldParser(datum, path).isDefined
             }
             case ("isNumeric(", field) => Try {
                     StatHelper.anyToDouble(datum(field))
@@ -137,8 +137,8 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                 fields.split(',').forall { string =>
                     // Get the path, evaluate it against the datum, and check if it's JSON
                     val path = string.split('.').toList
-                    val result = tuktu.api.utils.fieldParser(datum, path, Some(null))
-                    result != null && result.isInstanceOf[JsValue]
+                    val result = tuktu.api.utils.fieldParser(datum, path)
+                    result.map { res => res.isInstanceOf[JsValue] }.getOrElse(false)
                 }
             }
             case ("isEmpty(", ")") => datum.isEmpty
