@@ -236,33 +236,29 @@ object utils {
      * Recursively traverses a path of keys until it finds a value (or fails to traverse,
      * in which case a default value is used)
      */
-    def fieldParser(input: Map[String, Any], path: List[String], defaultValue: Option[Any] = None): Option[Any] = path match {
-        case Nil => Some(input)
-        case someKey :: Nil => input.get(someKey) match {
+    def fieldParser(input: Map[String, Any], path: String): Option[Any] = {
+        input.get(path) match {
             case Some(a) => Some(a)
-            case None    => defaultValue
+            case None    => if (path.isEmpty) Some(input) else fieldParser(input, path.split('.').toList)
         }
+    }
+    def fieldParser(input: Map[String, Any], path: List[String]): Option[Any] = path match {
+        case Nil            => Some(input)
+        case someKey :: Nil => input.get(someKey)
         case someKey :: trailPath => input.get(someKey).collect {
             // Handle remainder depending on type
-            case js: JsValue           => jsonParser(js, trailPath, defaultValue.map { default => AnyToJsValue(default) })
-            case map: Map[String, Any] => fieldParser(map, trailPath, defaultValue)
-        }.flatten match {
-            case Some(a) => Some(a)
-            case None    => defaultValue
-        }
+            case js: JsValue           => jsonParser(js, trailPath)
+            case map: Map[String, Any] => fieldParser(map, trailPath)
+        }.flatten
     }
 
     /**
      * Recursively traverses a JSON object of keys until it finds a value (or fails to traverse,
      * in which case a default value is used)
      */
-    def jsonParser(json: JsValue, jsPath: List[String], defaultValue: Option[JsValue] = None): Option[JsValue] = jsPath match {
-        case Nil => Some(json)
-        case js :: trailPath => (json \ js).asOpt[JsValue] match {
-            // Handle the remaining path from the json
-            case Some(nj) => jsonParser(nj, trailPath, defaultValue)
-            case None     => defaultValue
-        }
+    def jsonParser(json: JsValue, jsPath: List[String]): Option[JsValue] = jsPath match {
+        case Nil             => Some(json)
+        case js :: trailPath => (json \ js).asOpt[JsValue].flatMap { json => jsonParser(json, trailPath) }
     }
 
     /**

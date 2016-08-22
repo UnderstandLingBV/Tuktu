@@ -25,7 +25,7 @@ class AggregateByKeyProcessor(resultName: String) extends BaseBucketProcessor(re
             List((for (field <- fields) yield {
                 // Peplace functions with field names
                 val newExpression = parser.allowedFunctions.foldLeft(expression)((a, b) => {
-                    a.replaceAll(b, b + "(" + field + ")")
+                    a.replace(b + "()", b + "(" + field + ")")
                 })
                 // Evaluate string
                 field -> parser(newExpression)

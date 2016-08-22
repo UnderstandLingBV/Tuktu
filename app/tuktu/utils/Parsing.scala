@@ -3,6 +3,7 @@ package tuktu.utils
 import fastparse.WhitespaceApi
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsObject
+import tuktu.api.utils.fieldParser
 import tuktu.processors.bucket.statistics.StatHelper
 import scala.util.{ Try, Success, Failure }
 
@@ -118,10 +119,9 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                     ("isEmpty(".! ~/ ")".!)
             )
         ).map {
-            case ("containsFields(", fields) => fields.split(',').forall { string =>
+            case ("containsFields(", fields) => fields.split(',').forall { path =>
                 // Get the path and evaluate it against the datum
-                val path = string.split('.').toList
-                tuktu.api.utils.fieldParser(datum, path).isDefined
+                fieldParser(datum, path).isDefined
             }
             case ("isNumeric(", field) => Try {
                     StatHelper.anyToDouble(datum(field))
@@ -134,10 +134,9 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                 case _    => false
             }
             case ("isJSON(", fields) => {
-                fields.split(',').forall { string =>
+                fields.split(',').forall { path =>
                     // Get the path, evaluate it against the datum, and check if it's JSON
-                    val path = string.split('.').toList
-                    val result = tuktu.api.utils.fieldParser(datum, path)
+                    val result = fieldParser(datum, path)
                     result.map { res => res.isInstanceOf[JsValue] }.getOrElse(false)
                 }
             }
@@ -199,19 +198,12 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     def allowedFunctions = List(
             "count", "avg", "median", "sum", "max", "min"
     )
-    
-    def parsePath(datum: Map[String, Any], field: String): Option[Any] = {
-        if (datum.contains(field)) tuktu.api.utils.fieldParser(datum, List(field), None)
-        else tuktu.api.utils.fieldParser(datum, field.split('.').toList, None)
-    }
-    
+
     // Strings
-    val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.')).rep(1).!.map(_.toString))
+    val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.')).!.rep(0).map(_.toString))
     // All Tuktu-defined arithmetic functions
     val functions: P[Double] = P(
             (
-                    ("count(".! ~/ ")".!)
-            ) | (
                     (
                         "avg(" | "median(" | "sum(" | "max(" | "min(" | "count("
                     ).! ~/ strings ~ ")"
@@ -220,7 +212,7 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
             case ("avg(", field) => {
                 val (sum, count) = data.foldLeft((0.0, 0.0))((a,b) => {
                     // Get the value of the field we are after
-                    val optionValue = parsePath(b, field)
+                    val optionValue = fieldParser(b, field)
                     val value = optionValue match {
                         case Some(v) => StatHelper.anyToDouble(v)
                         case _ => 0.0
@@ -234,8 +226,8 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
             }
             case ("median(", field) => {
                 val sortedData = (data.collect {
-                    case datum: Map[String, Any] if parsePath(datum, field) != None => {
-                        StatHelper.anyToDouble(parsePath(datum, field).get)
+                    case datum: Map[String, Any] if fieldParser(datum, field) != None => {
+                        StatHelper.anyToDouble(fieldParser(datum, field).get)
                     }
                 }).sorted
 
@@ -250,14 +242,14 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
                     sortedData((n - 1) / 2)
             }
             case ("sum(", field) => data.foldLeft(0.0)((a,b) => a + StatHelper.anyToDouble(
-                    parsePath(b, field) match {
+                    fieldParser(b, field) match {
                         case Some(v) => StatHelper.anyToDouble(v)
                         case _ => 0.0
                     }
             ))
             case ("max(", field) => {
                 val maxElem = data.maxBy(datum => StatHelper.anyToDouble(
-                        parsePath(datum, field) match {
+                        fieldParser(datum, field) match {
                             case Some(v) => StatHelper.anyToDouble(v)
                             case _ => Double.MinValue
                         }
@@ -266,16 +258,15 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
             }
             case ("min(", field) => {
                 val maxElem = data.minBy(datum => StatHelper.anyToDouble(
-                        parsePath(datum, field) match {
+                        fieldParser(datum, field) match {
                             case Some(v) => StatHelper.anyToDouble(v)
                             case _ => Double.MaxValue
                         }
                 ))
                 StatHelper.anyToDouble(maxElem(field))
             }
-            case ("count(", ")") => data.foldLeft(0)((a,b) => a + 1)
             case ("count(", field) => data.foldLeft(0)((a,b) => a + {
-                if (parsePath(b, field) != null) 1 else 0
+                if (fieldParser(b, field).isDefined) 1 else 0
             })
         }
 

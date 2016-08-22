@@ -73,7 +73,7 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
                 field = fields.head
                 if (fields.size > 0 && datum.contains(field))
             } yield {
-                fieldName -> utils.fieldParser(datum, fields, default)
+                fieldName -> utils.fieldParser(datum, fields).getOrElse(default.get)
             }).toMap
         }
     })
@@ -202,7 +202,7 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
                 field = fields.head
                 if (fields.size > 0 && datum.contains(field))
             } yield {
-                fieldName -> utils.fieldParser(datum, fields, default).get
+                fieldName -> utils.fieldParser(datum, fields).getOrElse(default.get)
             })
 
             datum ++ newData
@@ -228,7 +228,7 @@ class ListJsonFetcherProcessor(resultName: String) extends BaseProcessor(resultN
             val paths = datum(field).asInstanceOf[Seq[String]]
             // Get the JSON values
             datum ++ paths.map { path => 
-                path -> utils.fieldParser(datum, path.split('.').toList, default).get
+                path -> utils.fieldParser(datum, path.split('.').toList).getOrElse(default.get)
             }
         }
     })
