@@ -1,24 +1,32 @@
 package controllers.restapi
 
-import play.api.cache.Cache
-import akka.util.Timeout
-import play.api.mvc.Controller
-import concurrent.duration.DurationInt
-import play.api.Play.current
-import play.api.libs.concurrent.Akka
-import akka.pattern.ask
-import tuktu.api.scheduler.Overview
-import play.api.mvc.Action
-import scala.concurrent.Future
-import play.api.libs.json.Json
 import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.libs.json.JsObject
-import tuktu.api.scheduler.KillRequest
-import tuktu.api.DispatchRequest
-import scala.concurrent.duration.FiniteDuration
-import tuktu.api.scheduler.SimpleScheduler
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
+
+import akka.pattern.ask
+import akka.util.Timeout
+import play.api.Play
+import play.api.Play.current
+import play.api.cache.Cache
+import play.api.libs.concurrent.Akka
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
+import play.api.mvc.Action
+import play.api.mvc.Controller
+import tuktu.api.DispatchRequest
 import tuktu.api.scheduler.CronScheduler
+import tuktu.api.scheduler.KillRequest
+import tuktu.api.scheduler.Overview
+import tuktu.api.scheduler.SimpleScheduler
+
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.charset.Charset
+
+import scala.collection.JavaConversions._
 
 object Scheduling extends Controller {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -49,40 +57,65 @@ object Scheduling extends Controller {
      * Terminate a scheduled job by name
      */
     def terminate() = Action.async { implicit request =>
-        val name = (request.body.asJson.getOrElse(Json.obj()).as[JsObject] \ "name").as[String]
-        scheduler ! new KillRequest(name)
-        Future { Ok(Json.obj()) }
+        Future {
+            val name = (request.body.asJson.getOrElse(Json.obj()).as[JsObject] \ "name").as[String]
+            scheduler ! new KillRequest(name)
+            Ok(Json.obj())
+        }
     }
     
     /**
      * Schedule (multiple) simple jobs
      */
     def simple()  = Action.async { implicit request =>
-        val json = request.body.asJson.getOrElse(Json.arr()).as[List[JsObject]]
-        
-        json.foreach(job => {
-            // Get parameters we need
-            val initialDelay = Duration((job \ "initial_delay").as[String]).asInstanceOf[FiniteDuration]
-            val interval = Duration((job \ "interval").as[String]).asInstanceOf[FiniteDuration]
-            val dispatchRequest = new DispatchRequest((job \ "config").as[String], None, false, false, false, None)     
-        
-            scheduler ! new SimpleScheduler((job \ "name").as[String], initialDelay, interval, dispatchRequest)
-        })
-        
-        Future { Ok(Json.obj()) }
+        Future {
+            val json = request.body.asJson.getOrElse(Json.arr()).as[List[JsObject]]
+            
+            json.foreach(job => {
+                // Get parameters we need
+                val initialDelay = Duration((job \ "initial_delay").as[String]).asInstanceOf[FiniteDuration]
+                val interval = Duration((job \ "interval").as[String]).asInstanceOf[FiniteDuration]
+                val dispatchRequest = new DispatchRequest((job \ "config").as[String], None, false, false, false, None)     
+            
+                scheduler ! new SimpleScheduler((job \ "name").as[String], initialDelay, interval, dispatchRequest)
+            })
+            
+            Ok(Json.obj())
+        }
     }
     
     /**
      * Schedules (multiple) cron jobs
      */
     def cron()  = Action.async { implicit request =>
-        val json = request.body.asJson.getOrElse(Json.arr()).as[List[JsObject]]
-        
-        json.foreach(job => {
-            // Start cron job
-            val dispatchRequest = new DispatchRequest((job \ "config").as[String], None, false, false, false, None)     
-            scheduler ! new CronScheduler((job \ "name").as[String], (job \ "schedule").as[String], dispatchRequest)
-        })
-        Future { Ok(Json.obj()) }
+        Future { 
+            val json = request.body.asJson.getOrElse(Json.arr()).as[List[JsObject]]
+            
+            json.foreach(job => {
+                // Start cron job
+                val dispatchRequest = new DispatchRequest((job \ "config").as[String], None, false, false, false, None)     
+                scheduler ! new CronScheduler((job \ "name").as[String], (job \ "schedule").as[String], dispatchRequest)
+                
+                // Should we add this to the auto start or not?
+                if ((job \ "persist").as[Boolean]) {
+                    // Get the autostart cache
+                    val autostart = Cache.getAs[List[JsObject]]("tuktu.scheduler.autostart").getOrElse(List())
+                    val path = Paths.get(Play.current.configuration.getString("tuktu.autostart").getOrElse("conf/autostart.json"))
+                    
+                    // Define JSON
+                    val json = Json.obj(
+                            "id" -> (job \ "config").as[String],
+                            "cron" -> (job \ "schedule").as[String]
+                    )
+                    // Write out
+                    val content = List(Json.obj("autostart" -> Json.arr(autostart ++ List(json))).toString)
+                    Files.write(path, content, Charset.forName("UTF-8"))
+                    
+                    // Add to cache
+                    Cache.set("tuktu.scheduler.autostart", autostart ++ List(json))
+                }
+            })
+            Ok(Json.obj())
+        }
     }
 }

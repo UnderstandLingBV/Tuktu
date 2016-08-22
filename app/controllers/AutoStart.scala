@@ -15,6 +15,8 @@ import play.api.libs.json.Json
 import tuktu.api.DispatchRequest
 
 import tuktu.api.scheduler._
+import play.api.libs.json.JsObject
+import play.api.cache.Cache
 
 /**
  * Load flows from an autostart file and either immediately start running them or
@@ -27,9 +29,12 @@ object AutoStart {
 
     if (Files.isRegularFile(path)) {
         val cfg = Json.parse(Files.readAllBytes(path))
+        
+        // Cache
+        Cache.set("tuktu.scheduler.autostart", (cfg \ "autostart").as[List[JsObject]])
 
         // kick off each job
-        for (job <- (cfg \ "autostart").as[Seq[JsValue]]) {
+        for (job <- (cfg \ "autostart").as[List[JsObject]]) {
             val id = (job \ "id").as[String]
             val dispatchRequest = new DispatchRequest(id, None, false, false, false, None)
             val cron = (job \ "cron").asOpt[String]
