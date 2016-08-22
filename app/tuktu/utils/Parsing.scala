@@ -201,7 +201,7 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     val functions: P[Double] = P(
             (
                     (
-                        "avg(" | "median(" | "sum("
+                        "avg(" | "median(" | "sum(" | "max(" | "min("
                     ).! ~/ strings ~ ")"
             ) | (
                     ("count(".! ~/ ")".!)
@@ -222,6 +222,14 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
                     sortedData((n - 1) / 2)
             }
             case ("sum(", field) => data.foldLeft(0.0)((a,b) => a + StatHelper.anyToDouble(b(field)))
+            case ("max(", field) => {
+                val maxElem = data.maxBy(datum => StatHelper.anyToDouble(datum(field)))
+                StatHelper.anyToDouble(maxElem(field))
+            }
+            case ("min(", field) => {
+                val maxElem = data.minBy(datum => StatHelper.anyToDouble(datum(field)))
+                StatHelper.anyToDouble(maxElem(field))
+            }
             case ("count(", ")") => data.foldLeft(0)((a,b) => a + 1)
         }
 
