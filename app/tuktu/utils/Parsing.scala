@@ -201,8 +201,10 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     val functions: P[Double] = P(
             (
                     (
-                        "avg(" | "median(" | "sum(" | "count("
+                        "avg(" | "median(" | "sum("
                     ).! ~/ strings ~ ")"
+            ) | (
+                    ("count(".! ~/ ")".!)
             )
         ).map {
             case ("avg(", field) => StatHelper.getMeans(data, List(field))(field)
@@ -220,7 +222,7 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
                     sortedData((n - 1) / 2)
             }
             case ("sum(", field) => data.foldLeft(0.0)((a,b) => a + StatHelper.anyToDouble(b(field)))
-            case ("count(", field) => data.foldLeft(0)((a,b) => a + 1)
+            case ("count(", ")") => data.foldLeft(0)((a,b) => a + 1)
         }
 
     // Allow all sorts of numbers, negative and scientific notation
