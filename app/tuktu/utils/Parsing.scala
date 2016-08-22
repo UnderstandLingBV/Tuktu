@@ -195,21 +195,49 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     import fastparse.noApi._
     import White._
 
+    // List of allowed functions
+    def allowedFunctions = List(
+            "count", "avg", "median", "sum", "max", "min"
+    )
+    
+    def parsePath(datum: Map[String, Any], field: String): Option[Any] = {
+        if (datum.contains(field)) tuktu.api.utils.fieldParser(datum, List(field), None)
+        else tuktu.api.utils.fieldParser(datum, field.split('.').toList, None)
+    }
+    
     // Strings
     val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.')).rep(1).!.map(_.toString))
     // All Tuktu-defined arithmetic functions
     val functions: P[Double] = P(
             (
-                    (
-                        "avg(" | "median(" | "sum(" | "max(" | "min("
-                    ).! ~/ strings ~ ")"
-            ) | (
                     ("count(".! ~/ ")".!)
+            ) | (
+                    (
+                        "avg(" | "median(" | "sum(" | "max(" | "min(" | "count("
+                    ).! ~/ strings ~ ")"
             )
         ).map {
-            case ("avg(", field) => StatHelper.getMeans(data, List(field))(field)
+            case ("avg(", field) => {
+                val (sum, count) = data.foldLeft((0.0, 0.0))((a,b) => {
+                    // Get the value of the field we are after
+                    val optionValue = parsePath(b, field)
+                    val value = optionValue match {
+                        case Some(v) => StatHelper.anyToDouble(v)
+                        case _ => 0.0
+                    }
+                    (a._1 + value, a._2 + (optionValue match {
+                        case Some(v) => 1.0
+                        case _ => 0.0
+                    }))
+                })
+                sum / count
+            }
             case ("median(", field) => {
-                val sortedData = data.map(datum => StatHelper.anyToDouble(datum(field))).sorted
+                val sortedData = (data.collect {
+                    case datum: Map[String, Any] if parsePath(datum, field) != None => {
+                        StatHelper.anyToDouble(parsePath(datum, field).get)
+                    }
+                }).sorted
 
                 // Find the mid element
                 val n = sortedData.size
@@ -221,16 +249,34 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
                 } else
                     sortedData((n - 1) / 2)
             }
-            case ("sum(", field) => data.foldLeft(0.0)((a,b) => a + StatHelper.anyToDouble(b(field)))
+            case ("sum(", field) => data.foldLeft(0.0)((a,b) => a + StatHelper.anyToDouble(
+                    parsePath(b, field) match {
+                        case Some(v) => StatHelper.anyToDouble(v)
+                        case _ => 0.0
+                    }
+            ))
             case ("max(", field) => {
-                val maxElem = data.maxBy(datum => StatHelper.anyToDouble(datum(field)))
+                val maxElem = data.maxBy(datum => StatHelper.anyToDouble(
+                        parsePath(datum, field) match {
+                            case Some(v) => StatHelper.anyToDouble(v)
+                            case _ => Double.MinValue
+                        }
+                ))
                 StatHelper.anyToDouble(maxElem(field))
             }
             case ("min(", field) => {
-                val maxElem = data.minBy(datum => StatHelper.anyToDouble(datum(field)))
+                val maxElem = data.minBy(datum => StatHelper.anyToDouble(
+                        parsePath(datum, field) match {
+                            case Some(v) => StatHelper.anyToDouble(v)
+                            case _ => Double.MaxValue
+                        }
+                ))
                 StatHelper.anyToDouble(maxElem(field))
             }
             case ("count(", ")") => data.foldLeft(0)((a,b) => a + 1)
+            case ("count(", field) => data.foldLeft(0)((a,b) => a + {
+                if (parsePath(b, field) != null) 1 else 0
+            })
         }
 
     // Allow all sorts of numbers, negative and scientific notation
