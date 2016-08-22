@@ -195,45 +195,32 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     import White._
 
     // List of allowed functions
-    def allowedFunctions = List(
-            "count", "avg", "median", "sum", "max", "min"
-    )
+    def allowedFunctions = List("count", "avg", "median", "sum", "max", "min")
 
     // Strings
-    val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.')).!.rep(0).map(_.toString))
+    val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.')).rep(0).!.map(_.toString))
     // All Tuktu-defined arithmetic functions
     val functions: P[Double] = P(
-            (
-                    (
-                        "avg(" | "median(" | "sum(" | "max(" | "min(" | "count("
-                    ).! ~/ strings ~ ")"
-            )
+            StringIn(allowedFunctions: _*).! ~/ "(" ~/ strings ~ ")"
         ).map {
-            case ("avg(", field) => {
-                val (sum, count) = data.foldLeft((0.0, 0.0))((a,b) => {
-                    // Get the value of the field we are after
-                    val optionValue = fieldParser(b, field)
-                    val value = optionValue match {
-                        case Some(v) => StatHelper.anyToDouble(v)
-                        case _ => 0.0
-                    }
-                    (a._1 + value, a._2 + (optionValue match {
-                        case Some(v) => 1.0
-                        case _ => 0.0
-                    }))
-                })
-                sum / count
+            case ("avg", field) => {
+                val mapped = for (datum <- data; v = fieldParser(datum, field) if v.isDefined) yield StatHelper.anyToDouble(v.get)
+                val sum = mapped.sum
+                val count = mapped.size
+
+                if (count > 0)
+                    sum / count
+                else
+                    0.0
             }
-            case ("median(", field) => {
-                val sortedData = (data.collect {
-                    case datum: Map[String, Any] if fieldParser(datum, field) != None => {
-                        StatHelper.anyToDouble(fieldParser(datum, field).get)
-                    }
-                }).sorted
+            case ("median", field) => {
+                val sortedData = (for (datum <- data; v = fieldParser(datum, field) if v.isDefined) yield StatHelper.anyToDouble(v.get)).sorted
 
                 // Find the mid element
                 val n = sortedData.size
-                if (n % 2 == 0) {
+                if (n == 0)
+                    0.0
+                else if (n % 2 == 0) {
                     // Get the two elements and average them
                     val n2 = n / 2
                     val n1 = n2 - 1
@@ -241,33 +228,18 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
                 } else
                     sortedData((n - 1) / 2)
             }
-            case ("sum(", field) => data.foldLeft(0.0)((a,b) => a + StatHelper.anyToDouble(
-                    fieldParser(b, field) match {
-                        case Some(v) => StatHelper.anyToDouble(v)
-                        case _ => 0.0
-                    }
-            ))
-            case ("max(", field) => {
-                val maxElem = data.maxBy(datum => StatHelper.anyToDouble(
-                        fieldParser(datum, field) match {
-                            case Some(v) => StatHelper.anyToDouble(v)
-                            case _ => Double.MinValue
-                        }
-                ))
-                StatHelper.anyToDouble(maxElem(field))
+            case ("sum", field) => {
+                data.map { datum => StatHelper.anyToDouble(fieldParser(datum, field).getOrElse(Double.MinValue)) }.sum
             }
-            case ("min(", field) => {
-                val maxElem = data.minBy(datum => StatHelper.anyToDouble(
-                        fieldParser(datum, field) match {
-                            case Some(v) => StatHelper.anyToDouble(v)
-                            case _ => Double.MaxValue
-                        }
-                ))
-                StatHelper.anyToDouble(maxElem(field))
+            case ("max", field) => {
+                data.map { datum => StatHelper.anyToDouble(fieldParser(datum, field).getOrElse(Double.MinValue)) }.max
             }
-            case ("count(", field) => data.foldLeft(0)((a,b) => a + {
-                if (fieldParser(b, field).isDefined) 1 else 0
-            })
+            case ("min", field) => {
+                data.map { datum => StatHelper.anyToDouble(fieldParser(datum, field).getOrElse(Double.MaxValue)) }.min
+            }
+            case ("count", field) => {
+                data.count { datum => fieldParser(datum, field).isDefined }
+            }
         }
 
     // Allow all sorts of numbers, negative and scientific notation
