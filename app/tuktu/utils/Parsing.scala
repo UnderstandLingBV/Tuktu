@@ -210,8 +210,6 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     // All Tuktu-defined arithmetic functions
     val functions: P[Double] = P(
             (
-                    ("count(".! ~/ ")".!)
-            ) | (
                     (
                         "avg(" | "median(" | "sum(" | "max(" | "min(" | "count("
                     ).! ~/ strings ~ ")"
@@ -273,7 +271,7 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
                 ))
                 StatHelper.anyToDouble(maxElem(field))
             }
-            case ("count(", ")") => data.foldLeft(0)((a,b) => a + 1)
+            case ("count(", field) if field.isEmpty => data.foldLeft(0)((a,b) => a + 1)
             case ("count(", field) => data.foldLeft(0)((a,b) => a + {
                 if (parsePath(b, field) != null) 1 else 0
             })
