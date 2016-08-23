@@ -70,27 +70,22 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         if (data.size == 0) List()
         else {
-            // Go over all paths
-            (for (obj <- fields) yield {
-                val field = (obj \ "field").as[String]
+            // Create the parser
+            val parser = new TuktuArithmeticsParser(data)
+            
+            // Get all values
+            val allValues = data.flatMap(_.keys).distinct
+           
+            // Compute stuff
+            List((for (value <- allValues) yield {
+                // Peplace functions with field value names
+                val newExpression = parser.allowedFunctions.foldLeft(expression)((a, b) => {
+                    a.replace(b + "()", b + "(" + value + ")")
+                })
                 
-                // Create the parser
-                val parser = new TuktuArithmeticsParser(data)
-                
-                // Get all values
-                val allValues = data.flatMap(_.keys).distinct
-               
-                // Compute stuff
-                (for (value <- allValues) yield {
-                    // Peplace functions with field value names
-                    val newExpression = parser.allowedFunctions.foldLeft(expression)((a, b) => {
-                        a.replace(b + "()", b + "(" + value + ")")
-                    })
-                    
-                    // Evaluate string
-                    value -> parser(newExpression)
-                }).toMap
-            }).toList
+                // Evaluate string
+                value -> parser(newExpression)
+            }).toMap)
         }
     }
 }
