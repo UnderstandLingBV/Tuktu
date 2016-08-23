@@ -204,9 +204,14 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
             StringIn(allowedFunctions: _*).! ~/ "(" ~/ strings ~ ")"
         ).map {
             case ("avg", field) => {
-                val mapped = for (datum <- data; v = fieldParser(datum, field) if v.isDefined) yield StatHelper.anyToDouble(v.get)
-                val sum = mapped.sum
-                val count = mapped.size
+                val (sum, count) = data.foldLeft(0.0, 0) {
+                    case ((sum, count), datum) =>
+                        val v = fieldParser(datum, field).map { StatHelper.anyToDouble(_) }
+                        (
+                            sum + v.getOrElse(0.0),
+                            count + { if (v.isDefined) 1 else 0 }
+                        )
+                }
 
                 if (count > 0)
                     sum / count
@@ -229,13 +234,19 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
                     sortedData((n - 1) / 2)
             }
             case ("sum", field) => {
-                data.map { datum => StatHelper.anyToDouble(fieldParser(datum, field).getOrElse(Double.MinValue)) }.sum
+                data.foldLeft(0.0) { (sum, datum) => sum + fieldParser(datum, field).map { StatHelper.anyToDouble(_) }.getOrElse(0.0) }
             }
             case ("max", field) => {
-                data.map { datum => StatHelper.anyToDouble(fieldParser(datum, field).getOrElse(Double.MinValue)) }.max
+                data.foldLeft(Double.MinValue) { (max, datum) =>
+                    val v = fieldParser(datum, field).map { StatHelper.anyToDouble(_) }.getOrElse(Double.MinValue)
+                    if (v > max) v else max
+                }
             }
             case ("min", field) => {
-                data.map { datum => StatHelper.anyToDouble(fieldParser(datum, field).getOrElse(Double.MaxValue)) }.min
+                data.foldLeft(Double.MaxValue) { (min, datum) =>
+                    val v = fieldParser(datum, field).map { StatHelper.anyToDouble(_) }.getOrElse(Double.MaxValue)
+                    if (v < min) v else min
+                }
             }
             case ("count", field) => {
                 data.count { datum => fieldParser(datum, field).isDefined }
