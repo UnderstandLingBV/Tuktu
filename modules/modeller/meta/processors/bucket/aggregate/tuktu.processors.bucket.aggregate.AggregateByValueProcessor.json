@@ -1,0 +1,57 @@
+{
+	"name": "Aggregate By Value Processor",
+	"description": "Aggregates values of a DataPacket by value.",
+	"class": "tuktu.processors.bucket.aggregate.AggregateByValueProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The fields to aggregate the expression on.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "field",
+									"description": "The actual field to aggregate on. Use dot-notation to traverse paths.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "base_value",
+									"description": "An arithmetic expression to evaluate the base value. For example, for counting, use 1 - for summing, use the value of the field via ${field}.",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "expression",
+					"description": "The expression to compute. When calling pre-defined functions like sum(), do not enter a field name.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
