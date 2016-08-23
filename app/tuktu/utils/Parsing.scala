@@ -197,11 +197,9 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     // List of allowed functions
     def allowedFunctions = List("count", "avg", "median", "sum", "max", "min")
 
-    // Strings
-    val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.')).rep(0).!.map(_.toString))
     // All Tuktu-defined arithmetic functions
     val functions: P[Double] = P(
-            StringIn(allowedFunctions: _*).! ~/ "(" ~/ strings ~ ")"
+            StringIn(allowedFunctions: _*).! ~/ "(" ~/ CharPred(_ != ')').rep(0).! ~ ")"
         ).map {
             case ("avg", field) => {
                 val (sum, count) = data.foldLeft(0.0, 0) {
