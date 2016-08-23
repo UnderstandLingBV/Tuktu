@@ -19,7 +19,7 @@ class MinProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     }
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        if (data.size == 0) List()
+        if (data.isEmpty) List()
         else {
             // See what type of data it is
             val firstElem = data.head(field)
@@ -56,7 +56,7 @@ class MaxProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     }
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        if (data.size == 0) List()
+        if (data.isEmpty) List()
         else {
             // See what type of data it is
             val firstElem = data.head(field)
@@ -93,7 +93,7 @@ class SumProcessor(resultName: String) extends BaseBucketProcessor(resultName) {
     }
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        if (data.size == 0) List()
+        if (data.isEmpty) List()
         else {
             // See what type of data it is
             val firstElem = data.head(field)

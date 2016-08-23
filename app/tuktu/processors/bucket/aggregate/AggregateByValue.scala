@@ -26,7 +26,7 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         new DataPacket(
-            if (data.data.size == 0) List()
+            if (data.isEmpty) List()
             else {
                 // Go over all paths
                 (for (obj <- fields) yield {
@@ -68,7 +68,7 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
     })
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
-        if (data.size == 0) List()
+        if (data.isEmpty) List()
         else {
             // Create the parser
             val parser = new TuktuArithmeticsParser(data)

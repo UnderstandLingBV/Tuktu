@@ -1,5 +1,5 @@
 @(buckets: Map[List[String], Int])
-@if(buckets.size == 0) {
+@if(buckets.isEmpty) {
     <h2>Currently, no buckets exist on this node.</h2>
 } else {
     <table class="table">
@@ -10,16 +10,16 @@
             </tr>
         </thead>
         <tbody>
-		@for(bucket <- buckets) {
-		    <tr>
-		      <td>
-		          <a href="#">@bucket._1.mkString("</a>, <a href=#>")</a>
-		      </td>
-		      <td>
-		          @bucket._2
-		      </td>
-		    </tr>
-		}
-	   </tbody>
-	</table>
+        @for(bucket <- buckets) {
+            <tr>
+              <td>
+                  <a href="#">@bucket._1.mkString("</a>, <a href=#>")</a>
+              </td>
+              <td>
+                  @bucket._2
+              </td>
+            </tr>
+        }
+        </tbody>
+    </table>
 }

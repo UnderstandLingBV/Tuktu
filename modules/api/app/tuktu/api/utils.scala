@@ -62,7 +62,7 @@ object utils {
                     // Skip the closing quote of the string encapsulating a non-string variable
                     skipQuote = false
                 } else {
-                    if (buffer.length == 0) {
+                    if (buffer.isEmpty) {
                         if (currentChar.equals('$')) {
                             buffer.append(currentChar)
                         } else {
@@ -169,7 +169,7 @@ object utils {
             // The prefix length of TuktuStrings "#{".length = 2
             val prefixSize = "#{".length
             cleaned.foreach { currentChar =>
-                if (buffer.length == 0) {
+                if (buffer.isEmpty) {
                     if (currentChar.equals('#')) {
                         buffer.append(currentChar)
                     } else {

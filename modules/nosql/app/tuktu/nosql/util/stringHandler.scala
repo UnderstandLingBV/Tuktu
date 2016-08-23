@@ -13,7 +13,7 @@ object stringHandler {
         val prefixSize = "${".length
 
         for (currentChar <- str) {
-            if (buffer.length == 0) {
+            if (buffer.isEmpty) {
                 if (currentChar.equals('$'))
                     buffer.append(currentChar)
                 else

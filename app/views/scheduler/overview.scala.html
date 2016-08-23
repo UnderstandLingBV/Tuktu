@@ -3,7 +3,7 @@
 @index("Scheduler", messages) {
     @schedulerMenu()
 } {
-    @if(jobs.size == 0) {
+    @if(jobs.isEmpty) {
         <h2>No scheduled jobs found!</h2>
     } else {
         <table class="table table-striped">
