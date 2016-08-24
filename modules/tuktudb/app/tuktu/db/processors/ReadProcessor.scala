@@ -26,7 +26,10 @@ class ReadProcessor(resultName: String) extends BaseProcessor(resultName) {
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Parse keys
-        val keys = keyFields.map(key => data.data.head(key))
+        val keys = keyFields.map(key => {
+            val datum = data.data.head
+            datum(utils.evaluateTuktuString(key, datum))
+        })
 
         // Request value from daemon
         val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? new ReadRequest(keys)
