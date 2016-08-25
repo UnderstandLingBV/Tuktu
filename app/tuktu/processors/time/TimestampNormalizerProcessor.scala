@@ -30,9 +30,9 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
     var dateTimeFormatter: DateTimeFormatter = _
 
     override def initialize(config: JsObject) {
-        val datetimeFormat = (config \ "datetime_format").as[String]
+        val datetimeFormat = (config \ "datetime_format").asOpt[String]
         datetimeField = (config \ "datetime_field").as[String]
-        val datetimeLocale = (config \ "datetime_locale").as[String]
+        val datetimeLocale = (config \ "datetime_locale").asOpt[String]
 
         millis = (config \ "time" \ "millis").asOpt[Int].getOrElse(0)
         seconds = (config \ "time" \ "seconds").asOpt[Int].getOrElse(0)
@@ -46,7 +46,9 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
         if (List(millis.abs, seconds.abs, minutes.abs, hours.abs, days.abs, months.abs, years.abs).max == 0)
             seconds = 1
 
-        dateTimeFormatter = DateTimeFormat.forPattern(datetimeFormat).withLocale(Locale.forLanguageTag(datetimeLocale))
+        datetimeFormat.collect {
+            case format: String => dateTimeFormatter = DateTimeFormat.forPattern(format).withLocale(Locale.forLanguageTag(datetimeLocale.getOrElse("en")))
+        }
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {

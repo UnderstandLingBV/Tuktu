@@ -20,9 +20,9 @@
 			"parameters": [
 				{
 					"name": "datetime_format",
-					"description": "The datetime format to parse the given field with.",
+					"description": "The datetime format to parse the given field with. Can be left empty if field is already a datetime object or a long timestamp.",
 					"type": "string",
-					"required": true
+					"required": false
 				},
 				{
 					"name": "datetime_field",
@@ -34,7 +34,8 @@
 					"name": "datetime_locale",
 					"description": "The locale of the datetime format to parse the field with.",
 					"type": "string",
-					"required": true
+					"required": false,
+					"default": "en"
 				},
 				{
 					"name": "time",
