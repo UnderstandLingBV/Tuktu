@@ -17,35 +17,36 @@ import akka.util.Timeout
  */
 class DeleteProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    
+
     var key: String = _
-    var sync = false
-    
+    var sync: Boolean = _
+
     override def initialize(config: JsObject) {
         key = (config \ "key").as[String]
         sync = (config \ "sync").asOpt[Boolean].getOrElse(false)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Collect keys for all data items
         val uniqueKeys = (for (datum <- data.data) yield utils.evaluateTuktuString(key, datum)).distinct
-        
+
         // Delete for all keys
         if (sync) {
             val futs = for (k <- uniqueKeys) yield {
                 // Send request to daemon
                 Akka.system.actorSelection("user/tuktu.db.Daemon") ? new DeleteRequest(k, sync)
             }
-            
+
             Future.sequence(futs).map { _ => data }
-        }
-        else Future {
-            for (k <- uniqueKeys) {
-                // Send request to daemon
-                Akka.system.actorSelection("user/tuktu.db.Daemon") ! new DeleteRequest(k, sync)
+        } else {
+            Future {
+                for (k <- uniqueKeys) {
+                    // Send request to daemon
+                    Akka.system.actorSelection("user/tuktu.db.Daemon") ! new DeleteRequest(k, sync)
+                }
+
+                data
             }
-            
-            data
         }
     })
 }

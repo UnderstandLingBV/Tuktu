@@ -19,7 +19,7 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "keys",
+					"name": "key",
 					"description": "The key of the bucket to read from. Insert field values using ${..} notation.",
 					"type": "string",
 					"required": true
