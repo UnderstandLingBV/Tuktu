@@ -32,17 +32,21 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
                 (for (obj <- fields) yield {
                     val field = (obj \ "field").as[String]
                     val base = (obj \ "base_value").as[String]
+                    var evaluatedExpression: Option[String] = None
 
                     // We have to get all the values for this key over all data
                     val baseValues = data.data.collect {
                         case datum: Map[String, Any] if utils.fieldParser(datum, utils.evaluateTuktuString(field, datum)).isDefined => {
+                            // Evaluate expression
+                            if (evaluatedExpression == None)
+                                evaluatedExpression = Some(utils.evaluateTuktuString(expression, datum))
+
                             // Get value to use
-                            val value = utils.fieldParser(datum, utils.evaluateTuktuString(field, datum)).get match {
+                            val value: String = utils.fieldParser(datum, utils.evaluateTuktuString(field, datum)).get match {
                                 case v: JsString => v.value
                                 case v: Any      => v.toString
                             }
-                            Map(value.toString ->
-                                ArithmeticParser(utils.evaluateTuktuString(base, datum)))
+                            Map(value -> ArithmeticParser(utils.evaluateTuktuString(base, datum)))
                         }
                     }
 
@@ -50,12 +54,12 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
                     val parser = new TuktuArithmeticsParser(baseValues)
 
                     // Get all values
-                    val allValues = baseValues.flatMap(_.keys).distinct
+                    val allValues = baseValues.flatMap { _.keys }.distinct
 
                     // Compute stuff
                     (for (value <- allValues) yield {
                         // Peplace functions with field value names
-                        val newExpression = parser.allowedFunctions.foldLeft(expression)((a, b) => {
+                        val newExpression = parser.allowedFunctions.foldLeft(evaluatedExpression.get)((a, b) => {
                             a.replace(b + "()", b + "(" + value + ")")
                         })
 
