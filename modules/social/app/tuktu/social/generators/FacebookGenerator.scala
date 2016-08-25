@@ -58,7 +58,7 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: FacebookBatcher, u
                     if (currentSearch != null) {
                         // Get the individual JSON results
                         val objects = currentSearch.toList
-                        if (objects.size > 0) resultsFound = true
+                        if (objects.nonEmpty) resultsFound = true
                         for (obj <- objects) {
                             val playJs = Json.parse(obj.toString)
                             // Get the unix timestamp of this object

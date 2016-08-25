@@ -46,7 +46,7 @@ class HeadOfListProcessor(resultName: String) extends BaseProcessor(resultName) 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         new DataPacket(for (datum <- data.data) yield {
             val value = datum(field).asInstanceOf[Seq[Any]]
-            if (value.size > 0) datum + (resultName -> value.head)
+            if (value.nonEmpty) datum + (resultName -> value.head)
             else datum
         })
     })
@@ -71,7 +71,7 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
                 fields = (fieldItem \ "path").as[List[String]]
                 fieldName = evaluateTuktuString((fieldItem \ "result").as[String], datum)
                 field = fields.head
-                if (fields.size > 0 && datum.contains(field))
+                if (fields.nonEmpty && datum.contains(field))
             } yield {
                 fieldName -> utils.fieldParser(datum, fields).getOrElse(default.get)
             }).toMap
@@ -200,7 +200,7 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
                 }
                 fieldName = (fieldItem \ "result").as[String]
                 field = fields.head
-                if (fields.size > 0 && datum.contains(field))
+                if (fields.nonEmpty && datum.contains(field))
             } yield {
                 fieldName -> utils.fieldParser(datum, fields).getOrElse(default.get)
             })

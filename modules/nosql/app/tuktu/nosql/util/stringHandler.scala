@@ -32,7 +32,7 @@ object stringHandler {
 
                     // See if it's a sequence or single field
                     vars(key(0)) match {
-                        case seq: Seq[Any] if vars(key(0)).asInstanceOf[Seq[Any]].size > 0 => {
+                        case seq: Seq[Any] if vars(key(0)).asInstanceOf[Seq[Any]].nonEmpty => {
                             // Iterate over the values
                             val variableList = (for (singleVar <- vars(key(0)).asInstanceOf[Seq[Any]]) yield {
                                 // Parse depending on type

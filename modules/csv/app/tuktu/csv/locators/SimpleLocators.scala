@@ -61,7 +61,7 @@ class Row(params: JsValue) extends BaseLocator(params) {
         }
         
         // Get the value for this cell
-        if (values.size > 0) {
+        if (values.nonEmpty) {
             // See if this index is out of bounds (repeat previous value)
             if (colIndex > values.size) previousValue
             else values(colIndex)
@@ -97,7 +97,7 @@ class CellRangeSplitter(params: JsValue) extends BaseLocator(params) {
         }
         
         // Return the value
-        if (values.size > 0)
+        if (values.nonEmpty)
             values(colIndex % values.size)
         else null
     }

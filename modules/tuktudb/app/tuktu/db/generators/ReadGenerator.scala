@@ -28,7 +28,7 @@ class ReadGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                 
                 fut.onSuccess {
                     case rr: ReadResponse => {
-                        if (rr.value.size > 0) {
+                        if (rr.value.nonEmpty) {
                             // Send it in whole or separately?
                             if (block)
                                 channel.push(new DataPacket(rr.value))

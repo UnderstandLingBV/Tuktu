@@ -33,7 +33,7 @@ class DocumentProcessor(resultName: String) extends BaseProcessor(resultName) {
                 case s: Any => s.toString
             }
             
-            if (str.size > 0)
+            if (str.nonEmpty)
         } yield {
             str
         }).mkString(separator))))

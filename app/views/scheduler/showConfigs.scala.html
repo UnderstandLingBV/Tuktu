@@ -2,7 +2,7 @@
     <div class="row" style="margin-bottom: 20px;">
        <div class="col-xs-11">
            <a href="#" onClick="navigateFolder('')">[root]</a>
-           @if(path.size > 0) {
+           @if(path.nonEmpty) {
                @for((elem, index) <- path.zipWithIndex) { / <a href="#" onClick="navigateFolder('@path.take(index).mkString("/")/@elem')">@elem</a>}
            }
         </div>

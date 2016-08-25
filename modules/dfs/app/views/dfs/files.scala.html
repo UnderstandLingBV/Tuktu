@@ -6,7 +6,7 @@
     <div class="row" style="margin-bottom: 20px;">
        <div class="col-xs-10">
            <a href="#" onClick="navigateFolder('')">[root]</a>
-           @if(index.size > 0) {
+           @if(index.nonEmpty) {
                @for((elem, ind) <- index.zipWithIndex) {
                    / <a href="#" onClick="navigateFolder('@index.take(ind).mkString("/")@elem')">
                        @elem
@@ -74,7 +74,7 @@
         </div>
     </div>
     
-    @if(files.size > 0 || folders.size > 0) {
+    @if(files.nonEmpty || folders.nonEmpty) {
 		<table class="table table-hover">
 	        <tr>
 	           <th>

@@ -91,7 +91,7 @@ class FileRotatingStreamProcessor(resultName: String) extends BaseProcessor(resu
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        if (data.data.size > 0) {
+        if (data.nonEmpty) {
             val now = Calendar.getInstance.getTime
             
             // Set the filename

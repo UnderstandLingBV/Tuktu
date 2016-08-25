@@ -56,7 +56,7 @@ class TDFSTextWriterProcessor(resultName: String) extends BaseProcessor(resultNa
         // Collect ouptut first
         val output = data.data.map(datum => {
             (for (field <- ({
-                if (fields.size > 0) fields else datum.keys
+                if (fields.nonEmpty) fields else datum.keys
             }) if datum.contains(field)) yield datum(field).toString).mkString(fieldSep)
         }).mkString(lineSep) + lineSep
         
