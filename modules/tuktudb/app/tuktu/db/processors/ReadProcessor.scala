@@ -18,24 +18,23 @@ import scala.concurrent.duration.DurationInt
 class ReadProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
-    var keyFields: List[String] = _
+    var key: String = _
 
     override def initialize(config: JsObject) {
-        keyFields = (config \ "keys").as[List[String]]
+        key = (config \ "key").as[String]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        // Parse keys
-        val keys = keyFields.map(key => {
-            val datum = data.data.head
-            datum(utils.evaluateTuktuString(key, datum))
-        })
-
-        // Request value from daemon
-        val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? new ReadRequest(keys)
-
-        fut.map {
-            case rr: ReadResponse => new DataPacket(rr.value)
-        }
+        if (data.data.size > 0) {
+            // Parse keys
+            val evalKey = utils.evaluateTuktuString(key, data.data.head)
+    
+            // Request value from daemon
+            val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? new ReadRequest(evalKey)
+    
+            fut.map {
+                case rr: ReadResponse => new DataPacket(rr.value)
+            }
+        } else Future { data }
     })
 }

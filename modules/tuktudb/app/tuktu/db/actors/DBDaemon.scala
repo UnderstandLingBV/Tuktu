@@ -42,7 +42,7 @@ class DBDaemon() extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Local in-memory database
-    private val tuktudb = collection.mutable.Map[List[Any], collection.mutable.ListBuffer[Map[String, Any]]]()
+    private val tuktudb = collection.mutable.Map[String, collection.mutable.ListBuffer[Map[String, Any]]]()
     
     // Get this local node
     val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
@@ -80,7 +80,7 @@ class DBDaemon() extends Actor with ActorLogging {
                     element <- sr.elements
                     
                     // Hash it
-                    nodes = hash(element.key.map(key => element.value(key)))
+                    nodes = hash(List(element.key))
                     
                     node <- nodes
                 } yield {
@@ -105,10 +105,9 @@ class DBDaemon() extends Actor with ActorLogging {
         case rr: ReplicateRequest => {
             // Add the data packet to our in-memory store
             rr.elements.foreach(elem => {
-                val realKey =elem.key.map(key => elem.value(key))
-                if (!tuktudb.contains(realKey))
-                    tuktudb += realKey -> collection.mutable.ListBuffer[Map[String, Any]]()
-                tuktudb(realKey) += elem.value
+                if (!tuktudb.contains(elem.key))
+                    tuktudb += elem.key -> collection.mutable.ListBuffer[Map[String, Any]]()
+                tuktudb(elem.key) += elem.value
             })
             
             if (rr.needReply) sender ! "ok"
@@ -118,19 +117,23 @@ class DBDaemon() extends Actor with ActorLogging {
             if (tuktudb.contains(rr.key)) sender ! new ReadResponse(tuktudb(rr.key) toList)
             else {
                 // We need to query other nodes
-                val nodes = hash(rr.key) diff List(homeAddress)
+                val nodes = hash(List(rr.key)) diff List(homeAddress)
                 
-                // One must have it, pick any
-                val fut = dbDaemons(Random.shuffle(nodes).head) ? rr
-                
-                fut.map {
-                    case rr: ReadResponse => sender ! rr
+                // There are no other nodes
+                if (nodes.isEmpty) sender ! new ReadResponse(List())
+                else {
+                    // One must have it, pick any
+                    val fut = dbDaemons(Random.shuffle(nodes).head) ? rr
+                    
+                    fut.map {
+                        case rr: ReadResponse => sender ! rr
+                    }
                 }
             }
         }
         case dr: DeleteRequest => {
             // Remove the data packet
-            val nodes = hash(dr.key)
+            val nodes = hash(List(dr.key))
             
             // Need reply or not?
             if (dr.needReply) {
@@ -152,7 +155,7 @@ class DBDaemon() extends Actor with ActorLogging {
             
             val requests = dbDaemons.map(_._2 ? new InternalOverview(or.offset)).asInstanceOf[Seq[Future[OverviewReply]]]
 
-            Future.fold(requests)(Map.empty[List[Any],Int])(_ ++ _.bucketCounts).map {
+            Future.fold(requests)(Map.empty[String, Int])(_ ++ _.bucketCounts).map {
                 result => originalSender ! new OverviewReply(result) 
             }            
         }

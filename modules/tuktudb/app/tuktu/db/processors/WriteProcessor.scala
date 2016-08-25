@@ -21,31 +21,28 @@ import scala.concurrent.Await
 class WriteProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
-    var keyFields: List[String] = _
+    var key: String = _
     var sync = false
     
     override def initialize(config: JsObject) {
-        keyFields = (config \ "keys").as[List[String]]
+        key = (config \ "key").as[String]
         sync = (config \ "sync").asOpt[Boolean].getOrElse(false)
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => {
+        val store = new StoreRequest(for (datum <- data.data) yield {
+            val evalKey = utils.evaluateTuktuString(key, datum)
+            new DBObject(evalKey, datum)
+        }, sync)
+        
         // Send request to daemon
         if (sync) {
-            val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? new StoreRequest({
-                    for (datum <- data.data) yield new DBObject(keyFields, datum)
-            }, sync)
-            
+            val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? store
             fut.map { _ => data}
         }
-        else {
-            Future {
-                Akka.system.actorSelection("user/tuktu.db.Daemon") ! new StoreRequest({
-                        for (datum <- data.data) yield new DBObject(keyFields, datum)
-                }, sync)
-                
-                data
-            }
+        else Future {
+            Akka.system.actorSelection("user/tuktu.db.Daemon") ! store
+            data
         }
     })
 }

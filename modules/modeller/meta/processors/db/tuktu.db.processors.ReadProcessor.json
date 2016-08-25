@@ -20,16 +20,9 @@
 			"parameters": [
 				{
 					"name": "keys",
-					"description": "The fields that need to be read out from the DataPacket to construct the bucket to fetch.",
-					"type": "array",
-					"required": true,
-					"parameters": [
-						{
-							"name": "",
-							"type": "string",
-							"required": false
-						}
-					]
+					"description": "The key of the bucket to read from. Insert field values using ${..} notation.",
+					"type": "string",
+					"required": true
 				}
 			]
 		}

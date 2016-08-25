@@ -4,7 +4,7 @@ package tuktu.api
  * Requests
  */
 case class DBObject(
-        key: List[String],
+        key: String,
         value: Map[String, Any]
 )
 case class StoreRequest(
@@ -16,14 +16,14 @@ case class ReplicateRequest(
         needReply: Boolean
 )
 case class ReadRequest(
-        key: List[Any]
+        key: String
 )
 case class DeleteRequest(
-        key: List[Any],
+        key: String,
         needReply: Boolean
 )
 case class DeleteActionRequest(
-        key: List[Any],
+        key: String,
         needReply: Boolean
 )
 case class PersistRequest()
@@ -31,7 +31,7 @@ case class OverviewRequest(
         offset: Int
 )
 case class OverviewReply(
-        bucketCounts: Map[List[Any], Int]
+        bucketCounts: Map[String, Int]
 )
 
 /**

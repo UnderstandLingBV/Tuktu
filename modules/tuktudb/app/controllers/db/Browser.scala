@@ -39,7 +39,7 @@ object Browser extends Controller {
 
         fut.map {
             case or: OverviewReply => {
-                Ok(views.html.db.overview(or.bucketCounts.map(bucket => bucket._1.map(_.toString) -> bucket._2)))
+                Ok(views.html.db.overview(or.bucketCounts))
             }
         }
     }
