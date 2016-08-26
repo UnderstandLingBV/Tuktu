@@ -17,7 +17,15 @@
 			"name": "config",
 			"type": "object",
 			"required": true,
-			"parameters": []
+			"parameters": [
+				{
+					"name": "remove_empty_datums",
+					"description": "Remove empty datums first, and then empty DataPackets? Or only empty DataPackets?",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
 		}
 	]
 }

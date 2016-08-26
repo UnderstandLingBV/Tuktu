@@ -1058,6 +1058,9 @@ class RemoveEmptyPacketProcessor(resultName: String) extends BaseProcessor(resul
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        data.filterNot { datum => removeEmptyDatums && datum.isEmpty }
-    }) compose Enumeratee.filter(!_.data.isEmpty)
+        if (removeEmptyDatums)
+            data.filter { datum => datum.nonEmpty }
+        else
+            data
+    }) compose Enumeratee.filter { (data: DataPacket) => data.nonEmpty }
 }
