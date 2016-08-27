@@ -168,7 +168,7 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
               if (num < vals.size - 1) self ! (num + 1)
               else self ! new StopPacket
             } else {
-                channel.push(new DataPacket(List(Map(resultName -> vals.map(DummyHelper.valToType(_, outputType))))))
+                channel.push(new DataPacket(vals.map(v => Map(resultName -> DummyHelper.valToType(v, outputType)))))
                 self ! new StopPacket
             }
         }

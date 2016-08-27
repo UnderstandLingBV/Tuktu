@@ -53,6 +53,38 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
 }
 
 /**
+ * Groups data in a DataPacket by a list of fields as key
+ */
+class GroupByProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+
+    // Set up the buffering actor
+    val bufferActor = Akka.system.actorOf(Props(classOf[BufferActor], genActor))
+    
+    var fields: List[String] = _
+
+    override def initialize(config: JsObject) {
+        // Get the field to group on
+        fields = (config \ "fields").as[List[String]]
+    }
+
+    // Use the iteratee and Enumeratee.grouped
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        // Group the data
+        val grouped = data.data.groupBy(datum => fields.map(field => datum(field)))
+        
+        // Send all groups to the buffer actor and release once sent
+        grouped.map(group => {
+            val fut = Future.sequence(group._2.map(datum => bufferActor ? datum))
+            Await.ready(fut, timeout.duration)
+            Await.ready(bufferActor ? "release", timeout.duration)
+        })
+        
+        data
+    }) compose Enumeratee.onEOF(() => bufferActor ! new StopPacket)
+}
+
+/**
  * Buffers datapackets until we have a specific amount of them
  */
 class SizeBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
@@ -68,7 +100,8 @@ class SizeBufferProcessor(resultName: String) extends BaseProcessor(resultName) 
     ) yield new DataPacket(dps.flatMap(data => data.data))
 
     // Use the iteratee and Enumeratee.grouped
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets) compose
+        Enumeratee.filter(!_.data.isEmpty)
 }
 
 /**
@@ -211,11 +244,11 @@ class SignalBufferActor(remoteGenerator: ActorRef) extends Actor with ActorLoggi
  * Splits the elements of a single data packet into separate data packets (one per element)
  */
 class DataPacketSplitterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    // Split the data from our DataPacket into separate data packets
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapFlatten((data: DataPacket) => {
-        Enumerator.enumerate(
-                for (datum <- data.data) yield
-                    new DataPacket(List(datum))
-        )
-    })
+    // Iteratee to take the data we need
+    def groupPackets: Iteratee[DataPacket, DataPacket] = for (
+            dps <- Enumeratee.take[DataPacket](1) &>> Iteratee.getChunks
+    ) yield new DataPacket(dps.flatMap(data => data.data))
+
+    // Use the iteratee and Enumeratee.grouped
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
 }
