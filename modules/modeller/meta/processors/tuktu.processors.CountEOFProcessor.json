@@ -1,0 +1,23 @@
+{
+	"name": "Count EOF Processor",
+	"description": "Counts the amount of EOFs and datums obtained before EOFs.",
+	"class": "tuktu.processors.CountEOFProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": []
+		}
+	]
+}
