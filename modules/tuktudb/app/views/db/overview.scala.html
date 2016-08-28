@@ -11,25 +11,34 @@
         </thead>
 
         <tbody>
-            @for(bucket <- buckets) {
+            @for((bucket, index) <- buckets.zipWithIndex) {
                 <tr>
                     <td>
-                        <a href="#" onclick="loadBucketContents('@{java.net.URLEncoder.encode(bucket._1, "utf-8")}')">
+                        <a href="#" onclick="loadBucketContents('@{java.net.URLEncoder.encode(bucket._1, "utf-8")}', @index)">
                             @bucket._1
                         </a>
                     </td>
                     <td> @bucket._2 </td>
                 </tr>
                 <tr>
-                    <td colspan="2" id="@{java.net.URLEncoder.encode(bucket._1, "utf-8")}"></td>
+                    <td colspan="2" id="content_@index"></td>
                 </tr>
             }
         </tbody>
     </table>
     
     <script type="text/javascript">
-        function loadBucketContents(bucketKey) {
-            
+        function loadBucketContents(bucketKey, index) {
+        	$.ajax({
+                method : "POST",
+                url : "@controllers.db.routes.Browser.getBucket",
+                data : {
+                    key : bucketKey,
+                    idx: index
+                }
+            }).done(function(html) {
+                $('#content_' + index).html(html);
+            });
         }
     </script>
 }

@@ -5,3 +5,4 @@
 # Home page
 GET     /                           controllers.db.Browser.index
 POST    /overview                   controllers.db.Browser.mainOverview
+POST    /bucket                     controllers.db.Browser.getBucket

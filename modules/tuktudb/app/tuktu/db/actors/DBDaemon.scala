@@ -33,10 +33,15 @@ import java.io.File
 import java.nio.file.Files
 import java.io.FileOutputStream
 import java.io.ObjectOutputStream
+import tuktu.api.ContentRequest
+import tuktu.api.ContentReply
 
 // helper case class to get Overview from each node separately
 case class InternalOverview(
     offset: Int
+)
+case class InternalContent(
+        cr: ContentRequest
 )
 
 /**
@@ -193,12 +198,31 @@ class DBDaemon() extends Actor with ActorLogging {
 
             Future.fold(requests)(Map.empty[String, Int])(_ ++ _.bucketCounts).map {
                 result => originalSender ! new OverviewReply(result) 
-            }            
+            }
         }
         case or: InternalOverview => {
             sender ! new OverviewReply(
                     tuktudb.drop(or.offset * 50).take(50).map(bucket => (bucket._1, bucket._2.size)).toMap
             )
+        }
+        case cr: ContentRequest => {
+            // Need to store original sender
+            val originalSender = sender
+            
+            val requests = dbDaemons.map(_._2 ? new InternalContent(cr)).asInstanceOf[Seq[Future[ContentReply]]]
+
+            Future.fold(requests)(List.empty[Map[String, Any]])(_ ++ _.data).map {
+                result => originalSender ! new ContentReply(result) 
+            }
+        }
+        case ic: InternalContent => {
+            val cr = ic.cr
+            sender ! new ContentReply({
+                    // Do we even have the key or not?
+                    if (tuktudb.contains(cr.key)) {
+                        tuktudb(cr.key).drop(cr.offset * 10).take(10).toList
+                    } else List()
+            })
         }
     }
 }

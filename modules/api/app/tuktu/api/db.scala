@@ -33,10 +33,13 @@ case class OverviewRequest(
 case class OverviewReply(
         bucketCounts: Map[String, Int]
 )
-
-/**
- * Responses
- */
+case class ContentRequest(
+        key: String,
+        offset: Int
+)
+case class ContentReply(
+        data: List[Map[String, Any]]
+)
 case class ReadResponse(
         value: List[Map[String, Any]]
 )
