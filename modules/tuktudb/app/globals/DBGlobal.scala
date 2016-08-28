@@ -26,6 +26,7 @@ class DBGlobal() extends TuktuGlobal() {
     override def onStart(app: Application) = {
         // Get replication factor
         Cache.set("tuktu.db.replication", Play.current.configuration.getInt("tuktu.db.replication").getOrElse(2))
+        
         // Set up the DB daemon
         val dbActor = Akka.system.actorOf(Props[DBDaemon], name = "tuktu.db.Daemon")
         dbActor ! new InitPacket

@@ -29,6 +29,10 @@ import scala.util.Random
 import tuktu.api.DeleteActionRequest
 import tuktu.api.OverviewRequest
 import tuktu.api.OverviewReply
+import java.io.File
+import java.nio.file.Files
+import java.io.FileOutputStream
+import java.io.ObjectOutputStream
 
 // helper case class to get Overview from each node separately
 case class InternalOverview(
@@ -48,6 +52,28 @@ class DBDaemon() extends Actor with ActorLogging {
     val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
     // Get cluster nodes
     val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+    
+    // Create data directory
+    val dataDir = new File(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))
+    if (!dataDir.exists)
+        dataDir.mkdirs
+        
+    // Check the persist strategy
+    val (persistType, persistValue) = (
+        Play.current.configuration.getString("tuktu.db.persiststrategy.type").getOrElse("time"),
+        Play.current.configuration.getInt("tuktu.db.persiststrategy.value").getOrElse(1)
+    )
+    // Persist only when a time limit has collapsed
+    if (persistType == "time") {
+        Akka.system.scheduler.schedule(
+                persistValue seconds,
+                persistValue seconds,
+                self,
+                new PersistRequest
+        )
+    }
+    // For size persistence
+    var persistUpdates = 0
     
     // Get all daemons
     val dbDaemons = {
@@ -111,6 +137,14 @@ class DBDaemon() extends Actor with ActorLogging {
             })
             
             if (rr.needReply) sender ! "ok"
+            
+            // Increase persistence counter
+            if (persistType == "size") persistUpdates += 1
+            // If we persist based on number of updates (size) or if we persist on each update, do it now
+            if (persistUpdates >= persistValue || persistValue == "update") {
+                self ! new PersistRequest
+                persistUpdates = 0
+            }
         }
         case rr: ReadRequest => {
             // Probe first
@@ -146,8 +180,10 @@ class DBDaemon() extends Actor with ActorLogging {
             if (dar.needReply) sender ! "ok"
         }
         case pp: PersistRequest => {
-            // @TODO: Persist to disk
-            
+            // Persist to disk
+            val oos = new ObjectOutputStream(new FileOutputStream(dataDir + File.separator + "db.data"))
+            oos.writeObject(tuktudb)
+            oos.close
         }
         case or: OverviewRequest => {
             // need to store original sender

@@ -13,10 +13,23 @@
         <tbody>
             @for(bucket <- buckets) {
                 <tr>
-                    <td> @bucket._1 </td>
+                    <td>
+                        <a href="#" onclick="loadBucketContents('@{java.net.URLEncoder.encode(bucket._1, "utf-8")}')">
+                            @bucket._1
+                        </a>
+                    </td>
                     <td> @bucket._2 </td>
+                </tr>
+                <tr>
+                    <td colspan="2" id="@{java.net.URLEncoder.encode(bucket._1, "utf-8")}"></td>
                 </tr>
             }
         </tbody>
     </table>
+    
+    <script type="text/javascript">
+        function loadBucketContents(bucketKey) {
+            
+        }
+    </script>
 }
