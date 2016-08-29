@@ -1,0 +1,9 @@
+@(data: List[String], idx: Int)
+<ul class="list-unstyled">
+@for((datum, index) <- data.zipWithIndex) {
+    <li>
+        <label onclick="$('#dp_@{idx}_@index').toggle();"><a href="#">Datapacket @index</a></label>
+        <pre id="dp_@{idx}_@index" style="display: none;">@datum</pre>
+    </li>
+}
+</ul>
