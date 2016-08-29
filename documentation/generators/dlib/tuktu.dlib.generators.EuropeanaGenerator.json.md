@@ -17,6 +17,9 @@ Queries the Europeana API and returns pointers to the resulting records.
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **query** *(type: string)* `[Required]`

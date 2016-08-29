@@ -7,8 +7,6 @@ Reads an enitre bucket from the Tuktu DB
 
   * **config** *(type: object)* `[Required]`
 
-    * **keys** *(type: array)* `[Required]`
-    - The fields that need to be read out from the DataPacket to construct the bucket to fetch.
-
-      * **[UNNAMED]** *(type: string)* `[Optional]`
+    * **key** *(type: string)* `[Required]`
+    - The key of the bucket to read from. Insert field values using ${..} notation.
 

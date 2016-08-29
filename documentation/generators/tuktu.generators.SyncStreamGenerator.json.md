@@ -17,6 +17,9 @@ Special sync generator that processes a tuple and returns the actual result.
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **no_return** *(type: boolean)* `[Optional, default = false]`

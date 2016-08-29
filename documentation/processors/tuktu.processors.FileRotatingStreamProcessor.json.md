@@ -27,3 +27,6 @@ Streams data into a file, rotates it based on a given scheme.
 
       * **[UNNAMED]** *(type: string)* `[Required]`
 
+    * **append** *(type: boolean)* `[Optional, default = false]`
+    - Whether or not to append to the file.
+

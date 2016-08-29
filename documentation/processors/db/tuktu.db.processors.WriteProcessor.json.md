@@ -7,10 +7,8 @@ Writes elements in a DataPacket into buckets in the Tuktu DB
 
   * **config** *(type: object)* `[Required]`
 
-    * **keys** *(type: array)* `[Required]`
-    - The fields that need to be read out from the DataPacket to construct the bucket to write to.
-
-      * **[UNNAMED]** *(type: string)* `[Optional]`
+    * **key** *(type: string)* `[Required]`
+    - The key of the bucket to write to. Insert field values using ${..} notation.
 
     * **sync** *(type: boolean)* `[Optional, default = false]`
     - Whether or not to wait for the writing to have occured before continuing.

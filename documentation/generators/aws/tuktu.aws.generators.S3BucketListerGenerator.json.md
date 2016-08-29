@@ -17,6 +17,9 @@ Lists the keys/filenames of all files inside an S3 bucket, possibly recursive.
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **file_name** *(type: string)* `[Required]`

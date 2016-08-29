@@ -18,8 +18,11 @@ Invokes a new generator for every DataPacket, which sends its data to a selected
 
       * **[UNNAMED]** *(type: string)* `[Required]`
 
+    * **keep_alive** *(type: boolean)* `[Optional, default = false]`
+    - If set to true, the config to stream to is loaded once and kept alive. Data is then streamed into it. If set to false, the config to stream to is instantiated once for each datum.
+
     * **flow_field** *(type: string)* `[Required]`
-    - Field containing the path of the flow to load relative to configs root folder; can contain variables which will be resolved with data packets' first datum.
+    - Field containing the path of the flow to load relative to configs root folder; can contain variables which will be resolved with data packets' first datum. If keep_alive is set to true, this field should be the name of the config file to load.
 
     * **send_whole** *(type: boolean)* `[Optional]`
     - True sends the whole DataPacket, false sends each data object inside the DataPacket separately.

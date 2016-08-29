@@ -7,3 +7,6 @@ Removes data packets from the stream that contain no data.
 
   * **config** *(type: object)* `[Required]`
 
+    * **remove_empty_datums** *(type: boolean)* `[Optional, default = false]`
+    - Remove empty datums first, and then empty DataPackets? Or only empty DataPackets?
+

@@ -17,6 +17,9 @@ Reads in an XML file and selects elements from it to stream further. Node that t
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **file_name** *(type: string)* `[Required]`

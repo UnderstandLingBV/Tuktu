@@ -17,6 +17,9 @@ Generates a list of given values.
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **values** *(type: array)* `[Required]`
@@ -26,4 +29,7 @@ Generates a list of given values.
 
     * **separate** *(type: boolean)* `[Optional, default = true]`
     - Send each item separately, or as one big list.
+
+    * **type** *(type: string)* `[Optional, default = "String"]`
+    - What the type of the message is. Can be one of JsObject, JsArray, String, Boolean, Double, Int
 

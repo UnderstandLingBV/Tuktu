@@ -17,3 +17,6 @@ Async 'special' generator that just waits for DataPackets to come in and process
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+

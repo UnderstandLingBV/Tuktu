@@ -17,6 +17,9 @@ Given a list of keywords, users and a geo square, streams public tweets matching
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **credentials** *(type: object)* `[Required]`

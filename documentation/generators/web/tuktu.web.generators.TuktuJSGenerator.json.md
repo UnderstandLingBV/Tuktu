@@ -17,5 +17,11 @@ Generates analytics JavaScript code.
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
+
+    * **add_ip** *(type: boolean)* `[Optional, default = false]`
+    - Should the IP be added to the DataPacket?
 

@@ -7,13 +7,13 @@ Floors a given timestamp, based on the time fields; e.g. floored to the nearest 
 
   * **config** *(type: object)* `[Required]`
 
-    * **datetime_format** *(type: string)* `[Required]`
-    - The datetime format to parse the given field with.
+    * **datetime_format** *(type: string)* `[Optional]`
+    - The datetime format to parse the given field with. Can be left empty if field is already a datetime object or a long timestamp.
 
     * **datetime_field** *(type: string)* `[Required]`
     - The field which contains a formatted datetime, a datetime object, or a long timestamp.
 
-    * **datetime_locale** *(type: string)* `[Required]`
+    * **datetime_locale** *(type: string)* `[Optional, default = "en"]`
     - The locale of the datetime format to parse the field with.
 
     * **time** *(type: object)* `[Required]`

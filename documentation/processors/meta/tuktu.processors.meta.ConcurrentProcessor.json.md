@@ -19,6 +19,12 @@ Takes a subflow and creates a number of instances of it. Data is then processed 
     * **start** *(type: string)* `[Required]`
     - The ID of the processor to compose first.
 
+    * **anchor_fields** *(type: array)* `[Optional]`
+    - If you want to anchor datums, specify the fields to anchor on. Note that once anchoring is enable, DataPackets with multiple datums will inevitably be chopped up into DataPackets for each single datum of the original.
+
+      * **[UNNAMED]** *(type: string)* `[Required]`
+      - A field to anchor on.
+
     * **pipeline** *(type: array)* `[Required]`
     - The actual pipeline of processors.
 

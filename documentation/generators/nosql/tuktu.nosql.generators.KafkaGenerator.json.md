@@ -17,6 +17,9 @@ Creates a Kafka consumer generating data packets from the feed of messages for a
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **kafka_properties** *(type: JsObject)* `[Required]`

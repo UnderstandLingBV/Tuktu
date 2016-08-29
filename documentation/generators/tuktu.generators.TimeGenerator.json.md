@@ -5,6 +5,9 @@ Generates points of time by adding (or subtracting) a certain amount of time to 
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **starting_time** *(type: string)* `[Required]`

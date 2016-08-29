@@ -17,6 +17,9 @@ Harvests metadata record identifiers from an OAI-PMH target repository.
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **target** *(type: string)* `[Required]`

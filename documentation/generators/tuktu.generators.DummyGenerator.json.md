@@ -17,6 +17,9 @@ Generates dummy strings every tick
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **interval** *(type: int)* `[Required]`
@@ -30,4 +33,7 @@ Generates dummy strings every tick
 
     * **max_amount** *(type: int)* `[Optional]`
     - The maximum amount of messages to be sent.
+
+    * **type** *(type: string)* `[Optional, default = "String"]`
+    - What the type of the message is. Can be one of JsObject, JsArray, String, Boolean, Double, Int
 

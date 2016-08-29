@@ -25,6 +25,9 @@ No description present.
     * **append** *(type: boolean)* `[Optional, default = false]`
     - Append the result to the data packet; otherwise the result is ignored.
 
+    * **separate** *(type: boolean)* `[Optional, default = true]`
+    - If a select query is used and multiple result rows are given, either make a datum for each row (true) or concatenate all rows as a list in the datum (false).
+
     * **distinct** *(type: boolean)* `[Optional, default = false]`
     - Only execute distinct queries within each DataPacket once, and reuse results if append is true.
 

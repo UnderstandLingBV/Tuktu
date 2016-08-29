@@ -24,3 +24,6 @@ Streams data into a file and closes it when it's done.
 
       * **[UNNAMED]** *(type: string)* `[Required]`
 
+    * **append** *(type: boolean)* `[Optional, default = false]`
+    - Whether or not to append to the file.
+

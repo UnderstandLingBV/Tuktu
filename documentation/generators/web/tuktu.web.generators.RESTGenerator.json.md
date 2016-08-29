@@ -17,6 +17,9 @@ Makes a REST request and fetches the reply.
 
   * **result** *(type: string)* `[Required]`
 
+  * **stop_on_error** *(type: boolean)* `[Optional, default = true]`
+  - If set to false, Tuktu will not kill the flow on data error.
+
   * **config** *(type: object)* `[Required]`
 
     * **url** *(type: string)* `[Required]`

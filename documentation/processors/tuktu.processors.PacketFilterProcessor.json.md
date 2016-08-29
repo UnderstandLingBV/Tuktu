@@ -7,20 +7,11 @@ Filters data packets satisfying a number of expressions.
 
   * **config** *(type: object)* `[Required]`
 
-    * **expressions** *(type: array)* `[Required]`
-    - The list of expressions.
+    * **type** *(type: string)* `[Required]`
+    - The type of the expression: 'groovy', 'negate' or 'simple'.
 
-      * **expression** *(type: object)* `[Required]`
-      - The actual expression.
-
-        * **type** *(type: string)* `[Required]`
-        - The type of the expression: 'groovy', 'negate' or 'simple'.
-
-        * **and_or** *(type: string)* `[Optional, default = "and"]`
-        - In case of normal or negate type, do all statements need to evaluate to true (and), or at least one (or).
-
-        * **expression** *(type: any)* `[Required]`
-        - The expression itself. This can be a string that needs to be evaluated, or it can be a nested array of new expressions that follow the same structure as any top-level expression.
+    * **expression** *(type: string)* `[Required]`
+    - The expression to evaluate, can be arithmetics, boolean logic and simple predicates like. Supported predicates are: containsFields(field.path.name,...), which checks the presence of all given field paths -- isNumeric(field), which checks if the field is numeric -- isJSON(field.path.name,...), which checks if all given paths exists and are JSON values -- isNull(field), which checks if the field is null -- isEmpty(), which checks if the datum is empty (ie. contains no keys).
 
     * **batch** *(type: boolean)* `[Optional, default = false]`
     - Whether or not to include the entire DataPacket if one or more of the elements match the expression(s)
