@@ -82,7 +82,7 @@ class WikipediaContentGenerator(resultName: String, processors: List[Enumeratee[
     var scraperOffset = 0
     var includeWord = false
     
-    override def receive() = {
+    override def _receive = {
          case config: JsValue => {
              // What language to crawl?
              val language = (config \ "language").as[String]
@@ -127,6 +127,5 @@ class WikipediaContentGenerator(resultName: String, processors: List[Enumeratee[
              scrapers.foreach(a => a ! new StopPacket)
              cleanup
          }
-         case ip: InitPacket => setup
      }
 }

@@ -15,7 +15,7 @@ import tuktu.api.BackPressurePacket
 import tuktu.api.DecreasePressurePacket
 
 class TDFSBinaryReaderGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get file parameters
             val filename = {
@@ -30,9 +30,5 @@ class TDFSBinaryReaderGenerator(resultName: String, processors: List[Enumeratee[
             )
         }
         case tcp: TDFSContentPacket => channel.push(new DataPacket(List(Map(resultName -> tcp.content))))
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
     }
 }

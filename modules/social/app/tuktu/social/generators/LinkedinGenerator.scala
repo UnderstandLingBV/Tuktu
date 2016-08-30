@@ -17,7 +17,7 @@ import com.github.scribejava.core.model.OAuth2AccessToken
  * Gets data from a linkedin endpoint
  */
 class LinkedinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get credentials
             val consumerKey = (config \ "credentials" \ "consumer_key").as[String]
@@ -58,7 +58,5 @@ class LinkedinGenerator(resultName: String, processors: List[Enumeratee[DataPack
             // Terminate
             self ! new StopPacket
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }

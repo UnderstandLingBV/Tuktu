@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.concurrent.atomic.AtomicInteger
 
 class ReadGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             var successCounts = new AtomicInteger(0) 
             
@@ -47,7 +47,5 @@ class ReadGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                 }
             }
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }

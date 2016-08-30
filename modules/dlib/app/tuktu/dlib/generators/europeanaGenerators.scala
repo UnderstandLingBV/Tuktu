@@ -57,10 +57,8 @@ class EuropeanaActor(parentActor: ActorRef, query: String, maxresult: Option[Int
 class EuropeanaGenerator( resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef] ) 
     extends BaseGenerator(resultName, processors, senderActor) 
 {
-    override def receive() = 
+    override def _receive = 
     {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
         case config: JsValue => 
         {
             // Get the Europeana url to query        
@@ -73,10 +71,7 @@ class EuropeanaGenerator( resultName: String, processors: List[Enumeratee[DataPa
             val europeanaActor = Akka.system.actorOf(Props(classOf[EuropeanaActor], self, url, maxresult))
             europeanaActor ! new InitPacket()
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
         case link: String => channel.push(new DataPacket(List(Map(resultName -> link))))
-        case x => Logger.error("Europeana generator got unexpected packet " + x + "\r\n")
     }
 }
 

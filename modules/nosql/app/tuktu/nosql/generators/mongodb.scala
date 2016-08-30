@@ -42,7 +42,7 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
     var conn: MongoConnection = _
     var nodes: List[String] = _
     
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get hosts
             nodes = (config \ "hosts").as[List[String]]
@@ -119,7 +119,6 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
                 MongoPool.releaseConnection(nodes, conn)
             cleanup
         }
-        case ip: InitPacket => setup
     }
 }
 
@@ -130,7 +129,7 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
     var conn: MongoConnection = _
     var nodes: List[String] = _
     
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get hosts
             nodes = (config \ "hosts").as[List[String]]
@@ -187,7 +186,6 @@ class MongoDBFindGenerator(resultName: String, processors: List[Enumeratee[DataP
                 MongoPool.releaseConnection(nodes, conn)
             cleanup(false)
         }
-        case ip: InitPacket => setup
     }
 }
 
@@ -198,7 +196,7 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
     var conn: MongoConnection = _
     var nodes: List[String] = _
     
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get hosts
             nodes = (config \ "hosts").as[List[String]]
@@ -254,7 +252,6 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
                 MongoPool.releaseConnection(nodes, conn)
             cleanup
         }
-        case ip: InitPacket => setup
     }
 }
 
@@ -265,7 +262,7 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
     var conn: MongoConnection = _
     var nodes: List[String] = _
     
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get hosts
             nodes = (config \ "hosts").as[List[String]]
@@ -321,6 +318,5 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
                 MongoPool.releaseConnection(nodes, conn)
             cleanup
         }
-        case ip: InitPacket => setup
     }
 }

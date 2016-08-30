@@ -105,7 +105,7 @@ class XlsReader(parentActor: ActorRef, fileName: String, sheetName: String, valu
 class XlsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     private var flattened = false
 
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get filename, sheet name and data start
             val fileName = (config \ "filename").as[String]
@@ -126,10 +126,6 @@ class XlsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val xslGenActor = Akka.system.actorOf(Props(classOf[XlsReader], self, fileName, sheetName, valueName,
                 dataColStart, dataColEnd, hierarchy, endFieldCol, endField))
             xslGenActor ! new InitPacket()
-        }
-        case sp: StopPacket => {
-            channel.eofAndEnd
-            self ! PoisonPill
         }
         case headerfullLine: Map[String, String] => flattened match {
             case false => channel.push(new DataPacket(List(Map(resultName -> headerfullLine))))

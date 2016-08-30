@@ -12,7 +12,7 @@ import play.api.Logger
 class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var twitterStream: TwitterStream = _
 
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get credentials
             val credentials = (config \ "credentials").as[JsObject]
@@ -86,6 +86,5 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             twitterStream.shutdown
             cleanup
         }
-        case ip: InitPacket => setup
     }
 }

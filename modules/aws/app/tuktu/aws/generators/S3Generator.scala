@@ -64,9 +64,7 @@ class ListFilesActor(s3Client: AmazonS3Client, recursive: Boolean, parent: Actor
  * Generator that lists the file names/keys of all files present in an S3 bucket, potentially recursive
  */
 class S3BucketListerGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
+    override def _receive = {
         case config: JsValue => {
             // Recursive or not?
             val recursive = (config \ "recursive").asOpt[Boolean].getOrElse(false)
@@ -87,7 +85,5 @@ class S3BucketListerGenerator(resultName: String, processors: List[Enumeratee[Da
             lister ! new ListFilePacket(bucket, fileName, true)
         }
         case name: String => channel.push(new DataPacket(List(Map(resultName -> name))))
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }

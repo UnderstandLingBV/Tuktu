@@ -105,7 +105,7 @@ class TimerActor(parentActor: ActorRef, startingTime: DateTime, endingTime: Opti
 class TimeGenerator( resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef] ) 
     extends BaseGenerator(resultName, processors, senderActor) 
 {
-    override def receive() = 
+    override def _receive = 
     {
         case config: JsValue => 
         {
@@ -138,10 +138,7 @@ class TimeGenerator( resultName: String, processors: List[Enumeratee[DataPacket,
             val timerActor = Akka.system.actorOf(Props(classOf[TimerActor], self, startingTime, endingTime, formatter, interval))
             timerActor ! new InitPacket()
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
         case time: String => channel.push(new DataPacket(List(Map(resultName -> time))))
-        case x => Logger.error("Time generator got unexpected packet " + x + "\r\n")
     }
 }
 

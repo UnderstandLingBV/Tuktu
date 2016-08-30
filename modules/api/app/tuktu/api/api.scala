@@ -326,13 +326,14 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
 
     def setup() = {}
 
-    def receive() = {
+    def _receive: PartialFunction[Any, Unit] = PartialFunction.empty
+
+    def receive = _receive orElse {
         case dpp: DecreasePressurePacket => decBP
         case bpp: BackPressurePacket => backoff
         case ip: InitPacket => setup
-        case config: JsValue => ???
         case sp: StopPacket => cleanup
-        case _ => {}
+        case a => play.api.Logger.warn(this.getClass.toString + " received an unhandled packet of type " + a.getClass.toString + ":\n" + a.toString)
     }
 }
 

@@ -140,7 +140,7 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: FacebookBatcher, u
 }
 
 class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get credentials
             val credentials = (config \ "credentials").as[JsObject]
@@ -199,7 +199,5 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             pollerActor ! new FBDataRequest(urls, startTime, endTime)
         }
         case data: ResponsePacket => channel.push(new DataPacket(List(Map(resultName -> data.json))))
-        case sp: StopPacket       => cleanup
-        case ip: InitPacket       => setup
     }
 }

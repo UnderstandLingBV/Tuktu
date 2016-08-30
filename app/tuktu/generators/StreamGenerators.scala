@@ -27,12 +27,8 @@ import play.api.Logger
  * Async 'special' generator that just waits for DataPackets to come in and processes them
  */
 class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
-        case ip: InitPacket => setup
+    override def _receive = {
         case config: JsValue => { }
-        case sp: StopPacket => cleanup
         case p: DataPacket => channel.push(p)
     }
 }

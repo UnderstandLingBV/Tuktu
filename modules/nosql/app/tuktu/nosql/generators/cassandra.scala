@@ -11,7 +11,7 @@ import tuktu.nosql.util.cassandra
 import tuktu.api.InitPacket
 
 class CassandraGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get the hostname
             val host = (config \ "host").as[String]
@@ -47,7 +47,5 @@ class CassandraGenerator(resultName: String, processors: List[Enumeratee[DataPac
             client.close()
             self ! StopPacket
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }

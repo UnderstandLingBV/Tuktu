@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * Gets a webpage's content based on REST request
  */
 class RESTGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get required config params to make request
             val url = (config \ "url").as[String]
@@ -74,7 +74,5 @@ class RESTGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                 case _ => new StopPacket
             }
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }

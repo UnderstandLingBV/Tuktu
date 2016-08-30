@@ -38,21 +38,18 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
     var amountSent = new AtomicInteger(0)
     var outputType: String = _
     
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
-        case ip: InitPacket => setup
+    override def _receive = {
         case config: JsValue => {
             // Get the ticking frequency
             val tickInterval = (config \ "interval").as[Int]
             // Get the message to send
             message = (config \ "message").as[String]
-            
+
             // See if we need to stop at some point
             maxAmount = (config \ "max_amount").asOpt[Int]
-            
+
             outputType = (config \ "type").asOpt[String].getOrElse("string").toLowerCase
-            
+
             // Determine initial waiting time before sending
             val initialDelay = {
               if((config \ "send_immediately").asOpt[Boolean].getOrElse(false))
@@ -60,7 +57,7 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
               else
                 tickInterval milliseconds
             }
-            
+
             // Set up the scheduler
             schedulerActor = Akka.system.scheduler.schedule(
                     initialDelay,
@@ -86,7 +83,6 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
                 }
             }
         }
-        case x => Logger.error("Dummy generator got unexpected packet " + x + "\r\n")
     }
 }
 
@@ -105,18 +101,15 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
     var maxNum = 0
     var randomActor: ActorRef = null
     
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
-        case ip: InitPacket => setup
+    override def _receive = {
         case config: JsValue => {
             // Get the ticking frequency
             val tickInterval = (config \ "interval").as[Int]
             maxNum = (config \ "max").as[Int]
-            
+
             // Set up actor that will make random numbers
             randomActor = Akka.system.actorOf(Props(classOf[RandomActor], maxNum))
-            
+
             // Set up the scheduler
             schedulerActor = Akka.system.scheduler.schedule(
                     tickInterval milliseconds,
@@ -134,7 +127,6 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
                 case num: Int => channel.push(new DataPacket(List(Map(resultName -> num))))
             }
         }
-        case x => Logger.error("Dummy generator got unexpected packet " + x + "\r\n")
     }
 }
 
@@ -146,11 +138,8 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
     var vals = List[String]()
     var separate = true
     var outputType: String = _
-    
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
-        case ip: InitPacket => setup
+
+    override def _receive = {
         case config: JsValue => {
             // Get the values
             vals = (config \ "values").as[List[String]]
@@ -160,7 +149,6 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             // Send message to self
             self ! 0
         }
-        case sp: StopPacket => cleanup
         case num: Int => {
             if(separate) {
               channel.push(new DataPacket(List(Map(resultName -> DummyHelper.valToType(vals(num), outputType)))))
@@ -183,11 +171,8 @@ class CustomPacketGenerator(resultName: String, processors: List[Enumeratee[Data
     var packet: DataPacket = _
     var maxAmount: Option[Int] = _
     var amountSent = new AtomicInteger(0)
-    
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
-        case ip: InitPacket => setup
+
+    override def _receive = {
         case config: JsValue => {
             // Get the ticking frequency
             val tickInterval = (config \ "interval").as[Int]
@@ -196,10 +181,10 @@ class CustomPacketGenerator(resultName: String, processors: List[Enumeratee[Data
             val js = (config \ "json").asOpt[Boolean].getOrElse(true)
             val jpkt = Json.parse( tpkt ).as[List[JsObject]]
             packet = new DataPacket(jpkt.map{ jobj => if(js) { jobj.as[Map[String,JsValue]]} else { tuktu.api.utils.JsObjectToMap(jobj) } } )
-            
+
             // See if we need to stop at some point
             maxAmount = (config \ "max_amount").asOpt[Int]
-            
+
             // Determine initial waiting time before sending
             val initialDelay = {
               if((config \ "send_immediately").asOpt[Boolean].getOrElse(false))
@@ -207,7 +192,7 @@ class CustomPacketGenerator(resultName: String, processors: List[Enumeratee[Data
               else
                 tickInterval milliseconds
             }
-            
+
             // Set up the scheduler
             schedulerActor = Akka.system.scheduler.schedule(
                     initialDelay,
@@ -233,6 +218,5 @@ class CustomPacketGenerator(resultName: String, processors: List[Enumeratee[Data
                 }
             }
         }
-        case x => Logger.error("Dummy generator got unexpected packet " + x + "\r\n")
     }
 }

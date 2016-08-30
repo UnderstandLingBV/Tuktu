@@ -22,10 +22,8 @@ case class RecordPacket( record: JsObject )
 class LearningRegistryGenerator( resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef] ) 
     extends BaseGenerator(resultName, processors, senderActor) 
 {
-    override def receive() = 
+    override def _receive = 
     {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
         case config: JsValue => 
         {
             // Get the Node address and harvesting parameters        
@@ -43,10 +41,7 @@ class LearningRegistryGenerator( resultName: String, processors: List[Enumeratee
             val lrActor = Akka.system.actorOf(Props(classOf[LearningRegistryActor], self, node, param))
             lrActor ! new InitPacket()
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
         case record: RecordPacket => channel.push(new DataPacket(List(Map(resultName -> record.record))))
-        case x => Logger.error("Learning Registry generator got unexpected packet " + x + "\r\n")
     }
 }
 

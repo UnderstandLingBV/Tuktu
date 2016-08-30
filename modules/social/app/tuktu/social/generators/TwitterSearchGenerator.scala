@@ -88,7 +88,7 @@ class SearchProcessor(actorId: Int, client: OAuth10aService, aToken: OAuth1Acces
 }
 
 class TwitterSearchGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get all credentials and set up scribe actors
              val credentials = (config \ "credentials").as[JsObject]
@@ -115,7 +115,5 @@ class TwitterSearchGenerator(resultName: String, processors: List[Enumeratee[Dat
             actor ! new SearchPacket(keywords, None)
         }
         case rp: ReplyPacket => channel.push(new DataPacket(List(Map(resultName -> rp.tweet))))
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }

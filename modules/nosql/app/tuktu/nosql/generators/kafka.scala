@@ -16,7 +16,7 @@ import tuktu.api.StopPacket
 import tuktu.api.InitPacket
 
 class KafkaGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get kafka properties
             val kafkaProps = new Properties
@@ -75,7 +75,5 @@ class KafkaGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
                 })
             }
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }

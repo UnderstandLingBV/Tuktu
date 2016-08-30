@@ -71,7 +71,7 @@ class CsvReader(parentActor: ActorRef, fileName: String, valueName: String,
 class CsvGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     private var flattened = false
 
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get filename, sheet name and data start
             val fileName = (config \ "filename").as[String]
@@ -97,10 +97,6 @@ class CsvGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                 dataColStart, dataColEnd, hierarchy, endFieldCol, endField,
                 separator, quote, escape))
             csvGenActor ! new InitPacket()
-        }
-        case sp: StopPacket => {
-            channel.eofAndEnd
-            self ! PoisonPill
         }
         case headerfullLine: Map[String, String] => flattened match {
             case false => channel.push(new DataPacket(List(Map(resultName -> headerfullLine))))

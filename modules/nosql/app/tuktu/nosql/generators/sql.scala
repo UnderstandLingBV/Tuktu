@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
             val url = (config \ "url").as[String]
@@ -47,7 +47,5 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                 rowEnumerator |>> (onEOF compose rowToDP compose processor) &>> sinkIteratee
             })
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }

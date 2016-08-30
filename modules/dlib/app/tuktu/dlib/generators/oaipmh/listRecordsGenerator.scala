@@ -72,10 +72,8 @@ class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[Data
     var toj: Boolean = _
     var flatten: Boolean = _
     
-    override def receive() = 
+    override def _receive = 
     {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
         case config: JsValue => 
         {
           // Get the ListRecords parameters        
@@ -101,8 +99,6 @@ class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[Data
             case Some( s ) => for ( set <- s ) { val harvester = Akka.system.actorOf(Props(classOf[HarvesterActor], self, verb, params + "&set=" + set)); harvester ! new InitPacket() } 
           }  
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
         case error: OAIErrorPacket => {
           toj match{
             case false => channel.push( new DataPacket( List( Map( resultName -> error.error ) ) ) )
@@ -131,8 +127,6 @@ class ListRecordsGenerator( resultName: String, processors: List[Enumeratee[Data
             }
           }
         }
-        
-        case x => Logger.error("OAI-PMH ListRecords generator got unexpected packet " + x + "\r\n")
     }
 
 }

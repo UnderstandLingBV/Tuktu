@@ -78,9 +78,7 @@ class LineReader(parentActor: ActorRef, resultName: String, fileName: String, en
 class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var lineGenActor: ActorRef = _
     
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
+    override def _receive = {
         case config: JsValue => {
             // Get filename
             val fileName = (config \ "filename").as[String]
@@ -129,7 +127,6 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             Option(lineGenActor) collect { case actor => actor ! PoisonPill }
             cleanup(false)
         }
-        case ip: InitPacket               => setup
         case data: List[Map[String, Any]] => channel.push(new DataPacket(data))
     }
 }
@@ -189,9 +186,7 @@ class FileDirectoryReader(parentActor: ActorRef, pathMatcher: PathMatcher, recur
  * Streams files of directories file by file (as java.nio.file.Path)
  */
 class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
+    override def _receive = {
         case config: JsValue => {
             // Get config variables
             val filesAndDirs = (config \ "filesAndDirs").asOpt[List[String]].getOrElse(Nil)
@@ -204,8 +199,6 @@ class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
             val fileDirActor = Akka.system.actorOf(Props(classOf[FileDirectoryReader], self, defaultFS.getPathMatcher(pathMatcher), recursive))
             fileDirActor ! new PathsPacket(filesAndDirs.map(defaultFS.getPath(_)), null)
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
         case path: Path     => channel.push(new DataPacket(List(Map(resultName -> path))))
     }
 }
@@ -214,9 +207,7 @@ class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
  * Reads XML in as bulk and streams an XPath selection forward
  */
 class XmlGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
+    override def _receive = {
         case config: JsValue => {
             // Get the file name
             val filename = (config \ "file_name").as[String]
@@ -235,8 +226,6 @@ class XmlGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                 })))))
             else nodes.foreach(el => channel.push(new DataPacket(List(Map(resultName -> el)))))
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }
 
@@ -244,9 +233,7 @@ class XmlGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
  * Reads a binary file chunk by chunk
  */
 class BinaryFileGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
+    override def _receive = {
         case config: JsValue => {
             // Get the file name
             val fileName = (config \ "filename").as[String]
@@ -282,7 +269,5 @@ class BinaryFileGenerator(resultName: String, processors: List[Enumeratee[DataPa
                 }) compose processor) &>> sinkIteratee
             })
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
     }
 }

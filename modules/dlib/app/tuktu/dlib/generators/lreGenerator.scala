@@ -68,10 +68,8 @@ class LREActor(parentActor: ActorRef, query: String, resultOnly: Boolean) extend
 class LREGenerator( resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef] ) 
     extends BaseGenerator(resultName, processors, senderActor) 
 {
-    override def receive() = 
+    override def _receive = 
     {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
         case config: JsValue => 
         {
             // Get the LRE query parameters
@@ -88,10 +86,7 @@ class LREGenerator( resultName: String, processors: List[Enumeratee[DataPacket, 
             val lreActor = Akka.system.actorOf(Props(classOf[LREActor], self, query, resultOnly))
             lreActor ! new InitPacket()
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
         case id: String => channel.push(new DataPacket(List(Map(resultName -> id))))
         case lrpacket: LREResultPacket => channel.push(new DataPacket(List(Map(resultName -> lrpacket.result))))
-        case x => Logger.error("LRE generator got unexpected packet " + x + "\r\n")
     }
 }

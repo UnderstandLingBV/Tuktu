@@ -117,9 +117,7 @@ class BatchedCSVReader(parentActor: ActorRef, fileName: String, encoding: String
 class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var csvGenActor: ActorRef = _
 
-    override def receive() = {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
+    override def _receive = {
         case config: JsValue => {
             // Get filename
             val fileName = (config \ "filename").as[String]
@@ -198,7 +196,6 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             Option(csvGenActor) collect { case actor => actor ! PoisonPill }
             cleanup(false)
         }
-        case ip: InitPacket               => setup
         case data: List[Map[String, Any]] => channel.push(new DataPacket(data))
     }
 }

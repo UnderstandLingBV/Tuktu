@@ -22,7 +22,7 @@ class TDFSLineReaderGenerator(resultName: String, processors: List[Enumeratee[Da
     var startLine: Int = _
     var endLine: Option[Int] = _
     
-    override def receive() = {
+    override def _receive = {
         case config: JsValue => {
             // Get file parameters
             val filename = {
@@ -51,9 +51,5 @@ class TDFSLineReaderGenerator(resultName: String, processors: List[Enumeratee[Da
                 // Make a proper string and output it
                 channel.push(new DataPacket(List(Map(resultName -> new String(tcp.content)))))
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
     }
 }

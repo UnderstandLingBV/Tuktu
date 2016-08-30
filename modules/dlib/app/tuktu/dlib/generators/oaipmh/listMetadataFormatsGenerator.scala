@@ -63,10 +63,8 @@ class ListMetadataFormatsGenerator ( resultName: String, processors: List[Enumer
 {
     var toj: Boolean = _
     var flatten: Boolean = _
-    override def receive() = 
+    override def _receive = 
     {  
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
         case config: JsValue => 
         {
           // Get the ListRecords parameters        
@@ -83,8 +81,6 @@ class ListMetadataFormatsGenerator ( resultName: String, processors: List[Enumer
           val harvester = Akka.system.actorOf(Props(classOf[ListFormatsActor], self, verb))
           harvester ! new InitPacket()
         }
-        case sp: StopPacket => cleanup
-        case ip: InitPacket => setup
         case error: OAIErrorPacket => {
           toj match{
             case false => channel.push( new DataPacket( List( Map( resultName -> error.error ) ) ) )
@@ -113,7 +109,5 @@ class ListMetadataFormatsGenerator ( resultName: String, processors: List[Enumer
             }
           }
         }
-        
-        case x => Logger.error("OAI-PMH ListMetadataFormats generator got unexpected packet " + x + "\r\n")
     }
 }
