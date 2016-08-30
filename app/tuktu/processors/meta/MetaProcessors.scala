@@ -482,7 +482,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
                     Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, "Parallel Config Processor - Unknown", 1, true)
                     data
                 }) compose enumeratee compose Enumeratee.onEOF(() =>
-                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppStopPacket(idString)
+                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(idString, "done")
                 )
                 Enumerator({
                     if (sendOriginal) data else new DataPacket(List())

@@ -79,20 +79,6 @@ class DataMonitor extends Actor with ActorLogging {
                 }
             }
         }
-        case asp: AppStopPacket => {
-            appMonitor.get(asp.uuid) match {
-                case Some(app) => {
-                    app.finished_instances += 1
-
-                    if (app.instances == app.finished_instances)
-                        // Update end time and start expiration
-                        app.expire(asp.timestamp)
-                }
-                case None => {
-                    Logger.warn("DataMonitor received AppStopPacket for unknown app with uuid: " + asp.uuid)
-                }
-            }
-        }
         case enp: ErrorNotificationPacket => {
             // Get the actors and stop them
             appMonitor.get(enp.uuid) collect {
@@ -119,9 +105,13 @@ class DataMonitor extends Actor with ActorLogging {
                     case "done" => {
                         app.finished_instances += 1
 
-                        if (app.instances == app.finished_instances)
+                        if (app.instances <= app.finished_instances) {
                             // Update end time and start expiration
                             app.expire(amp.timestamp)
+                            if (app.instances < app.finished_instances)
+                                // This shouldn't happen
+                                Logger.warn("App " + amp.uuid + " received \"done\" more often (" + app.finished_instances + ") than it had running instances (" + app.instances + ").")
+                        }
                     }
                     case "stop" => {
                         // Broadcast to all actors to stop

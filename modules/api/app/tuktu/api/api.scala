@@ -167,10 +167,6 @@ case class AppInitPacket(
         mailbox: Option[ActorRef] = None,
         timestamp: Long = System.currentTimeMillis
 )
-case class AppStopPacket(
-        uuid: String,
-        timestamp: Long = System.currentTimeMillis
-)
 case class SubflowMapPacket(
         mailbox: ActorRef,
         subflows: List[ActorRef]
