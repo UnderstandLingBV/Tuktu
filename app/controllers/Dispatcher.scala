@@ -84,6 +84,9 @@ object Dispatcher {
         val subflows = collection.mutable.ListBuffer.empty[ActorRef]
         // Keep track of instantiated processors
         val instantiatedProcessors = collection.mutable.Map[String, Any]()
+        // Count how often a processor is referenced
+        val referenceCounts = processorMap.flatMap(pd => pd._2.next)
+            .groupBy(a => a).map(el => el._1 -> el._2.size).filter(_._2 > 1)
         
         /**
          * Builds a chain of processors recursively
@@ -199,7 +202,17 @@ object Dispatcher {
 
                 // Add method to all our entries so far
                 val method = procClazz.getMethods.find(m => m.getName == "processor").get
-                val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                val procEnum =
+                    // Check if this processor is one that is referenced by multiple subflows
+                    if (referenceCounts.get(pd.id).getOrElse(1) > 1) {
+                        // Make sure we swallow all EOFs until we reached the final one
+                        val bClazz = Class.forName("tuktu.api.BranchMergeProcessor")
+                        val ic = bClazz.getConstructor(classOf[Int]).newInstance(referenceCounts(pd.id).asInstanceOf[Object])
+                        val mthd = bClazz.getMethods.find(m => m.getName == "processor").get
+                        // Call the actual Enumeratees
+                        mthd.invoke(ic).asInstanceOf[Enumeratee[DataPacket, DataPacket]] compose
+                            method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                    } else method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
 
                 if (logLevel == "all") {
                     accum compose
@@ -233,7 +246,17 @@ object Dispatcher {
 
                 // Get Enumeratee
                 val method = procClazz.getMethods.find(m => m.getName == "processor").get
-                val procEnum = method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                val procEnum = 
+                    // Check if this processor is one that is referenced by multiple subflows
+                    if (referenceCounts.get(pd.id).getOrElse(1) > 1) {
+                        // Make sure we swallow all EOFs until we reached the final one
+                        val bClazz = Class.forName("tuktu.api.BranchMergeProcessor")
+                        val ic = bClazz.getConstructor(classOf[Int]).newInstance(referenceCounts(pd.id).asInstanceOf[Object])
+                        val mthd = bClazz.getMethods.find(m => m.getName == "processor").get
+                        // Call the actual Enumeratees
+                        mthd.invoke(ic).asInstanceOf[Enumeratee[DataPacket, DataPacket]] compose
+                            method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                    } else method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
 
                 val composition = if (logLevel == "all") {
                     accum compose

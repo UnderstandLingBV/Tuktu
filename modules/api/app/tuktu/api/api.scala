@@ -24,6 +24,8 @@ import java.util.concurrent.LinkedBlockingQueue
 import scala.concurrent.Future
 import play.api.mvc.Request
 import play.api.mvc.AnyContent
+import play.api.libs.iteratee.Input
+import play.api.libs.iteratee.Enumerator
 
 case class DataPacket(
         data: List[Map[String, Any]]
@@ -188,6 +190,22 @@ case class ClearFlowPacket(
 abstract class BaseProcessor(resultName: String) {
     def initialize(config: JsObject): Unit = {}
     def processor(): Enumeratee[DataPacket, DataPacket] = ???
+}
+
+/**
+ * Processor that keeps track of the number of EOFs seen when branches merge
+ */
+class BranchMergeProcessor(eofCount: Int) {
+    var counts = 0
+    def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapInput {
+        case Input.El(dp) => Input.El(dp)
+        case Input.Empty => Input.Empty
+        case Input.EOF => {
+            // Increase counter and check what we need to do
+            counts += 1
+            if (counts == eofCount) Input.EOF else Input.Empty
+        }
+    }
 }
 
 abstract class BaseJsProcessor(resultName: String) extends BaseProcessor(resultName) {
