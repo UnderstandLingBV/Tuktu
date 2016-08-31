@@ -207,10 +207,13 @@ object BranchMergeProcessor {
                 return {
                     case in @ (Input.El(_) | Input.Empty) => new Enumeratee.CheckDone[M, M] { def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k)) } &> k(in)
                     case Input.EOF => {
+                        // We have reached an EOF, increment and check if we have reached the designated count
                         if (map(uuid).incrementAndGet == EOFCount) {
+                            // We are done, sent out EOF for real
                             map -= uuid
                             Done(Cont(k), Input.EOF)
                         } else {
+                            // We are not done yet, send Empty
                             new Enumeratee.CheckDone[M, M] { def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k)) } &> k(Input.Empty)
                         }
                     }

@@ -18,6 +18,7 @@ import play.api.libs.json.Json
 import tuktu.api._
 import akka.routing.Broadcast
 import java.nio.file.{ Files, Paths }
+import java.util.concurrent.atomic.{ AtomicInteger, AtomicBoolean }
 
 /**
  * Invokes a new generator for every DataPacket received
@@ -188,6 +189,8 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     var replacements: Map[String, String] = _
     var keepAlive: Boolean = _
     var remoteGeneratorFut: Future[Any] = _
+    val remaining = new AtomicInteger(0)
+    val done = new AtomicBoolean(false)
 
     override def initialize(config: JsObject) {
         // Get the name of the config file
@@ -246,13 +249,27 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
                 for (datum <- data.data)
                     forwardData(List(datum))
             } else forwardData(data.data)
-        } else remoteGeneratorFut onSuccess { case actorRef: ActorRef => actorRef ! data }
+        } else {
+            // Callback order on Futures is not guaranteed, so we need to keep track of number of remaining packages to be sent to actorRef
+            // Increment count, and once the data has been sent, decrement the count; if it's 0 and we have reached EOF, broadcast Stop
+            remaining.incrementAndGet
+            remoteGeneratorFut onSuccess { case actorRef: ActorRef =>
+                actorRef ! data
+                if (remaining.decrementAndGet == 0 && done.get == true)
+                    actorRef ! Broadcast(new StopPacket)
+            }
+        }
 
         data
     }) compose Enumeratee.onEOF(() => {
         if (keepAlive)
-            // Terminate the remote flow
-            remoteGeneratorFut onSuccess { case actorRef: ActorRef => actorRef ! Broadcast(new StopPacket) }
+            remoteGeneratorFut onSuccess { case actorRef: ActorRef =>
+                // We have reached EOF, we are done; if no packages are remaining to be sent, broadcast Stop right away,
+                // otherwise it will be done right after the last package has been sent
+                done.set(true)
+                if (remaining.get == 0)
+                    actorRef ! Broadcast(new StopPacket)
+            }
     })
 
     def forwardData(data: List[Map[String, Any]]) {
