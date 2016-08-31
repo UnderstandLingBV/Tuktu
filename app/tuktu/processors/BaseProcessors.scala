@@ -45,7 +45,7 @@ class CountEOFProcessor(resultName: String) extends BaseProcessor(resultName) {
         data
     }) compose Enumeratee.onEOF { () =>
         eofCounts = eofCounts + 1
-        println("Got " + eofCounts + " EOFs after " + datumSeen + " datums, in " + dataSeen + " DataPackets")
+        Logger.info(resultName + " got " + eofCounts + " EOFs after " + datumSeen + " datums, in " + dataSeen + " DataPackets.")
     }
 }
 

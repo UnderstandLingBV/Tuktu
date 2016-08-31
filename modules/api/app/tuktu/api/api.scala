@@ -182,22 +182,31 @@ abstract class BaseProcessor(resultName: String) {
 }
 
 object BranchMergeProcessor {
-    def ignoreEofs[E](uuid: String, maxCount: Int): Enumeratee[E, E] = new Enumeratee[E, E] {
-        def applyOn[A](inner: Iteratee[E, A]): Iteratee[E, Iteratee[E, A]] = {
-            def step(input: Input[E], i: Iteratee[E, A]): Iteratee[E, Iteratee[E, A]] = {
-                input match {
+    val map = collection.mutable.Map[String, AtomicInteger]()
+
+    def ignoreEOFs[M](EOFCount: Int): Enumeratee[M, M] = {
+        var uuid = java.util.UUID.randomUUID.toString
+        while (map.contains(uuid))
+            uuid = java.util.UUID.randomUUID.toString
+        map += uuid -> new AtomicInteger(0)
+
+        new Enumeratee.CheckDone[M, M] {
+
+            def step[A](k: Input[M] => Iteratee[M, A]): Input[M] => Iteratee[M, Iteratee[M, A]] = {
+                return {
+                    case in @ (Input.El(_) | Input.Empty) => new Enumeratee.CheckDone[M, M] { def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k)) } &> k(in)
                     case Input.EOF => {
-                        if (Cache.getAs[AtomicInteger]("eofs_" + uuid).getOrElse(new AtomicInteger(0)).incrementAndGet() == maxCount) {
-                            Cache.remove("eofs_" + uuid)
-                            Done(i, Input.EOF)
-                        } else Cont(_ => step(Input.Empty, i))
+                        if (map(uuid).incrementAndGet == EOFCount) {
+                            map -= uuid
+                            Done(Cont(k), Input.EOF)
+                        } else {
+                            new Enumeratee.CheckDone[M, M] { def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k)) } &> k(Input.Empty)
+                        }
                     }
-                    case Input.Empty  => Cont(step(_, i))
-                    case Input.El(pe) => Cont(step(_, i))
                 }
             }
 
-            Cont(step(_, inner))
+            def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k))
         }
     }
 }
