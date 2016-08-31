@@ -1,14 +1,18 @@
 package tuktu.api
 
+import java.util.concurrent.LinkedBlockingQueue
+
 import scala.collection.GenTraversableOnce
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
-import akka.actor.Cancellable
+import akka.actor.ActorSelection.toScala
 import akka.actor.PoisonPill
-import akka.pattern.ask
+import akka.actor.actorRef2Scala
 import akka.util.Timeout
 import play.api.Application
 import play.api.Play
@@ -16,20 +20,21 @@ import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Concurrent
+import play.api.libs.iteratee.Cont
+import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Enumeratee
+import play.api.libs.iteratee.Enumeratee.CheckDone
+import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
-import java.util.concurrent.LinkedBlockingQueue
-import scala.concurrent.Future
-import play.api.mvc.Request
 import play.api.mvc.AnyContent
-import play.api.libs.iteratee.Input
-import play.api.libs.iteratee.Enumerator
+import play.api.mvc.Request
+import scala.concurrent.ExecutionContext
+import java.util.concurrent.atomic.AtomicInteger
 
 case class DataPacket(
-        data: List[Map[String, Any]]
-) extends java.io.Serializable {
+        data: List[Map[String, Any]]) extends java.io.Serializable {
     def isEmpty: Boolean = data.isEmpty
     def nonEmpty: Boolean = data.nonEmpty
     def filter(f: Map[String, Any] => Boolean): DataPacket = new DataPacket(data.filter(f))
@@ -40,13 +45,12 @@ case class DataPacket(
 }
 
 case class DispatchRequest(
-        configName: String,
-        config: Option[JsValue],
-        isRemote: Boolean,
-        returnRef: Boolean,
-        sync: Boolean,
-        sourceActor: Option[ActorRef]
-)
+    configName: String,
+    config: Option[JsValue],
+    isRemote: Boolean,
+    returnRef: Boolean,
+    sync: Boolean,
+    sourceActor: Option[ActorRef])
 
 case class InitPacket()
 case class StopPacket()
@@ -55,26 +59,22 @@ case class ErrorPacket()
 case class BackPressurePacket()
 case class DecreasePressurePacket()
 case class BackPressureNotificationPacket(
-        idString: String
-)
+    idString: String)
 
 case class ResponsePacket(
-        json: JsValue
-)
+    json: JsValue)
 
 case class RequestPacket(
-        request: Request[AnyContent],
-        isInitial: Boolean
-)
+    request: Request[AnyContent],
+    isInitial: Boolean)
 
 case class HealthCheck()
 case class HealthReply()
 
 case class ClusterNode(
-        host: String,
-        akkaPort: Int,
-        UIPort: Int
-)
+    host: String,
+    akkaPort: Int,
+    UIPort: Int)
 
 /**
  * Monitor stuff
@@ -86,32 +86,28 @@ case object EndType extends MPType
 case object CompleteType extends MPType
 
 case class MonitorPacket(
-        typeOf: MPType,
-        uuid: String,
-        branch: String,
-        amount: Integer,
-        timestamp: Long = System.currentTimeMillis
-)
+    typeOf: MPType,
+    uuid: String,
+    branch: String,
+    amount: Integer,
+    timestamp: Long = System.currentTimeMillis)
 
 case class MonitorOverviewRequest()
 case class MonitorOverviewResult(
-        runningJobs: Map[String, AppMonitorObject],
-        finishedJobs: Map[String, AppMonitorObject],
-        subflows: Map[String, String]
-)
+    runningJobs: Map[String, AppMonitorObject],
+    finishedJobs: Map[String, AppMonitorObject],
+    subflows: Map[String, String])
 
 case class MonitorLastDataPacketRequest(
-        flow_name: String,
-        processor_id: String
-)
+    flow_name: String,
+    processor_id: String)
 
 case class ProcessorMonitorPacket(
-        typeOf: MPType,
-        uuid: String,
-        processor_id: String,
-        data: DataPacket,
-        timestamp: Long = System.currentTimeMillis
-)
+    typeOf: MPType,
+    uuid: String,
+    processor_id: String,
+    data: DataPacket,
+    timestamp: Long = System.currentTimeMillis)
 
 case class AppMonitorObject(
         uuid: String,
@@ -131,8 +127,7 @@ case class AppMonitorObject(
         processorDataPacketCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
         processorDatumCount: collection.mutable.Map[String, collection.mutable.Map[MPType, Int]] = collection.mutable.Map.empty,
         processorBeginTimes: collection.mutable.Map[String, collection.mutable.Queue[Long]] = collection.mutable.Map.empty,
-        processorDurations: collection.mutable.Map[String, collection.mutable.ListBuffer[Long]] = collection.mutable.Map.empty
-) {
+        processorDurations: collection.mutable.Map[String, collection.mutable.ListBuffer[Long]] = collection.mutable.Map.empty) {
     def expire(current: Long = System.currentTimeMillis, force: Boolean = true) {
         if (force || endTime != None)
             endTime = Some(current)
@@ -147,42 +142,36 @@ case class AppMonitorObject(
 case class AppMonitorPacket(
         val actor: ActorRef,
         val status: String,
-        val timestamp: Long = System.currentTimeMillis
-) {
+        val timestamp: Long = System.currentTimeMillis) {
     def getName = actor.path.toStringWithoutAddress
-    def getParentName = actor.path.parent.toStringWithoutAddress 
+    def getParentName = actor.path.parent.toStringWithoutAddress
 }
 case class AppMonitorUUIDPacket(
-        uuid: String,
-        status: String,
-        timestamp: Long = System.currentTimeMillis
-)
+    uuid: String,
+    status: String,
+    timestamp: Long = System.currentTimeMillis)
 
 case class AddMonitorEventListener()
 case class RemoveMonitorEventListener()
 
 case class AppInitPacket(
-        uuid: String,
-        configName: String,
-        instanceCount: Int,
-        stopOnError: Boolean,
-        mailbox: Option[ActorRef] = None,
-        timestamp: Long = System.currentTimeMillis
-)
+    uuid: String,
+    configName: String,
+    instanceCount: Int,
+    stopOnError: Boolean,
+    mailbox: Option[ActorRef] = None,
+    timestamp: Long = System.currentTimeMillis)
 case class SubflowMapPacket(
-        mailbox: ActorRef,
-        subflows: List[ActorRef]
-)
+    mailbox: ActorRef,
+    subflows: List[ActorRef])
 case class ErrorNotificationPacket(
-        uuid: String,
-        configName: String,
-        processorName: String,
-        input: String,
-        error: Throwable
-)
+    uuid: String,
+    configName: String,
+    processorName: String,
+    input: String,
+    error: Throwable)
 case class ClearFlowPacket(
-    uuid: String
-)
+    uuid: String)
 /**
  * End monitoring stuff
  */
@@ -192,58 +181,60 @@ abstract class BaseProcessor(resultName: String) {
     def processor(): Enumeratee[DataPacket, DataPacket] = ???
 }
 
-/**
- * Processor that keeps track of the number of EOFs seen when branches merge
- */
-class BranchMergeProcessor(eofCount: Int) {
-    var counts = 0
-    def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapInput {
-        case Input.El(dp) => Input.El(dp)
-        case Input.Empty => Input.Empty
-        case Input.EOF => {
-            // Increase counter and check what we need to do
-            counts += 1
-            if (counts == eofCount) Input.EOF else Input.Empty
+object BranchMergeProcessor {
+    def ignoreEofs[E](uuid: String, maxCount: Int): Enumeratee[E, E] = new Enumeratee[E, E] {
+        def applyOn[A](inner: Iteratee[E, A]): Iteratee[E, Iteratee[E, A]] = {
+            def step(input: Input[E], i: Iteratee[E, A]): Iteratee[E, Iteratee[E, A]] = {
+                input match {
+                    case Input.EOF => {
+                        if (Cache.getAs[AtomicInteger]("eofs_" + uuid).getOrElse(new AtomicInteger(0)).incrementAndGet() == maxCount) {
+                            Cache.remove("eofs_" + uuid)
+                            Done(i, Input.EOF)
+                        } else Cont(_ => step(Input.Empty, i))
+                    }
+                    case Input.Empty  => Cont(step(_, i))
+                    case Input.El(pe) => Cont(step(_, i))
+                }
+            }
+
+            Cont(step(_, inner))
         }
     }
 }
 
 abstract class BaseJsProcessor(resultName: String) extends BaseProcessor(resultName) {
     val jsField = Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field"))
-    
+
     def addJsElement[A <: BaseJsObject](datum: Map[String, Any], element: A): Map[String, Any] = {
         // Get the JS elements
         val newDatum = if (!datum.contains(jsField)) datum + (jsField -> new WebJsOrderedObject(List())) else {
             datum(jsField) match {
                 case a: WebJsOrderedObject => datum
-                case a: Any => datum + (jsField -> new WebJsOrderedObject(List()))
+                case a: Any                => datum + (jsField -> new WebJsOrderedObject(List()))
             }
         }
-        
+
         val jsElements = newDatum(jsField).asInstanceOf[WebJsOrderedObject]
-        
+
         // Add this element to the ordered web js object
         newDatum + (jsField -> new WebJsOrderedObject(
-                jsElements.items ++ List(Map(
-                        resultName -> element
-                ))
-        ))
+            jsElements.items ++ List(Map(
+                resultName -> element))))
     }
-    
+
     def addJsElements[A <: BaseJsObject](datum: Map[String, Any], element: List[A]): Map[String, Any] =
-        element.foldLeft(datum)((a,b) => addJsElement(a, b))
+        element.foldLeft(datum)((a, b) => addJsElement(a, b))
 }
 
 /**
  * Definition of a processor
  */
 case class ProcessorDefinition(
-        id: String,
-        name: String,
-        config: JsObject,
-        resultName: String,
-        next: List[String]
-)
+    id: String,
+    name: String,
+    config: JsObject,
+    resultName: String,
+    next: List[String])
 
 abstract class BufferProcessor(genActor: ActorRef, resultName: String) extends BaseProcessor(resultName: String) {}
 
@@ -260,9 +251,8 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     val bpProcessors = for (processor <- processors) yield {
         // Create blocking queue
         val queue = new LinkedBlockingQueue[Boolean](
-                Cache.getAs[Int]("mon.bp.blocking_queue_size").getOrElse(Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000))
-        )
-        
+            Cache.getAs[Int]("mon.bp.blocking_queue_size").getOrElse(Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000)))
+
         // Add the pushing Enumeratee upfront and the pulling Enumeratee at the back
         Enumeratee.mapM((dp: DataPacket) => Future {
             // Check if full
@@ -271,7 +261,7 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
                 self ! new BackPressurePacket
                 bpSent = true
             }
-            
+
             queue.put(true)
             dp
         }) compose processor compose Enumeratee.mapM((dp: DataPacket) => Future {
@@ -280,7 +270,7 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
             dp
         })
     }
-    
+
     // Set up pipeline, either one that sends back the result, or one that just sinks
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     senderActor match {
@@ -298,9 +288,8 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     def cleanup(sendEof: Boolean): Unit = {
         // Send message to the monitor actor
         Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                self,
-                "done"
-        )
+            self,
+            "done")
 
         // Remove parent relationship from Cache
         Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
@@ -313,33 +302,33 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
         //context.stop(self)
         self ! PoisonPill
     }
-    
+
     def cleanup(): Unit = cleanup(true)
-        
+
     // Back pressure handling
     val backOffInterval = Cache.getAs[Int]("mon.bp.bounce_ms").getOrElse(Play.current.configuration.getInt("tuktu.monitor.bounce_ms").getOrElse(20))
     val maxBackOff = Cache.getAs[Int]("mon.bp.max_bounce").getOrElse(Play.current.configuration.getInt("tuktu.monitor.max_bounce").getOrElse(6))
     private var backOffCount = 0
     /**
-     * Backoff method dealing with back-pressure 
+     * Backoff method dealing with back-pressure
      */
     def backoff() = {
         // Also notify our potential sender actor
         senderActor match {
-            case None => {}
+            case None     => {}
             case Some(ar) => ar ! new BackPressurePacket()
         }
         // We are pushing too fast, back off
         Thread.sleep(Math.pow(2, backOffCount).toLong * backOffInterval)
-        
+
         // To turn it back down
         self ! new DecreasePressurePacket()
-        
+
         // Increment
         if (backOffCount < maxBackOff)
             backOffCount += 1
     }
-    
+
     def decBP() = if (backOffCount >= 0) backOffCount -= 1 else backOffCount = 0
 
     def setup() = {}
@@ -348,10 +337,10 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
 
     def receive = _receive orElse {
         case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket => backoff
-        case ip: InitPacket => setup
-        case sp: StopPacket => cleanup
-        case a => play.api.Logger.warn(this.getClass.toString + " received an unhandled packet of type " + a.getClass.toString + ":\n" + a.toString)
+        case bpp: BackPressurePacket     => backoff
+        case ip: InitPacket              => setup
+        case sp: StopPacket              => cleanup
+        case a                           => play.api.Logger.warn(this.getClass.toString + " received an unhandled packet of type " + a.getClass.toString + ":\n" + a.toString)
     }
 }
 

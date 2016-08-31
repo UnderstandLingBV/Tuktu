@@ -28,6 +28,7 @@ import tuktu.processors.bucket.concurrent.BaseConcurrentProcessor
 import tuktu.processors.meta.ConcurrentProcessor
 import mailbox.DeadLetterWatcher
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicInteger
 
 case class treeNode(
         name: String,
@@ -87,6 +88,11 @@ object Dispatcher {
         // Count how often a processor is referenced
         val referenceCounts = processorMap.flatMap(pd => pd._2.next)
             .groupBy(a => a).map(el => el._1 -> el._2.size).filter(_._2 > 1)
+            .map(c => {
+                val uuid = java.util.UUID.randomUUID.toString
+                Cache.set("eofs_" + uuid, new AtomicInteger(0))
+                c._1 -> (c._2, uuid)
+            })
         
         /**
          * Builds a chain of processors recursively
@@ -204,13 +210,9 @@ object Dispatcher {
                 val method = procClazz.getMethods.find(m => m.getName == "processor").get
                 val procEnum =
                     // Check if this processor is one that is referenced by multiple subflows
-                    if (referenceCounts.get(pd.id).getOrElse(1) > 1) {
-                        // Make sure we swallow all EOFs until we reached the final one
-                        val bClazz = Class.forName("tuktu.api.BranchMergeProcessor")
-                        val ic = bClazz.getConstructor(classOf[Int]).newInstance(referenceCounts(pd.id).asInstanceOf[Object])
-                        val mthd = bClazz.getMethods.find(m => m.getName == "processor").get
+                    if (referenceCounts.contains(pd.id)) {
                         // Call the actual Enumeratees
-                        mthd.invoke(ic).asInstanceOf[Enumeratee[DataPacket, DataPacket]] compose
+                        BranchMergeProcessor.ignoreEofs[DataPacket](referenceCounts(pd.id)._2, referenceCounts(pd.id)._1) compose
                             method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
                     } else method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
 
@@ -248,13 +250,9 @@ object Dispatcher {
                 val method = procClazz.getMethods.find(m => m.getName == "processor").get
                 val procEnum = 
                     // Check if this processor is one that is referenced by multiple subflows
-                    if (referenceCounts.get(pd.id).getOrElse(1) > 1) {
-                        // Make sure we swallow all EOFs until we reached the final one
-                        val bClazz = Class.forName("tuktu.api.BranchMergeProcessor")
-                        val ic = bClazz.getConstructor(classOf[Int]).newInstance(referenceCounts(pd.id).asInstanceOf[Object])
-                        val mthd = bClazz.getMethods.find(m => m.getName == "processor").get
+                    if (referenceCounts.contains(pd.id)) {
                         // Call the actual Enumeratees
-                        mthd.invoke(ic).asInstanceOf[Enumeratee[DataPacket, DataPacket]] compose
+                        BranchMergeProcessor.ignoreEofs[DataPacket](referenceCounts(pd.id)._2, referenceCounts(pd.id)._1) compose
                             method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
                     } else method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
 
