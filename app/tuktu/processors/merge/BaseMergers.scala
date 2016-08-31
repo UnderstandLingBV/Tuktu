@@ -59,30 +59,28 @@ class JSMerger() extends DataMerger() {
  */
 class PaddingMerger() extends DataMerger() {
     override def merge(packets: List[DataPacket]): DataPacket = {
-        new DataPacket({
+        if (packets.isEmpty || packets.exists { packet => packet.isEmpty })
+            new DataPacket(Nil)
+        else
+            new DataPacket({
                 /**
                  * We must somehow deal with difference in length of the data packets
-                 * 
+                 *
                  * What we do here is check if one of the packets has size 1 and one of the others is lengthier. If so,
                  * we pad the 1-sized packet to the length of the other. If both have a size bigger than one but
                  * still not equal, we repeat the packet smallest in size
                  */
-                val maxSize = packets.maxBy(pckt => pckt.data.size).data.size
+                val maxSize = packets.maxBy { packet => packet.data.size }.data.size
 
                 // Go over all packets, padding where required
-                packets.map(packet => packet.data).fold(Nil)((x, y) => {
-                    // Check size difference
-                    if (y.size < maxSize) {
-                        // Repeat the values of y
-                        x.zipAll({
-                            for (i <- 1 to maxSize) yield y(i % y.size)
-                        }, Map(), Map()).map(z => z._1 ++ z._2)
-                    }
-                    else
-                        // Similar to simple merger
-                        x.zipAll(y, Map(), Map()).map(z => z._1 ++ z._2)
-                })
-        })
+                packets
+                    .filter { packet => packet.nonEmpty }
+                    .foldLeft(for (i <- 1 to maxSize) yield Map[String, Any]()) { (accum, packet) =>
+                        accum
+                            .zip(for (i <- 1 to maxSize) yield packet.data(i % packet.data.size))
+                            .map { case (accumMap, packetMap) => accumMap ++ packetMap }
+                    }.toList
+            })
     }
 }
 
