@@ -181,15 +181,26 @@ abstract class BaseProcessor(resultName: String) {
     def processor(): Enumeratee[DataPacket, DataPacket] = ???
 }
 
+/**
+ * When merging branches, multiple EOFs are received by the processor where the merge is happening
+ * This processor is prepended by the Dispatcher to processors where merging happens to handle these EOFs by ignoring all but the last one
+ */
 object BranchMergeProcessor {
+    // Keep track of how many EOFs were seen by each processor defined by their UUID
     val map = collection.mutable.Map[String, AtomicInteger]()
 
+    // Creates a new EOF ignoring Enumeratee
     def ignoreEOFs[M](EOFCount: Int): Enumeratee[M, M] = {
+        // Generate unique UUID and add to the map
         var uuid = java.util.UUID.randomUUID.toString
         while (map.contains(uuid))
             uuid = java.util.UUID.randomUUID.toString
         map += uuid -> new AtomicInteger(0)
 
+        /**
+         * An enumeratee that passes all input through until EOFCount EOFs are reached, redeeming the final iteratee with EOF as the left over input. 
+         * Based on: https://github.com/playframework/playframework/blob/2.3.x/framework/src/iteratees/src/main/scala/play/api/libs/iteratee/Enumeratee.scala#L672-L681
+         */
         new Enumeratee.CheckDone[M, M] {
 
             def step[A](k: Input[M] => Iteratee[M, A]): Input[M] => Iteratee[M, Iteratee[M, A]] = {

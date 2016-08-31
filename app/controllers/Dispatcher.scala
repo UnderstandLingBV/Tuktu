@@ -85,8 +85,10 @@ object Dispatcher {
         val subflows = collection.mutable.ListBuffer.empty[ActorRef]
         // Keep track of instantiated processors
         val instantiatedProcessors = collection.mutable.Map[String, Any]()
-        // Count how often a processor is referenced
-        val referenceCounts = processorMap.flatMap(pd => pd._2.next)
+
+        // Count how often a processor is a successor of the generator or a processor
+        // and ignore all but the last EOF for each processor that has more than one predecessor
+        val referenceCounts = (nextIds ++ processorMap.flatMap { case (id, definition) => definition.next })
             .groupBy { a => a }.mapValues { predecessors => predecessors.size }.filter { case (id, predecessors) => predecessors > 1 }
             .map { case (id, predecessors) =>
                 id -> BranchMergeProcessor.ignoreEOFs[DataPacket](predecessors)
@@ -209,7 +211,7 @@ object Dispatcher {
                 val procEnum =
                     // Check if this processor is one that is referenced by multiple subflows
                     if (referenceCounts.contains(pd.id)) {
-                        // Call the actual Enumeratees
+                        // Prepend the Enumeratee which will ignore all EOFs but the last
                         referenceCounts(pd.id) compose
                             method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
                     } else method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
@@ -249,7 +251,7 @@ object Dispatcher {
                 val procEnum = 
                     // Check if this processor is one that is referenced by multiple subflows
                     if (referenceCounts.contains(pd.id)) {
-                        // Call the actual Enumeratees
+                        // Prepend the Enumeratee which will ignore all EOFs but the last
                         referenceCounts(pd.id) compose
                             method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
                     } else method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
