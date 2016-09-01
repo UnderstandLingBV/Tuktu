@@ -196,6 +196,6 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             Option(csvGenActor) collect { case actor => actor ! PoisonPill }
             cleanup(false)
         }
-        case data: List[Map[String, Any]] => channel.push(new DataPacket(data))
+        case data: List[Map[String, Any]] => channel.push(DataPacket(data))
     }
 }

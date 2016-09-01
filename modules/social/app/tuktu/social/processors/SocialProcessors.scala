@@ -42,7 +42,7 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for {
+        DataPacket(for {
             datum <- data.data
 
             tweet = datum(objField).asInstanceOf[JsObject]
@@ -126,7 +126,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for {
+        DataPacket(for {
             datum <- data.data
 
             item = datum(objField).asInstanceOf[JsObject]

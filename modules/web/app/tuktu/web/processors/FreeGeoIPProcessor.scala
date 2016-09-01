@@ -43,7 +43,7 @@ class FreeGeoIPProcessor(resultName: String) extends BaseProcessor(resultName)
             lookupIP( address ).map{ result => datum + (resultName -> result) }
         }
         val futurelist = Future.sequence( listfuture )
-        futurelist.map{ fl => new DataPacket( fl ) }
+        futurelist.map{ fl => DataPacket( fl ) }
     })
 
     def lookupIP(ip: String): Future[Any] = {

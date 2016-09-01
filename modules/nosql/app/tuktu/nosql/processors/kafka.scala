@@ -36,7 +36,7 @@ class KafkaProcessor(resultName: String) extends BaseProcessor(resultName) {
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Send the data to kafka
-        for (datum <- data.data) {
+        for (datum <- data) {
             // Get the key
             val key = datum(keyField).toString
             // Serialize datum

@@ -82,7 +82,7 @@ class ESProcessor(resultName: String) extends BaseProcessor(resultName) {
         val replies = Await.result(responses, timeout.duration)
 
         // Now combine replies with data
-        new DataPacket(
+        DataPacket(
             for {
                     (datum, replyList) <- data.data.zip(replies)
                     reply <- replyList

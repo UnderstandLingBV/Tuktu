@@ -160,9 +160,9 @@ class FlattenCookiesProcessor(resultName: String) extends BaseProcessor(resultNa
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Get the cookies and make them first-class citizen
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val cookies = datum(field).asInstanceOf[collection.mutable.ListBuffer[Map[String, Any]]]
             datum ++ cookies.flatMap(cookie => cookie.keys.zip(cookie.values.map(el => el.toString)))
-        })
+        }
     })
 }

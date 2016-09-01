@@ -81,7 +81,7 @@ class MongoDBRawCommandProcessor(resultName: String) extends BaseProcessor(resul
                 }
             })
         })
-        futs.map(result => new DataPacket(result))
+        futs.map(result => DataPacket(result))
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 
 }

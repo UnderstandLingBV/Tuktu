@@ -36,7 +36,7 @@ class CSVStringProcessor(resultName: String) extends BaseProcessor(resultName) {
         val csvWriter = new CSVWriter(sw, separator, quote, escape, "")
 
         // Convert data to CSV
-        val newData = for (datum <- data.data) yield {
+        val newData = for (datum <- data) yield {
             // Sort the datum by key to guarantee a consistent order for all similar data packets,
             // before mapping to their value's string representation
             val stringDatum = datum.toArray.sortBy(_._1).map(_._2.toString)
@@ -51,7 +51,7 @@ class CSVStringProcessor(resultName: String) extends BaseProcessor(resultName) {
         csvWriter.close
         sw.close
 
-        Future { new DataPacket(newData) }
+        Future { newData }
     })
 }
 
@@ -83,7 +83,7 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket({
+        DataPacket({
             // See if this is the first one
             val first = headers == null
 

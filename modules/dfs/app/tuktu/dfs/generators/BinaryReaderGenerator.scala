@@ -29,6 +29,6 @@ class TDFSBinaryReaderGenerator(resultName: String, processors: List[Enumeratee[
                     filename, true, None, Some(64 * 1024)
             )
         }
-        case tcp: TDFSContentPacket => channel.push(new DataPacket(List(Map(resultName -> tcp.content))))
+        case tcp: TDFSContentPacket => channel.push(DataPacket(List(Map(resultName -> tcp.content))))
     }
 }

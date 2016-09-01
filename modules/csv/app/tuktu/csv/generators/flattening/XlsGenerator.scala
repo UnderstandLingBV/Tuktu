@@ -128,8 +128,8 @@ class XlsGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             xslGenActor ! new InitPacket()
         }
         case headerfullLine: Map[String, String] => flattened match {
-            case false => channel.push(new DataPacket(List(Map(resultName -> headerfullLine))))
-            case true  => channel.push(new DataPacket(List(headerfullLine)))
+            case false => channel.push(DataPacket(List(Map(resultName -> headerfullLine))))
+            case true  => channel.push(DataPacket(List(headerfullLine)))
         }
     }
 }

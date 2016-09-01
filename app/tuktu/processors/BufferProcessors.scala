@@ -33,7 +33,7 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
     def receive() = {
         case "release" => {
             // Create datapacket and clear buffer
-            val dp = new DataPacket(buffer.toList.asInstanceOf[List[Map[String, Any]]])
+            val dp = DataPacket(buffer.toList.asInstanceOf[List[Map[String, Any]]])
             buffer.clear
 
             // Push forward to remote generator
@@ -97,7 +97,7 @@ class SizeBufferProcessor(resultName: String) extends BaseProcessor(resultName) 
     // Iteratee to take the data we need
     def groupPackets: Iteratee[DataPacket, DataPacket] = for (
             dps <- Enumeratee.take[DataPacket](maxSize) &>> Iteratee.getChunks
-    ) yield new DataPacket(dps.flatMap(data => data.data))
+    ) yield DataPacket(dps.flatMap(data => data.data))
 
     // Use the iteratee and Enumeratee.grouped
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets) compose
@@ -146,7 +146,7 @@ class EOFBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
     // Iteratee to take the data we need
     def groupPackets: Iteratee[DataPacket, DataPacket] = for (
             dps <- Enumeratee.takeWhile[DataPacket](_ != Input.EOF) &>> Iteratee.getChunks
-    ) yield new DataPacket(dps.flatMap(data => data.data))
+    ) yield DataPacket(dps.flatMap(data => data.data))
 
     // Use the iteratee and Enumeratee.grouped
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
@@ -247,7 +247,7 @@ class DataPacketSplitterProcessor(resultName: String) extends BaseProcessor(resu
     // Iteratee to take the data we need
     def groupPackets: Iteratee[DataPacket, DataPacket] = for (
             dps <- Enumeratee.take[DataPacket](1) &>> Iteratee.getChunks
-    ) yield new DataPacket(dps.flatMap(data => data.data))
+    ) yield DataPacket(dps.flatMap(data => data.data))
 
     // Use the iteratee and Enumeratee.grouped
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)

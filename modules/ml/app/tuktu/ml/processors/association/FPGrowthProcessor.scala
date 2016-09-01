@@ -27,7 +27,7 @@ class FPGrowthProcessor(resultName: String) extends BaseProcessor(resultName) {
         val fpgrowth = new FPGrowth(itemsets, minSupport)
         val results = fpgrowth.learn
         
-        new DataPacket(results.map(itemSet => Map(
+        DataPacket(results.map(itemSet => Map(
                 resultName + "_items" -> itemSet.items,
                 resultName + "_support" -> itemSet.support
         )).toList)

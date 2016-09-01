@@ -107,7 +107,7 @@ class TuktuJSGenerator(
             Cache.getOrElse("JSGenerator.requesters", 30)(collection.mutable.ListBuffer.empty[ActorRef]) += sender
 
             // Set up the data packet
-            val dp = new DataPacket(List(Map(
+            val dp = DataPacket(List(Map(
                 // By default, add referer, request and headers
                 "url" -> request.headers.get("referer").getOrElse(""),
                 "request" -> request,

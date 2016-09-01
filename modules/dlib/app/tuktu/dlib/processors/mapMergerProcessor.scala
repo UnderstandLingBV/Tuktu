@@ -31,7 +31,7 @@ class MapMergerProcessor (resultName: String) extends BaseProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-      new DataPacket(for (datum <- data.data) yield {
+      DataPacket(for (datum <- data.data) yield {
                 val m1: JsObject = datum( map1 ).asInstanceOf[JsObject]
                 val m2: JsObject = datum( map2 ).asInstanceOf[JsObject]
                 val result: JsObject = priority match{

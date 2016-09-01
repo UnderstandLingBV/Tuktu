@@ -101,12 +101,12 @@ class ListIdentifiersGenerator( resultName: String, processors: List[Enumeratee[
         }
         case error: OAIErrorPacket => {
           toj match{
-            case false => channel.push( new DataPacket( List( Map( resultName -> error.error ) ) ) )
+            case false => channel.push( DataPacket( List( Map( resultName -> error.error ) ) ) )
             case true => {
               val jsobj: JsObject = oaipmh.xml2jsObject( error.error.toString )
               flatten match{
-                case true => channel.push( new DataPacket( List( tuktu.api.utils.JsObjectToMap( jsobj ) ) ) )
-                case false => channel.push( new DataPacket( List( Map( resultName -> jsobj ) ) ) )
+                case true => channel.push( DataPacket( List( tuktu.api.utils.JsObjectToMap( jsobj ) ) ) )
+                case false => channel.push( DataPacket( List( Map( resultName -> jsobj ) ) ) )
               }
             }
           }
@@ -116,12 +116,12 @@ class ListIdentifiersGenerator( resultName: String, processors: List[Enumeratee[
           for (identifier <- identifiers; if (!identifier.isEmpty))
           {
             toj match{
-              case false => channel.push( new DataPacket( List( Map( resultName -> identifier ) ) ) )
+              case false => channel.push( DataPacket( List( Map( resultName -> identifier ) ) ) )
               case true => {
                 val jo = oaipmh.xml2jsObject( identifier )
                 flatten match{
-                  case true => channel.push( new DataPacket( List( tuktu.api.utils.JsObjectToMap( jo ) ) ) )
-                  case false => channel.push( new DataPacket( List( Map( resultName -> jo ) ) ) )
+                  case true => channel.push( DataPacket( List( tuktu.api.utils.JsObjectToMap( jo ) ) ) )
+                  case false => channel.push( DataPacket( List( Map( resultName -> jo ) ) ) )
                 }
               }
             }

@@ -142,7 +142,7 @@ class JoinGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
         }
         case jp: JoinedPacket => {
             // Send it on to the outside
-            channel.push(new DataPacket(List(Map(
+            channel.push(DataPacket(List(Map(
                     sources(0)._3 -> jp.data1,
                     sources(1)._3 -> jp.data2
             ))))

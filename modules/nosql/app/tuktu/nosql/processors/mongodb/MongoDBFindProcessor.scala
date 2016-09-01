@@ -99,7 +99,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
             })
         })
         
-        results.map(datums => new DataPacket(datums.flatten))
+        results.map(datums => DataPacket(datums.flatten))
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }
 
@@ -153,7 +153,7 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        for (datum <- data.data) {
+        for (datum <- data) {
             val dbEval = utils.evaluateTuktuString(db, datum)
             val collEval = utils.evaluateTuktuString(collection, datum)
             
@@ -200,7 +200,7 @@ class PacketSenderActor(remoteGenerator: ActorRef) extends Actor with ActorLoggi
         }
         case datum: Map[String, Any] => {
             // Directly forward
-            remoteGenerator ! new DataPacket(List(datum))
+            remoteGenerator ! DataPacket(List(datum))
             sender ! "ok"
         }
     }

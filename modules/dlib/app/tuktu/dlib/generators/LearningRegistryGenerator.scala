@@ -41,7 +41,7 @@ class LearningRegistryGenerator( resultName: String, processors: List[Enumeratee
             val lrActor = Akka.system.actorOf(Props(classOf[LearningRegistryActor], self, node, param))
             lrActor ! new InitPacket()
         }
-        case record: RecordPacket => channel.push(new DataPacket(List(Map(resultName -> record.record))))
+        case record: RecordPacket => channel.push(DataPacket(List(Map(resultName -> record.record))))
     }
 }
 

@@ -198,6 +198,6 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime))
             pollerActor ! new FBDataRequest(urls, startTime, endTime)
         }
-        case data: ResponsePacket => channel.push(new DataPacket(List(Map(resultName -> data.json))))
+        case data: ResponsePacket => channel.push(DataPacket(List(Map(resultName -> data.json))))
     }
 }

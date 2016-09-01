@@ -13,7 +13,7 @@ import play.api.Play.current
  */
 class SimpleMerger() extends DataMerger() {
     override def merge(packets: List[DataPacket]): DataPacket = {
-        new DataPacket(
+        DataPacket(
                 // Fold and zip the packets into one
                 packets.map(packet => packet.data).fold(Nil)((x, y) => x.zipAll(y, Map(), Map()).map(z => z._1 ++ z._2))
         )
@@ -27,7 +27,7 @@ class JSMerger() extends DataMerger() {
     override def merge(packets: List[DataPacket]): DataPacket = {
         val jsField = Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field"))
 
-        new DataPacket({
+        DataPacket({
                 // Fold and zip the packets into one
                 val x = packets.map(packet => packet.data)
                 packets.map(packet => packet.data).fold(Nil)((x, y) => x.zipAll(y, Map.empty[String, Any], Map.empty[String, Any]).map(z => {
@@ -60,9 +60,9 @@ class JSMerger() extends DataMerger() {
 class PaddingMerger() extends DataMerger() {
     override def merge(packets: List[DataPacket]): DataPacket = {
         if (packets.isEmpty || packets.exists { packet => packet.isEmpty })
-            new DataPacket(Nil)
+            DataPacket(Nil)
         else
-            new DataPacket({
+            DataPacket({
                 /**
                  * We must somehow deal with difference in length of the data packets
                  *
@@ -70,14 +70,14 @@ class PaddingMerger() extends DataMerger() {
                  * we pad the 1-sized packet to the length of the other. If both have a size bigger than one but
                  * still not equal, we repeat the packet smallest in size
                  */
-                val maxSize = packets.maxBy { packet => packet.data.size }.data.size
+                val maxSize = packets.maxBy { packet => packet.size }.size
 
                 // Go over all packets, padding where required
                 packets
                     .filter { packet => packet.nonEmpty }
                     .foldLeft(for (i <- 1 to maxSize) yield Map[String, Any]()) { (accum, packet) =>
                         accum
-                            .zip(for (i <- 1 to maxSize) yield packet.data(i % packet.data.size))
+                            .zip(for (i <- 1 to maxSize) yield packet.data(i % packet.size))
                             .map { case (accumMap, packetMap) => accumMap ++ packetMap }
                     }.toList
             })
@@ -90,7 +90,7 @@ class PaddingMerger() extends DataMerger() {
 class SerialMerger() extends DataMerger() {
     override def merge(packets: List[DataPacket]): DataPacket = {
         // Append all results
-        new DataPacket(
+        DataPacket(
                 packets.map(elem => elem.data).flatten
         )
     }

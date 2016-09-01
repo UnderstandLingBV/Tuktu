@@ -44,7 +44,7 @@ object Dispatcher {
         implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
         Enumeratee.mapM((data: DataPacket) => Future {
-            Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, uuid, branch, data.data.size)
+            Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, uuid, branch, data.size)
             data
         })
     }

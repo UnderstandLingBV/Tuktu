@@ -183,7 +183,7 @@ class ConcurrentHandlerActor(genActor: ActorRef, nodeList: List[String], process
                 }
                 
                 // Check if we need to merge
-                val mergedData = if (mergeHandler == null) new DataPacket(resultData.head)
+                val mergedData = if (mergeHandler == null) DataPacket(resultData.head)
                     else mergeHandler(resultData)
 
                 // We should send them on to the remote generator now
@@ -240,11 +240,11 @@ abstract class BaseConcurrentProcessor(genActor: ActorRef, resultName: String) e
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) {
             // Offload data packet to our handler
-            concurrentHandler ! new DataPacket(List(datum))
+            concurrentHandler ! DataPacket(List(datum))
         }
 
         // No need to continue
-        new DataPacket(List())
+        DataPacket(List())
     }) compose Enumeratee.filter((data: DataPacket) => data.nonEmpty) compose Enumeratee.onEOF(() => {
         // Send the end signal to our remote generator
         concurrentHandler ! new StopPacket

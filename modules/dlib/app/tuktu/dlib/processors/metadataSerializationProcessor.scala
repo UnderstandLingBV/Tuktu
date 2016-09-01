@@ -40,7 +40,7 @@ class MetadataSerializationProcessor(resultName: String) extends BaseProcessor(r
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-      new DataPacket(for (datum <- data.data) yield {
+      DataPacket(for (datum <- data.data) yield {
                 val path: String = utils.evaluateTuktuString(folder, datum) + File.separator + utils.evaluateTuktuString(fileName, datum)
                 val file: File = new File( path )
                 

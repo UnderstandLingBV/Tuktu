@@ -24,7 +24,7 @@ class RhetoricsProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get the language
             val language = utils.evaluateTuktuString(lang, datum)
             // Get the tokens from data
@@ -42,6 +42,6 @@ class RhetoricsProcessor(resultName: String) extends BaseProcessor(resultName) {
             
             // Run the persuasion algorithm
             datum + (resultName -> Rhetorics.find(tkns, posTags, language))
-        })
+        }
     })
 }

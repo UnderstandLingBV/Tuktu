@@ -36,7 +36,7 @@ class WrapperHelper(originalData: Map[String, Any], generatorName: String, resul
         data
     }) compose Enumeratee.onEOF(() => {
         // Forward
-        remoteGenerator ! new DataPacket(List(originalData +
+        remoteGenerator ! DataPacket(List(originalData +
                 (resultName -> buffer.toList)
         ))
         

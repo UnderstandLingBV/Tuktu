@@ -76,10 +76,10 @@ class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
                     if (amountSent.getAndIncrement >= amnt)
                             self ! new StopPacket
                     else
-                        channel.push(new DataPacket(List(Map(resultName -> DummyHelper.valToType(message, outputType)))))
+                        channel.push(DataPacket(List(Map(resultName -> DummyHelper.valToType(message, outputType)))))
                 }
                 case None => {
-                    channel.push(new DataPacket(List(Map(resultName -> DummyHelper.valToType(message, outputType)))))
+                    channel.push(DataPacket(List(Map(resultName -> DummyHelper.valToType(message, outputType)))))
                 }
             }
         }
@@ -124,7 +124,7 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
         case one: Int => {
             val fut = randomActor ? one
             fut.onSuccess {
-                case num: Int => channel.push(new DataPacket(List(Map(resultName -> num))))
+                case num: Int => channel.push(DataPacket(List(Map(resultName -> num))))
             }
         }
     }
@@ -151,12 +151,12 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
         }
         case num: Int => {
             if(separate) {
-              channel.push(new DataPacket(List(Map(resultName -> DummyHelper.valToType(vals(num), outputType)))))
+              channel.push(DataPacket(List(Map(resultName -> DummyHelper.valToType(vals(num), outputType)))))
               // See if we're done or not
               if (num < vals.size - 1) self ! (num + 1)
               else self ! new StopPacket
             } else {
-                channel.push(new DataPacket(vals.map(v => Map(resultName -> DummyHelper.valToType(v, outputType)))))
+                channel.push(DataPacket(vals.map(v => Map(resultName -> DummyHelper.valToType(v, outputType)))))
                 self ! new StopPacket
             }
         }
@@ -180,7 +180,7 @@ class CustomPacketGenerator(resultName: String, processors: List[Enumeratee[Data
             val tpkt = (config \ "packet").as[String]
             val js = (config \ "json").asOpt[Boolean].getOrElse(true)
             val jpkt = Json.parse( tpkt ).as[List[JsObject]]
-            packet = new DataPacket(jpkt.map{ jobj => if(js) { jobj.as[Map[String,JsValue]]} else { tuktu.api.utils.JsObjectToMap(jobj) } } )
+            packet = DataPacket(jpkt.map{ jobj => if(js) { jobj.as[Map[String,JsValue]]} else { tuktu.api.utils.JsObjectToMap(jobj) } } )
 
             // See if we need to stop at some point
             maxAmount = (config \ "max_amount").asOpt[Int]

@@ -25,7 +25,7 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(
+        DataPacket(
             if (data.isEmpty) List()
             else {
                 // Go over all paths

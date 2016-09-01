@@ -60,6 +60,6 @@ class VocabularyLookupProcessor(resultName: String) extends BaseProcessor(result
           }
         }
       })
-      Future.sequence( lfutures ).map( x => new DataPacket(x) )
+      Future.sequence( lfutures ).map( x => DataPacket(x) )
     })  
 }

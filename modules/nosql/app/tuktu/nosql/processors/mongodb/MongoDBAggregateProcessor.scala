@@ -74,12 +74,14 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
                 // Get data from Mongo
                 val resultData = coll.aggregate(pipeline.head, pipeline.tail).map(_.result[JsObject])
                 resultData.map { resultList =>
-                    if (resultList.isEmpty) datum + (resultName -> List.empty[JsObject])
-                    else datum + (resultName -> resultList)
+                    if (resultList.isEmpty)
+                        datum + (resultName -> List.empty[JsObject])
+                    else
+                        datum + (resultName -> resultList)
                 }
             }
         })
         
-        newData.map(nd => new DataPacket(nd))
+        newData.map(nd => DataPacket(nd))
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }

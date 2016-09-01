@@ -138,7 +138,7 @@ class DataMonitor extends Actor with ActorLogging {
                     latest(pmp.typeOf) = pmp.data
 
                     val count = app.processorDatumCount.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty.withDefaultValue(0))
-                    count(pmp.typeOf) += pmp.data.data.size
+                    count(pmp.typeOf) += pmp.data.size
 
                     val DPcount = app.processorDataPacketCount.getOrElseUpdate(pmp.processor_id, collection.mutable.Map.empty.withDefaultValue(0))
                     DPcount(pmp.typeOf) += 1

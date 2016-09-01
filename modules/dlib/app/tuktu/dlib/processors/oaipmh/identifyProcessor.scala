@@ -34,7 +34,7 @@ class IdentifyProcessor (resultName: String) extends BaseProcessor(resultName)
           case true => getIdentity( trgt ).map{ x => datum + ( resultName ->  oaipmh.xml2jsObject( x ) ) }
         }
       }
-      Future.sequence( lfuture ).map{ x => new DataPacket( x )  }
+      Future.sequence( lfuture ).map{ x => DataPacket( x )  }
     })
     
   /**

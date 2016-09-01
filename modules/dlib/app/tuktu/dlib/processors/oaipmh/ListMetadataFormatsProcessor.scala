@@ -42,7 +42,7 @@ class ListMetadataFormatsProcessor(resultName: String) extends BaseProcessor(res
               case true => getFormats( verb ).map{ x => datum + ( resultName ->  x.map{ f => oaipmh.xml2jsObject( f ) } ) } 
           }        
       }
-      Future.sequence( lfuture ).map{ x => new DataPacket( x )  }
+      Future.sequence( lfuture ).map{ x => DataPacket( x )  }
     })
     
   /**

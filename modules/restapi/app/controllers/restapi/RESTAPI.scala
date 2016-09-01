@@ -188,7 +188,7 @@ object RESTAPI extends Controller {
                         sendData match {
                             case None => {}
                             case Some(data) => {
-                                gen ! new DataPacket(List(utils.JsObjectToMap(data)))
+                                gen ! DataPacket(List(utils.JsObjectToMap(data)))
                                 gen ! Input.EOF
                             }
                         }
@@ -250,7 +250,7 @@ object RESTAPI extends Controller {
                             val gen = Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest((postBody \ "name").as[String], config, false, true, false, None)
                             gen.map {
                                 case g: ActorRef => {
-                                    g ! new DataPacket(List(utils.JsObjectToMap(data)))
+                                    g ! DataPacket(List(utils.JsObjectToMap(data)))
                                     Ok("")
                                 }
                                 case _: Any => BadRequest(Json.obj("error" -> "Couldn't obtain generator from Dispatcher"))

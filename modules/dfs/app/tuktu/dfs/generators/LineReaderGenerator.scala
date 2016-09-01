@@ -49,7 +49,7 @@ class TDFSLineReaderGenerator(resultName: String, processors: List[Enumeratee[Da
                 }
             })
                 // Make a proper string and output it
-                channel.push(new DataPacket(List(Map(resultName -> new String(tcp.content)))))
+                channel.push(DataPacket(List(Map(resultName -> new String(tcp.content)))))
         }
     }
 }

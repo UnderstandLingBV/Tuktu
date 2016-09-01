@@ -50,7 +50,7 @@ object Synchronous extends Controller {
             ).asInstanceOf[ActorRef]
             
             // Forward data to generator and fetch result
-            val resultFuture = (generator ? new DataPacket(List(utils.JsObjectToMap((jsonBody \ "body").as[JsObject])))).asInstanceOf[Future[DataPacket]]
+            val resultFuture = (generator ? DataPacket(List(utils.JsObjectToMap((jsonBody \ "body").as[JsObject])))).asInstanceOf[Future[DataPacket]]
             resultFuture.map {
               dp =>
                 {

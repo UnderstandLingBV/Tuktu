@@ -25,13 +25,13 @@ class BaseProcessorTestSuite extends PlaySpec {
             """).as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                 Map("key1" -> "val1", "key2" -> "val2"),
                 Map("key2" -> "val2")
             )))
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("res1" -> "val1"),
                     Map()
             )))
@@ -50,22 +50,22 @@ class BaseProcessorTestSuite extends PlaySpec {
 
             // Input
             val input = List(
-                new DataPacket(List(
+                DataPacket(List(
                     Map("key1" -> "val1", "key2" -> "val2"),
                     Map("key3" -> "val3")
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("key1" -> "val1", "key2" -> "val2")
                 ))
             )
 
             //Expected output
             val output = List(
-                new DataPacket(List(
+                DataPacket(List(
                     Map(),
                     Map("key3" -> "val3")
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map()
                 ))
             )
@@ -94,13 +94,13 @@ class BaseProcessorTestSuite extends PlaySpec {
             }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> Map("subkey1" -> "val1"), "key2" -> "val2")
                 ))
             )
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map(
                             "key1" -> Map("subkey1" -> "val1"),
                             "key2" -> "val2",
@@ -115,17 +115,17 @@ class BaseProcessorTestSuite extends PlaySpec {
     
     "RunningCountProcessor" must {
         // Input
-        val input = List(new DataPacket(List(
+        val input = List(DataPacket(List(
                 Map("one" -> 1),
                 Map("one" -> 1),
                 Map("one" -> 1)
             )),
-            new DataPacket(List(
+            DataPacket(List(
                 Map("one" -> 1),
                 Map("one" -> 1),
                 Map("one" -> 1)
             )),
-            new DataPacket(List(
+            DataPacket(List(
                 Map("one" -> 1),
                 Map("one" -> 1),
                 Map("one" -> 1)
@@ -143,17 +143,17 @@ class BaseProcessorTestSuite extends PlaySpec {
             """).as[JsObject]
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("one" -> 1, "result" -> 0),
                     Map("one" -> 1, "result" -> 0),
                     Map("one" -> 1, "result" -> 0)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("one" -> 1, "result" -> 1),
                     Map("one" -> 1, "result" -> 1),
                     Map("one" -> 1, "result" -> 1)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("one" -> 1, "result" -> 2),
                     Map("one" -> 1, "result" -> 2),
                     Map("one" -> 1, "result" -> 2)
@@ -168,17 +168,17 @@ class BaseProcessorTestSuite extends PlaySpec {
             val config = Json.parse("{}").as[JsObject]
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("one" -> 1, "result" -> 0),
                     Map("one" -> 1, "result" -> 1),
                     Map("one" -> 1, "result" -> 2)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("one" -> 1, "result" -> 3),
                     Map("one" -> 1, "result" -> 4),
                     Map("one" -> 1, "result" -> 5)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("one" -> 1, "result" -> 6),
                     Map("one" -> 1, "result" -> 7),
                     Map("one" -> 1, "result" -> 8)
@@ -197,17 +197,17 @@ class BaseProcessorTestSuite extends PlaySpec {
             """).as[JsObject]
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("one" -> 1, "result" -> 0),
                     Map("one" -> 1, "result" -> 3),
                     Map("one" -> 1, "result" -> 6)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("one" -> 1, "result" -> 9),
                     Map("one" -> 1, "result" -> 12),
                     Map("one" -> 1, "result" -> 15)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("one" -> 1, "result" -> 18),
                     Map("one" -> 1, "result" -> 21),
                     Map("one" -> 1, "result" -> 24)
@@ -231,13 +231,13 @@ class BaseProcessorTestSuite extends PlaySpec {
             }""").as[JsObject]
               
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> "val1", "key2" -> "val2")
                 ))
             )
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("key1" -> "val2", "key2" -> "val2")
             )))
             
@@ -261,13 +261,13 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Input
-        val input = List(new DataPacket(List(
+        val input = List(DataPacket(List(
               Map("json" -> Json.obj("key1" -> "val1", "key2" -> Json.obj("key3" -> "val3")))
             ))
         )
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
               Map("json" -> Json.obj("key1" -> "val1", "key2" -> Json.obj("key3" -> "val3")), "key4" -> "val3")
             ))
         )
@@ -297,13 +297,13 @@ class BaseProcessorTestSuite extends PlaySpec {
             }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> Map("subkey1" -> "val1"), "key2" -> "val2")
                 ))
             )
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map(
                             "key1" -> Map("subkey1" -> "val1"),
                             "key2" -> "val2",
@@ -320,7 +320,7 @@ class BaseProcessorTestSuite extends PlaySpec {
       
          // Input
         val input = List(
-            new DataPacket(List(
+            DataPacket(List(
               Map("key1" -> 1, "key2" -> 3, "key3" -> "value1"),
               Map("key1" -> 2, "key2" -> 2, "key3" -> "value2"),
               Map("key1" -> 3, "key2" -> 1, "key3" -> "value3")
@@ -342,7 +342,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
               Map("key1" -> 2, "key2" -> 2, "key3" -> "value2")
             ))
         )
@@ -366,7 +366,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
               Map("key1" -> 1, "key2" -> 3, "key3" -> "value1"),
               Map("key1" -> 3, "key2" -> 1, "key3" -> "value3")
             ))
@@ -390,7 +390,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
               Map("key1" -> 1, "key2" -> 3, "key3" -> "value1"),
               Map("key1" -> 2, "key2" -> 2, "key3" -> "value2")
             ))
@@ -414,7 +414,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
               Map("key1" -> 1, "key2" -> 3, "key3" -> "value1"),
               Map("key1" -> 2, "key2" -> 2, "key3" -> "value2"),
               Map("key1" -> 3, "key2" -> 1, "key3" -> "value3")
@@ -441,7 +441,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
               Map("key1" -> 1, "key2" -> 3, "key3" -> "value1"),
               Map("key1" -> 2, "key2" -> 2, "key3" -> "value2"),
               Map("key1" -> 3, "key2" -> 1, "key3" -> "value3")
@@ -456,7 +456,7 @@ class BaseProcessorTestSuite extends PlaySpec {
       
       // Input
       val input = List(
-        new DataPacket(List(
+        DataPacket(List(
           Map("key1" -> "een", "key2" -> "twee"),
           Map("key1" -> "half", "key2" -> "een"),
           Map("key1" -> "1", "key2" -> "2")
@@ -486,7 +486,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
               Map("key1" -> "een", "key2" -> "twee"),
               Map("key1" -> "1", "key2" -> "2")
             ))
@@ -518,7 +518,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
               Map("key1" -> "een", "key2" -> "twee")
             ))
         )
@@ -542,7 +542,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
             Map("key1" -> "half", "key2" -> "een"),
               Map("key1" -> "1", "key2" -> "2")
             ))
@@ -574,7 +574,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }""").as[JsObject]
         
         // Expected output
-        val output = List(new DataPacket(List(
+        val output = List(DataPacket(List(
               Map("key1" -> "een", "key2" -> "twee"),
               Map("key1" -> "half", "key2" -> "een"),
               Map("key1" -> "1", "key2" -> "2")
@@ -596,13 +596,13 @@ class BaseProcessorTestSuite extends PlaySpec {
             }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> "val2", "key2" -> "val2", "result" -> "val2")
                 ))
             )
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                 Map("key1" -> "val2", "key2" -> "val2", "result" -> "val1")    
             )))
             
@@ -618,13 +618,13 @@ class BaseProcessorTestSuite extends PlaySpec {
             }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> "val2", "key2" -> "val2")
                 ))
             )
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                 Map("key1" -> "val2", "key2" -> "val2", "result" -> "val1")    
             )))
             
@@ -641,13 +641,13 @@ class BaseProcessorTestSuite extends PlaySpec {
             val config = Json.parse("{}").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> "val1", "key2" -> "val2")
                 ))
             )
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                      Map("key1" -> "val1", "key2" -> "val2")
                 ))
             )
@@ -664,13 +664,13 @@ class BaseProcessorTestSuite extends PlaySpec {
               }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> "val1", "key2" -> "val2")
                 ))
             )
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                      Map("key1" -> "val1", "key2" -> "val2")
                 ))
             )
@@ -695,13 +695,13 @@ class BaseProcessorTestSuite extends PlaySpec {
             }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> Json.arr("val1","val2","val3"), "key2" -> Json.arr("val4","val5","val6"))
                 ))
             )
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("key1" -> "val1,val2,val3", "key2" -> Json.arr("val4","val5","val6"))
                 )) 
             )
@@ -721,13 +721,13 @@ class BaseProcessorTestSuite extends PlaySpec {
             }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("keyholes" -> "keyhole1"),Map("keyholes" -> "keyhole2"),Map("keyholes" -> "keyhole3")
                 ))
             )
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                      Map("keyholes" -> List("keyhole1","keyhole2","keyhole3"))
                 )) 
             )
@@ -753,14 +753,14 @@ class BaseProcessorTestSuite extends PlaySpec {
             }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("keys" ->  Json.arr(Json.obj("key1" -> "val1"),Json.obj("key1" -> "val2"),Json.obj("key1" -> "val3"))) 
                 ))
             )
             
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("keys" -> "val1,val2,val3")
                 )) 
             )
@@ -782,14 +782,14 @@ class BaseProcessorTestSuite extends PlaySpec {
             }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> Map("subkey1" -> "val1"))
                 ))
             )
             
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("key1,subkey1" -> "val1")
                 )) 
             )
@@ -810,13 +810,13 @@ class BaseProcessorTestSuite extends PlaySpec {
                 """).as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("keyholes" -> List("keyhole1","keyhole2","keyhole3"))
                 ))
             ) 
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("keyholes" -> "keyhole1"),Map("keyholes" -> "keyhole2"),Map("keyholes" -> "keyhole3")
                 )) 
             )
@@ -828,7 +828,7 @@ class BaseProcessorTestSuite extends PlaySpec {
     "StringSplitterProcessor" must {
       
       // Input
-      val input = List(new DataPacket(List(
+      val input = List(DataPacket(List(
           Map("key1" -> "value1,value2,value3", "key2" -> "value4")
         ))
       ) 
@@ -845,7 +845,7 @@ class BaseProcessorTestSuite extends PlaySpec {
               }""").as[JsObject]
 
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("key1" -> List("value1","value2","value3"), "key2" -> "value4")
                 )) 
             )
@@ -865,7 +865,7 @@ class BaseProcessorTestSuite extends PlaySpec {
               }""").as[JsObject]
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("key1" -> "value1,value2,value3", "key2" -> "value4", "result" -> List("value1","value2","value3"))
                 )) 
             )
@@ -887,7 +887,7 @@ class BaseProcessorTestSuite extends PlaySpec {
               }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List( Map("keys" -> List(
+            val input = List(DataPacket(List( Map("keys" -> List(
                     Map("key1" -> "value1", "key2" -> "value2"),
                     Map("key1" -> "value3", "key2" -> "value4"),
                     Map("key1" -> "value5", "key2" -> "value6")))
@@ -895,7 +895,7 @@ class BaseProcessorTestSuite extends PlaySpec {
             ) 
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("keys" -> List("value1","value3","value5"))
                 )) 
             )
@@ -917,7 +917,7 @@ class BaseProcessorTestSuite extends PlaySpec {
               }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(Map("keys" -> List(
+            val input = List(DataPacket(List(Map("keys" -> List(
                     Map("key1" -> "value1", "key2" -> "value2", "key3" -> "value3"),
                     Map("key1" -> "value4", "key2" -> "value5", "key3" -> "value6"),
                     Map("key1" -> "value7", "key2" -> "value8", "key3" -> "value9")))
@@ -925,7 +925,7 @@ class BaseProcessorTestSuite extends PlaySpec {
             ) 
             
             //Expected output
-            val output = List(new DataPacket(List(Map("keys" -> List(
+            val output = List(DataPacket(List(Map("keys" -> List(
                     Map("key1" -> "value1", "key2" -> "value2", "key3" -> "value3"),
                     Map("key1" -> "value4", "key2" -> "value5", "key3" -> "value6"),
                     Map("key1" -> "value7", "key2" -> "value8", "key3" -> "value9")),
@@ -952,7 +952,7 @@ class BaseProcessorTestSuite extends PlaySpec {
               }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(Map("maps" -> List(
+            val input = List(DataPacket(List(Map("maps" -> List(
                    Map("key1" -> "value1", "key2" -> "value2", "key3" -> "value3"),
                    Map("key1" -> "value4", "key2" -> "value5", "key3" -> "value6"),
                    Map("key1" -> "value7", "key2" -> "value8", "key3" -> "value9")),
@@ -962,7 +962,7 @@ class BaseProcessorTestSuite extends PlaySpec {
             ) 
             
             //Expected output
-            val output = List(new DataPacket(List(Map("maps" -> List(
+            val output = List(DataPacket(List(Map("maps" -> List(
                    Map("key1" -> "value1", "key2" -> "value2", "key3" -> "value3"),
                    Map("key1" -> "value4", "key2" -> "value5", "key3" -> "value6"),
                    Map("key1" -> "value7", "key2" -> "value8", "key3" -> "value9")),
@@ -987,13 +987,13 @@ class BaseProcessorTestSuite extends PlaySpec {
               }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("keys" -> Map("key1" -> "value1", "key2" -> "value2"))
                 ))
             ) 
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                    Map("keys" -> Map("key1" -> "value1", "key2" -> "value2"), "key1" -> "value1", "key2" -> "value2")
                 ))
             )
@@ -1015,13 +1015,13 @@ class BaseProcessorTestSuite extends PlaySpec {
               }""").as[JsObject]
             
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("keys" -> List("key1", "key2"),"values" -> List("value1", "value2"))
                 ))
             ) 
             
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                    Map("keys" -> "key1", "values" -> "value1"), Map("keys" -> "key2", "values" -> "value2")
                 ))
             )
@@ -1040,11 +1040,11 @@ class BaseProcessorTestSuite extends PlaySpec {
             val config = Json.obj("fields" -> List("key1", "key2"))
 
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 3),
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 4)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 5),
                     Map("key1" -> 1, "key2" -> 3, "key3" -> 6)
                 ))
@@ -1052,26 +1052,26 @@ class BaseProcessorTestSuite extends PlaySpec {
 
             // Expected output, order irrelevant within each DP's groups, so n! possible outputs for n different groups
             // In this case we have 1! = 1 output for the first, and 2! = 2 ouputs for the second DataPacket, hence 2 total outputs
-            val output1 = List(new DataPacket(List(
+            val output1 = List(DataPacket(List(
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 3),
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 4)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 5)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("key1" -> 1, "key2" -> 3, "key3" -> 6)
                 ))
             )
 
-            val output2 = List(new DataPacket(List(
+            val output2 = List(DataPacket(List(
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 3),
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 4)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("key1" -> 1, "key2" -> 3, "key3" -> 6)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 5)
                 ))
             )
@@ -1090,18 +1090,18 @@ class BaseProcessorTestSuite extends PlaySpec {
             val config = Json.obj("fields" -> List("key1", "key2"))
 
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 3),
                     Map("key1" -> 4, "key3" -> 5, "key4" -> 6)
                 )),
-                new DataPacket(List(
+                DataPacket(List(
                     Map("key1" -> 7, "key3" -> 8, "key4" -> 9),
                     Map("key1" -> 10, "key3" -> 11, "key4" -> 12)
                 ))
             )
 
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("key1" -> 1, "key2" -> 2, "key3" -> 3)
                 ))
             )
@@ -1120,7 +1120,7 @@ class BaseProcessorTestSuite extends PlaySpec {
             val config = Json.obj("field" -> "key")
 
             // Input
-            val input = List(new DataPacket(List(
+            val input = List(DataPacket(List(
                     Map("key" -> 17),
                     Map("key" -> 1.337),
                     Map("key" -> 102341L),
@@ -1129,7 +1129,7 @@ class BaseProcessorTestSuite extends PlaySpec {
             )))
 
             //Expected output
-            val output = List(new DataPacket(List(
+            val output = List(DataPacket(List(
                     Map("key" -> BigDecimal(17)),
                     Map("key" -> BigDecimal(1.337)),
                     Map("key" -> BigDecimal(102341L)),

@@ -44,13 +44,13 @@ class MissingvaluesProcessor(resultName: String) extends BaseProcessor(resultNam
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             datum.map(elem => {
                 elem._1 -> (fields match {
                     case Some(fs) if fs.contains(elem._1) => replaceValues(elem._2, replacements)
                     case _ => replaceValues(elem._2, replacements)
                 })
             })
-        })
+        }
     })
 }

@@ -55,7 +55,7 @@ class HDFSWriterProcessor(resultName: String) extends BaseProcessor(resultName) 
         // Create a Map containing all the writers
         val writers = scala.collection.mutable.Map[String, (FSDataOutputStream, BufferedWriter)]()
         
-        for (datum <- data.data) {
+        for (datum <- data) {
             val name = tuktu.api.utils.evaluateTuktuString(fileName, datum)
             
             // Set up the output stream reader and buffered writer

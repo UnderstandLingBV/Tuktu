@@ -43,7 +43,7 @@ class MeanProcessor(genActor: ActorRef, resultName: String) extends BaseConcurre
     def mergeProcess(): List[List[Map[String, Any]]] => DataPacket = results => {
         // Sum is first, count second
         val iter = results(0).zip(results(1))
-        new DataPacket({
+        DataPacket({
             for (item <- iter) yield Map(field -> (NumericHelper.toDouble(item._1(field)) / NumericHelper.toDouble(item._2(field))))
         })
     }

@@ -58,7 +58,7 @@ class RESTProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         // Now combine replies with data
         responses.map(replies => {
-            new DataPacket(
+            DataPacket(
                 for ((datum, reply) <- data.data.zip(replies)) yield {
                     datum + (resultName -> reply)
                 }

@@ -18,14 +18,14 @@ class BufferProcessorTestSuite extends PlaySpec {
 
             // Input
             val input = List(
-                new DataPacket(List(Map("key" -> 1), Map("key" -> 2))),
-                new DataPacket(List(Map("key" -> 3))),
-                new DataPacket(List(Map("key" -> 4))))
+                DataPacket(List(Map("key" -> 1), Map("key" -> 2))),
+                DataPacket(List(Map("key" -> 3))),
+                DataPacket(List(Map("key" -> 4))))
 
             //Expected output
             val output = List(
-                new DataPacket(List(Map("key" -> 1), Map("key" -> 2), Map("key" -> 3))),
-                new DataPacket(List(Map("key" -> 4))))
+                DataPacket(List(Map("key" -> 1), Map("key" -> 2), Map("key" -> 3))),
+                DataPacket(List(Map("key" -> 4))))
 
             new BaseProcessorTest()(proc, config, input, output)
         }
@@ -41,13 +41,13 @@ class BufferProcessorTestSuite extends PlaySpec {
 
             // Input
             val input = List(
-                new DataPacket(List(Map("key" -> 1), Map("key" -> 2))),
-                new DataPacket(List(Map("key" -> 3))),
-                new DataPacket(List(Map("key" -> 4))))
+                DataPacket(List(Map("key" -> 1), Map("key" -> 2))),
+                DataPacket(List(Map("key" -> 3))),
+                DataPacket(List(Map("key" -> 4))))
 
             //Expected output
             val output = List(
-                new DataPacket(List(Map("key" -> 1), Map("key" -> 2), Map("key" -> 3), Map("key" -> 4))))
+                DataPacket(List(Map("key" -> 1), Map("key" -> 2), Map("key" -> 3), Map("key" -> 4))))
 
             new BaseProcessorTest()(proc, config, input, output)
         }
@@ -63,16 +63,16 @@ class BufferProcessorTestSuite extends PlaySpec {
 
             // Input
             val input = List(
-                new DataPacket(List(Map("key" -> 1), Map("key" -> 2))),
-                new DataPacket(List(Map("key" -> 3))),
-                new DataPacket(List(Map("key" -> 4))))
+                DataPacket(List(Map("key" -> 1), Map("key" -> 2))),
+                DataPacket(List(Map("key" -> 3))),
+                DataPacket(List(Map("key" -> 4))))
 
             //Expected output
             val output = List(
-                new DataPacket(List(Map("key" -> 1))),
-                new DataPacket(List(Map("key" -> 2))),
-                new DataPacket(List(Map("key" -> 3))),
-                new DataPacket(List(Map("key" -> 4))))
+                DataPacket(List(Map("key" -> 1))),
+                DataPacket(List(Map("key" -> 2))),
+                DataPacket(List(Map("key" -> 3))),
+                DataPacket(List(Map("key" -> 4))))
 
             new BaseProcessorTest()(proc, config, input, output)
         }

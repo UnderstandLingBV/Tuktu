@@ -109,7 +109,7 @@ abstract class BaseMLApplyProcessor[BM <: BaseModel](resultName: String) extends
                 // New Model Name will be used, so line it up for destruction
                 if (destroyOnEOF) toBeDestroyed += newModelName
                 // Apply model
-                new DataPacket(applyModel(resultName, data.data, m))
+                DataPacket(applyModel(resultName, data.data, m))
             }
             case None => data
         }

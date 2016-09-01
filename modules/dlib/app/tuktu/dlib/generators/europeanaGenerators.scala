@@ -71,7 +71,7 @@ class EuropeanaGenerator( resultName: String, processors: List[Enumeratee[DataPa
             val europeanaActor = Akka.system.actorOf(Props(classOf[EuropeanaActor], self, url, maxresult))
             europeanaActor ! new InitPacket()
         }
-        case link: String => channel.push(new DataPacket(List(Map(resultName -> link))))
+        case link: String => channel.push(DataPacket(List(Map(resultName -> link))))
     }
 }
 

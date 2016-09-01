@@ -32,8 +32,8 @@ class ConvertFieldToJson(resultName: String) extends BaseProcessor(resultName) {
  */
 class ConvertToJson(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             datum + (resultName -> MapToJsObject(datum))
-        })
+        }
     })
 }

@@ -31,9 +31,9 @@ class ReadGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                         if (rr.value.nonEmpty) {
                             // Send it in whole or separately?
                             if (block)
-                                channel.push(new DataPacket(rr.value))
+                                channel.push(DataPacket(rr.value))
                             else
-                                for (value <- rr.value) channel.push(new DataPacket(List(value)))
+                                for (value <- rr.value) channel.push(DataPacket(List(value)))
                         }
                                 
                         // Terminate if we are done

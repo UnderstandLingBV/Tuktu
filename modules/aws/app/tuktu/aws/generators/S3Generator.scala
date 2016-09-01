@@ -84,6 +84,6 @@ class S3BucketListerGenerator(resultName: String, processors: List[Enumeratee[Da
             // List files in current one
             lister ! new ListFilePacket(bucket, fileName, true)
         }
-        case name: String => channel.push(new DataPacket(List(Map(resultName -> name))))
+        case name: String => channel.push(DataPacket(List(Map(resultName -> name))))
     }
 }

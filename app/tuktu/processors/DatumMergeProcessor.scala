@@ -13,6 +13,6 @@ import tuktu.api.utils
  */
 class DatumMergeProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(List(data.data.foldLeft(Map.empty[String, Any])((a, b) => utils.mergeMap(a, b))))
+        DataPacket(List(data.data.foldLeft(Map.empty[String, Any])((a, b) => utils.mergeMap(a, b))))
     })
 }

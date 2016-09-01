@@ -86,7 +86,7 @@ class LREGenerator( resultName: String, processors: List[Enumeratee[DataPacket, 
             val lreActor = Akka.system.actorOf(Props(classOf[LREActor], self, query, resultOnly))
             lreActor ! new InitPacket()
         }
-        case id: String => channel.push(new DataPacket(List(Map(resultName -> id))))
-        case lrpacket: LREResultPacket => channel.push(new DataPacket(List(Map(resultName -> lrpacket.result))))
+        case id: String => channel.push(DataPacket(List(Map(resultName -> id))))
+        case lrpacket: LREResultPacket => channel.push(DataPacket(List(Map(resultName -> lrpacket.result))))
     }
 }

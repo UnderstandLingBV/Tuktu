@@ -33,7 +33,7 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
                 def onStatus(status: Status): Unit = {
                     // Flatten the status and push it on
                     val flatStatus = Json.parse(DataObjectFactory.getRawJSON(status))
-                    channel.push(new DataPacket(List(Map(resultName -> flatStatus))))
+                    channel.push(DataPacket(List(Map(resultName -> flatStatus))))
                 }
 
                 @Override

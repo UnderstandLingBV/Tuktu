@@ -21,7 +21,7 @@ class StratifiedSamplingProcessor(resultName: String) extends BaseProcessor(resu
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket({
+        DataPacket({
             // Group items together based on class field
             val grouped = data.data.groupBy(datum => datum(classField))
             // Do the counting

@@ -48,7 +48,7 @@ class RESTGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             // Push result on success, then push EOF
             response.onSuccess {
                 case resp: WSResponse => {
-                    channel.push(new DataPacket(
+                    channel.push(DataPacket(
                         List(
                             Map(
                                 resultName -> (parseAs match {

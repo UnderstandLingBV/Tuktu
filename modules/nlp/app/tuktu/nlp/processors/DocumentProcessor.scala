@@ -25,7 +25,7 @@ class DocumentProcessor(resultName: String) extends BaseProcessor(resultName) {
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         // Get all the text/line data from the packets
-        new DataPacket(List(Map(resultName -> (for {
+        DataPacket(List(Map(resultName -> (for {
             datum <- data.data
             
             str = datum(fieldName) match {

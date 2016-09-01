@@ -53,7 +53,7 @@ class URLCheckerProcessor(resultName: String) extends BaseProcessor(resultName)
                 case Some( s ) => code.map { c => datum + (resultName -> s.contains(c)) }
             }
         }
-        Future.sequence( lfuture ).map{ fl => new DataPacket( fl ) }
+        Future.sequence( lfuture ).map{ fl => DataPacket( fl ) }
     })
 
     def checkUrl(url: String): Future[Int] = {

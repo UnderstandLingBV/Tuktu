@@ -19,7 +19,7 @@ class StreamingDeduplicationProcessor(resultName: String) extends BaseProcessor(
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket((for {
+        DataPacket((for {
             datum <- data.data
 
             // Get the fields we need to check upon

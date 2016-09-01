@@ -138,7 +138,7 @@ class TimeGenerator( resultName: String, processors: List[Enumeratee[DataPacket,
             val timerActor = Akka.system.actorOf(Props(classOf[TimerActor], self, startingTime, endingTime, formatter, interval))
             timerActor ! new InitPacket()
         }
-        case time: String => channel.push(new DataPacket(List(Map(resultName -> time))))
+        case time: String => channel.push(DataPacket(List(Map(resultName -> time))))
     }
 }
 

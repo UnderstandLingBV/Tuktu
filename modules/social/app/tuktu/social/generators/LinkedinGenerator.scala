@@ -52,7 +52,7 @@ class LinkedinGenerator(resultName: String, processors: List[Enumeratee[DataPack
             if (response.isSuccessful) {
                 // See what fields we are after
                 val values = (config \\ "field")
-                values.foreach(value => channel.push(new DataPacket(List(Map(resultName -> value)))))
+                values.foreach(value => channel.push(DataPacket(List(Map(resultName -> value)))))
             }
             
             // Terminate

@@ -37,7 +37,7 @@ class EuropeanaQueryProcessor(resultName: String) extends BaseProcessor(resultNa
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-      new DataPacket(for (datum <- data.data) yield {
+      DataPacket(for (datum <- data.data) yield {
                 val url =  evaluateTuktuString(query, datum) + "&wskey=" + evaluateTuktuString(apikey, datum)
                 maxresult match{
                   case None => datum + ( resultName -> europeana.callEuropeana( url, 1, 0 ) )

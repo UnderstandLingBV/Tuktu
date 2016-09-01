@@ -31,7 +31,7 @@ class ARMProcessor(resultName: String) extends BaseProcessor(resultName) {
         val arm = new association.ARM(itemsets, minSupport)
         val rules = arm.learn(minConf)
         
-        new DataPacket(rules.map(rule => Map(
+        DataPacket(rules.map(rule => Map(
                 resultName + "_antecedent" -> rule.antecedent,
                 resultName + "_consequent" -> rule.consequent,
                 resultName + "_confidence" -> rule.confidence

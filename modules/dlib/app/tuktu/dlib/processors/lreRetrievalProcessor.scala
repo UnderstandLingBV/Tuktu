@@ -47,6 +47,6 @@ class LRERetrievalProcessor(resultName: String) extends BaseProcessor(resultName
             futureresult.map{ result => datum + (resultName -> result) }
         }
         val futurelist = Future.sequence( listfuture )
-        futurelist.map{ fl => new DataPacket( fl ) }
+        futurelist.map{ fl => DataPacket( fl ) }
     })
 }

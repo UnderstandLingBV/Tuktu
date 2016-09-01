@@ -164,7 +164,7 @@ class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends Buffer
                 // Hash anchor fields to node/actor
                 data.data.foreach(datum => {
                     val offset = anchorToActorHasher(datum, aFields, intermediateActors.size)
-                    intermediateActors(offset) ! new DataPacket(List(datum))
+                    intermediateActors(offset) ! DataPacket(List(datum))
                 })
             }
             case None => {

@@ -37,11 +37,12 @@ case class DataPacket(
         data: List[Map[String, Any]]) extends java.io.Serializable {
     def isEmpty: Boolean = data.isEmpty
     def nonEmpty: Boolean = data.nonEmpty
-    def filter(f: Map[String, Any] => Boolean): DataPacket = new DataPacket(data.filter(f))
-    def filterNot(f: Map[String, Any] => Boolean): DataPacket = new DataPacket(data.filterNot(f))
-    def map(f: Map[String, Any] => Map[String, Any]): DataPacket = new DataPacket(data.map(f))
-    def flatMap(f: Map[String, Any] => GenTraversableOnce[Map[String, Any]]): DataPacket = new DataPacket(data.flatMap(f))
+    def filter(f: Map[String, Any] => Boolean): DataPacket = DataPacket(data.filter(f))
+    def filterNot(f: Map[String, Any] => Boolean): DataPacket = DataPacket(data.filterNot(f))
+    def map(f: Map[String, Any] => Map[String, Any]): DataPacket = DataPacket(data.map(f))
+    def flatMap(f: Map[String, Any] => GenTraversableOnce[Map[String, Any]]): DataPacket = DataPacket(data.flatMap(f))
     def foreach(f: Map[String, Any] => Unit): Unit = data.foreach(f)
+    def size: Int = data.size
 }
 
 case class DispatchRequest(

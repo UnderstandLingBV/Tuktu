@@ -139,7 +139,7 @@ class PacketSenderActor(remoteGenerator: ActorRef) extends Actor with ActorLoggi
         }
         case datum: Map[String, Any] => {
             // Directly forward
-            remoteGenerator ! new DataPacket(List(datum))
+            remoteGenerator ! DataPacket(List(datum))
             sender ! "ok"
         }
     }

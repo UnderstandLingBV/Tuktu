@@ -246,7 +246,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         if (!keepAlive) {
             if (!sendWhole) {
-                for (datum <- data.data)
+                for (datum <- data)
                     forwardData(List(datum))
             } else forwardData(data.data)
         } else {
@@ -298,7 +298,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
         fut onSuccess {
             case generatorActor: ActorRef => {
                 //send the data forward
-                generatorActor ! new DataPacket(data)
+                generatorActor ! DataPacket(data)
                 // Directly send stop packet
                 generatorActor ! Broadcast(new StopPacket)
             }
@@ -405,7 +405,7 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
         // Send data to actors
         val futs = for (actor <- actors) yield (actor ? {
-            if (sendOriginal) data else new DataPacket(List())
+            if (sendOriginal) data else DataPacket(List())
         }).asInstanceOf[Future[DataPacket]]
 
         // Get the results
@@ -465,9 +465,9 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
             processData(data)
         } else {
             // Process and merge each datum individually, and concatenate the results into a new DataPacket
-            val futs = for (datum <- data.data) yield Future(processData(new DataPacket(List(datum))))
+            val futs = for (datum <- data.data) yield Future(processData(DataPacket(List(datum))))
             val results = Await.result(Future.sequence(futs), timeout.duration)
-            new DataPacket(results.foldLeft[List[Map[String, Any]]](Nil)((x, y) => x ++ y.data))
+            DataPacket(results.foldLeft[List[Map[String, Any]]](Nil)((x, y) => x ++ y.data))
         }
     })
 
@@ -502,7 +502,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
                     Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(idString, "done")
                 )
                 Enumerator({
-                    if (sendOriginal) data else new DataPacket(List())
+                    if (sendOriginal) data else DataPacket(List())
                 }).through(inclMonitor).run(Iteratee.getChunks)
             }
         } flatMap (t => Future.sequence(t))) // Flatten Future[List[Future[T]]] => Future[List[T]]

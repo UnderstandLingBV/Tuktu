@@ -12,14 +12,14 @@ import tuktu.test.flow.BaseFlowTester
 class FlowTests extends PlaySpec with OneAppPerSuite {
     "DummyTest flow" must {
         "generate one simple value" in {
-            val data = List(new DataPacket(List(Map("test" -> "test"))))
+            val data = List(DataPacket(List(Map("test" -> "test"))))
             new BaseFlowTester(Akka.system)(List(data), "flowtests/dummy")
         }
     }
     
     "Normalization flow" must {
         "normalize values to range [-1, 1]" in {
-            val data = List(new DataPacket(List(
+            val data = List(DataPacket(List(
                     Map("num" -> 0.6),
                     Map("num" -> 1.0),
                     Map("num" -> -1.0),

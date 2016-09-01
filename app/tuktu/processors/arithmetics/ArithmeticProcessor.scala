@@ -52,6 +52,6 @@ class ArithmeticAggregateProcessor(resultName: String) extends BaseProcessor(res
         // Compute on entire DataPacket
         val formula = utils.evaluateTuktuString(calculate, data.data.headOption.getOrElse(Map.empty))
         val res = new tuktu.utils.TuktuArithmeticsParser(data.data)(formula)
-        new DataPacket(data.data.map(datum => datum + (resultName -> res)))
+        data.map { datum => datum + (resultName -> res) }
     })
 }

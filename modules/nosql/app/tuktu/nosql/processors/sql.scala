@@ -94,8 +94,8 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
         // If we have to append data, zip datums with query results, otherwise return DataPacket untouched
         if (append) {
             if (separate)
-                new DataPacket(data.data.zip(results).flatMap(tuple => tuple._2.map(row => tuple._1 + (resultName -> row))))
-            else new DataPacket(data.data.zip(results).map(tuple => tuple._1 + (resultName -> tuple._2)))
+                DataPacket(data.data.zip(results).flatMap(tuple => tuple._2.map(row => tuple._1 + (resultName -> row))))
+            else DataPacket(data.data.zip(results).map(tuple => tuple._1 + (resultName -> tuple._2)))
         } else data
     }) compose Enumeratee.onEOF(() => if (connDef != null) releaseConnection(connDef, conn))
 }

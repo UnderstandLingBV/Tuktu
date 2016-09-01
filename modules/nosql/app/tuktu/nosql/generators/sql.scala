@@ -38,8 +38,8 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             })
             // Enumeratee to turn the Row into a DP
             val rowToDP: Enumeratee[Row, DataPacket] = Enumeratee.mapM(row => Future { flatten match {
-                case true => new DataPacket(List(sql.rowToMap(row)))
-                case false => new DataPacket(List(Map(resultName -> sql.rowToMap(row))))
+                case true => DataPacket(List(sql.rowToMap(row)))
+                case false => DataPacket(List(Map(resultName -> sql.rowToMap(row))))
             }})
             
             // Chain together

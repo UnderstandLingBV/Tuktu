@@ -100,9 +100,9 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
                 case res: List[Map[String, Any]] => {
                     // Determine what to do based on batch or non batch
                     if (batch)
-                        channel.push(new DataPacket(res))
+                        channel.push(DataPacket(res))
                     else
-                        res.foreach(row => channel.push(new DataPacket(List(row))))
+                        res.foreach(row => channel.push(DataPacket(List(row))))
                     self ! new StopPacket()
                 }
                 case _ => self ! new StopPacket()
@@ -233,7 +233,7 @@ class MongoDBCollectionsGenerator(resultName: String, processors: List[Enumerate
                     val futureCollections = futureResult.map{ result => (result \\ "name").map { coll => coll.as[String] } }
                     futureCollections.onSuccess {
                         case collections: List[String] => {
-                            collections.foreach{ collection => channel.push(new DataPacket(List( Map(resultName -> collection) ))) }
+                            collections.foreach{ collection => channel.push(DataPacket(List( Map(resultName -> collection) ))) }
                             self ! new StopPacket
                         }
                         case _ => self ! new StopPacket
@@ -299,7 +299,7 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
                     val futureCollections = futureResult.map{ result => (result \\ "name").map { coll => coll.as[String] } }
                     futureCollections.onSuccess {
                         case collections: List[String] => {
-                            collections.foreach{ collection => channel.push(new DataPacket(List( Map(resultName -> collection) ))) }
+                            collections.foreach{ collection => channel.push(DataPacket(List( Map(resultName -> collection) ))) }
                             self ! new StopPacket
                         }
                         case _ => self ! new StopPacket

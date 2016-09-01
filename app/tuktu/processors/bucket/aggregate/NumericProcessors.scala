@@ -139,7 +139,7 @@ class CountProcessor(resultName: String) extends BaseBucketProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(List(Map(field -> data.data.size)))
+        DataPacket(List(Map(field -> data.size)))
     })
 
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {

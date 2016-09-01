@@ -66,9 +66,9 @@ class KafkaGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
                                         consumerConnector.shutdown
                                         self ! StopPacket
                                     }
-                                    else channel.push(new DataPacket(List(Map(resultName -> message))))
+                                    else channel.push(DataPacket(List(Map(resultName -> message))))
                                 }
-                                case None => channel.push(new DataPacket(List(Map(resultName -> message))))
+                                case None => channel.push(DataPacket(List(Map(resultName -> message))))
                             }
                         }
                     }

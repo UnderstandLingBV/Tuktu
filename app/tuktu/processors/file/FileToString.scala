@@ -30,7 +30,7 @@ class FileToString(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get file contents
             val file = Source.fromFile(datum(field).asInstanceOf[Path].toFile, charset)
             val content = file.getLines.toList.drop(drop).dropRight(dropRight).mkString(separator)
@@ -38,6 +38,6 @@ class FileToString(resultName: String) extends BaseProcessor(resultName) {
 
             // Parse JSON and append
             datum + (resultName -> content)
-        })
+        }
     })
 }

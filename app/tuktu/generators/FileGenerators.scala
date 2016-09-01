@@ -127,7 +127,7 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             Option(lineGenActor) collect { case actor => actor ! PoisonPill }
             cleanup(false)
         }
-        case data: List[Map[String, Any]] => channel.push(new DataPacket(data))
+        case data: List[Map[String, Any]] => channel.push(DataPacket(data))
     }
 }
 
@@ -199,7 +199,7 @@ class FilesGenerator(resultName: String, processors: List[Enumeratee[DataPacket,
             val fileDirActor = Akka.system.actorOf(Props(classOf[FileDirectoryReader], self, defaultFS.getPathMatcher(pathMatcher), recursive))
             fileDirActor ! new PathsPacket(filesAndDirs.map(defaultFS.getPath(_)), null)
         }
-        case path: Path     => channel.push(new DataPacket(List(Map(resultName -> path))))
+        case path: Path     => channel.push(DataPacket(List(Map(resultName -> path))))
     }
 }
 
@@ -220,11 +220,11 @@ class XmlGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             
             // Get the elements we are after
             val nodes = utils.xmlQueryParser(xml.head, query)
-            if (asText) nodes.foreach(el => channel.push(new DataPacket(List(Map(resultName -> {
+            if (asText) nodes.foreach(el => channel.push(DataPacket(List(Map(resultName -> {
                     if (trim) el.text.trim
                     else el.text
                 })))))
-            else nodes.foreach(el => channel.push(new DataPacket(List(Map(resultName -> el)))))
+            else nodes.foreach(el => channel.push(DataPacket(List(Map(resultName -> el)))))
         }
     }
 }

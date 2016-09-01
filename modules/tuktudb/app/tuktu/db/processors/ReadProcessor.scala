@@ -33,7 +33,7 @@ class ReadProcessor(resultName: String) extends BaseProcessor(resultName) {
             val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? new ReadRequest(evalKey)
 
             fut.map {
-                case rr: ReadResponse => new DataPacket(rr.value)
+                case rr: ReadResponse => DataPacket(rr.value)
             }
         } else Future { data }
     })

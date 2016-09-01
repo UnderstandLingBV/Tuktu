@@ -40,7 +40,7 @@ class CountEOFProcessor(resultName: String) extends BaseProcessor(resultName) {
     var eofCounts = 0
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        datumSeen += data.data.size
+        datumSeen += data.size
         dataSeen += 1
         data
     }) compose Enumeratee.onEOF { () =>
@@ -60,11 +60,13 @@ class HeadOfListProcessor(resultName: String) extends BaseProcessor(resultName) 
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             val value = datum(field).asInstanceOf[Seq[Any]]
-            if (value.nonEmpty) datum + (resultName -> value.head)
-            else datum
-        })
+            if (value.nonEmpty)
+                datum + (resultName -> value.head)
+            else
+                datum
+        }
     })
 }
 
@@ -307,9 +309,9 @@ class EvaluateNestedTuktuExpressionsProcessor(resultName: String) extends BasePr
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             datum + (resultName -> evalHelper(expr, datum))
-        })
+        }
     })
 }
 
@@ -324,11 +326,11 @@ class PredicateProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get the predicate parser
             val p = new tuktu.utils.TuktuPredicateParser(datum)
             datum + (resultName -> utils.evaluateTuktuString(predicate, datum))
-        })
+        }
     })
 }
 
@@ -382,7 +384,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(
+        DataPacket(
             // Check if we need to do batch or individual
             if (batch) {
                 // Helper function to check if at least batchMinCount datums fulfill the expressions
@@ -398,7 +400,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                     }
                 }
                 // Check if we need to keep this DP in its entirety or not
-                if (helper(data.data, data.data.size)) data.data
+                if (helper(data.data, data.size)) data.data
                 else List()
             } else {
                 // Filter data
@@ -455,7 +457,7 @@ class PacketRegexFilterProcessor(resultName: String) extends BaseProcessor(resul
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(
+        DataPacket(
             // Check if we need to do batch or individual
             if (batch) {
                 // Helper function to check if at least batchMinCount datums fulfill the expressions
@@ -471,7 +473,7 @@ class PacketRegexFilterProcessor(resultName: String) extends BaseProcessor(resul
                     }
                 }
                 // Check if we need to keep this DP in its entirety or not
-                if (helper(data.data, data.data.size)) data.data
+                if (helper(data.data, data.size)) data.data
                 else List()
             } else {
                 // Filter data
@@ -650,7 +652,7 @@ class KeyImploderProcessor(resultName: String) extends BaseProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(List((for (field <- fields) yield {
+        DataPacket(List((for (field <- fields) yield {
             field -> {
                 for (datum <- data.data) yield datum(field)
             }
@@ -783,7 +785,7 @@ class DataPacketWrapperProcessor(resultName: String) extends BaseProcessor(resul
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         if (as_whole)
-            new DataPacket(List(Map(resultName -> data.data)))
+            DataPacket(List(Map(resultName -> data.data)))
         else
             data.map(datum => Map(resultName -> datum))
     })
@@ -852,7 +854,7 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get the list field's value
             val q = datum(listField)
             val listValue = datum(listField).asInstanceOf[List[Map[String, Any]]]
@@ -873,7 +875,7 @@ class MultiListMapFlattenerProcessor(resultName: String) extends BaseProcessor(r
 
             // Add to our total result
             datum ++ resultMap.map(elem => elem._1 -> elem._2.toList).toMap
-        })
+        }
     })
 }
 

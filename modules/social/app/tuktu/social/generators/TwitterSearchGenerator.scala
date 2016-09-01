@@ -114,6 +114,6 @@ class TwitterSearchGenerator(resultName: String, processors: List[Enumeratee[Dat
             
             actor ! new SearchPacket(keywords, None)
         }
-        case rp: ReplyPacket => channel.push(new DataPacket(List(Map(resultName -> rp.tweet))))
+        case rp: ReplyPacket => channel.push(DataPacket(List(Map(resultName -> rp.tweet))))
     }
 }

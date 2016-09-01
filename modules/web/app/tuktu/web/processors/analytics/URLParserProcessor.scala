@@ -26,7 +26,7 @@ class URLParserProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get URL 
             try {
                 val url = new URL(datum(field).asInstanceOf[String])
@@ -42,7 +42,7 @@ class URLParserProcessor(resultName: String) extends BaseProcessor(resultName) {
             } catch {
                 case e: MalformedURLException => datum + (resultName -> Map.empty[String, String])
             }
-        })
+        }
     })
 }
 
@@ -59,7 +59,7 @@ class URLQueryStringParserProcessor(resultName: String) extends BaseProcessor(re
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get URL 
             val url = new URI(datum(field).asInstanceOf[String])
             val params = URLEncodedUtils.parse(url, "UTF-8")
@@ -68,6 +68,6 @@ class URLQueryStringParserProcessor(resultName: String) extends BaseProcessor(re
                     if (flatten) params.map(nvp => nvp.getName -> nvp.getValue).toMap
                     else Map(resultName -> params.map(nvp => nvp.getName -> nvp.getValue).toList)
             )
-        })
+        }
     })
 }

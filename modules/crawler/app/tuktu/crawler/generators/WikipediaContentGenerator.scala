@@ -103,7 +103,7 @@ class WikipediaContentGenerator(resultName: String, processors: List[Enumeratee[
          }
          case sp: ScrapedPacket => {
              // Push text forward
-             channel.push(new DataPacket(List(Map(
+             channel.push(DataPacket(List(Map(
                      resultName -> (Map(
                              "content" -> sp.text
                      ) ++ {

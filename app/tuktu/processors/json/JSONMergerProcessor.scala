@@ -20,13 +20,13 @@ class JSONMergerProcessor(resultName: String) extends BaseProcessor(resultName) 
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
+        for (datum <- data) yield {
             // Get the data fields
             val objects = fields.map(field => datum(field).asInstanceOf[JsObject])
             // Merge them one by one
             val json = objects.foldLeft(Json.obj())((a, b) => utils.mergeJson(a, b))
 
             datum + (resultName -> json)
-        })
+        }
     })
 }

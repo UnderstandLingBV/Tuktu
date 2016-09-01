@@ -14,6 +14,6 @@ class DatumToFieldProcessor(resultName: String) extends BaseProcessor(resultName
     override def initialize(config: JsObject) {}
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket( data.data.map( datum => Map(resultName -> datum)) ) 
+        for (datum <- data) yield Map(resultName -> datum)
     })
 }
