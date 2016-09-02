@@ -35,6 +35,9 @@ import java.io.FileOutputStream
 import java.io.ObjectOutputStream
 import tuktu.api.ContentRequest
 import tuktu.api.ContentReply
+import java.io.FileInputStream
+import java.io.ObjectInputStream
+import scala.collection.mutable.ListBuffer
 
 // helper case class to get Overview from each node separately
 case class InternalOverview(
@@ -104,7 +107,15 @@ class DBDaemon() extends Actor with ActorLogging {
         )
     
     def receive() = {
-        case ip: InitPacket => {}
+        case ip: InitPacket => {
+            // Read out and initialize the persisted DB
+            val filename = dataDir + File.separator + "db.data"
+            if (new File(filename).exists) {
+                val ois = new ObjectInputStream(new FileInputStream(dataDir + File.separator + "db.data"))
+                tuktudb ++= ois.readObject.asInstanceOf[Map[String, ListBuffer[Map[String, Any]]]]
+                ois.close
+            }
+        }
         case sr: StoreRequest => {
             val elementsPerNode = ({
                 for {
