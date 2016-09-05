@@ -198,7 +198,7 @@ class DBDaemon() extends Actor with ActorLogging {
         case pp: PersistRequest => {
             // Persist to disk
             val oos = new ObjectOutputStream(new FileOutputStream(dataDir + File.separator + "db.data"))
-            oos.writeObject(tuktudb)
+            oos.writeObject(tuktudb.toMap)
             oos.close
         }
         case or: OverviewRequest => {
