@@ -81,7 +81,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
             val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
             fCollection.flatMap(coll => {
                 // Evaluate the query and filter strings and convert to JSON
-                val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
+                val queryJson = Json.parse(utils.evaluateTuktuString(query.toString, datum)).as[JsObject]
                 val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
                 val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
                 
@@ -95,11 +95,17 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
                 }
                 
                 // Get the results in
-                resultData.map(resultList => for (resultRow <- resultList) yield datum + (resultName -> tuktu.api.utils.JsObjectToMap(resultRow)))
+                 resultData.map { resultList =>
+                    if (resultList.isEmpty)
+                        datum + (resultName -> List.empty[JsObject])
+                    else {
+                        datum + (resultName -> resultList)
+                    }
+                }
             })
         })
         
-        results.map(datums => DataPacket(datums.flatten))
+        results.map(nd => DataPacket(nd))
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }
 
