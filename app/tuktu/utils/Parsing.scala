@@ -108,12 +108,12 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     import White._
 
     // Strings
-    val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.', ',')).rep(1).!.map(_.toString))
+    val strings: P[String] = P(CharPred(_ != ')').rep(1).!.map(_.toString))
     // All Tuktu-defined functions
     val functions: P[Boolean] = P(
             (
                     (
-                        "containsFields(" | "isNumeric(" | "isNull(" | "isJSON("
+                        "containsFields(" | "isNumeric(" | "isNull(" | "isJSON(" | "containsSubstring("
                     ).! ~/ strings ~ ")"
             ) | (
                     ("isEmpty(".! ~/ ")".!)
@@ -139,6 +139,13 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                     val result = fieldParser(datum, path)
                     result.map { res => res.isInstanceOf[JsValue] }.getOrElse(false)
                 }
+            }
+            case ("containsSubstring(", field) => {
+                // Get the actual string and the substring
+                val split = field.split(",")
+                val string = split(0)
+                val substring = split(1)
+                string.contains(substring)
             }
             case ("isEmpty(", ")") => datum.isEmpty
         }

@@ -1,0 +1,30 @@
+{
+	"name": "Delay Processor",
+	"description": "Adds a delay between data packets.",
+	"class": "tuktu.processors.DelayProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "delay",
+					"type": "long",
+					"description": "The delay in milliseconds.",
+					"required": true
+				}
+			]
+		}
+	]
+}

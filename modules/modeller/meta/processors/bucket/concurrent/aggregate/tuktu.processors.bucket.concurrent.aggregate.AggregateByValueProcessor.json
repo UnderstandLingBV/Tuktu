@@ -1,0 +1,70 @@
+{
+	"name": "Concurrent Aggregate By Value Processor",
+	"class": "tuktu.processors.bucket.concurrent.aggregate.AggregateByValueProcessor",
+	"description": "Concurrently aggregates by value. Only works for commutative and associative functions (ie. (a+b)+c = a+(b+c) and a+b=b+a)",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "nodes",
+					"description": "The nodes to use for the SingleNode handler type.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "fields",
+					"description": "The fields to aggregate the expression on.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "field",
+									"description": "The actual field to aggregate on. Use dot-notation to traverse paths.",
+									"type": "string",
+									"required": true
+								},
+								{
+									"name": "base_value",
+									"description": "An arithmetic expression to evaluate the base value. For example, for counting, use 1 - for summing, use the value of the field via ${field}.",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "expression",
+					"description": "The expression to compute. When calling pre-defined functions like sum(), do not enter a field name.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

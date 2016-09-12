@@ -34,6 +34,27 @@ class SkipProcessor(resultName: String) extends BaseProcessor(resultName) {
     })
 }
 
+/**
+ * Adds a delay between two data packets
+ */
+class DelayProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var isFirst = true
+    var delay: Long = _
+
+    override def initialize(config: JsObject) {
+        delay = (config \ "delay").as[Long]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        if (!isFirst) Thread.sleep(delay)
+        else isFirst = false
+        data
+    })
+}
+
+/**
+ * Counts the number of EOFs and prints them to info when done
+ */
 class CountEOFProcessor(resultName: String) extends BaseProcessor(resultName) {
     var dataSeen = 0
     var datumSeen = 0
