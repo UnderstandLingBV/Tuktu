@@ -1,0 +1,65 @@
+{
+	"name": "Fixed Width Processor",
+	"class": "tuktu.csv.processors.FixedWidthProcessor",
+	"description": "Turns a fixed-width file into separate fields bases on the fixed widths.",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "headers",
+					"type": "array",
+					"description": "The headers of the fields.",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"description": "Name of the header.",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "field",
+					"type": "string",
+					"description": "The field containing the fixed-width delimited string.",
+					"required": true
+				},
+				{
+					"name": "widths",
+					"type": "array",
+					"description": "The widths of all the fields.",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "int",
+							"description": "Width of the field.",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "flatten",
+					"type": "boolean",
+					"description": "Whether or not to add the resulting fields as top-level citizen (true) or in the resultname field (false).",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

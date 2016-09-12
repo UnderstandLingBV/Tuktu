@@ -180,3 +180,46 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
         }
     })
 }
+
+/**
+ * Parses a fixed-width delimited file where each field always has a specific size
+ */
+class FixedWidthProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var headers: Option[List[String]] = _
+    var field: String = _
+    var widths: List[Int] = _
+    var flatten: Boolean = _
+    var numberHeaders: List[String] = _
+
+    override def initialize(config: JsObject) {
+        field = (config \ "field").as[String]
+        widths = (config \ "widths").as[List[Int]]
+        headers = (config \ "headers").asOpt[List[String]]
+        flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
+        numberHeaders = (0 to widths.size).toList.map(_.toString)
+    }
+    
+    def substringFetch(curWidths: List[Int], string: String): List[String] = curWidths match {
+        case Nil => List(string)
+        case width::trail => string.take(width)::substringFetch(trail, string.drop(width))
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(
+                for (datum <- data.data) yield {
+                    // Get the field to split on
+                    val values = substringFetch(widths, datum(field).toString)
+                    
+                    // Merge with headers or add to DP
+                    if (flatten) headers match {
+                        case Some(hdrs) => datum ++ hdrs.zip(values).toMap
+                        case None => datum ++ numberHeaders.zip(values).toMap
+                    }
+                    else datum + (resultName -> (headers match {
+                        case Some(hdrs) => headers.zip(values).toMap
+                        case None => values
+                    }))
+                }
+        )
+    })
+}
