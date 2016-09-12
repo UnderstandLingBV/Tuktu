@@ -31,6 +31,13 @@
 					"required": false
 				},
 				{
+					"name": "instances",
+					"description": "The amount of instances to run.",
+					"type": "int",
+					"required": false,
+					"default": 1
+				},
+				{
 					"name": "next",
 					"description": "The processors to send the data into.",
 					"type": "array",
