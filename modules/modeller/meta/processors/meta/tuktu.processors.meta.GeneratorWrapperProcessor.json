@@ -29,7 +29,15 @@
 					"description": "The configuration for the generator.",
 					"type": "JsObject",
 					"required": false
+				},
+				{
+					"name": "as_whole",
+					"description": "If set to true, the entire generator's data is buffered and released upon termination of the generator. If set to false, the data resulting from the generator is directly streamed.",
+					"type": "Boolean",
+					"required": false,
+					"default": false
 				}
+				
 			]
 		}
 	]

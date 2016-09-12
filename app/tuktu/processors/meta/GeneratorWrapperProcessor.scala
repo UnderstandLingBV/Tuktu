@@ -22,26 +22,32 @@ import tuktu.api.BaseProcessor
 import tuktu.api.BufferProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils.evaluateTuktuString
+import tuktu.api.StopPacket
+import akka.routing.Broadcast
 
 /**
  * Helper class to have the generator wrapper deal with the data
  */
-class WrapperHelper(originalData: Map[String, Any], generatorName: String, resultName: String, remoteGenerator: ActorRef) extends Actor with ActorLogging {
+class WrapperHelper(originalData: Map[String, Any], generatorName: String,
+        resultName: String, remoteGenerator: ActorRef, asWhole: Boolean) extends Actor with ActorLogging {
     val buffer = collection.mutable.ListBuffer.empty[List[Map[String, Any]]]
     
     // Make the helper enumeratee
     def resultFetchingEnumeratee: Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
-        buffer += data.data
+        // Buffer or not?
+        if (asWhole) buffer += data.data
+        else remoteGenerator ! data
         
         data
     }) compose Enumeratee.onEOF(() => {
-        // Forward
-        remoteGenerator ! DataPacket(List(originalData +
-                (resultName -> buffer.toList)
-        ))
+        // Forward if whole data was set to true
+        if (asWhole)
+            remoteGenerator ! DataPacket(List(originalData +
+                    (resultName -> buffer.toList)
+            ))
         
         // Terminate
-        remoteGenerator ! PoisonPill
+        remoteGenerator ! Broadcast(new StopPacket)
     })
     
     def receive() = {
@@ -65,16 +71,19 @@ class GeneratorWrapperProcessor(genActor: ActorRef, resultName: String) extends 
     
     var generatorName: String = _
     var generatorConfig: JsObject = _
+    var asWhole: Boolean = _
     
     override def initialize(config: JsObject) {
         generatorName = (config \ "generator_name").as[String]
         generatorConfig = (config \ "generator_config").as[JsObject]
+        asWhole = (config \ "as_whole").asOpt[Boolean].getOrElse(false)
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         data.data.foreach(datum => {
             // Create the actor and kickstart it
-            val wrapperHelper = Akka.system.actorOf(Props(classOf[WrapperHelper], datum, generatorName, resultName, genActor))
+            val wrapperHelper = Akka.system.actorOf(Props(classOf[WrapperHelper], datum, generatorName,
+                    resultName, genActor, asWhole))
             // Start
             wrapperHelper ! Json.parse(evaluateTuktuString(generatorConfig.toString, datum))
         })
