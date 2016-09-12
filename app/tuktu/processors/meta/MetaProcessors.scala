@@ -196,11 +196,12 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
         // Get the name of the config file
         name = (config \ "name").as[String]
         // Node to execute on
+        val instances = (config \ "instances").asOpt[Int].getOrElse(1)
         nodes = (config \ "nodes").asOpt[String] match {
             case Some(n) => Json.obj("nodes" -> Json.obj(
                 "type" -> "SingleNode",
                 "node" -> n,
-                "instances" -> 1))
+                "instances" -> instances))
             case None => Json.obj()
         }
         // Get the processors to send data into
