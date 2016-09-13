@@ -288,7 +288,6 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
                 }
                 fieldName = (fieldItem \ "result").as[String]
                 field = fields.head
-                if (fields.nonEmpty && datum.contains(field))
             } yield {
                 fieldName -> utils.fieldParser(datum, fields).getOrElse(default.get)
             })
