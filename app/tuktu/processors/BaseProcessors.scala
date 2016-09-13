@@ -24,6 +24,8 @@ import play.api.Logger
 import scala.collection.GenTraversableOnce
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Input
+import akka.routing.Broadcast
+import concurrent.duration.DurationLong
 
 /**
  * Doesn't do anything
@@ -37,19 +39,67 @@ class SkipProcessor(resultName: String) extends BaseProcessor(resultName) {
 /**
  * Adds a delay between two data packets
  */
-class DelayProcessor(resultName: String) extends BaseProcessor(resultName) {
+class DelayActor(delay: Long, remote: ActorRef) extends Actor with ActorLogging {
+    val buffer = collection.mutable.ListBuffer.empty[DataPacket]
+    var cancellable: Cancellable = null
+    var mustStop: Boolean = false
+    
+    def cleanup() = {
+        remote ! Broadcast(new StopPacket)
+        self ! PoisonPill
+    }
+    
+    def receive() = {
+        case "release" => {
+            // Cancel the cancellable
+            cancellable.cancel
+            
+            // Forward data
+            remote ! buffer.head
+            buffer.remove(0)
+            
+            // Check if we are done
+            if (!buffer.isEmpty) {
+                // Schedule next one
+                cancellable = Akka.system.scheduler.scheduleOnce(
+                        delay milliseconds,
+                        self,
+                        "release"
+                )
+            }
+            else if (mustStop) cleanup
+        }
+        case data: DataPacket => {
+            buffer += data
+            if (cancellable == null || cancellable.isCancelled) {
+                cancellable = Akka.system.scheduler.scheduleOnce(
+                        0 milliseconds,
+                        self,
+                        "release"
+                )
+            }
+        }
+        case sp: StopPacket => {
+            if (!cancellable.isCancelled)
+                mustStop = true
+            else cleanup
+        }
+    }
+}
+class DelayProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
     var isFirst = true
     var delay: Long = _
+    var actor: ActorRef = _
 
     override def initialize(config: JsObject) {
         delay = (config \ "delay").as[Long]
+        actor = Akka.system.actorOf(Props(classOf[DelayActor], delay, genActor))
     }
     
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        if (!isFirst) Thread.sleep(delay)
-        else isFirst = false
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        actor ! data
         data
-    })
+    }) compose Enumeratee.onEOF{() => actor ! new StopPacket}
 }
 
 /**

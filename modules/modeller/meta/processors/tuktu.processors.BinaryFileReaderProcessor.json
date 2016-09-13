@@ -1,0 +1,37 @@
+{
+	"name": "Binary File Reader Processor",
+	"description": "Reads a binary file.",
+	"class": "tuktu.processors.BinaryFileReaderProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "filename",
+					"description": "The file to be read.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "chunk_size",
+					"description": "The chunk size to use.",
+					"type": "int",
+					"required": false,
+					"default": 8092
+				}
+			]
+		}
+	]
+}

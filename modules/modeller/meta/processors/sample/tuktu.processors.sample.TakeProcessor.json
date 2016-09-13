@@ -1,6 +1,6 @@
 {
 	"name": "Take Processor",
-	"description": "Takes a number of data packets and then terminates.",
+	"description": "Takes a number of data packets (or datums per DP) and then terminates.",
 	"class": "tuktu.processors.sample.TakeProcessor",
 	"parameters": [
 		{
@@ -20,9 +20,16 @@
 			"parameters": [
 				{
 					"name": "amount",
-					"description": "The amount of data packets to take.",
+					"description": "The amount of data packets (or datums) to take.",
 					"type": "int",
 					"required": true
+				},
+				{
+					"name": "datums",
+					"description": "If set to true, the take is done on datums inside a DP, if set to false, it is performed on DPs.",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}

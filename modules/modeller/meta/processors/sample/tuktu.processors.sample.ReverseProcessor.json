@@ -1,0 +1,23 @@
+{
+	"name": "Reverse Processor",
+	"description": "Reverse the datums inside a DataPacket.",
+	"class": "tuktu.processors.sample.ReverseProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": []
+		}
+	]
+}

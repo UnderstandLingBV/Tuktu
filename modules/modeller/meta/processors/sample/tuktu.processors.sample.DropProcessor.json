@@ -1,6 +1,6 @@
 {
 	"name": "Drop Processor",
-	"description": "Drops some data packets before sending through.",
+	"description": "Drops some data packets (or datums) before sending through.",
 	"class": "tuktu.processors.sample.DropProcessor",
 	"parameters": [
 		{
@@ -20,9 +20,16 @@
 			"parameters": [
 				{
 					"name": "amount",
-					"description": "The amount of data packets to drop.",
+					"description": "The amount of data packets (or datums) to drop.",
 					"type": "int",
 					"required": true
+				},
+				{
+					"name": "datums",
+					"description": "If set to true, the drop is done on datums inside a DP, if set to false, it is performed on DPs.",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}

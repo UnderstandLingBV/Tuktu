@@ -1,23 +1,23 @@
 package tuktu.processors
 
+import java.io.BufferedReader
 import java.io.BufferedWriter
+import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json.JsObject
-import tuktu.api.BaseProcessor
-import tuktu.api.DataPacket
-import tuktu.api.utils
-import scala.io.Codec
-import scala.io.Source
-import java.io.BufferedReader
-import scala.concurrent.duration.Duration
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.io.File
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.io.Codec
+
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.JsObject
+import tuktu.api._
 
 /**
  * Streams data into a file and closes it when it's done
@@ -271,5 +271,32 @@ class FileReaderProcessor(resultName: String) extends BaseProcessor(resultName) 
                     reader.close
             }
         }
+    })
+}
+
+/**
+ * Reads binary data from a file
+ */
+class BinaryFileReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var fileName: String = _
+    var chunkSize: Int = _
+    
+    override def initialize(config: JsObject) {
+        // Get the file name
+        fileName = (config \ "filename").as[String]
+        // Chunk size (default 8kb)
+        chunkSize = (config \ "chunk_size").asOpt[Int].getOrElse(8 * 1024)
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapFlatten(data => {
+        val actualChunkSize = chunkSize
+        (for (datum <- data.data) yield {
+            // Get the input stream
+            val inputStream = tuktu.api.file.genericBinaryReader(utils.evaluateTuktuString(fileName, datum))
+            Enumerator.fromStream(inputStream, chunkSize) &>
+                Enumeratee.mapM((chunk: Array[Byte]) => Future {
+                    new DataPacket(List(datum + (resultName -> chunk)))
+                })
+        }).toList.foldLeft(Enumerator.enumerate[DataPacket](List()))((a, b) => a andThen b)
     })
 }

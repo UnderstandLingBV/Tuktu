@@ -265,7 +265,7 @@ class BinaryFileGenerator(resultName: String, processors: List[Enumeratee[DataPa
                 }
                 
                 fileStream |>> (Enumeratee.mapM((bytes: Array[Byte]) => Future {
-                    DataPacket(List(Map(resultName -> bytes)))
+                    new DataPacket(List(Map(resultName -> bytes)))
                 }) compose processor) &>> sinkIteratee
             })
         }
