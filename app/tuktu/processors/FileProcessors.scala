@@ -290,13 +290,17 @@ class BinaryFileReaderProcessor(resultName: String) extends BaseProcessor(result
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapFlatten(data => {
         val actualChunkSize = chunkSize
-        (for (datum <- data.data) yield {
+        val enums = (for (datum <- data.data) yield {
             // Get the input stream
             val inputStream = tuktu.api.file.genericBinaryReader(utils.evaluateTuktuString(fileName, datum))
             Enumerator.fromStream(inputStream, chunkSize) &>
                 Enumeratee.mapM((chunk: Array[Byte]) => Future {
                     new DataPacket(List(datum + (resultName -> chunk)))
                 })
-        }).toList.foldLeft(Enumerator.enumerate[DataPacket](List()))((a, b) => a andThen b)
+        }).toList
+        
+        if (enums.size == 1) enums.head
+        else
+            enums.drop(1).foldLeft(enums.head)((a, b) => a andThen b)
     })
 }
