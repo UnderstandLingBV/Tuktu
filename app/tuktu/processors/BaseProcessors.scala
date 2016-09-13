@@ -136,7 +136,7 @@ class HeadOfListProcessor(resultName: String) extends BaseProcessor(resultName) 
             if (value.nonEmpty)
                 datum + (resultName -> value.head)
             else
-                datum
+                datum - resultName
         }
     })
 }
@@ -160,7 +160,6 @@ class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName)
                 fields = (fieldItem \ "path").as[List[String]]
                 fieldName = evaluateTuktuString((fieldItem \ "result").as[String], datum)
                 field = fields.head
-                if (fields.nonEmpty && datum.contains(field))
             } yield {
                 fieldName -> utils.fieldParser(datum, fields).getOrElse(default.get)
             }).toMap
