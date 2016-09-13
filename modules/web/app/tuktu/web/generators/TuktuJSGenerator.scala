@@ -109,7 +109,6 @@ class TuktuJSGenerator(
             // Set up the data packet
             val dp = DataPacket(List(Map(
                 // By default, add referer, request and headers
-                "url" -> request.headers.get("referer").getOrElse(""),
                 "request" -> request,
                 "request_path" -> request.path,
                 "request_uri" -> request.uri,
