@@ -897,12 +897,18 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
             // Get the list field's value
-            val listValue = datum(listField).asInstanceOf[List[Map[String, Any]]]
+            val listValue = datum(listField) match {
+                case lv: JsArray => lv.value.toList
+                case lv: List[Any] => lv
+            }
 
             // Get the actual fields of the maps iteratively
             val newList = listValue.map(listItem => {
                 // Get map field
-                listItem(mapField)
+                listItem match {
+                    case mf: JsObject => (mf \ mapField)
+                    case mf: Map[String, Any] => mf(mapField)
+                }
             })
 
             datum + (resultName -> newList)
