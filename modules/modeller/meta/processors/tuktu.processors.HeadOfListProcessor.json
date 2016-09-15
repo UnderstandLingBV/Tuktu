@@ -23,6 +23,13 @@
 					"type": "string",
 					"description": "The field containing the list.",
 					"required": true
+				},
+				{
+					"name": "keep_original_field",
+					"type": "boolean",
+					"description": "If set to true, the original field is kept if no head of the list is found. Set to false will remove the original field if fetching the head of the list fails.",
+					"required": false,
+					"default": false
 				}
 			]
 		}

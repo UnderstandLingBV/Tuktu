@@ -125,9 +125,11 @@ class CountEOFProcessor(resultName: String) extends BaseProcessor(resultName) {
  */
 class HeadOfListProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
+    var keepOriginal: Boolean = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
+        keepOriginal = (config \ "keep_original_field").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -135,8 +137,9 @@ class HeadOfListProcessor(resultName: String) extends BaseProcessor(resultName) 
             val value = datum(field).asInstanceOf[Seq[Any]]
             if (value.nonEmpty)
                 datum + (resultName -> value.head)
-            else
+            else if (!keepOriginal)
                 datum - resultName
+            else datum
         }
     })
 }
