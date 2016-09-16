@@ -109,10 +109,6 @@ class TuktuJSGenerator(
             // Set up the data packet
             val dp = DataPacket(List(Map(
                 // By default, add referer, request and headers
-                "request" -> request,
-                "request_path" -> request.path,
-                "request_uri" -> request.uri,
-                "request_host" -> request.host,
                 "headers" -> request.headers,
                 "cookies" -> request.cookies.map(c => c.name -> c.value).toMap,
                 Cache.getAs[String]("web.jsname").getOrElse(Play.current.configuration.getString("tuktu.jsname").getOrElse("tuktu_js_field")) -> new WebJsOrderedObject(List()))
