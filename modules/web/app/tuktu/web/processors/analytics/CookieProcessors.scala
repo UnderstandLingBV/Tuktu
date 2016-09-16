@@ -37,11 +37,11 @@ class SetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName)
             val cValue = utils.evaluateTuktuString(value, datum)
             val cExpires = expires match {
                 case Some(e) => Some(utils.evaluateTuktuString(e, datum))
-                case None => None
+                case None    => None
             }
             val cPath = path match {
                 case Some(p) => Some(utils.evaluateTuktuString(p, datum))
-                case None => None
+                case None    => None
             }
 
             // Check if we need to set only if the cookie doesnt exist, or always
@@ -51,10 +51,9 @@ class SetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName)
                             "setCookie" + resultName,
                             List(""),
                             "var n='" + resultName + "=';" +
-                                "var ca=document.cookie.split(';');" +
+                                "var ca=document.cookie.split(/;\\s*/);" +
                                 "for(var i=0;i<ca.length;i++){" +
                                     "var c=ca[i];" +
-                                    "while(c.charAt(0)===' ')c=c.substring(1);" +
                                     "if(c.indexOf(n)===0)return c.substring(n.length);" +
                                 "}" +
                                 "return '';"
@@ -64,29 +63,28 @@ class SetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName)
                             resultName + "=" + cValue + {
                                 cExpires match {
                                     case Some(e) => ";expires=" + e
-                                    case None => ""
+                                    case None    => ""
                                 }
                             } + {
                                 cPath match {
                                     case Some(p) => ";path=" + p
-                                    case None => ""
+                                    case None    => ""
                                 }
                             } + "';}"
                     )
                 ))
-            }
-            else {
+            } else {
                 addJsElement(datum, new WebJsCodeObject(
                         "document.cookie=\"" +
                         resultName + "=" + cValue + {
                             cExpires match {
                                 case Some(e) => ";expires=" + e
-                                case None => ""
+                                case None    => ""
                             }
                         } + {
                             cPath match {
                                 case Some(p) => ";path=" + p
-                                case None => ""
+                                case None    => ""
                             }
                         } + "\";"
                 ))
@@ -115,10 +113,9 @@ class GetCookieProcessor(resultName: String) extends BaseJsProcessor(resultName)
                         "getCookie" + resultName,
                         List(""),
                         "var n='" + cName + "=';" +
-                            "var ca=document.cookie.split(';');" +
+                            "var ca=document.cookie.split(/;\\s*/);" +
                             "for(var i=0;i<ca.length;i++){" +
                                 "var c=ca[i];" +
-                                "while(c.charAt(0)===' ')c=c.substring(1);" +
                                 "if(c.indexOf(n)===0)return c.substring(n.length);" +
                             "}" +
                             "return '';"
@@ -138,11 +135,16 @@ class GetAllCookiesProcessor(resultName: String) extends BaseJsProcessor(resultN
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
             addJsElement(datum, new WebJsObject(
-                    "document.cookie.split(';').map(function(elem){" +
-                    "while(elem.charAt(0)===' ')elem=elem.substring(1);" +
-                    "var res={};var splt=elem.split('=');" +
-                    "res[splt[0]]=splt.slice(1,splt.length).join('=');" +
-                    "return res;})", true
+                    "(function(){" +
+                        "var res={};" +
+                        "document.cookie.split(/;\\s*/).forEach(function(elem){" +
+                            "var splt=elem.split('=');" +
+                            // Some browsers remove the (empty string)= for cookies with empty name, so manually add it
+                            "if(splt.length==1)splt=['',splt[0]];" +
+                            "res[splt[0]]=splt.slice(1,splt.length).join('=');" +
+                        "});" +
+                        "return res;" +
+                    "})();", true
             ))
         }
     })
