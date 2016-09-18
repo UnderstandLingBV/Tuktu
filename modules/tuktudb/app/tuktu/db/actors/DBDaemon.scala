@@ -38,6 +38,8 @@ import tuktu.api.ContentReply
 import java.io.FileInputStream
 import java.io.ObjectInputStream
 import scala.collection.mutable.ListBuffer
+import akka.actor.ActorRef
+import org.apache.commons.collections4.map.PassiveExpiringMap
 
 // helper case class to get Overview from each node separately
 case class InternalOverview(
@@ -46,6 +48,12 @@ case class InternalOverview(
 case class InternalContent(
         cr: ContentRequest
 )
+case class DBIdentityRequest()
+case class DBActorIdentity(
+        node: String,
+        id: ActorRef
+)
+case class IntiateDaemonUpdate()
 
 /**
  * Daemon for Tuktu's DB operations
@@ -83,18 +91,10 @@ class DBDaemon() extends Actor with ActorLogging {
     // For size persistence
     var persistUpdates = 0
     
-    // Get all daemons
-    val dbDaemons = {
-        // Get all other daemons
-        val otherNodes = clusterNodes.keys.toList diff List(Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
-        
-        val futures = for (hostname <- otherNodes) yield {
-            val location = "akka.tcp://application@" + hostname  + ":" + clusterNodes(hostname).akkaPort + "/user/tuktu.db.Daemon"
-            // Get the identity
-            (Akka.system.actorSelection(location) ? Identify(None)).asInstanceOf[Future[ActorIdentity]]
-        }
-        ((homeAddress, self)::otherNodes.zip(Await.result(Future.sequence(futures), timeout.duration).map(id => id.getRef))).toMap
-    }
+    // Map to get all the other daemons, use 4 * timeout so the periodic check is supposedly faster
+    val dbDaemons = new PassiveExpiringMap[String, ActorRef](4 * timeout.duration.toMillis)
+    // Always add ourselves, so TuktuDB will always function
+    dbDaemons.put(homeAddress, self)
     
     /**
      * Hashes a list of keys and a data packet to specific set of nodes
@@ -105,9 +105,43 @@ class DBDaemon() extends Actor with ActorLogging {
                 Cache.getAs[Int]("tuktu.db.replication"),
                 true
         )
+        
+    // Periodically schedule checking of DB daemons
+    Akka.system.scheduler.schedule(
+            2 * timeout.duration,
+            2 * timeout.duration,
+            self,
+            new IntiateDaemonUpdate
+    )
+    
+    /**
+     * Helper function to get the other DB daemons
+     */
+    def getOtherDaemons() {
+        // Update self
+        dbDaemons.put(homeAddress, self)
+        
+        // Request all other daemons for their IDs
+        val otherNodes = clusterNodes.keys.toList diff List(Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
+        otherNodes.foreach(hostname => {
+            val location = "akka.tcp://application@" + hostname + ":" + clusterNodes(hostname).akkaPort + "/user/tuktu.db.Daemon"
+            Akka.system.actorSelection(location) ! new DBIdentityRequest()
+        })
+    }
     
     def receive() = {
+        case initiate: IntiateDaemonUpdate => getOtherDaemons
+        case idr: DBIdentityRequest => {
+            // Another DB daemon asked us to send it our address
+            sender ! new DBActorIdentity(homeAddress, self)
+        }
+        case id: DBActorIdentity => {
+            // Another DB daemon is letting us know its presence
+            dbDaemons.put(id.node, id.id)
+        }
         case ip: InitPacket => {
+            getOtherDaemons
+            
             // Read out and initialize the persisted DB
             val filename = dataDir + File.separator + "db.data"
             if (new File(filename).exists) {
@@ -132,12 +166,12 @@ class DBDaemon() extends Actor with ActorLogging {
             
             // Send replicate request to all
             if (sr.needReply) {
-                val futs = for (elemWithNode <- elementsPerNode) yield dbDaemons(elemWithNode._1) ? new ReplicateRequest(elemWithNode._2.map(_._2), true)
+                val futs = for (elemWithNode <- elementsPerNode) yield dbDaemons.get(elemWithNode._1) ? new ReplicateRequest(elemWithNode._2.map(_._2), true)
                 Future.sequence(futs).map(_ => sender ! "ok")
             }
             else {
                 elementsPerNode.foreach(elemWithNode => {
-                    dbDaemons(elemWithNode._1) ! new ReplicateRequest(
+                    dbDaemons.get(elemWithNode._1) ! new ReplicateRequest(
                             elemWithNode._2.map(_._2),
                             false
                     )
@@ -173,7 +207,7 @@ class DBDaemon() extends Actor with ActorLogging {
                 if (nodes.isEmpty) sender ! new ReadResponse(List())
                 else {
                     // One must have it, pick any
-                    val fut = dbDaemons(Random.shuffle(nodes).head) ? rr
+                    val fut = dbDaemons.get(Random.shuffle(nodes).head) ? rr
                     
                     fut.map {
                         case rr: ReadResponse => sender ! rr
@@ -187,9 +221,9 @@ class DBDaemon() extends Actor with ActorLogging {
             
             // Need reply or not?
             if (dr.needReply) {
-                val futs = for (node <- nodes) yield dbDaemons(node) ? new DeleteActionRequest(dr.key, true)
+                val futs = for (node <- nodes) yield dbDaemons.get(node) ? new DeleteActionRequest(dr.key, true)
                 Future.sequence(futs).map(_ => sender ! "ok")
-            } else nodes.foreach(node => dbDaemons(node) ! new DeleteActionRequest(dr.key, false))
+            } else nodes.foreach(node => dbDaemons.get(node) ! new DeleteActionRequest(dr.key, false))
         }
         case dar: DeleteActionRequest => {
             tuktudb -= dar.key
@@ -205,7 +239,8 @@ class DBDaemon() extends Actor with ActorLogging {
             // need to store original sender
             val originalSender = sender
             
-            val requests = dbDaemons.map(_._2 ? new InternalOverview(or.offset)).asInstanceOf[Seq[Future[OverviewReply]]]
+            val requests = dbDaemons.values.toArray.asInstanceOf[Array[ActorRef]]
+                .map(_ ? new InternalOverview(or.offset)).asInstanceOf[Seq[Future[OverviewReply]]]
 
             Future.fold(requests)(Map.empty[String, Int])(_ ++ _.bucketCounts).map {
                 result => originalSender ! new OverviewReply(result) 
@@ -220,7 +255,8 @@ class DBDaemon() extends Actor with ActorLogging {
             // Need to store original sender
             val originalSender = sender
             
-            val requests = dbDaemons.map(_._2 ? new InternalContent(cr)).asInstanceOf[Seq[Future[ContentReply]]]
+            val requests = dbDaemons.values.toArray.asInstanceOf[Array[ActorRef]]
+                .map(_ ? new InternalContent(cr)).asInstanceOf[Seq[Future[ContentReply]]]
 
             Future.fold(requests)(List.empty[Map[String, Any]])(_ ++ _.data).map {
                 result => originalSender ! new ContentReply(result) 
