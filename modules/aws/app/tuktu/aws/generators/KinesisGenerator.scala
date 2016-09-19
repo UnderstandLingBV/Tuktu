@@ -36,7 +36,6 @@ class KinesisGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             // Get the consumer, app and stream name
             val streamName = (config \ "stream_name").as[String]
             val appName = (config \ "app_name").as[String]
-            val consumerName = (config \ "consumer_name").as[String]
             
             // Initial position
             val initialPosition = (config \ "initial_position").asOpt[String].getOrElse("latest")
