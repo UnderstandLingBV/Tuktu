@@ -1,0 +1,113 @@
+{
+	"name": "Kinesis Generator",
+	"description": "Reads JSON data from Kinesis.",
+	"class": "tuktu.aws.generators.KinesisGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "stop_on_error",
+			"type": "boolean",
+			"required": false,
+			"description": "If set to false, Tuktu will not kill the flow on data error.",
+			"default": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "aws_access_key",
+					"description": "Sets the AWS access key if it cannot be found.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "aws_access_secret",
+					"description": "Sets the AWS access secret if it cannot be found.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "stream_name",
+					"description": "The Kinesis stream name.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "app_name",
+					"description": "The name of the Kinesis consumer application.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "initial_position",
+					"description": "The initial position in the stream. Allowed values are horizon and latest.",
+					"type": "int",
+					"required": false,
+					"default": "latest"
+				},
+				{
+					"name": "retry_count",
+					"description": "The amount of retries before giving up.",
+					"type": "int",
+					"required": false,
+					"default": 3
+				},
+				{
+					"name": "backoff_time",
+					"description": "The time in milliseconds to back-off before retrying.",
+					"type": "long",
+					"required": false,
+					"default": 1000
+				},
+				{
+					"name": "checkpoint_interval",
+					"description": "The interval determining how frequently to checkpoint.",
+					"type": "long",
+					"required": false,
+					"default": 1000
+				}
+				
+			]
+		}
+	]
+}

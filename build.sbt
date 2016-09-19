@@ -32,7 +32,9 @@ lazy val restApiDependencies = Seq(
 )
 
 lazy val awsDependencies = Seq(
-    cache
+    cache,
+	"com.amazonaws" % "amazon-kinesis-client" % "1.7.0",
+	"com.amazonaws" % "aws-java-sdk" % "1.11.35"
 )
 
 lazy val apiDependencies = Seq(
