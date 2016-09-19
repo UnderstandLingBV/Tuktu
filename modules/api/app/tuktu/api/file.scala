@@ -22,7 +22,7 @@ import com.netaporter.uri.Uri
 import com.amazonaws.regions.Regions
 import com.amazonaws.regions.Region
 
-class S3CredentialProvider(id: String, key: String) extends AWSCredentials {
+class TuktuAWSCredentialProvider(id: String, key: String) extends AWSCredentials {
     override def getAWSAccessKeyId() = id
     override def getAWSSecretKey() = key
 }
@@ -168,7 +168,7 @@ object file {
         
         // Set up S3 client
         val s3Client = (id, key) match {
-            case (Some(i), Some(k)) => new AmazonS3Client(new S3CredentialProvider(i, k))
+            case (Some(i), Some(k)) => new AmazonS3Client(new TuktuAWSCredentialProvider(i, k))
             case _ => new AmazonS3Client()
         }
         setS3Region(region, s3Client)
@@ -188,7 +188,7 @@ object file {
         
         // Set up S3 client
         val s3Client = (id, key) match {
-            case (Some(i), Some(k)) => new AmazonS3Client(new S3CredentialProvider(i, k))
+            case (Some(i), Some(k)) => new AmazonS3Client(new TuktuAWSCredentialProvider(i, k))
             case _ => new AmazonS3Client()
         }
         setS3Region(region, s3Client)

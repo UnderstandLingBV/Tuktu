@@ -11,7 +11,6 @@ import play.api.libs.json.JsValue
 import tuktu.api.BackPressurePacket
 import tuktu.api.file
 import com.amazonaws.services.s3.AmazonS3Client
-import tuktu.api.S3CredentialProvider
 import akka.actor.ActorLogging
 import akka.actor.Actor
 import akka.actor.Props
@@ -20,6 +19,7 @@ import play.api.Play.current
 import java.io.File
 import com.amazonaws.services.s3.model.ListObjectsRequest
 import com.amazonaws.services.s3.model.S3ObjectSummary
+import tuktu.api.TuktuAWSCredentialProvider
 
 case class ListFilePacket(
         bucketName: String,
@@ -73,7 +73,7 @@ class S3BucketListerGenerator(resultName: String, processors: List[Enumeratee[Da
             val (id, key, region, bucket, fileName) = file.parseS3Address((config \ "file_name").as[String])
             // Create S3 client
             val s3Client = (id, key) match {
-                case (Some(i), Some(k)) => new AmazonS3Client(new S3CredentialProvider(i, k))
+                case (Some(i), Some(k)) => new AmazonS3Client(new TuktuAWSCredentialProvider(i, k))
                 case _ => new AmazonS3Client()
             }
             file.setS3Region(region, s3Client)
