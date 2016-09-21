@@ -19,35 +19,27 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "fields",
-					"description": "The fields to aggregate the expression on.",
+					"name": "group",
+					"description": "The list of fields which will be grouped together based on their distinct values across all specified fields. Leave empty to consider the whole DataPacket as a single group. The expression is calculated on each group separately, and the group fields with its values will be retained within each group's result, while everything else may not be unique within the group and hence will be dropped. If for example all monthly employee salaries were in a DataPacket (among other things), one could group by employee (some sort of ID), and then calculate the avg() of base ${salary} of each employee ({result -> average employee salary, employee -> employeeID}) instead of company-wide ({result -> average company-wide salary}).",
 					"type": "array",
 					"required": true,
 					"parameters": [
 						{
-							"name": "",
-							"type": "object",
-							"required": true,
-							"parameters": [
-								{
-									"name": "field",
-									"description": "The actual field to aggregate on. Use dot-notation to traverse paths.",
-									"type": "string",
-									"required": true
-								},
-								{
-									"name": "base_value",
-									"description": "An arithmetic expression to evaluate the base value. For example, for counting, use 1 - for summing, use the value of the field via ${field}.",
-									"type": "string",
-									"required": true
-								}
-							]
+							"name": "field",
+							"type": "string",
+							"required": true
 						}
 					]
 				},
 				{
+					"name": "base_value",
+					"description": "An arithmetic expression to evaluate the base value. For example, for counting, use 1 - for summing, use the value of the field via ${field}.",
+					"type": "string",
+					"required": true
+				},
+				{
 					"name": "expression",
-					"description": "The expression to compute. When calling pre-defined functions like sum(), do not enter a field name.",
+					"description": "The expression to compute. When calling pre-defined functions like sum(), avg(), median(), min(), max(), count(), do not enter a field name.",
 					"type": "string",
 					"required": true
 				}
