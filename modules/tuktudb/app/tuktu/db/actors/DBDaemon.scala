@@ -1,44 +1,25 @@
 package tuktu.db.actors
 
-import scala.concurrent.Await
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import akka.actor.Actor
-import akka.actor.ActorIdentity
-import akka.actor.ActorLogging
-import akka.actor.Identify
-import akka.actor.actorRef2Scala
+import scala.collection.JavaConversions.collectionAsScalaIterable
+import scala.collection.mutable.ListBuffer
+import scala.util.Random
+import akka.actor.{ Actor, ActorRef, ActorIdentity, ActorLogging, Identify, actorRef2Scala }
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
-import tuktu.api.ClusterNode
-import tuktu.api.DataPacket
-import tuktu.api.DeleteRequest
-import tuktu.api.InitPacket
-import tuktu.api.PersistRequest
-import tuktu.api.ReadRequest
-import tuktu.api.ReadResponse
-import tuktu.api.ReplicateRequest
-import tuktu.api.StoreRequest
-import tuktu.api.utils
-import scala.util.Random
-import tuktu.api.DeleteActionRequest
-import tuktu.api.OverviewRequest
-import tuktu.api.OverviewReply
 import java.io.File
 import java.nio.file.Files
 import java.io.FileOutputStream
 import java.io.ObjectOutputStream
-import tuktu.api.ContentRequest
-import tuktu.api.ContentReply
 import java.io.FileInputStream
 import java.io.ObjectInputStream
-import scala.collection.mutable.ListBuffer
-import akka.actor.ActorRef
+import tuktu.api._
 import org.apache.commons.collections4.map.PassiveExpiringMap
 
 // helper case class to get Overview from each node separately
@@ -239,7 +220,7 @@ class DBDaemon() extends Actor with ActorLogging {
             // need to store original sender
             val originalSender = sender
             
-            val requests = dbDaemons.values.toArray.asInstanceOf[Array[ActorRef]]
+            val requests = dbDaemons.values.toArray(Array[ActorRef]()).toSeq
                 .map(_ ? new InternalOverview(or.offset)).asInstanceOf[Seq[Future[OverviewReply]]]
 
             Future.fold(requests)(Map.empty[String, Int])(_ ++ _.bucketCounts).map {
@@ -255,7 +236,7 @@ class DBDaemon() extends Actor with ActorLogging {
             // Need to store original sender
             val originalSender = sender
             
-            val requests = dbDaemons.values.toArray.asInstanceOf[Array[ActorRef]]
+            val requests = dbDaemons.values.toArray(Array[ActorRef]()).toSeq
                 .map(_ ? new InternalContent(cr)).asInstanceOf[Seq[Future[ContentReply]]]
 
             Future.fold(requests)(List.empty[Map[String, Any]])(_ ++ _.data).map {
