@@ -1,10 +1,21 @@
 package tuktu.aws.generators
 
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 import com.amazonaws.auth._
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.services.kinesis.clientlibrary.exceptions._
+import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor
+import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer
+import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
+import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownReason
+import com.amazonaws.services.kinesis.model.Record
+import com.google.common.base.Charsets
 
 import akka.actor.ActorRef
 import play.api.libs.iteratee.Enumeratee
@@ -12,18 +23,6 @@ import play.api.libs.json._
 import play.api.libs.json.JsValue
 import tuktu.api._
 import tuktu.api.TuktuAWSCredentialProvider
-import com.amazonaws.services.kinesis.model.Record
-import com.google.common.base.Charsets
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory
-import scala.collection.JavaConverters._
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer
-import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownReason
-import com.amazonaws.services.kinesis.clientlibrary.exceptions._
-import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessor
 
 /**
  * Reads data from a Kinesis stream
@@ -48,19 +47,22 @@ class KinesisGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             // Optionally get AWS credentials?
             val credentials = ((config \ "aws_access_key").asOpt[String], (config \ "aws_access_secret").asOpt[String]) match {
                 case (Some(awsAccessKey), Some(awsAccessSecret)) =>
-                    new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsAccessKey, awsAccessSecret))
+                    new tuktu.aws.utils.Utils.AWSStaticCredentialsProvider(new BasicAWSCredentials(awsAccessKey, awsAccessSecret))
                 case _ => new ProfileCredentialsProvider()
             }
+            // Region
+            val region = (config \ "aws_region").asOpt[String].getOrElse("eu-west-1")
 
             // Set up configuration
             val kclConfig = new KinesisClientLibConfiguration(appName, streamName,
                         credentials, java.util.UUID.randomUUID.toString)
+                .withRegionName(region)
             // Set initial position
             initialPosition match {
                 case "horizon" => kclConfig.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON)
                 case _ => kclConfig.withInitialPositionInStream(InitialPositionInStream.LATEST)
             }
-            
+                        
             // Create the processor factory
             val factory = new ProcessorFactory(self, retryCount, backoffTime, checkpointInterval)
             // Set up the worker

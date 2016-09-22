@@ -67,6 +67,13 @@
 					"required": false
 				},
 				{
+					"name": "aws_region",
+					"description": "Sets the AWS region.",
+					"type": "string",
+					"required": false,
+					"default": "eu-west-1"
+				},
+				{
 					"name": "stream_name",
 					"description": "The Kinesis stream name.",
 					"type": "string",

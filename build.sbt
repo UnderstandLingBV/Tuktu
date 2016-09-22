@@ -33,15 +33,14 @@ lazy val restApiDependencies = Seq(
 
 lazy val awsDependencies = Seq(
     cache,
-	"com.amazonaws" % "amazon-kinesis-client" % "1.7.0",
-	"com.amazonaws" % "aws-java-sdk" % "1.11.35"
+	"com.amazonaws" % "amazon-kinesis-client" % "1.7.0"
 )
 
 lazy val apiDependencies = Seq(
     cache,
     "com.amazonaws" % "aws-java-sdk-s3" % "1.11.1",
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
-    "org.apache.hadoop" % "hadoop-client" % "2.6.0" excludeAll(ExclusionRule(organization = "org.slf4j")),
+    "org.apache.hadoop" % "hadoop-client" % "2.7.3" excludeAll(ExclusionRule(organization = "org.slf4j")),
     "com.netaporter" %% "scala-uri" % "0.4.7",
     "com.enragedginger" %% "akka-quartz-scheduler" % "1.3.0-akka-2.3.x",
     "org.apache.commons" % "commons-collections4" % "4.1"
