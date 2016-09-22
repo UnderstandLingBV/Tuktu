@@ -116,7 +116,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     val functions: P[Boolean] = P(
             (
                     (
-                        "containsFields(" | "isNumeric(" | "isNull(" | "isJSON(" | "containsSubstring("
+                        "containsFields(" | "isNumeric(" | "isNull(" | "isJSON(" | "containsSubstring(" | "isEmptyValue("
                     ).! ~/ strings ~ ")"
             ) | (
                     ("isEmpty(".! ~/ ")".!)
@@ -149,6 +149,15 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                 val string = split(0)
                 val substring = split(1)
                 string.contains(substring)
+            }
+            case ("isEmptyValue(", field) => fieldParser(datum, field) match {
+                case None => false
+                case Some(value) => value match {
+                    case a: Seq[_] => a.isEmpty
+                    case a: Map[_, _] => a.isEmpty
+                    case a: String => a.isEmpty
+                    case a: Any => a.toString.isEmpty
+                }
             }
             case ("isEmpty(", ")") => datum.isEmpty
         }
