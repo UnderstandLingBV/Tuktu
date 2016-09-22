@@ -30,19 +30,20 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
     }
 
     /**
-     * Returns
+     * @param data A DataPacket's data
+     * @return Cube values (to write to result) and Map(cubeStringRepresentation -> evaluated expression)
      */
     private def preprocess(data: List[Map[String, Any]]): List[(List[Any], Map[String, Any])] = {
         (for (
             datum <- data;
-            _values = group map { field => utils.fieldParser(datum, utils.evaluateTuktuString(field, datum)) } if _values.forall { _.isDefined }
+            options = group map { field => utils.fieldParser(datum, utils.evaluateTuktuString(field, datum)) } if options.forall { _.isDefined }
         ) yield {
             // Evaluate expression
             if (evaluatedExpression == None)
                 evaluatedExpression = Some(utils.evaluateTuktuString(expression, datum))
 
             // Get value to use
-            val values = _values map { _.get }
+            val values = options map { _.get }
             val jsStrings = values map {
                 _ match {
                     case v: JsString => v
@@ -77,8 +78,18 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
                     a.replace(b + "()", b + "(" + jsStrings.mkString(",") + ")")
                 })
 
-                // Evaluate string
-                group.zip(values).toMap + (resultName -> parser(newExpression))
+                // Build nested result: split by '.' and nest the whole way down; then mergeMaps
+                def buildResult(tuples: List[(String, Any)], current: Map[String, Any] = Map.empty): Map[String, Any] = tuples match {
+                    case Nil => current
+                    case head :: tail => {
+                        def helper(path: List[String], value: Any): Map[String, Any] = path match {
+                            case head :: Nil => Map(head -> value)
+                            case head :: tail => Map(head -> helper(tail, value))
+                        }
+                        buildResult(tail, utils.mergeMap(current, helper(head._1.split('.').toList, head._2)))
+                    }
+                }
+                buildResult(group.zip(values) ++ List(resultName -> parser(newExpression)))
             }
         })
     })
