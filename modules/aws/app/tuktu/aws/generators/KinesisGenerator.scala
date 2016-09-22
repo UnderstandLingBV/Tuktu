@@ -23,6 +23,7 @@ import play.api.libs.json._
 import play.api.libs.json.JsValue
 import tuktu.api._
 import tuktu.api.TuktuAWSCredentialProvider
+import play.api.Logger
 
 /**
  * Reads data from a Kinesis stream
@@ -96,7 +97,9 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
     // Keep track of our checkpointing time
     var nextCheckpointTime: Long = 0
     
-    override def initialize(shardId: String) {}
+    override def initialize(shardId: String) {
+        //Logger.debug("[Kinesis reader] Processor got initialized")
+    }
     
     /**
      * Processes records
@@ -130,11 +133,13 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
         if (attempt >= retryCount) false
         else {
             try {
-                processRecord(record)
+                //Logger.debug("[Kinesis reader] Trying to process record")
+                generator ! processRecord(record)
                 true
             }
             catch {
                 case e: Throwable => {
+                    //Logger.debug("[Kinesis reader] Throttled while readin " + e.getMessage)
                     Thread.sleep(backoffTime)
                     processRecordWithRetries(record, attempt + 1)
                 }
@@ -148,6 +153,7 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
     def processRecord(record: Record) = {
         // Get the JSON data
         val json = Json.parse(new String(record.getData.array(), Charsets.UTF_8))
+        //Logger.debug("[Kinesis reader] Processed record " + json)
         // Determine what to do
         json match {
             // Send each element to our generator
@@ -160,6 +166,7 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
      * Upon shutdown, we may need to checkpoint
      */
     override def shutdown(checkpointer: IRecordProcessorCheckpointer, reason: ShutdownReason) {
+        //Logger.debug("[Kinesis reader] Got shutdown signal")
         if (reason == ShutdownReason.TERMINATE)
             checkpoint(checkpointer)
     }
@@ -183,6 +190,7 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
             }
         }
         
+        //Logger.debug("[Kinesis reader] Setting a checkpoint with retries")
         checkpointWithRetries(0)
     }
 }
