@@ -84,10 +84,6 @@ object utils {
                                 val split = buffer.substring(prefixSize).split(",")
                                 (split(0), split(1).toBoolean)
                             } else (buffer.substring(prefixSize), false)
-                            
-                            if (varName == "expression_to") {
-                                println(vars(varName).asInstanceOf[JsString].value)
-                            }
 
                             // Apply with variable in vars, or leave it be if it cannot be found
                             val value = if (vars.contains(varName)) {
