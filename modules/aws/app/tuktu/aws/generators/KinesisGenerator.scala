@@ -24,19 +24,24 @@ import play.api.libs.json.JsValue
 import tuktu.api._
 import tuktu.api.TuktuAWSCredentialProvider
 import play.api.Logger
+import akka.actor.ActorLogging
+import akka.actor.Actor
+import play.api.libs.concurrent.Akka
+import akka.actor.Props
+import play.api.Play.current
 
 /**
  * Reads data from a Kinesis stream
  */
 class KinesisGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    var worker: Worker = _
+    var bootstrapper: ActorRef = _
     
     override def _receive = {
         case config: JsValue => {
             // Get the consumer, app and stream name
             val streamName = (config \ "stream_name").as[String]
             val appName = (config \ "app_name").as[String]
-            
+
             // Initial position
             val initialPosition = (config \ "initial_position").asOpt[String].getOrElse("latest")
 
@@ -56,28 +61,41 @@ class KinesisGenerator(resultName: String, processors: List[Enumeratee[DataPacke
 
             // Set up configuration
             val kclConfig = new KinesisClientLibConfiguration(appName, streamName,
-                        credentials, java.util.UUID.randomUUID.toString)
+                credentials, java.util.UUID.randomUUID.toString)
                 .withRegionName(region)
             // Set initial position
             initialPosition match {
                 case "horizon" => kclConfig.withInitialPositionInStream(InitialPositionInStream.TRIM_HORIZON)
-                case _ => kclConfig.withInitialPositionInStream(InitialPositionInStream.LATEST)
+                case _         => kclConfig.withInitialPositionInStream(InitialPositionInStream.LATEST)
             }
-                        
-            // Create the processor factory
-            val factory = new ProcessorFactory(self, retryCount, backoffTime, checkpointInterval)
-            // Set up the worker
-            worker = new Worker(factory, kclConfig)
-            
-            // Start the worker
-            worker.run
+
+            // Set up the bootstrapper actor
+            bootstrapper = Akka.system.actorOf(Props(classOf[KinesisBootstrapper], self, kclConfig, retryCount, backoffTime, checkpointInterval))
+            bootstrapper ! new InitPacket
         }
         case dp: DataPacket => channel.push(dp)
         case sp: StopPacket => {
-            // Shut down our worker
-            worker.shutdown
+            // Shut down our bootstrapper
+            bootstrapper ! sp
             cleanup
         }
+    }
+}
+
+/**
+ * Separate actor to help with running KCL 
+ */
+class KinesisBootstrapper(generator: ActorRef, kclConfig: KinesisClientLibConfiguration, retryCount: Int, backoffTime: Long, checkpointInterval: Long) extends Actor with ActorLogging {
+    var worker: Worker = _
+    def receive() = {
+        case ip: InitPacket => {
+            // Create the processor factory
+            val factory = new ProcessorFactory(generator, retryCount, backoffTime, checkpointInterval)
+            // Set up the worker
+            worker = new Worker(factory, kclConfig)
+            worker.run
+        }
+        case sp: StopPacket => worker.shutdown
     }
 }
 
@@ -96,11 +114,11 @@ class ProcessorFactory(generator: ActorRef, retryCount: Int, backoffTime: Long, 
 class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Long, checkpointInterval: Long) extends IRecordProcessor {
     // Keep track of our checkpointing time
     var nextCheckpointTime: Long = 0
-    
+
     override def initialize(shardId: String) {
         //Logger.debug("[Kinesis reader] Processor got initialized")
     }
-    
+
     /**
      * Processes records
      */
@@ -114,7 +132,7 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
             nextCheckpointTime = System.currentTimeMillis + checkpointInterval
         }
     }
-    
+
     /**
      * Processes records with retries
      */
@@ -125,7 +143,7 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
             processRecordWithRetries(record, 0)
         })
     }
-    
+
     /**
      * Processes a single record with retries
      */
@@ -136,8 +154,7 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
                 //Logger.debug("[Kinesis reader] Trying to process record")
                 generator ! processRecord(record)
                 true
-            }
-            catch {
+            } catch {
                 case e: Throwable => {
                     //Logger.debug("[Kinesis reader] Throttled while readin " + e.getMessage)
                     Thread.sleep(backoffTime)
@@ -146,7 +163,7 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
             }
         }
     }
-    
+
     /**
      * Processes the actual record to turn it into a DataPacket
      */
@@ -161,7 +178,7 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
             case el: JsObject => new DataPacket(List(utils.JsObjectToMap(el.as[JsObject])))
         }
     }
-    
+
     /**
      * Upon shutdown, we may need to checkpoint
      */
@@ -170,7 +187,7 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
         if (reason == ShutdownReason.TERMINATE)
             checkpoint(checkpointer)
     }
-    
+
     /**
      * Does the actual checkpointing
      */
@@ -185,11 +202,11 @@ class TuktuRecordProcessor(generator: ActorRef, retryCount: Int, backoffTime: Lo
                     Thread.sleep(backoffTime)
                     checkpointWithRetries(num + 1)
                 }
-                case e: ShutdownException => false
+                case e: ShutdownException     => false
                 case e: InvalidStateException => false
             }
         }
-        
+
         //Logger.debug("[Kinesis reader] Setting a checkpoint with retries")
         checkpointWithRetries(0)
     }
