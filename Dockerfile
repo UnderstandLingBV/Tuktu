@@ -20,10 +20,10 @@ RUN dpkg -i scala-$SCALA_VERSION.deb
 RUN wget --output-document /opt/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip http://downloads.typesafe.com/typesafe-activator/$ACTIVATOR_VERSION/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip
 RUN unzip /opt/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip -d /opt
 RUN rm -f /opt/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip
-RUN mv /opt/activator-dist-$ACTIVATOR_VERSION-minimal /opt/activator
+RUN mv /opt/activator-$ACTIVATOR_VERSION-minimal /opt/activator
 
 # Add activator to path
-ENV PATH /opt/activator-dist-$ACTIVATOR_VERSION/bin:$PATH
+ENV PATH /opt/activator/bin:$PATH
 
 # Expose port for AKKA communication
 EXPOSE 2552
