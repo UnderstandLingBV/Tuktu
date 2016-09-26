@@ -5,7 +5,7 @@
     "sbt clean test dist"
   ],
   "after_success": [
-    "curl --data \"build=true\" -X POST https://registry.hub.docker.com/u/witlox/wjc/trigger/triggerhere/",
+    "curl --data \"build=true\" -X POST https://registry.hub.docker.com/u/witlox/wjc/trigger/8311031a-434e-4107-b784-048bfd3213bb/",
   ],
   "group": "stable",
   "dist": "precise",
