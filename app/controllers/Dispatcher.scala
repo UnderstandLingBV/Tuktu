@@ -293,39 +293,14 @@ object Dispatcher {
         def buildBranch(
                 nextProcessors: List[Enumeratee[DataPacket, DataPacket]]
         ): Enumeratee[DataPacket, DataPacket] = {
-            val queueSize = Cache.getAs[Int]("mon.bp.blocking_queue_size").getOrElse(Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000))
+            //val queueSize = Cache.getAs[Int]("mon.bp.blocking_queue_size").getOrElse(Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000))
             // Set up the broadcast
             val (enumerator, channel) = Concurrent.broadcast[DataPacket]
             
             // Set up broadcast
-            val queues = for (processor <- nextProcessors) yield {
-                // Create queue for back pressure
-                val queue = new LinkedBlockingQueue[Boolean](queueSize)
-                // Create the Enumeratee that will read from it
-                val qEnum: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(dp => Future {
-                    queue.take
-                    dp
-                })
-                
-                // Chain
-                enumerator |>> (qEnum compose processor) &>> Iteratee.ignore
-                
-                // Return queue
-                queue
-            }
-            
-            // Push to all the queues for back pressure
-            Enumeratee.mapM[DataPacket](dp => Future {
-                // Check if one of the queues is full
-                if (queues.exists(q => q.remainingCapacity == 0)) {
-                    // Send back pressure signal to the monitor that will forward it to the generator
-                    Akka.system.actorSelection("user/TuktuMonitor") ! new BackPressureNotificationPacket(idString)
-                }
-                // Put on the queue
-                queues.foreach(q => q.put(true))
-                
-                dp
-            }) compose
+            val queues = for (processor <- nextProcessors)
+                enumerator |>> processor &>> Iteratee.ignore
+
             // Make a broadcasting Enumeratee and sink Iteratee
             Enumeratee.mapM[DataPacket]((data: DataPacket) => Future {
                 // Broadcast data

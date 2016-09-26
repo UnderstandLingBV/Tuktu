@@ -270,31 +270,6 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
         .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) += self -> context.parent
 
-    var bpSent = false
-    // Back pressure support for Iteratee API->actors
-    val bpProcessors = for (processor <- processors) yield {
-        // Create blocking queue
-        val queue = new LinkedBlockingQueue[Boolean](
-            Cache.getAs[Int]("mon.bp.blocking_queue_size").getOrElse(Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000)))
-
-        // Add the pushing Enumeratee upfront and the pulling Enumeratee at the back
-        Enumeratee.mapM((dp: DataPacket) => Future {
-            // Check if full
-            if (queue.remainingCapacity == 0 && !bpSent) {
-                // Send back pressure packet
-                self ! new BackPressurePacket
-                bpSent = true
-            }
-
-            queue.put(true)
-            dp
-        }) compose processor compose Enumeratee.mapM((dp: DataPacket) => Future {
-            queue.take
-            bpSent = false
-            dp
-        })
-    }
-
     // Set up pipeline, either one that sends back the result, or one that just sinks
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     senderActor match {
@@ -304,9 +279,9 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
                 ref ! dp
                 dp
             }) compose Enumeratee.onEOF(() => ref ! new StopPacket)
-            bpProcessors.foreach(processor => enumerator |>> (processor compose sendBackEnumeratee) &>> sinkIteratee)
+            processors.foreach(processor => enumerator |>> (processor compose sendBackEnumeratee) &>> sinkIteratee)
         }
-        case None => bpProcessors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
+        case None => processors.foreach(processor => enumerator |>> processor &>> sinkIteratee)
     }
 
     def cleanup(sendEof: Boolean): Unit = {
@@ -329,39 +304,11 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
 
     def cleanup(): Unit = cleanup(true)
 
-    // Back pressure handling
-    val backOffInterval = Cache.getAs[Int]("mon.bp.bounce_ms").getOrElse(Play.current.configuration.getInt("tuktu.monitor.bounce_ms").getOrElse(20))
-    val maxBackOff = Cache.getAs[Int]("mon.bp.max_bounce").getOrElse(Play.current.configuration.getInt("tuktu.monitor.max_bounce").getOrElse(6))
-    private var backOffCount = 0
-    /**
-     * Backoff method dealing with back-pressure
-     */
-    def backoff() = {
-        // Also notify our potential sender actor
-        senderActor match {
-            case None     => {}
-            case Some(ar) => ar ! new BackPressurePacket()
-        }
-        // We are pushing too fast, back off
-        Thread.sleep(Math.pow(2, backOffCount).toLong * backOffInterval)
-
-        // To turn it back down
-        self ! new DecreasePressurePacket()
-
-        // Increment
-        if (backOffCount < maxBackOff)
-            backOffCount += 1
-    }
-
-    def decBP() = if (backOffCount >= 0) backOffCount -= 1 else backOffCount = 0
-
     def setup() = {}
 
     def _receive: PartialFunction[Any, Unit] = PartialFunction.empty
 
     def receive = _receive orElse {
-        case dpp: DecreasePressurePacket => decBP
-        case bpp: BackPressurePacket     => backoff
         case ip: InitPacket              => setup
         case sp: StopPacket              => cleanup
         case a                           => play.api.Logger.warn(this.getClass.toString + " received an unhandled packet of type " + a.getClass.toString + ":\n" + a.toString)
