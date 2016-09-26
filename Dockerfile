@@ -46,4 +46,4 @@ WORKDIR /opt/tuktu-$TUKTU_VERSION
 RUN chmod +x run.sh
 
 # and.. go!
-CMD ["run.sh"]
+CMD ["./run.sh"]
