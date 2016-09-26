@@ -2,6 +2,8 @@
 
 [![Join the chat at https://gitter.im/UnderstandLingBV/Tuktu](https://badges.gitter.im/UnderstandLingBV/Tuktu.svg)](https://gitter.im/UnderstandLingBV/Tuktu?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
+[![Build Status](https://travis-ci.org/witlox/Tuktu.svg?branch=master)](https://travis-ci.org/witlox/Tuktu)
+
 Tuktu is created and officially maintained by [UnderstandLing Intellect](http://www.understandling.com).
 
 ![UnderstandLing Logo](images/ul.png)
