@@ -20,7 +20,7 @@
 			"parameters": [
 				{
 					"name": "calculate",
-					"description": "The formula which is calculated, can use aggregation functions mean(field), sum(field), median(field) and count(field).",
+					"description": "The formula which is calculated, can use aggregation functions avg(field), sum(field), median(field), stdev(field), min(field), max(field) and count(field).",
 					"type": "string",
 					"required": true
 				},

@@ -19,7 +19,10 @@ object ArithmeticParser {
     import White._
 
     // Allow all sorts of numbers, negative and scientific notation
-    val number: P[Double] = P(CharIn('-' :: '.' :: 'e' :: ('0' to '9').toList).rep(1).!.map(_.toDouble))
+    val number: P[Double] = P(
+            (CharIn(List('-')) ~ CharIn(('0' to '9').toList).rep(1)).!.map(_.toDouble) |
+            CharIn('.' :: 'e' :: ('0' to '9').toList).rep(1).!.map(_.toDouble)
+    )
     val parens: P[Double] = P("(" ~/ addSub ~ ")")
     val factor: P[Double] = P(number | parens)
 
@@ -110,7 +113,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     // Strings
     val strings: P[String] = P((
             CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList).rep(1) ~
-            CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.', ',') ++ ('0' to '9').toList).rep(0) 
+            CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList ++ List('_', '-', '.', ',', '/') ++ ('0' to '9').toList).rep(0) 
         ).!.map(_.toString))
     // All Tuktu-defined functions
     val functions: P[Boolean] = P(
@@ -214,7 +217,7 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     import White._
 
     // List of allowed functions
-    def allowedFunctions = List("count", "avg", "median", "sum", "max", "min")
+    def allowedFunctions = List("count", "avg", "median", "sum", "max", "min", "stdev")
 
     // All Tuktu-defined arithmetic functions
     val functions: P[Double] = P(
@@ -264,6 +267,13 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
                     val v = fieldParser(datum, field).map { StatHelper.anyToDouble(_) }.getOrElse(Double.MaxValue)
                     if (v < min) v else min
                 }
+            }
+            case ("stdev", field) => {
+                // Get variance
+                val vars = StatHelper.getVariances(data, List(field))
+
+                // Sqrt them to get StDevs
+                vars.map(v => v._1 -> math.sqrt(v._2)).head._2
             }
             case ("count", field) => {
                 data.count { datum => fieldParser(datum, field).isDefined }

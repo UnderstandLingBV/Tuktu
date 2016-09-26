@@ -88,7 +88,7 @@
 				{
 					"name": "initial_position",
 					"description": "The initial position in the stream. Allowed values are horizon and latest.",
-					"type": "int",
+					"type": "string",
 					"required": false,
 					"default": "latest"
 				},
