@@ -35,9 +35,9 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     var db: String = _
     var collection: String = _
     
-    var query: String = _
-    var filter: String = _
-    var sort: String = _
+    var query: JsObject = _
+    var filter: JsObject = _
+    var sort: JsObject = _
     var limit: Option[Int] = _
     
     override def initialize(config: JsObject) {
@@ -62,9 +62,9 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         collection = (config \ "collection").as[String]
         
         // Get query and filter
-        query = (config \ "query").as[JsObject].toString
-        filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj()).toString
-        sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj()).toString
+        query = (config \ "query").as[JsObject]
+        filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
+        sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
         limit = (config \ "limit").asOpt[Int]
         
         // Get the connection
@@ -81,10 +81,10 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
             val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
             fCollection.flatMap(coll => {
                 // Evaluate the query and filter strings and convert to JSON
-                val queryJson = Json.parse(utils.evaluateTuktuString(query.toString, datum)).as[JsObject]
-                val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
-                val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
-                
+                val queryJson: JsObject = utils.evaluateTuktuConfig(query, datum)
+                val filterJson: JsObject = utils.evaluateTuktuConfig(filter, datum)
+                val sortJson: JsObject = utils.evaluateTuktuConfig(sort, datum)
+
                 // Get data based on query and filter
                 val resultData = limit match {
                     case Some(lmt) => coll.find(queryJson, filterJson)
@@ -120,9 +120,9 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
     var db: String = _
     var collection: String = _
     
-    var query: String = _
-    var filter: String = _
-    var sort: String = _
+    var query: JsObject = _
+    var filter: JsObject = _
+    var sort: JsObject = _
     
     // Set up the packet sender actor
     val packetSenderActor = Akka.system.actorOf(Props(classOf[PacketSenderActor], genActor))
@@ -149,9 +149,9 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
         collection = (config \ "collection").as[String]
         
         // Get query and filter
-        query = (config \ "query").as[JsObject].toString
-        filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj()).toString
-        sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj()).toString
+        query = (config \ "query").as[JsObject]
+        filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
+        sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
         
         // Get the connection
         val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
@@ -167,10 +167,10 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
             val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
             fCollection.map {collection =>
                 // Evaluate the query and filter strings and convert to JSON
-                val queryJson = Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject]
-                val filterJson = Json.parse(utils.evaluateTuktuString(filter, datum)).as[JsObject]
-                val sortJson = Json.parse(utils.evaluateTuktuString(sort, datum)).asInstanceOf[JsObject]
-              
+                val queryJson: JsObject = utils.evaluateTuktuConfig(query, datum)
+                val filterJson: JsObject = utils.evaluateTuktuConfig(filter, datum)
+                val sortJson: JsObject = utils.evaluateTuktuConfig(sort, datum)
+
                 // Query database and forward to our actor
                 val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson)
                     .sort(sortJson).cursor[JsObject]().enumerate().andThen(Enumerator.eof)

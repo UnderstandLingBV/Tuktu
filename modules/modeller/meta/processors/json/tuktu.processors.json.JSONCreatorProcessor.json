@@ -20,8 +20,8 @@
 			"parameters": [
 				{
 					"name": "json",
-					"description": "The string representation of the JSON element.",
-					"type": "string",
+					"description": "The JSON element, can contain Tuktu Strings (in strings). If you want something to be parsed (for example Tuktu Strings), place them inside a string and %{...}, like for example { a: \"%{${list}}\" } -> { a: [ 1, 2, 3 ] } if list's string representation is \"[1,2,3]\".",
+					"type": "any",
 					"required": true
 				}
 			]

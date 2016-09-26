@@ -49,103 +49,36 @@ object utils {
         if (vars.isEmpty) {
             str
         } else {
-            // determine max length for performance reasons, include the ,true option
-            val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length + ",true".size
+            // determine max length for performance reasons
+            val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
             val result = new StringBuilder
             // a temporary buffer to determine if we need to replace this
             val buffer = new StringBuilder
             // The prefix length of TuktuStrings "${".length = 2
             val prefixSize = "${".length
-            var skipQuote = false
             str.foreach { currentChar =>
-                if (skipQuote) {
-                    // Skip the closing quote of the string encapsulating a non-string variable
-                    skipQuote = false
-                } else {
-                    if (buffer.isEmpty) {
-                        if (currentChar.equals('$')) {
-                            buffer.append(currentChar)
-                        } else {
-                            result.append(currentChar)
-                        }
-                    } else if (buffer.length == 1) {
+                if (buffer.isEmpty) {
+                    if (currentChar.equals('$')) {
                         buffer.append(currentChar)
-                        if (!currentChar.equals('{')) {
-                            result.append(buffer)
-                            buffer.clear
-                        }
-                    } else if (buffer.length > maxKeyLength + prefixSize) {
-                        result.append(buffer).append(currentChar)
+                    } else {
+                        result.append(currentChar)
+                    }
+                } else if (buffer.length == 1) {
+                    buffer.append(currentChar)
+                    if (!currentChar.equals('{')) {
+                        result.append(buffer)
+                        buffer.clear
+                    }
+                } else if (buffer.length > maxKeyLength + prefixSize) {
+                    result.append(buffer).append(currentChar)
+                    buffer.clear
+                } else {
+                    if (currentChar.equals('}')) {
+                        // apply with variable in vars, or leave it be if it cannot be found
+                        result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
                         buffer.clear
                     } else {
-                        if (currentChar.equals('}')) {
-                            // Check if we need to modify the buffer in case of non-string values, to remove the quotes
-                            val (varName, removeQuotesForNonString) = if (buffer.substring(prefixSize).split(",").size == 2) {
-                                val split = buffer.substring(prefixSize).split(",")
-                                (split(0), split(1).toBoolean)
-                            } else (buffer.substring(prefixSize), false)
-
-                            // Apply with variable in vars, or leave it be if it cannot be found
-                            val value = if (vars.contains(varName)) {
-                                (vars(varName) match {
-                                    // Skip the quotes or not?
-                                    case v: Boolean => {
-                                        if (removeQuotesForNonString) {
-                                            result.setLength(result.length - 1)
-                                            skipQuote = true
-                                        }
-                                        v
-                                    }
-                                    case v: JsBoolean => {
-                                        if (removeQuotesForNonString) {
-                                            result.setLength(result.length - 1)
-                                            skipQuote = true
-                                        }
-                                        v.value
-                                    }
-                                    case v: Double => {
-                                        if (removeQuotesForNonString) {
-                                            result.setLength(result.length - 1)
-                                            skipQuote = true
-                                        }
-                                        v
-                                    }
-                                    case v: Int => {
-                                        if (removeQuotesForNonString) {
-                                            result.setLength(result.length - 1)
-                                            skipQuote = true
-                                        }
-                                        v
-                                    }
-                                    case v: JsNumber => {
-                                        if (removeQuotesForNonString) {
-                                            result.setLength(result.length - 1)
-                                            skipQuote = true
-                                        }
-                                        v.value
-                                    }
-                                    case v: JsString => {
-                                        if (removeQuotesForNonString) {
-                                            result.setLength(result.length - 1)
-                                            skipQuote = true
-                                        }
-                                        v.value
-                                    }
-                                    case v: String => v
-                                    case v: Any => {
-                                        if (removeQuotesForNonString) {
-                                            result.setLength(result.length - 1)
-                                            skipQuote = true
-                                        }
-                                        v.toString
-                                    }
-                                }).toString
-                            } else buffer + "}"
-                            result.append(value)
-                            buffer.clear
-                        } else {
-                            buffer.append(currentChar)
-                        }
+                        buffer.append(currentChar)
                     }
                 }
             }
@@ -228,7 +161,7 @@ object utils {
     }
 
     def evaluateTuktuConfig(obj: JsObject, vars: Map[String, Any]): JsObject = {
-        new JsObject(obj.value.mapValues(value => evaluateTuktuConfig(value, vars)).toSeq)
+        new JsObject(obj.value.map { case (key, value) => evaluateTuktuString(key, vars) -> evaluateTuktuConfig(value, vars) }.toSeq)
     }
 
     def evaluateTuktuConfig(arr: JsArray, vars: Map[String, Any]): JsArray = {
