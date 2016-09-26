@@ -48,7 +48,7 @@ class GeneratorConfigProcessor(resultName: String) extends BaseProcessor(resultN
         val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
             "/" + nextName + ".json", "utf-8")
         val conf = utils.evaluateTuktuConfig(Json.parse(configFile.mkString).as[JsObject],
-            replacements.map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)))
+            replacements.map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)), '#')
         configFile.close
 
         // Invoke the new generator with custom config
@@ -108,7 +108,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         val datum = data.data.headOption.getOrElse(Map())
 
         // Populate config
-        val config = utils.evaluateTuktuConfig(processorConfig, datum)
+        val config = utils.evaluateTuktuConfig(processorConfig, datum, '#')
 
         // Get the name of the config file
         val nextName = (config \ "name").as[String]
@@ -280,7 +280,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
             val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
                 "/" + path + ".json", "utf-8")
             val cfg = utils.evaluateTuktuConfig(Json.parse(configFile.mkString).as[JsObject],
-                replacements.map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)))
+                replacements.map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)), '#')
             configFile.close
             (cfg \ "processors").as[List[JsObject]]
         }
@@ -484,7 +484,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
             val processorMap = {
                 val configContent = Files.readAllBytes(Paths.get(Cache.getAs[String]("configRepo").getOrElse("configs"), path + ".json"))
                 val cfg = utils.evaluateTuktuConfig(Json.parse(configContent).as[JsObject],
-                    (replacements ++ localReplacements).map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)))
+                    (replacements ++ localReplacements).map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)), '#')
                 controllers.Dispatcher.buildProcessorMap((cfg \ "processors").as[List[JsObject]])
             }
 

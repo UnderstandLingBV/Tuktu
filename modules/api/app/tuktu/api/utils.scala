@@ -45,7 +45,7 @@ object utils {
     /**
      * Evaluates a Tuktu string to resolve variables in the actual string
      */
-    def evaluateTuktuString(str: String, vars: Map[String, Any]) = {
+    def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$') = {
         if (vars.isEmpty) {
             str
         } else {
@@ -55,10 +55,10 @@ object utils {
             // a temporary buffer to determine if we need to replace this
             val buffer = new StringBuilder
             // The prefix length of TuktuStrings "${".length = 2
-            val prefixSize = "${".length
+            val prefixSize = (specialChar + "{").length
             str.foreach { currentChar =>
                 if (buffer.isEmpty) {
-                    if (currentChar.equals('$')) {
+                    if (currentChar.equals(specialChar)) {
                         buffer.append(currentChar)
                     } else {
                         result.append(currentChar)
@@ -91,7 +91,7 @@ object utils {
     /**
      * Evaluates a Tuktu config to resolve variables in it
      */
-    def evaluateTuktuConfig(str: String, vars: Map[String, Any]): JsValue = {
+    def evaluateTuktuConfig(str: String, vars: Map[String, Any], specialChar: Char): JsValue = {
         // Check if str is of the form %{...} and hence is JSON that needs to be parsed
         val toBeParsed = str.startsWith("%{") && str.endsWith("}")
         val cleaned = if (toBeParsed) str.drop(2).dropRight(1) else str
@@ -107,10 +107,10 @@ object utils {
             val buffer = new StringBuilder
 
             // The prefix length of TuktuStrings "#{".length = 2
-            val prefixSize = "#{".length
+            val prefixSize = (specialChar + "{").length
             cleaned.foreach { currentChar =>
                 if (buffer.isEmpty) {
-                    if (currentChar.equals('#')) {
+                    if (currentChar.equals(specialChar)) {
                         buffer.append(currentChar)
                     } else {
                         result.append(currentChar)
@@ -153,23 +153,23 @@ object utils {
      * Recursively evaluates a Tuktu config to resolve variables in it
      * Overloaded to get the correct return type for every possible use case
      */
-    def evaluateTuktuConfig(json: JsValue, vars: Map[String, Any]): JsValue = json match {
-        case obj: JsObject  => evaluateTuktuConfig(obj, vars)
-        case arr: JsArray   => evaluateTuktuConfig(arr, vars)
-        case str: JsString  => evaluateTuktuConfig(str, vars)
+    def evaluateTuktuConfig(json: JsValue, vars: Map[String, Any], specialChar: Char): JsValue = json match {
+        case obj: JsObject  => evaluateTuktuConfig(obj, vars, specialChar)
+        case arr: JsArray   => evaluateTuktuConfig(arr, vars, specialChar)
+        case str: JsString  => evaluateTuktuConfig(str, vars, specialChar)
         case value: JsValue => value // Nothing to do for any other JsTypes
     }
 
-    def evaluateTuktuConfig(obj: JsObject, vars: Map[String, Any]): JsObject = {
-        new JsObject(obj.value.map { case (key, value) => evaluateTuktuString(key, vars) -> evaluateTuktuConfig(value, vars) }.toSeq)
+    def evaluateTuktuConfig(obj: JsObject, vars: Map[String, Any], specialChar: Char): JsObject = {
+        new JsObject(obj.value.map { case (key, value) => evaluateTuktuString(key, vars, specialChar) -> evaluateTuktuConfig(value, vars, specialChar) }.toSeq)
     }
 
-    def evaluateTuktuConfig(arr: JsArray, vars: Map[String, Any]): JsArray = {
-        new JsArray(arr.value.map(value => evaluateTuktuConfig(value, vars)))
+    def evaluateTuktuConfig(arr: JsArray, vars: Map[String, Any], specialChar: Char): JsArray = {
+        new JsArray(arr.value.map(value => evaluateTuktuConfig(value, vars, specialChar)))
     }
 
-    def evaluateTuktuConfig(str: JsString, vars: Map[String, Any]): JsValue = {
-        evaluateTuktuConfig(str.value, vars)
+    def evaluateTuktuConfig(str: JsString, vars: Map[String, Any], specialChar: Char): JsValue = {
+        evaluateTuktuConfig(str.value, vars, specialChar)
     }
 
     /**

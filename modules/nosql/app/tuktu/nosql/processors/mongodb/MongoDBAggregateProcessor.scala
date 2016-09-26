@@ -68,7 +68,7 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
                 import coll.BatchCommands.AggregationFramework.PipelineOperator
                 val transformer = new MongoPipelineTransformer()(coll)
                 val pipeline = tasks.map { task =>
-                    transformer.json2task(utils.evaluateTuktuConfig(task, datum))(collection=coll) 
+                    transformer.json2task(utils.evaluateTuktuConfig(task, datum, '$'))(collection=coll) 
                 }
     
                 // Get data from Mongo
