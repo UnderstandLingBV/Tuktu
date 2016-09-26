@@ -1,4 +1,4 @@
-FROM java:1.8
+FROM openjdk:8
 
 MAINTAINER Pim Witlox
 
@@ -22,7 +22,10 @@ RUN unzip /opt/typesafe-activator-$ACTIVATOR_VERSION.zip -d /opt
 RUN rm -f /opt/typesafe-activator-$ACTIVATOR_VERSION.zip
 RUN mv /opt/activator-dist-$ACTIVATOR_VERSION /opt/activator
 
-# Expose port 9000 for Tuktu
+# Expose port for AKKA communication
+EXPOSE 2552
+
+# Expose port for Tuktu UI
 EXPOSE 9000
  
 # Build our application distribution
