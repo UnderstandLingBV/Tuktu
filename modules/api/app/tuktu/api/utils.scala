@@ -47,9 +47,11 @@ object utils {
      */
     def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$'): String = {
 
-        val any: P[String] = AnyChar.!.map { _.toString }
+        // Calculate maximal key size of replacements
+        val maxKeySize = vars.foldLeft(0) { case (max, (key, _)) => scala.math.max(max, key.size) }
+
         // key starts after special char and { and goes until }; try to get value from vars
-        val key: P[String] = CharPred(_ != '}').rep(0).!.map {
+        val key: P[String] = CharPred(_ != '}').rep(min = 0, max = maxKeySize).!.map {
             case key: String => {
                 vars.get(key) match {
                     case None               => specialChar + "{" + key + "}"
@@ -61,8 +63,9 @@ object utils {
         // special construct starts with special char, and then { key }; key handles replacement
         val special: P[String] = P((specialChar + "{") ~/ key ~ "}")
         // special construct has higher priority than any char, so put it first
+        val any: P[String] = AnyChar.!.map { _.toString }
         val either: P[String] = P(special | any)
-        val total: P[String] = P(Start ~/ either.rep(0) ~ End).map { _.mkString }
+        val total: P[String] = P(Start ~/ either.rep(min = 0) ~ End).map { _.mkString }
 
         // Parse str and return its value
         total.parse(str).get.value
