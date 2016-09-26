@@ -1,6 +1,6 @@
 # Tuktu - Big Data Science Swiss Army Knife
 
-[![Join the chat at https://gitter.im/UnderstandLingBV/Tuktu](https://badges.gitter.im/UnderstandLingBV/Tuktu.svg)](https://gitter.im/UnderstandLingBV/Tuktu?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://travis-ci.org/witlox/Tuktu.svg?branch=master)](https://travis-ci.org/witlox/Tuktu) [![Release](https://img.shields.io/github/release/witlox/Tuktu.svg)](https://github.com/witlox/Tuktu/releases/latest)
+[![Join the chat at https://gitter.im/UnderstandLingBV/Tuktu](https://badges.gitter.im/UnderstandLingBV/Tuktu.svg)](https://gitter.im/UnderstandLingBV/Tuktu?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://travis-ci.org/witlox/Tuktu.svg?branch=master)](https://travis-ci.org/witlox/Tuktu) [![Release](https://img.shields.io/github/release/witlox/Tuktu.svg)](https://github.com/witlox/Tuktu/releases/latest) [![Image Size](https://img.shields.io/imagelayers/image-size/witlox/Tuktu/latest.svg)] [![Image Layers](https://img.shields.io/imagelayers/layers/witlox/Tuktu/latest.svg?maxAge=2592000)]
 
 Tuktu is created and officially maintained by [UnderstandLing Intellect](http://www.understandling.com).
 
