@@ -13,6 +13,9 @@ Invokes a new generator for every DataPacket, which sends its data to a selected
     * **node** *(type: string)* `[Optional]`
     - The Tuktu SingleNode to execute on.
 
+    * **instances** *(type: int)* `[Optional, default = 1]`
+    - The amount of instances to run.
+
     * **next** *(type: array)* `[Required]`
     - The processors to send the data into.
 

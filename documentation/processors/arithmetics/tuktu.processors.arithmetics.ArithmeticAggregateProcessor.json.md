@@ -8,7 +8,7 @@ Calculates the result of the given formula, allows for aggregation over an entir
   * **config** *(type: object)* `[Required]`
 
     * **calculate** *(type: string)* `[Required]`
-    - The formula which is calculated, can use aggregation functions mean(field), sum(field), median(field) and count(field).
+    - The formula which is calculated, can use aggregation functions avg(field), sum(field), median(field), stdev(field), min(field), max(field) and count(field).
 
     * **do_rounding** *(type: boolean)* `[Optional, default = false]`
     - Round the result
