@@ -43,7 +43,8 @@ lazy val apiDependencies = Seq(
     "org.apache.hadoop" % "hadoop-client" % "2.7.3" excludeAll(ExclusionRule(organization = "org.slf4j")),
     "com.netaporter" %% "scala-uri" % "0.4.7",
     "com.enragedginger" %% "akka-quartz-scheduler" % "1.3.0-akka-2.3.x",
-    "org.apache.commons" % "commons-collections4" % "4.1"
+    "org.apache.commons" % "commons-collections4" % "4.1",
+    "com.lihaoyi" %% "fastparse" % "0.4.1"
 )
 
 lazy val nlpDependencies = Seq(
@@ -152,7 +153,7 @@ lazy val coreDependencies = Seq(
     "org.reflections" % "reflections" % "0.9.10",
     "com.github.lucarosellini.rJava" % "JRIEngine" % "0.9-7",
     "com.github.lucarosellini.rJava" % "JRI" % "0.9-7",
-    "com.lihaoyi" %% "fastparse" % "0.3.7"
+    "com.lihaoyi" %% "fastparse" % "0.4.1"
 )
 
 lazy val tuktuDBDependencies = Seq(

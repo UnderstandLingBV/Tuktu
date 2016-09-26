@@ -17,7 +17,7 @@ import scala.xml.Elem
 import scala.xml.Node
 import scala.xml.NodeSeq
 import scala.collection.mutable.ArrayBuffer
-
+import fastparse.all._
 
 object utils {
     val logDpContent = Cache.getAs[Boolean]("mon.log_dp_content").getOrElse(Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true))
@@ -45,108 +45,27 @@ object utils {
     /**
      * Evaluates a Tuktu string to resolve variables in the actual string
      */
-    def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$') = {
-        if (vars.isEmpty) {
-            str
-        } else {
-            // determine max length for performance reasons
-            val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
-            val result = new StringBuilder
-            // a temporary buffer to determine if we need to replace this
-            val buffer = new StringBuilder
-            // The prefix length of TuktuStrings "${".length = 2
-            val prefixSize = (specialChar + "{").length
-            str.foreach { currentChar =>
-                if (buffer.isEmpty) {
-                    if (currentChar.equals(specialChar)) {
-                        buffer.append(currentChar)
-                    } else {
-                        result.append(currentChar)
-                    }
-                } else if (buffer.length == 1) {
-                    buffer.append(currentChar)
-                    if (!currentChar.equals('{')) {
-                        result.append(buffer)
-                        buffer.clear
-                    }
-                } else if (buffer.length > maxKeyLength + prefixSize) {
-                    result.append(buffer).append(currentChar)
-                    buffer.clear
-                } else {
-                    if (currentChar.equals('}')) {
-                        // apply with variable in vars, or leave it be if it cannot be found
-                        result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
-                        buffer.clear
-                    } else {
-                        buffer.append(currentChar)
-                    }
+    def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$'): String = {
+
+        val any: P[String] = AnyChar.!.map { _.toString }
+        // key starts after special char and { and goes until }; try to get value from vars
+        val key: P[String] = CharPred(_ != '}').rep(0).!.map {
+            case key: String => {
+                vars.get(key) match {
+                    case None               => specialChar + "{" + key + "}"
+                    case Some(js: JsString) => js.value
+                    case Some(a)            => a.toString
                 }
             }
-            // add any left overs
-            result.append(buffer)
-            result.toString
         }
-    }
+        // special construct starts with special char, and then { key }; key handles replacement
+        val special: P[String] = P((specialChar + "{") ~/ key ~ "}")
+        // special construct has higher priority than any char, so put it first
+        val either: P[String] = P(special | any)
+        val total: P[String] = P(Start ~/ either.rep(0) ~ End).map { _.mkString }
 
-    /**
-     * Evaluates a Tuktu config to resolve variables in it
-     */
-    def evaluateTuktuConfig(str: String, vars: Map[String, Any], specialChar: Char): JsValue = {
-        // Check if str is of the form %{...} and hence is JSON that needs to be parsed
-        val toBeParsed = str.startsWith("%{") && str.endsWith("}")
-        val cleaned = if (toBeParsed) str.drop(2).dropRight(1) else str
-
-        // Replace all other Tuktu config strings
-        val replaced = if (vars.isEmpty) {
-            cleaned
-        } else {
-            // determine max length for performance reasons
-            val maxKeyLength = vars.maxBy(kv => kv._1.length)._1.length
-            val result = new StringBuilder
-            // a temporary buffer to determine if we need to replace a Tuktu config string
-            val buffer = new StringBuilder
-
-            // The prefix length of TuktuStrings "#{".length = 2
-            val prefixSize = (specialChar + "{").length
-            cleaned.foreach { currentChar =>
-                if (buffer.isEmpty) {
-                    if (currentChar.equals(specialChar)) {
-                        buffer.append(currentChar)
-                    } else {
-                        result.append(currentChar)
-                    }
-                } else if (buffer.length == 1) {
-                    buffer.append(currentChar)
-                    if (!currentChar.equals('{')) {
-                        result.append(buffer)
-                        buffer.clear
-                    }
-                } else if (buffer.length > maxKeyLength + prefixSize) {
-                    result.append(buffer).append(currentChar)
-                    buffer.clear
-                } else {
-                    if (currentChar.equals('}')) {
-                        // apply with variable in vars, or leave it be if it cannot be found
-                        result.append(vars.getOrElse(buffer.substring(prefixSize), buffer + "}").toString)
-                        buffer.clear
-                    } else {
-                        buffer.append(currentChar)
-                    }
-                }
-            }
-            // add any left overs
-            result.append(buffer)
-            result.toString
-        }
-
-        if (toBeParsed)
-            try
-                Json.parse(replaced)
-            catch {
-                case e: com.fasterxml.jackson.core.JsonParseException => new JsString("%{" + replaced + "}")
-            }
-        else
-            new JsString(replaced)
+        // Parse str and return its value
+        total.parse(str).get.value
     }
 
     /**
@@ -169,7 +88,22 @@ object utils {
     }
 
     def evaluateTuktuConfig(str: JsString, vars: Map[String, Any], specialChar: Char): JsValue = {
-        evaluateTuktuConfig(str.value, vars, specialChar)
+        // Check if str is of the form %{...} and hence is JSON that needs to be parsed
+        val toBeParsed = str.value.startsWith("%{") && str.value.endsWith("}")
+        val cleaned = if (toBeParsed) str.value.drop(2).dropRight(1) else str.value
+
+        // Replace all other Tuktu config strings
+
+        val replaced = evaluateTuktuString(cleaned, vars, specialChar)
+
+        if (toBeParsed)
+            try
+                Json.parse(replaced)
+            catch {
+                case e: com.fasterxml.jackson.core.JsonParseException => new JsString("%{" + replaced + "}")
+            }
+        else
+            new JsString(replaced)
     }
 
     /**
