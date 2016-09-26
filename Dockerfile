@@ -17,7 +17,7 @@ RUN wget https://downloads.typesafe.com/scala/$SCALA_VERSION/scala-$SCALA_VERSIO
 RUN dpkg -i scala-$SCALA_VERSION.deb  
 
 # Download and install Activator
-RUN wget --output-document /opt/typesafe-activator-$ACTIVATOR_VERSION.zip http://downloads.typesafe.com/typesafe-activator/$ACTIVATOR_VERSION/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip
+RUN wget --output-document /opt/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip http://downloads.typesafe.com/typesafe-activator/$ACTIVATOR_VERSION/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip
 RUN unzip /opt/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip -d /opt
 RUN rm -f /opt/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip
 RUN mv /opt/activator-dist-$ACTIVATOR_VERSION /opt/activator
