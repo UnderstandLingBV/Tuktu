@@ -3,9 +3,8 @@ FROM openjdk:8
 MAINTAINER Pim Witlox
 
 ENV ACTIVATOR_VERSION 1.3.10
-ENV SCALA_VERSION 2.11.8  
-ENV SBT_VERSION 0.13.9  
-ENV SBT_OPTS -Xmx2G -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -Xss2M  
+ENV SCALA_VERSION 2.11.8
+ENV SBT_VERSION 0.13.9
 ENV TUKTU_VERSION 1.2
 
 # install sbt  
@@ -25,17 +24,23 @@ RUN mv /opt/activator-$ACTIVATOR_VERSION-minimal /opt/activator
 # Add activator to path
 ENV PATH /opt/activator/bin:$PATH
 
+# mount our source
+ADD . .
+
 # Expose port for AKKA communication
 EXPOSE 2552
 
 # Expose port for Tuktu UI
 EXPOSE 9000
- 
+
 # Build our application distribution
 RUN activator dist
 
 # Extract our distribtion
-RUN unzip target/universal/tuktu-$TUKTU_VERSION.zip . 
+RUN unzip target/universal/tuktu-$TUKTU_VERSION.zip
+
+# Change working dir to packaged version
+WORKDIR tuktu-$TUKTU_VERSION
 
 # and.. go!
 CMD ["run.sh"]
