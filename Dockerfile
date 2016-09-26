@@ -24,9 +24,6 @@ RUN mv /opt/activator-$ACTIVATOR_VERSION-minimal /opt/activator
 # Add activator to path
 ENV PATH /opt/activator/bin:$PATH
 
-# mount our source
-ADD . .
-
 # Expose port for AKKA communication
 EXPOSE 2552
 
@@ -34,13 +31,16 @@ EXPOSE 2552
 EXPOSE 9000
 
 # Build our application distribution
+ADD . SRC
+WORKDIR SRC
 RUN activator dist
 
 # Extract our distribtion
 RUN unzip target/universal/tuktu-$TUKTU_VERSION.zip
+RUN mv tuktu-$TUKTU_VERSION /opt/tuktu-$TUKTU_VERSION
 
 # Change working dir to packaged version
-WORKDIR tuktu-$TUKTU_VERSION
+WORKDIR /opt/tuktu-$TUKTU_VERSION
 
 # and.. go!
 CMD ["run.sh"]
