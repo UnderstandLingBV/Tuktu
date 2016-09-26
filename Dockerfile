@@ -42,5 +42,8 @@ RUN mv tuktu-$TUKTU_VERSION /opt/tuktu-$TUKTU_VERSION
 # Change working dir to packaged version
 WORKDIR /opt/tuktu-$TUKTU_VERSION
 
+# Make our start script executable
+RUN chmod +x run.sh
+
 # and.. go!
 CMD ["run.sh"]
