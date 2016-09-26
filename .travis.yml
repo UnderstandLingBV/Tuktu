@@ -1,0 +1,13 @@
+{
+  "language": "scala",
+  "scala": "2.11.8",
+  "script": [
+    "sbt clean test dist"
+  ],
+  "after_success": [
+    "curl --data \"build=true\" -X POST https://registry.hub.docker.com/u/witlox/wjc/trigger/triggerhere/",
+  ],
+  "group": "stable",
+  "dist": "precise",
+  "os": "linux"
+}
