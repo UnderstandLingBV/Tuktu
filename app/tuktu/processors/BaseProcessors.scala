@@ -1002,7 +1002,10 @@ class MapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         for (datum <- data) yield {
             // Get map
-            val map = datum(field).asInstanceOf[Map[String, Any]]
+            val map = datum(field) match {
+                case a: Map[String, Any] => a
+                case a: JsObject => utils.JsObjectToMap(a)
+            }
 
             // Add to total
             datum ++ map
