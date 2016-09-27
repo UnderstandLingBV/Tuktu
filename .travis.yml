@@ -1,13 +1,19 @@
-{
-  "language": "scala",
-  "scala": "2.11.8",
-  "script": [
-    "sbt clean test"
-  ],
-  "after_success": [
-    "curl --data \"build=true\" -X POST https://registry.hub.docker.com/u/witlox/tuktu/trigger/8311031a-434e-4107-b784-048bfd3213bb/",
-  ],
-  "group": "stable",
-  "dist": "precise",
-  "os": "linux"
-}
+language: scala
+scala: 2.11.8
+script:
+- sbt clean test dist
+8after_success:
+- curl --data "build=true" -X POST https://registry.hub.docker.com/u/witlox/tuktu/trigger/8311031a-434e-4107-b784-048bfd3213bb/
+group: stable
+dist: precise
+os: linux
+deploy:
+  provider: bintray
+  file: "target/universal/tuktu-1.2.zip"
+  user: "witlox"
+  key:
+    secure: Q9dGPKhJ5nZGysNzd1FUxgit3R18n5MtbCFbg+r9vOIIZ3bseZVFNmzcYn7UheEyiSAiq3AchVmfG4AZN46Yzk1r8+u9jmhl7PLtKRPAKH5HuNLwU7QaLRRskkDMYM3L3hLMdlYLI54wG6PxHv2+/+66RnkFjrcmXBxzHOoRvPX4cQuZdFcIBRoiEsdM0UtFE94exY4r7V2zkqy8HsFpe0BixXsf0ukjCtp2cRJeeIzeHLTx9do11wYVQf3L2K1/+Zx9geZ7HOoV+SIubaVLd7M/NsVvJ4bjS/48IiWAj7Lt0ye03r66jN6SwMCX1nMhbpF7dzp38syCDk8aBru0z5rfSrIPz6dt17q7qXJNRUnjHYzI84qugOl6J7qYDrhMc2hFrUVYXmsmsQRQ50ftgQ4+zZgqOqGv9BLN/PJ36L6u14f+pI0ptLW43VA6LlyinTSvQXvOI+4xuyPtRYeC3dolvEMdNLtGtSfdd5Z/1PsZn9tZ/earbIQvddVYcIhnwmQQeKQGMEJm0ecFRFVBt53xiEbZILIDGav9fqbjeZGLOxdN/f/ElcnLeR5x+hLxosJZii8MwETFEULhwT1RcOGBlYAg5brSXsnHUQzMKgXCAsv6lX6AxsYIh3zwKKfs8L1PS45qKUmJeB/gL4d3uSicddwE6fpaqYTEeYzFNM8=
+  on:
+    all_branches: true
+  overwrite: true
+  
