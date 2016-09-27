@@ -6,8 +6,9 @@ import tuktu.api.DataPacket
 import tuktu.processors._
 import tuktu.test.processor.BaseProcessorTest
 import play.api.libs.json.JsObject
+import tuktu.api.utils
 
-class BaseProcessorTestSuite extends PlaySpec {
+class BaseProcessorTestSuite extends PlaySpec with OneAppPerSuite {
     "FieldFilterProcessor" must {
         "filter fields that are specified" in {
             // Processor
@@ -1027,56 +1028,6 @@ class BaseProcessorTestSuite extends PlaySpec {
             )
             
             new BaseProcessorTest()(proc, config, input, output)
-        }
-    }
-
-    "GroupByProcessor" must {
-        "group Datums into separate DataPackets based on their values in given fields" in {
-
-            // Processor
-            val proc = new GroupByProcessor("")
-
-            // Config
-            val config = Json.obj("fields" -> List("key1", "key2"))
-
-            // Input
-            val input = List(DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 3),
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 4)
-                )),
-                DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 5),
-                    Map("key1" -> 1, "key2" -> 3, "key3" -> 6)
-                ))
-            )
-
-            // Expected output, order irrelevant within each DP's groups, so n! possible outputs for n different groups
-            // In this case we have 1! = 1 output for the first, and 2! = 2 ouputs for the second DataPacket, hence 2 total outputs
-            val output1 = List(DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 3),
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 4)
-                )),
-                DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 5)
-                )),
-                DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 3, "key3" -> 6)
-                ))
-            )
-
-            val output2 = List(DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 3),
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 4)
-                )),
-                DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 3, "key3" -> 6)
-                )),
-                DataPacket(List(
-                    Map("key1" -> 1, "key2" -> 2, "key3" -> 5)
-                ))
-            )
-
-            new BaseProcessorTest()(proc, config, input, output1, output2)
         }
     }
 
