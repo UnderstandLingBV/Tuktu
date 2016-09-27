@@ -51,5 +51,5 @@ The following companies or organizations use or actively contribute to Tuktu.
 [University of Maastricht](http://www.maastrichtuniversity.nl/) The University of Maastricht has been using Tuktu as the core platform for performing analytics on open source data. The University of Maastricht has been using Tuktu from the very beginning.
 
 [Docker](https://www.docker.com/) Start the container (have docker installed) by running:
-docker pull witlox/tuktu
-docker run -p 9000:9000 -p 2552:2552 --name tuktu -d witlox/tuktu
+- docker pull witlox/tuktu
+- docker run -p 9000:9000 -p 2552:2552 --name tuktu -d witlox/tuktu
