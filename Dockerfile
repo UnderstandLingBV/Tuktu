@@ -53,6 +53,4 @@ WORKDIR /usr/share/tuktu-$TUKTU_VERSION
 RUN rm -rf /tmp/* /var/tmp/* /var/cache/apk/*
 
 # and.. go!
-RUN chmod +x run.sh
-ENTRYPOINT ["/bin/sh"]
-CMD ["./run.sh""]
+CMD ["./bin/tuktu"]
