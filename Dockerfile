@@ -1,49 +1,58 @@
-FROM openjdk:8
+FROM alpine:latest
 
 MAINTAINER Pim Witlox
 
-ENV ACTIVATOR_VERSION 1.3.10
-ENV SCALA_VERSION 2.11.8
+# our versions of the tools
 ENV SBT_VERSION 0.13.12
+ENV SCALA_VERSION 2.11.8
+ENV ACTIVATOR_VERSION 1.3.10
 ENV TUKTU_VERSION 1.2
 
+# general stuff
+USER root
+RUN apk update && apk upgrade
+WORKDIR /tmp
+
+# install openjdk8
+RUN apk add openjdk8
+ENV JAVA_HOME /usr/lib/jvm/java-1.8-openjdk 
+ENV PATH $JAVA_HOME/bin:$PATH
+
 # install sbt  
-RUN wget https://dl.bintray.com/sbt/debian/sbt-$SBT_VERSION.deb  
-RUN dpkg -i sbt-$SBT_VERSION.deb  
+RUN apk add curl
+ENV SBT_HOME /usr/local/sbt
+RUN curl -sL "http://dl.bintray.com/sbt/native-packages/sbt/$SBT_VERSION/sbt-$SBT_VERSION.tgz" | gunzip | tar -x -C /usr/local && echo -ne "- with sbt $SBT_VERSION\n" >> /root/.built
+ENV PATH $SBT_HOME/bin:$PATH
 
 # install scala  
-RUN wget https://downloads.typesafe.com/scala/$SCALA_VERSION/scala-$SCALA_VERSION.deb  
-RUN dpkg -i scala-$SCALA_VERSION.deb  
+ENV SCALA_HOME /usr/share/scala
+RUN apk add --no-cache --virtual=.build-dependencies wget ca-certificates && apk add --no-cache bash && cd "/tmp" && wget "https://downloads.typesafe.com/scala/$SCALA_VERSION/scala-$SCALA_VERSION.tgz" && \
+    tar xzf "scala-$SCALA_VERSION.tgz" && mkdir "$SCALA_HOME" && rm "/tmp/scala-$SCALA_VERSION/bin/"*.bat && mv "/tmp/scala-$SCALA_VERSION/bin" "/tmp/scala-$SCALA_VERSION/lib" "$SCALA_HOME" && \
+    ln -s "$SCALA_HOME/bin/"* "/usr/bin/" && apk del .build-dependencies
+ENV PATH $SCALA_HOME/bin:$PATH
 
-# Download and install Activator
-RUN wget --output-document /opt/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip http://downloads.typesafe.com/typesafe-activator/$ACTIVATOR_VERSION/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip
-RUN unzip /opt/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip -d /opt
-RUN rm -f /opt/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip
-RUN mv /opt/activator-$ACTIVATOR_VERSION-minimal /opt/activator
+# download and install activator
+RUN wget "http://downloads.typesafe.com/typesafe-activator/$ACTIVATOR_VERSION/typesafe-activator-$ACTIVATOR_VERSION-minimal.zip"
+RUN unzip typesafe-activator-$ACTIVATOR_VERSION-minimal.zip
+RUN mv activator-$ACTIVATOR_VERSION-minimal /usr/share/activator
+ENV PATH /usr/share/activator/bin:$PATH
 
-# Add activator to path
-ENV PATH /opt/activator/bin:$PATH
-
-# Expose port for AKKA communication
+# AKKA communication and Tuktu UI
 EXPOSE 2552
-
-# Expose port for Tuktu UI
 EXPOSE 9000
 
-# Build our application distribution
-ADD . SRC
-WORKDIR SRC
-RUN activator dist
+# download our application distribution, extract it and move to the correct spot
+RUN wget "http://dl.bintray.com/witlox/tuktu/tuktu-$TUKTU_VERSION.zip"
+RUN unzip tuktu-$TUKTU_VERSION.zip
+RUN mv tuktu-$TUKTU_VERSION /usr/share/tuktu-$TUKTU_VERSION
 
-# Extract our distribtion
-RUN unzip target/universal/tuktu-$TUKTU_VERSION.zip
-RUN mv tuktu-$TUKTU_VERSION /opt/tuktu-$TUKTU_VERSION
+# change working dir to packaged version
+WORKDIR /usr/share/tuktu-$TUKTU_VERSION
 
-# Change working dir to packaged version
-WORKDIR /opt/tuktu-$TUKTU_VERSION
-
-# Make our start script executable
-RUN chmod +x run.sh
+# clean up
+RUN rm -rf /tmp/* /var/tmp/* /var/cache/apk/*
 
 # and.. go!
-CMD ["./run.sh"]
+RUN chmod +x run.sh
+ENTRYPOINT ["/bin/sh"]
+CMD ["./run.sh""]
