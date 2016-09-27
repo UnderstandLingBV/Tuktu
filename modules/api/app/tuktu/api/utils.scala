@@ -96,17 +96,17 @@ object utils {
         val cleaned = if (toBeParsed) str.value.drop(2).dropRight(1) else str.value
 
         // Replace all other Tuktu config strings
-
         val replaced = evaluateTuktuString(cleaned, vars, specialChar)
 
         if (toBeParsed)
             try
                 Json.parse(replaced)
             catch {
-                case e: com.fasterxml.jackson.core.JsonParseException => new JsString("%{" + replaced + "}")
+                // If we can not parse it, treat it as JsString
+                case e: com.fasterxml.jackson.core.JsonParseException => JsString(replaced)
             }
         else
-            new JsString(replaced)
+            JsString(replaced)
     }
 
     /**
