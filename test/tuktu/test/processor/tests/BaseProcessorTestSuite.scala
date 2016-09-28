@@ -754,7 +754,7 @@ class BaseProcessorTestSuite extends PlaySpec {
         }
     }
 
-    "StringSplitterProcessor" must {
+    /*"StringSplitterProcessor" must {
 
         // Input
         val input = List(DataPacket(List(
@@ -795,9 +795,9 @@ class BaseProcessorTestSuite extends PlaySpec {
 
             new BaseProcessorTest()(proc, config, input, output)
         }
-    }
+    }*/
 
-    "ListMapFlattenerProcessor" must {
+    /*"ListMapFlattenerProcessor" must {
         "read out a specific key of each map in a list" in {
 
             // Processor
@@ -821,7 +821,7 @@ class BaseProcessorTestSuite extends PlaySpec {
 
             new BaseProcessorTest()(proc, config, input, output)
         }
-    }
+    }*/
 
     "MultiListMapFlattenerProcessor" must {
         "read out specific keys of each map in a list" in {

@@ -23,10 +23,10 @@ class FlowTests extends PlaySpec {
     "Normalization flow" must {
         "normalize values to range [-1, 1]" in {
             val data = List(DataPacket(List(
-                Map("num" -> 0.6),
-                Map("num" -> 1.0),
-                Map("num" -> -1.0),
-                Map("num" -> -0.6))))
+                Map("data" -> 0.6),
+                Map("data" -> 1.0),
+                Map("data" -> -1.0),
+                Map("data" -> -0.6))))
             new BaseFlowTester(Akka.system)(List(data), "flowtests/normalization")
         }
     }

@@ -1,5 +1,7 @@
 language: scala
 scala: 2.11.8
+jdk:
+- oraclejdk8
 script:
 - sbt clean test dist
 after_success:
@@ -12,6 +14,9 @@ deploy:
  api_key:
    secure: IUYUmyN52MlzW4kWLl7KjrE1NLO6apS61VXZIqEMWhcDarljbzzEPe+aakdTwG1eqOOj7ErD29rOdQUemcZZy6xm6nd0u1Evis7mB/KEco0mXG6YKD63BSdcNB3Gt9b26GIG5DfcbkEThIgtq1/Ic5JC0Ex2GkcwIickrfk063cPB7JrXdLFDCmPudsUDZ4BhfDWWhMGedQ2nXx+efC+rsZL8zvVy3Zw1U5quAHpo73aAROS4tpyWzRCGH3kz6QSHn20JdEnMk1tDTj6JdKkUs/00bBs+/yi/uWeU+GcsWSwe8wYfyCpC0SCrJsZRIVywJq/LnUba8/eBfdrBxkEteM3QkSPY5UHqWGoyESHk8qeWQyEuO229ca45mby9GrnNdVHDn5sI4qGvlNo7nIUwvB9IDGjVELrh8bLEjr4aJvsFN8O0YzSh+Lm+105r3qfNP7Xtf3US9B5P9zrMztuAsK2GREcCz9Y8ACJf+WSN4bmFzN8mxfvVOo0fekblXuGkBGJNgcQ+jKC81WLPmnMPwqzfll9HfDu2kQz/0gYOQUalDsJvO3cIzjRuIMQxSlRYpf7xKUnI32HtVq/nVfESJIV8mg8P9XKOdNGGXsOynUbndNHsYJ1apgGPfOdjWYxDd1n3drAxLY2eHWwK1ehd4VgbNcSjpZf8RZP36VPrO0=
  file: target/universal/tuktu-1.2.zip
+ skip_cleanup: true
  on:
    repo: UnderstandLingBV/Tuktu
+   tags: true
  overwrite: true
+ 

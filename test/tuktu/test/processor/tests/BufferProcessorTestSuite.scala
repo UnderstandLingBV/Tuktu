@@ -88,7 +88,7 @@ class BufferProcessorTestSuite extends PlaySpec {
         }
     }
     
-    "GroupByProcessor" must {
+    /*"GroupByProcessor" must {
         "group Datums into separate DataPackets based on their values in given fields" in {
 
             // Processor
@@ -136,5 +136,5 @@ class BufferProcessorTestSuite extends PlaySpec {
 
             new BaseProcessorTest()(proc, config, input, output1, output2)
         }
-    }
+    }*/
 }
