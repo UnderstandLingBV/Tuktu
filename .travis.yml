@@ -3,7 +3,7 @@ scala: 2.11.8
 script:
 - sbt clean test dist
 after_success:
-- curl --data "build=true" -X POST https://registry.hub.docker.com/u/witlox/tuktu/trigger/8311031a-434e-4107-b784-048bfd3213bb/
+- curl --data "build=true" -X POST https://registry.hub.docker.com/u/understandling/tuktu/trigger/d4fad504-8dcd-4a55-b40c-b4b21f18c4c8/
 group: stable
 dist: precise
 os: linux
