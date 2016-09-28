@@ -12,5 +12,6 @@ For documentation on Tuktu, please see [http://www.tuktu.io](http://www.tuktu.io
 
 # Docker 
 Start the container (have [docker](https://www.docker.com/) installed) by running:
+
 - docker pull understandling/tuktu
 - docker run -p 9000:9000 -p 2552:2552 --name tuktu -d understandling/tuktu
