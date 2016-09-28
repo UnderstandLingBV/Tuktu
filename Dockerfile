@@ -1,6 +1,6 @@
 FROM alpine:latest
 
-MAINTAINER Pim Witlox
+MAINTAINER UnderstandLing <contact@understandling.com>
 
 # our versions of the tools
 ENV SBT_VERSION 0.13.12
@@ -42,7 +42,7 @@ EXPOSE 2552
 EXPOSE 9000
 
 # download our application distribution, extract it and move to the correct spot
-RUN wget "http://dl.bintray.com/witlox/tuktu/tuktu-$TUKTU_VERSION.zip"
+RUN wget "https://github.com/UnderstandLingBV/Tuktu/archive/tuktu-$TUKTU_VERSION.zip"
 RUN unzip tuktu-$TUKTU_VERSION.zip
 RUN mv tuktu-$TUKTU_VERSION /usr/share/tuktu-$TUKTU_VERSION
 
