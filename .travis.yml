@@ -19,4 +19,8 @@ deploy:
    repo: UnderstandLingBV/Tuktu
    tags: true
  overwrite: true
- 
+ notifications:
+  slack:
+    on_success: always
+    on_failure: always
+  email: false
