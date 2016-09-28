@@ -42,7 +42,7 @@ EXPOSE 2552
 EXPOSE 9000
 
 # download our application distribution, extract it and move to the correct spot
-RUN wget "https://github.com/UnderstandLingBV/Tuktu/archive/tuktu-$TUKTU_VERSION.zip"
+RUN wget "https://github.com/UnderstandLingBV/Tuktu/releases/download/$TUKTU_VERSION/tuktu-$TUKTU_VERSION.zip"
 RUN unzip tuktu-$TUKTU_VERSION.zip
 RUN mv tuktu-$TUKTU_VERSION /usr/share/tuktu-$TUKTU_VERSION
 
