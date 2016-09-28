@@ -1,15 +1,23 @@
 package tuktu.test.processor.tests
 
-import org.scalatestplus.play._
-import play.api.libs.json.Json
-import tuktu.api.DataPacket
-import tuktu.processors._
-import tuktu.test.processor.BaseProcessorTest
-import play.api.libs.json.JsObject
 import org.scalatest.DoNotDiscover
+import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.PlaySpec
+import org.scalatest.BeforeAndAfter
+
+import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import tuktu.api.DataPacket
+import tuktu.processors.DataPacketSplitterProcessor
+import tuktu.processors.EOFBufferProcessor
+import tuktu.processors.GroupByProcessor
+import tuktu.processors.SizeBufferProcessor
+import tuktu.test.processor.BaseProcessorTest
+import play.api.libs.concurrent.Akka
+import play.api.Play
 
 @DoNotDiscover
-class BufferProcessorTestSuite extends PlaySpec with OneAppPerSuite {
+class BufferProcessorTestSuite extends PlaySpec {
     "SizeBufferProcessor" must {
         "buffer DataPackets until a certain amount is reached" in {
             // Processor
