@@ -8,7 +8,9 @@ import play.api.test.FakeApplication
 import play.api.test.Helpers.running
 import tuktu.api.DataPacket
 import tuktu.test.flow.BaseFlowTester
+import org.scalatest.DoNotDiscover
 
+@DoNotDiscover
 class FlowTests extends PlaySpec with OneAppPerSuite {
     "DummyTest flow" must {
         "generate one simple value" in {

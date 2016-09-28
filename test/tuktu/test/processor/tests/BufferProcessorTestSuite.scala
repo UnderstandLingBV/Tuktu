@@ -6,7 +6,9 @@ import tuktu.api.DataPacket
 import tuktu.processors._
 import tuktu.test.processor.BaseProcessorTest
 import play.api.libs.json.JsObject
+import org.scalatest.DoNotDiscover
 
+@DoNotDiscover
 class BufferProcessorTestSuite extends PlaySpec with OneAppPerSuite {
     "SizeBufferProcessor" must {
         "buffer DataPackets until a certain amount is reached" in {
