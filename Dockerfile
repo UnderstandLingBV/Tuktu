@@ -11,6 +11,7 @@ ENV TUKTU_VERSION 1.2
 # general stuff
 USER root
 RUN apk update && apk upgrade
+RUN apk update && apk add ca-certificates wget && update-ca-certificates
 WORKDIR /tmp
 
 # install openjdk8
