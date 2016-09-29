@@ -327,4 +327,22 @@ object utils {
         }
         merge(a, b)
     }
+
+    /**
+     * Merges two Tuktu configs, generators by index and processors by id
+     */
+    def mergeConfig(oldConfig: JsObject, overwrite: JsObject): JsObject = {
+        // Merge generators by index
+        val oldGens = (oldConfig \ "generators").asOpt[List[JsObject]].getOrElse(Nil)
+        val newGens = (overwrite \ "generators").asOpt[List[JsObject]].getOrElse(Nil)
+        val mergedGenerators = oldGens.zipAll(newGens, new JsObject(Nil), new JsObject(Nil)).map { case (c1, c2) => mergeJson(c1, c2) }
+
+        // Merge processors by id
+        val oldProcs = (oldConfig \ "processors").asOpt[List[JsObject]].getOrElse(Nil).groupBy(_ \ "id").mapValues(_.head)
+        val newProcs = (overwrite \ "processors").asOpt[List[JsObject]].getOrElse(Nil).groupBy(_ \ "id").mapValues(_.head)
+        val mergedProcessors = for (id <- oldProcs.keySet ++ newProcs.keySet) yield mergeJson(oldProcs.getOrElse(id, new JsObject(Nil)), newProcs.getOrElse(id, new JsObject(Nil)))
+
+        // Build merged config
+        Json.obj("generators" -> mergedGenerators, "processors" -> mergedProcessors)
+    }
 }
