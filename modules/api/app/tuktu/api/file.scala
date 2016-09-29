@@ -69,8 +69,16 @@ object file {
     def fileReader(uri: URI)(implicit codec: Codec): BufferedReader = {
         if (uri.toString.startsWith("//"))
             Source.fromFile(uri.getHost + File.separator + uri.getPath)(codec).bufferedReader
-        else
-            Source.fromFile(uri.getPath)(codec).bufferedReader
+        else{            
+            val path = uri.getPath
+
+            val cleanPath = if(path.startsWith("/")) 
+                path.substring(1)
+            else
+                path
+
+            Source.fromFile(cleanPath)(codec).bufferedReader
+        }            
     }
     
     /**
