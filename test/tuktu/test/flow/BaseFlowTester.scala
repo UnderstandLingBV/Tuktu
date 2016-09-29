@@ -169,11 +169,14 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
         )
 
         // Compare data packet by data packet
-        val res = obtainedOutput.zip(outputs).forall(packetLists => {
+        val res =
+            obtainedOutput.size == outputs.size &&
+            obtainedOutput.zip(outputs).forall(packetLists => {
             val obtainedList = packetLists._1
             val expectedList = packetLists._2
             
             // Inspect the next level
+            obtainedList.size == expectedList.size &&
             obtainedList.zip(expectedList).forall(packets => {
                 val obtained = packets._1
                 val expected = packets._2
