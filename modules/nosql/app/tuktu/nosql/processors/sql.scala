@@ -21,6 +21,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var append: Boolean = _
     var separate: Boolean = _
     var distinct: Boolean = _
+    var manipulateData: Boolean = _
 
     var connDef: ConnectionDefinition = null
     var conn: Connection = null
@@ -41,6 +42,9 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         // Only query distinct setups
         distinct = (config \ "distinct").asOpt[Boolean].getOrElse(false)
+        
+        // Indicate if we need to manipulate data (rename, drop etc), without expecting a result.
+        manipulateData = (config \ "manipulate_data").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
@@ -73,20 +77,25 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
                     // Get connection from pool
                     conn = getConnection(connDef)
                 }
-
-                // See if we need to append or not
-                if (append) {
-                    val res = queryResult(evalQuery)(conn)
-                    // Add to query results, only if distinct
-                    if (distinct)
-                        query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> res
-                    res
-                } else {
-                    tuktu.nosql.util.sql.query(evalQuery)(conn)
-                    // Add to query results, only if distinct
-                    if (distinct)
-                        query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> Nil
+                
+                if(manipulateData) {
+                    queryUpdate(evalQuery)(conn)
                     Nil
+                } else {
+                    // See if we need to append or not
+                    if (append) {
+                        val res = queryResult(evalQuery)(conn)
+                        // Add to query results, only if distinct
+                        if (distinct)
+                            query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> res
+                        res
+                    } else {
+                        tuktu.nosql.util.sql.query(evalQuery)(conn)
+                        // Add to query results, only if distinct
+                        if (distinct)
+                            query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> Nil
+                        Nil
+                    }
                 }
             }
         }

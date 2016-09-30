@@ -97,6 +97,9 @@ object sql {
 
     def query(query: String)(conn: Connection) =
         SQL(query).execute()(conn)
+        
+    def queryUpdate(query: String)(conn: Connection) =
+        SQL(query).executeUpdate()(conn)        
 
     def bulkQuery(query: String, parameters: List[NamedParameter])(conn: Connection) =
         SQL(query)
