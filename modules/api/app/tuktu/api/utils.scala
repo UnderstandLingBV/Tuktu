@@ -46,26 +46,31 @@ object utils {
      * Evaluates a Tuktu string to resolve variables in the actual string
      */
     def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$'): String = {
+        // Supported functions; empty String not properly supported by StringIn, so we will use Option instead
+        val functionNames: Seq[String] = Seq("JSON.stringify")
 
-        // Calculate maximal key size of replacements
-        val maxKeySize = vars.foldLeft(0) { case (max, (key, _)) => scala.math.max(max, key.size) }
-
-        // key starts after special char and { and goes until }; try to get value from vars
-        val key: P[String] = CharPred(_ != '}').rep(min = 0, max = maxKeySize).!.map {
-            case key: String => {
-                vars.get(key) match {
-                    case None               => specialChar + "{" + key + "}"
-                    case Some(js: JsString) => js.value
-                    case Some(a)            => a.toString
+        // A key can contain more Tuktu Strings, or go until closing } bracket
+        def key: P[String] = P(tuktuString | CharPred(_ != '}').!).rep.map { _.mkString }
+        // A Tuktu String is of the form $function{key}, try to get value at key, and do something with its value based on function
+        def tuktuString: P[String] = P(specialChar.toString ~ StringIn(functionNames: _*).!.? ~ "{" ~ key ~ "}").map {
+            case (optFunction, key) =>
+                // Try to get value at key; does support dot notation
+                fieldParser(vars, key) match {
+                    // No value found at key, return whole Tuktu String unchanged 
+                    case None => specialChar + optFunction.getOrElse("") + "{" + key + "}"
+                    case Some(a) => optFunction match {
+                        // We found a value, decide what to do with it based on function, None is empty string, ie. ${key}
+                        case None => a match {
+                            case js: JsString => js.value
+                            case _            => a.toString
+                        }
+                        case Some("JSON.stringify") => AnyToJsValue(a).toString
+                    }
                 }
-            }
         }
-        // special construct starts with special char, and then { key }; key handles replacement
-        val special: P[String] = P((specialChar + "{") ~/ key ~ "}")
-        // special construct has higher priority than any char, so put it first
-        val any: P[String] = AnyChar.!.map { _.toString }
-        val either: P[String] = P(special | any)
-        val total: P[String] = P(Start ~/ either.rep(min = 0) ~ End).map { _.mkString }
+        // Repeatedly parse either a tuktuString or anything (tuktuString first, hence higher priority, with full backtrack)
+        val either: P[String] = P(tuktuString | AnyChar.!)
+        val total: P[String] = P(Start ~ either.rep ~ End).map { _.mkString }
 
         // Parse str and return its value
         total.parse(str).get.value
@@ -73,69 +78,75 @@ object utils {
 
     /**
      * Recursively evaluates a Tuktu config to resolve variables in it
-     * Overloaded to get the correct return type for every possible use case
      */
-    def evaluateTuktuConfig(json: JsValue, vars: Map[String, Any], specialChar: Char): JsValue = json match {
-        case obj: JsObject  => evaluateTuktuConfig(obj, vars, specialChar)
-        case arr: JsArray   => evaluateTuktuConfig(arr, vars, specialChar)
-        case str: JsString  => evaluateTuktuConfig(str, vars, specialChar)
+    def evaluateTuktuJsValue(json: JsValue, vars: Map[String, Any], specialChar: Char = '$'): JsValue = json match {
+        case obj: JsObject  => evaluateTuktuJsObject(obj, vars, specialChar)
+        case arr: JsArray   => evaluateTuktuJsArray(arr, vars, specialChar)
+        case str: JsString  => evaluateTuktuJsString(str, vars, specialChar)
         case value: JsValue => value // Nothing to do for any other JsTypes
     }
 
-    def evaluateTuktuConfig(obj: JsObject, vars: Map[String, Any], specialChar: Char): JsObject = {
-        new JsObject(obj.value.map { case (key, value) => evaluateTuktuString(key, vars, specialChar) -> evaluateTuktuConfig(value, vars, specialChar) }.toSeq)
+    def evaluateTuktuJsObject(obj: JsObject, vars: Map[String, Any], specialChar: Char = '$'): JsObject = {
+        new JsObject(obj.value.map { case (key, value) => evaluateTuktuString(key, vars, specialChar) -> evaluateTuktuJsValue(value, vars, specialChar) }.toSeq)
     }
 
-    def evaluateTuktuConfig(arr: JsArray, vars: Map[String, Any], specialChar: Char): JsArray = {
-        new JsArray(arr.value.map(value => evaluateTuktuConfig(value, vars, specialChar)))
+    def evaluateTuktuJsArray(arr: JsArray, vars: Map[String, Any], specialChar: Char = '$'): JsArray = {
+        new JsArray(arr.value.map(value => evaluateTuktuJsValue(value, vars, specialChar)))
     }
 
-    def evaluateTuktuConfig(str: JsString, vars: Map[String, Any], specialChar: Char): JsValue = {
-        // Check if str is of the form %{...} and hence is JSON that needs to be parsed
-        val toBeParsed = str.value.startsWith("%{") && str.value.endsWith("}")
-        val cleaned = if (toBeParsed) str.value.drop(2).dropRight(1) else str.value
+    def evaluateTuktuJsString(str: JsString, vars: Map[String, Any], specialChar: Char = '$'): JsValue = {
+        // Check if it has to be parsed
+        val toBeParsed = str.value.startsWith(specialChar + "JSON.parse{") && str.value.endsWith("}")
+        val cleaned = if (toBeParsed) str.value.drop((specialChar + "JSON.parse{").length).dropRight("}".length) else str.value
 
-        // Replace all other Tuktu config strings
-        val replaced = evaluateTuktuString(cleaned, vars, specialChar)
+        // Evaluate Tuktu Strings in cleaned string
+        val evaluated = evaluateTuktuString(cleaned, vars, specialChar)
 
         if (toBeParsed)
             try
-                Json.parse(replaced)
+                Json.parse(evaluated)
             catch {
                 // If we can not parse it, treat it as JsString
-                case e: com.fasterxml.jackson.core.JsonParseException => JsString(replaced)
+                case e: com.fasterxml.jackson.core.JsonParseException =>
+                    play.api.Logger.warn("evaluateTuktuJsString: Couldn't parse to JSON:\n" + evaluated)
+                    JsString(evaluated)
             }
         else
-            JsString(replaced)
+            JsString(evaluated)
     }
 
     /**
-     * Recursively traverses a path of keys until it finds a value (or fails to traverse,
-     * in which case a default value is used)
+     * Recursively traverses a path of keys until it finds its value
+     * (or fails to traverse, in which case None is returned)
      */
     def fieldParser(input: Map[String, Any], path: String): Option[Any] = {
         input.get(path) match {
             case Some(a) => Some(a)
-            case None    => if (path.isEmpty) Some(input) else fieldParser(input, path.split('.').toList)
+            case None =>
+                if (path.isEmpty)
+                    Some(input)
+                else
+                    fieldParser(input, path.split('.').toList)
         }
     }
     def fieldParser(input: Map[String, Any], path: List[String]): Option[Any] = path match {
         case Nil            => Some(input)
         case someKey :: Nil => input.get(someKey)
-        case someKey :: trailPath => input.get(someKey).collect {
+        case someKey :: trailPath => input.get(someKey).flatMap {
             // Handle remainder depending on type
             case js: JsValue           => jsonParser(js, trailPath)
             case map: Map[String, Any] => fieldParser(map, trailPath)
-        }.flatten
+            case _                     => None
+        }
     }
 
     /**
-     * Recursively traverses a JSON object of keys until it finds a value (or fails to traverse,
-     * in which case a default value is used)
+     * Recursively traverses a JSON object of keys until it finds a value
+     * (or fails to traverse, in which case None is returned)
      */
     def jsonParser(json: JsValue, jsPath: List[String]): Option[JsValue] = jsPath match {
         case Nil             => Some(json)
-        case js :: trailPath => (json \ js).asOpt[JsValue].flatMap { json => jsonParser(json, trailPath) }
+        case js :: trailPath => (json \ js).asOpt[JsValue].flatMap { _json => jsonParser(_json, trailPath) }
     }
 
     /**
@@ -148,24 +159,23 @@ object utils {
      * Turns Any into a JsValueWrapper to use by Json.arr and Json.obj
      */
     private def AnyToJsValueWrapper(a: Any, mongo: Boolean = false): Json.JsValueWrapper = a match {
-        case a: Boolean     => a
-        case a: String      => a
-        case a: Char        => a.toString
-        case a: Short       => a
-        case a: Int         => a
-        case a: Long        => a
-        case a: Float       => a
-        case a: Double      => a
-        case a: BigDecimal  => a
-        case a: Date        => if (!mongo) a else Json.obj("$date" -> a.getTime)
-        case a: DateTime    => if (!mongo) a else Json.obj("$date" -> a.getMillis)
-        case a: JsValue     => a
-        case a: (_, _)      => MapToJsObject(Map(a._1 -> a._2), mongo)
-        case a: Map[_, _]   => MapToJsObject(a, mongo)
-        case a: Seq[_]      => SeqToJsArray(a, mongo)
-        case a: Array[_]    => SeqToJsArray(a, mongo)
-        case a: Iterable[_] => SeqToJsArray(a.toSeq, mongo)
-        case _              => if (a == null) "null" else a.toString
+        case a: Boolean            => a
+        case a: String             => a
+        case a: Char               => a.toString
+        case a: Short              => a
+        case a: Int                => a
+        case a: Long               => a
+        case a: Float              => a
+        case a: Double             => a
+        case a: BigDecimal         => a
+        case a: Date               => if (!mongo) a else Json.obj("$date" -> a.getTime)
+        case a: DateTime           => if (!mongo) a else Json.obj("$date" -> a.getMillis)
+        case a: JsValue            => a
+        case a: (_, _)             => MapToJsObject(Map(a._1 -> a._2), mongo)
+        case a: Map[_, _]          => MapToJsObject(a, mongo)
+        case a: TraversableOnce[_] => SeqToJsArray(a.toSeq, mongo)
+        case a: Array[_]           => SeqToJsArray(a, mongo)
+        case _                     => if (a == null) "null" else a.toString
     }
 
     /**
@@ -282,10 +292,9 @@ object utils {
 
         // Return result
         Map(label -> Map(
-                "attributes" -> attributes,
-                "text" -> text,
-                "children" -> children.toList
-        ))
+            "attributes" -> attributes,
+            "text" -> text,
+            "children" -> children.toList))
     }
 
     /**

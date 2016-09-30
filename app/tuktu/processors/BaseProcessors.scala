@@ -18,7 +18,6 @@ import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import tuktu.api._
 import java.text.SimpleDateFormat
-import tuktu.nosql.util.stringHandler
 import tuktu.api.utils.evaluateTuktuString
 import play.api.Logger
 import scala.collection.GenTraversableOnce

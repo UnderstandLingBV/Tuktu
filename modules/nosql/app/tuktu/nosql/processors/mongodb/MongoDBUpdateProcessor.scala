@@ -1,24 +1,20 @@
 package tuktu.nosql.processors.mongodb
 
-import scala.collection.immutable.SortedSet
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json.JsObject
-import play.modules.reactivemongo.json._
-import play.modules.reactivemongo.json.collection.JSONCollection
-import reactivemongo.core.nodeset.Authenticate
-import tuktu.api.BaseProcessor
-import tuktu.api.DataPacket
-import tuktu.nosql.util._
+import akka.util.Timeout
 import play.api.cache.Cache
 import play.api.Play.current
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.Await
-import play.api.libs.json._
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.{ JsObject, JsValue }
+import play.modules.reactivemongo.json._
+import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.api.MongoConnection
-import akka.util.Timeout
+import reactivemongo.core.nodeset.Authenticate
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
+import tuktu.api.{ BaseProcessor, DataPacket }
 import tuktu.api.utils
+import tuktu.nosql.util.MongoPool
 
 /**
  * Updates data into MongoDB
@@ -27,18 +23,18 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     var conn: MongoConnection = _
     var nodes: List[String] = _
-    
+
     var db: String = _
     var collection: String = _
-    
+
     var waitForCompletion: Boolean = _
-    
+
     // If set to true, creates a new document when no document matches the query criteria. 
     var upsert = false
     // The selection criteria for the update. 
-    var query: String = _
+    var query: JsValue = _
     // The modifications to apply. 
-    var update: String = _
+    var update: JsValue = _
     //  If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document. 
     var multi = false
 
@@ -49,29 +45,26 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         val opts = (config \ "mongo_options").asOpt[JsObject]
         val mongoOptions = MongoPool.parseMongoOptions(opts)
         // Get credentials
-        val authentication = (config \ "auth").asOpt[JsObject]
-        val auth = authentication match {
-            case None => None
-            case Some(a) => Some(Authenticate(
-                    (a \ "db").as[String],
-                    (a \ "user").as[String],
-                    (a \ "password").as[String]
-            ))
+        val auth = (config \ "auth").asOpt[JsObject].map { a =>
+            Authenticate(
+                (a \ "db").as[String],
+                (a \ "user").as[String],
+                (a \ "password").as[String])
         }
-        
+
         // DB and collection
         db = (config \ "db").as[String]
         collection = (config \ "collection").as[String]
 
         // Query stuff
-        query = (config \ "query").as[String]
-        update = (config \ "update").as[String]
+        query = (config \ "query")
+        update = (config \ "update")
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
         multi = (config \ "multi").asOpt[Boolean].getOrElse(false)
-        
+
         // Wait for updates to complete?
         waitForCompletion = (config \ "wait_for_completion").asOpt[Boolean].getOrElse(false)
-        
+
         // Get the connection
         val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
         conn = Await.result(fConnection, timeout.duration)
@@ -83,12 +76,10 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
                 utils.evaluateTuktuString(db, datum),
                 utils.evaluateTuktuString(collection, datum),
                 (
-                        Json.parse(stringHandler.evaluateString(query, datum, "\"", "")).as[JsObject],
-                        Json.parse(stringHandler.evaluateString(update, datum, "\"", "")).as[JsObject]
-                )
-            )
-        }).toList.groupBy(_._1).map(elem => elem._1 -> elem._2.groupBy(_._2))
-        
+                    utils.evaluateTuktuJsValue(query, datum).as[JsObject],
+                    utils.evaluateTuktuJsValue(update, datum).as[JsObject]))
+        }).toList.groupBy { case (db, _, _) => db }.map(elem => elem._1 -> elem._2.groupBy(_._2))
+
         // Execute per DB/Collection pair
         val resultFut = Future.sequence(for {
             (dbEval, collectionMap) <- jsons

@@ -7,21 +7,18 @@ import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee._
 import play.api.libs.iteratee.Iteratee
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
-import play.api.libs.json.JsValue
+import play.api.libs.json.{ Json, JsObject, JsValue }
 import play.api.Play.current
 import play.modules.reactivemongo.json._
 import play.modules.reactivemongo.json.collection._
 import reactivemongo.api._
 import reactivemongo.core.nodeset.Authenticate
 import scala.collection.immutable.SortedSet
-import scala.concurrent.Await
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import tuktu.api._
-import tuktu.nosql.util._
+import tuktu.nosql.util.MongoPool
 
 /**
  * Queries MongoDB for data
@@ -31,15 +28,15 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     var conn: MongoConnection = _
     var nodes: List[String] = _
-    
+
     var db: String = _
     var collection: String = _
-    
-    var query: JsObject = _
-    var filter: JsObject = _
-    var sort: JsObject = _
+
+    var query: JsValue = _
+    var filter: JsValue = _
+    var sort: JsValue = _
     var limit: Option[Int] = _
-    
+
     override def initialize(config: JsObject) {
         // Get hosts
         nodes = (config \ "hosts").as[List[String]]
@@ -47,26 +44,23 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         val opts = (config \ "mongo_options").asOpt[JsObject]
         val mongoOptions = MongoPool.parseMongoOptions(opts)
         // Get credentials
-        val authentication = (config \ "auth").asOpt[JsObject]
-        val auth = authentication match {
-            case None => None
-            case Some(a) => Some(Authenticate(
-                    (a \ "db").as[String],
-                    (a \ "user").as[String],
-                    (a \ "password").as[String]
-            ))
+        val auth = (config \ "auth").asOpt[JsObject].map { a =>
+            Authenticate(
+                (a \ "db").as[String],
+                (a \ "user").as[String],
+                (a \ "password").as[String])
         }
-        
+
         // DB and collection
         db = (config \ "db").as[String]
         collection = (config \ "collection").as[String]
-        
+
         // Get query and filter
-        query = (config \ "query").as[JsObject]
-        filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
-        sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
+        query = (config \ "query")
+        filter = (config \ "filter").asOpt[JsValue].getOrElse(new JsObject(Nil))
+        sort = (config \ "sort").asOpt[JsValue].getOrElse(new JsObject(Nil))
         limit = (config \ "limit").asOpt[Int]
-        
+
         // Get the connection
         val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
         conn = Await.result(fConnection, timeout.duration)
@@ -76,26 +70,26 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         val results = Future.sequence(for (datum <- data.data) yield {
             val dbEval = utils.evaluateTuktuString(db, datum)
             val collEval = utils.evaluateTuktuString(collection, datum)
-            
+
             // Get collection
             val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
             fCollection.flatMap(coll => {
                 // Evaluate the query and filter strings and convert to JSON
-                val queryJson: JsObject = utils.evaluateTuktuConfig(query, datum, '$')
-                val filterJson: JsObject = utils.evaluateTuktuConfig(filter, datum, '$')
-                val sortJson: JsObject = utils.evaluateTuktuConfig(sort, datum, '$')
+                val queryJson = utils.evaluateTuktuJsValue(query, datum).as[JsObject]
+                val filterJson = utils.evaluateTuktuJsValue(filter, datum).as[JsObject]
+                val sortJson = utils.evaluateTuktuJsValue(sort, datum).as[JsObject]
 
                 // Get data based on query and filter
                 val resultData = limit match {
                     case Some(lmt) => coll.find(queryJson, filterJson)
                         .sort(sortJson).options(QueryOpts().batchSize(lmt))
                         .cursor[JsObject]().collect[List](lmt)
-                    case None    => coll.find(queryJson, filterJson)
+                    case None => coll.find(queryJson, filterJson)
                         .sort(sortJson).cursor[JsObject]().collect[List]()
                 }
-                
+
                 // Get the results in
-                 resultData.map { resultList =>
+                resultData.map { resultList =>
                     if (resultList.isEmpty)
                         datum + (resultName -> List.empty[JsObject])
                     else {
@@ -104,7 +98,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
                 }
             })
         })
-        
+
         results.map(nd => DataPacket(nd))
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }
@@ -116,17 +110,17 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     var conn: MongoConnection = _
     var nodes: List[String] = _
-    
+
     var db: String = _
     var collection: String = _
-    
-    var query: JsObject = _
-    var filter: JsObject = _
-    var sort: JsObject = _
-    
+
+    var query: JsValue = _
+    var filter: JsValue = _
+    var sort: JsValue = _
+
     // Set up the packet sender actor
     val packetSenderActor = Akka.system.actorOf(Props(classOf[PacketSenderActor], genActor))
-    
+
     override def initialize(config: JsObject) {
         // Get hosts
         nodes = (config \ "hosts").as[List[String]]
@@ -134,25 +128,22 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
         val opts = (config \ "mongo_options").asOpt[JsObject]
         val mongoOptions = MongoPool.parseMongoOptions(opts)
         // Get credentials
-        val authentication = (config \ "auth").asOpt[JsObject]
-        val auth = authentication match {
-            case None => None
-            case Some(a) => Some(Authenticate(
-                    (a \ "db").as[String],
-                    (a \ "user").as[String],
-                    (a \ "password").as[String]
-            ))
+        val auth = (config \ "auth").asOpt[JsObject].map { a =>
+            Authenticate(
+                (a \ "db").as[String],
+                (a \ "user").as[String],
+                (a \ "password").as[String])
         }
-        
+
         // DB and collection
         db = (config \ "db").as[String]
         collection = (config \ "collection").as[String]
-        
+
         // Get query and filter
-        query = (config \ "query").as[JsObject]
-        filter = (config \ "filter").asOpt[JsObject].getOrElse(Json.obj())
-        sort = (config \ "sort").asOpt[JsObject].getOrElse(Json.obj())
-        
+        query = (config \ "query")
+        filter = (config \ "filter").asOpt[JsValue].getOrElse(new JsObject(Nil))
+        sort = (config \ "sort").asOpt[JsValue].getOrElse(new JsObject(Nil))
+
         // Get the connection
         val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
         conn = Await.result(fConnection, timeout.duration)
@@ -162,14 +153,14 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
         for (datum <- data) {
             val dbEval = utils.evaluateTuktuString(db, datum)
             val collEval = utils.evaluateTuktuString(collection, datum)
-            
+
             // Get collection
             val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
-            fCollection.map {collection =>
+            fCollection.map { collection =>
                 // Evaluate the query and filter strings and convert to JSON
-                val queryJson: JsObject = utils.evaluateTuktuConfig(query, datum, '$')
-                val filterJson: JsObject = utils.evaluateTuktuConfig(filter, datum, '$')
-                val sortJson: JsObject = utils.evaluateTuktuConfig(sort, datum, '$')
+                val queryJson = utils.evaluateTuktuJsValue(query, datum).as[JsObject]
+                val filterJson = utils.evaluateTuktuJsValue(filter, datum).as[JsObject]
+                val sortJson = utils.evaluateTuktuJsValue(sort, datum).as[JsObject]
 
                 // Query database and forward to our actor
                 val enumerator: Enumerator[JsObject] = collection.find(queryJson, filterJson)
@@ -177,15 +168,14 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
 
                 // Chain the stuff together with proper forwarding and EOF handling
                 enumerator |>> (
-                        Enumeratee.mapM[JsObject](record => Future {
-                            packetSenderActor ! (datum + (resultName -> tuktu.api.utils.JsObjectToMap(record)))
-                            record
-                        })
-                ) &>> Iteratee.ignore
+                    Enumeratee.mapM[JsObject](record => Future {
+                        packetSenderActor ! (datum + (resultName -> tuktu.api.utils.JsObjectToMap(record)))
+                        record
+                    })) &>> Iteratee.ignore
                 //enumerator.run(pushRecords)
             }
         }
-        
+
         data
     }) compose Enumeratee.onEOF(() => {
         packetSenderActor ! new StopPacket
@@ -198,7 +188,7 @@ class MongoDBFindStreamProcessor(genActor: ActorRef, resultName: String) extends
  */
 class PacketSenderActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
     remoteGenerator ! new InitPacket
-    
+
     def receive() = {
         case sp: StopPacket => {
             remoteGenerator ! sp

@@ -18,7 +18,7 @@ class JSONCreatorProcessor(resultName: String) extends BaseProcessor(resultName)
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
-            datum + (resultName -> utils.evaluateTuktuConfig(json, datum, '$'))
+            datum + (resultName -> utils.evaluateTuktuJsValue(json, datum))
         }
     })
 }
