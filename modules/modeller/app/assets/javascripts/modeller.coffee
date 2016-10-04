@@ -11,7 +11,6 @@ intInputTester.step = '1'
 floatInputTester = document.createElement('input')
 floatInputTester.type = 'number'
 floatInputTester.step = 'any'
-containsTuktuString = /#\{.*?\}/
 
 # Unfortunately the svg element doesn't have clientWidth, clientHeight
 # So we have to take it from its parent and deduct div-padding and svg-border
@@ -296,11 +295,13 @@ class Generator
 			when 'JsObject', 'any'
 				try
 					if array and config?
-						$(elem).val(JSON.stringify(config, null, '    '))
+						$(elem).val(JSON.stringify(config, null, '  '))
 					else if config[elem.dataset.key]?
-						$(elem).val(JSON.stringify(config[elem.dataset.key], null, '    '))
+						$(elem).val(JSON.stringify(config[elem.dataset.key], null, '  '))
 					else
-						$(elem).val(JSON.stringify(JSON.parse(elem.dataset.default), null, '    '))
+						$(elem).val(JSON.stringify(JSON.parse(elem.dataset.default), null, '  '))
+					if ($(elem).val().startsWith("\"$JSON.parse{") or $(elem).val().startsWith("\"#JSON.parse{")) and $(elem).val().endsWith("}\"")
+						$(elem).val($(elem).val().substring(1, $(elem).val().length - 1))
 				catch
 					$(elem).val('')
 			when 'boolean'
@@ -356,19 +357,22 @@ class Generator
 						$(data).val() if $(data).prop('required') is true or ($(data).val() isnt '' and $(data).val() isnt data.dataset.default)
 
 					when 'JsObject'
-						try
-							JSON.parse($(data).val()) if _.isObject(JSON.parse($(data).val())) and not _.isArray(JSON.parse($(data).val())) and ($(data).prop('required') is true or not _.isEqual(JSON.parse($(data).val()), myDefault))
+						if ($(data).val().startsWith("$JSON.parse{") or $(data).val().startsWith("#JSON.parse{")) and $(data).val().endsWith("}")
+							$(data).val()
+						else
+							try
+								JSON.parse($(data).val()) if _.isObject(JSON.parse($(data).val())) and not _.isArray(JSON.parse($(data).val())) and ($(data).prop('required') is true or not _.isEqual(JSON.parse($(data).val()), myDefault))
 
 					when 'any'
-						try
-							JSON.parse($(data).val()) if $(data).prop('required') is true or ($(data).val() isnt '' and not _.isEqual(JSON.parse($(data).val()), myDefault))
+						if ($(data).val().startsWith("$JSON.parse{") or $(data).val().startsWith("#JSON.parse{")) and $(data).val().endsWith("}")
+							$(data).val()
+						else
+							try
+								JSON.parse($(data).val()) if $(data).prop('required') is true or ($(data).val() isnt '' and not _.isEqual(JSON.parse($(data).val()), myDefault))
 
 					when 'int', 'long'
-						if containsTuktuString.test($(data).val())
-							if $(data).val().startsWith("%{") && $(data).val().endsWith("}")
-								$(data).val()
-							else 
-								"%{" + $(data).val() + "}"
+						if ($(data).val().startsWith("$JSON.parse{") or $(data).val().startsWith("#JSON.parse{")) and $(data).val().endsWith("}")
+							$(data).val()
 						else
 							$(intInputTester).prop('required', $(data).prop('required'))
 							$(intInputTester).val($(data).val())
@@ -378,11 +382,8 @@ class Generator
 								parseFloat($(intInputTester).val())
 
 					when 'float', 'double'
-						if containsTuktuString.test($(data).val())
-							if $(data).val().startsWith("%{") && $(data).val().endsWith("}")
-								$(data).val()
-							else 
-								"%{" + $(data).val() + "}"
+						if ($(data).val().startsWith("$JSON.parse{") or $(data).val().startsWith("#JSON.parse{")) and $(data).val().endsWith("}")
+							$(data).val()
 						else
 							$(floatInputTester).prop('required', $(data).prop('required'))
 							$(floatInputTester).val($(data).val())
@@ -667,7 +668,7 @@ checkValidity = (elem) ->
 				$(elem).closest('.form-group').removeClass('has-warning')
 
 		when 'int', 'long'
-			if containsTuktuString.test($(elem).val())
+			if ($(elem).val().startsWith("$JSON.parse{") or $(elem).val().startsWith("#JSON.parse{")) and $(elem).val().endsWith("}")
 				$(elem).closest('.form-group').removeClass('has-error')
 			else
 				$(intInputTester).prop('required', $(elem).prop('required'))
@@ -678,7 +679,7 @@ checkValidity = (elem) ->
 					$(elem).closest('.form-group').removeClass('has-error')
 
 		when 'float', 'double'
-			if containsTuktuString.test($(elem).val())
+			if ($(elem).val().startsWith("$JSON.parse{") or $(elem).val().startsWith("#JSON.parse{")) and $(elem).val().endsWith("}")
 				$(elem).closest('.form-group').removeClass('has-error')
 			else
 				$(floatInputTester).prop('required', $(elem).prop('required') is true)
@@ -689,16 +690,23 @@ checkValidity = (elem) ->
 					$(elem).closest('.form-group').removeClass('has-error')
 
 		when 'JsObject'
-			try
-				if (not _.isObject(JSON.parse($(elem).val())) or _.isArray(JSON.parse($(elem).val()))) and ($(elem).prop('required') is true or $(elem).val() isnt '')
+			if ($(elem).val().startsWith("$JSON.parse{") or $(elem).val().startsWith("#JSON.parse{")) and $(elem).val().endsWith("}")
+				$(elem).closest('.form-group').removeClass('has-error')
+			else if $(elem).prop('required') is false and $(elem).val() is ''
+				$(elem).closest('.form-group').removeClass('has-error')
+			else
+				try
+					if _.isObject(JSON.parse($(elem).val())) and not _.isArray(JSON.parse($(elem).val()))
+						$(elem).closest('.form-group').removeClass('has-error')
+					else
+						$(elem).closest('.form-group').addClass('has-error')
+				catch
 					$(elem).closest('.form-group').addClass('has-error')
-				else
-					$(elem).closest('.form-group').removeClass('has-error')
-			catch
-				$(elem).closest('.form-group').addClass('has-error')
 
 		when 'any'
-			if $(elem).prop('required') is false and $(elem).val() is ''
+			if ($(elem).val().startsWith("$JSON.parse{") or $(elem).val().startsWith("#JSON.parse{")) and $(elem).val().endsWith("}")
+				$(elem).closest('.form-group').removeClass('has-error')
+			else if $(elem).prop('required') is false and $(elem).val() is ''
 				$(elem).closest('.form-group').removeClass('has-error')
 			else
 				try
