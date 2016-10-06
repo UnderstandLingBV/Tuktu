@@ -4,12 +4,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
-import tuktu.api.BaseProcessor
-import tuktu.api.DataPacket
-import tuktu.api.utils
-import tuktu.nosql.util.stringHandler
+import tuktu.api.{ BaseProcessor, DataPacket }
 import tuktu.nosql.util.sql._
-import tuktu.nosql.util.sql.ConnectionDefinition
 import java.sql.Connection
 
 class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
@@ -52,7 +48,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         val results = for (datum <- data.data) yield {
             // Evaluate all
-            val evalQuery = stringHandler.evaluateString(query, datum)
+            val evalQuery = tuktu.api.utils.evaluateTuktuString(query, datum)
             val evalUrl = tuktu.api.utils.evaluateTuktuString(url, datum)
             val evalUser = tuktu.api.utils.evaluateTuktuString(user, datum)
             val evalPassword = tuktu.api.utils.evaluateTuktuString(password, datum)

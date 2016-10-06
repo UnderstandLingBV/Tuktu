@@ -1,7 +1,6 @@
 package tuktu.api
 
 import java.util.Date
-import java.util.regex.Pattern
 import scala.util.hashing.MurmurHash3
 import org.joda.time.DateTime
 import play.api.Play.current
@@ -9,14 +8,9 @@ import play.api.cache.Cache
 import play.api.libs.json._
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.concurrent.Akka
-import play.api.Logger
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.Play
-import scala.xml.XML
-import scala.xml.Elem
-import scala.xml.Node
-import scala.xml.NodeSeq
-import scala.collection.mutable.ArrayBuffer
+import scala.xml.{ XML, Elem, Node, NodeSeq }
 import fastparse.all._
 
 object utils {
@@ -36,9 +30,9 @@ object utils {
 
             // Log the error
             if (logDpContent)
-                Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString, on Input: " + input, e)
+                play.api.Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString, on Input: " + input, e)
             else
-                Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString", e)
+                play.api.Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString", e)
         }
     }
 
@@ -47,7 +41,7 @@ object utils {
      */
     def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$'): String = {
         // Supported functions; empty String not properly supported by StringIn, so we will use Option instead
-        val functionNames: Seq[String] = Seq("JSON.stringify")
+        val functionNames: Seq[String] = Seq("JSON.stringify", "SQL")
 
         // A key can contain more Tuktu Strings, or go until closing } bracket
         def key: P[String] = P(tuktuString | CharPred(_ != '}').!).rep.map { _.mkString }
@@ -65,6 +59,15 @@ object utils {
                             case _            => a.toString
                         }
                         case Some("JSON.stringify") => AnyToJsValue(a).toString
+                        case Some("SQL") => {
+                            def evaluateSQLParameter(any: Any): String = any match {
+                                case el: JsValue => evaluateSQLParameter(JsValueToAny(el))
+                                case el: Boolean => if (el) "1" else "0"
+                                case el: String  => "'" + el.replace("'", "''") + "'"
+                                case _           => any.toString
+                            }
+                            evaluateSQLParameter(a)
+                        }
                     }
                 }
         }

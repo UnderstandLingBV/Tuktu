@@ -4,14 +4,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
-import tuktu.api.BaseProcessor
-import tuktu.api.DataPacket
-import tuktu.api.utils
-import tuktu.nosql.util.sql
-import tuktu.nosql.util.stringHandler
-import java.sql.Connection
+import tuktu.api.{ BaseProcessor, DataPacket }
+import tuktu.api.utils.evaluateTuktuString
 import tuktu.nosql.util.sql._
-import tuktu.nosql.util.sql.ConnectionDefinition
+import java.sql.Connection
 
 /**
  * In SQL, an edge table contains edges from a graph and relations need to be fetched iteratively.
@@ -84,8 +80,8 @@ class RecursiveLookupProcessor(resultName: String) extends BaseProcessor(resultN
             // Build and evaluate the query for this datum
             val query = {
                 "SELECT " + fetchColumns.keys.mkString(",") +
-                    " FROM " + stringHandler.evaluateString(fromClause, datum) +
-                    " WHERE " + stringHandler.evaluateString(whereClause, datum)
+                    " FROM " + evaluateTuktuString(fromClause, datum) +
+                    " WHERE " + evaluateTuktuString(whereClause, datum)
             }
 
             // Get the result and use it to fetch new relations

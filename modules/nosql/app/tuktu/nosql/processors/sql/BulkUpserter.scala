@@ -8,7 +8,6 @@ import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
 import tuktu.nosql.util.sql._
-import tuktu.nosql.util.stringHandler
 import java.sql.Date
 import org.joda.time.DateTime
 import anorm.NamedParameter

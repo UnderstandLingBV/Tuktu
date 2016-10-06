@@ -95,14 +95,14 @@ object sql {
     def queryResult(query: String)(implicit conn: Connection) =
         SQL(query).as(parser.*)
 
-    def query(query: String)(conn: Connection) =
-        SQL(query).execute()(conn)
-        
-    def queryUpdate(query: String)(conn: Connection) =
-        SQL(query).executeUpdate()(conn)        
+    def query(query: String)(implicit conn: Connection) =
+        SQL(query).execute
 
-    def bulkQuery(query: String, parameters: List[NamedParameter])(conn: Connection) =
+    def queryUpdate(query: String)(implicit conn: Connection) =
+        SQL(query).executeUpdate
+
+    def bulkQuery(query: String, parameters: List[NamedParameter])(implicit conn: Connection) =
         SQL(query)
             .on(parameters: _*)
-            .executeUpdate()(conn)
+            .executeUpdate
 }
