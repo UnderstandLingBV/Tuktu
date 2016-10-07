@@ -67,13 +67,6 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
-				},
-				{
-					"name": "manipulate_data",
-					"description": "Executes the given SQL statement, which may be an INSERT, UPDATE, or DELETE statement or an SQL statement that returns nothing, such as an SQL DDL statement.",
-					"type": "boolean",
-					"required": false,
-					"default": false
 				}
 			]
 		}
