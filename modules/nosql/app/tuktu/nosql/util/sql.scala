@@ -2,17 +2,12 @@ package tuktu.nosql.util
 
 import org.apache.commons.dbcp2.BasicDataSource
 import java.sql.Connection
-import anorm.NamedParameter
 import anorm.SqlParser._
-import anorm.Row
-import anorm.SQL
-import anorm.SqlParser
-import anorm.Iteratees
+import anorm._
 import play.api.libs.iteratee.Enumerator
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.HashSet
-import anorm.RowParser
 
 /**
  * Keeps track of connections
@@ -93,10 +88,10 @@ object sql {
         }
 
     def queryResult(query: String)(implicit conn: Connection) =
-        SQL(query).as(parser.*)
+        SQL"#$query".as(parser.*)
 
     def query(query: String)(implicit conn: Connection) =
-        SQL(query).execute
+        SQL"#$query".execute
 
     def bulkQuery(query: String, parameters: List[NamedParameter])(implicit conn: Connection) =
         SQL(query)
