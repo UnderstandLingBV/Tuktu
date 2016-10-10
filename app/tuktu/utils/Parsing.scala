@@ -60,7 +60,7 @@ object PredicateParser {
     val literal: P[Boolean] = P(("true" | "false").!.map(_.toBoolean))
     val parens: P[Boolean] = P("(" ~/ (andOr | arithExpr) ~ ")")
     val neg: P[Boolean] = P(("!(" ~/ andOr ~ ")") | ("!" ~/ literal)).map(!_)
-    val factor: P[Boolean] = P(literal | neg | parens | arithExpr | stringExpr)
+    val factor: P[Boolean] = P(litExpr | literal | neg | parens | arithExpr | stringExpr)
     // Strings
     val strings: P[String] = P(CharIn(('a' to 'z').toList ++ ('A' to 'Z').toList).rep(1).!.map(_.toString))
 
@@ -73,6 +73,13 @@ object PredicateParser {
                 case "==" => left == right case "!=" => left != right
             }
         }
+    
+    // Evaluate literal expressions
+    val litExpr: P[Boolean] = P(literal ~/ ("==" | "!=").! ~ literal)
+      .map {
+          case (left, "==", right) => left == right
+          case (left, "!=", right) => left != right
+      }
 
     // Evaluate string expressions
     val stringExpr: P[Boolean] = P(strings ~/ ("==" | "!=").! ~ strings)
@@ -168,7 +175,7 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     val literal: P[Boolean] = P(("true" | "false").!.map(_.toBoolean))
     val parens: P[Boolean] = P("(" ~/ (andOr | arithExpr) ~ ")")
     val neg: P[Boolean] = P(("!(" ~/ andOr ~ ")") | ("!" ~/ literal)).map(!_)
-    val factor: P[Boolean] = P(literal | neg | parens | functions | stringExpr | arithExpr)
+    val factor: P[Boolean] = P(litExpr | literal | neg | parens | functions | stringExpr | arithExpr)
 
     // Evaluate arithmetic expressions on numbers using the ArithmeticParser
     val arithExpr: P[Boolean] = P((ArithmeticParser.addSub | ArithmeticParser.parens) ~/ ("<" | ">" | ">=" | "<=" | "==" | "!=").! ~ (ArithmeticParser.addSub | ArithmeticParser.parens))
@@ -179,6 +186,13 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                 case "==" => left == right case "!=" => left != right
             }
         }
+    
+    // Evaluate literal expressions
+    val litExpr: P[Boolean] = P(literal ~/ ("==" | "!=").! ~ literal)
+      .map {
+          case (left, "==", right) => left == right
+          case (left, "!=", right) => left != right
+      }
 
     // Evaluate string expressions
     val stringExpr: P[Boolean] = P(strings ~/ ("==" | "!=").! ~ strings)

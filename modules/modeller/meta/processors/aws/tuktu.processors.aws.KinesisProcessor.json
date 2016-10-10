@@ -1,0 +1,53 @@
+{
+    "name": "Kinesis Processor",
+	"class": "tuktu.aws.processors.KinesisProcessor",
+	"description": "Put record to kinesis stream",
+    "parameters": [
+        {
+            "name": "id",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "result",
+            "type": "string",
+            "required": true
+        },
+        {
+            "name": "config",
+            "type": "object",
+            "required": true,
+            "parameters": [
+				{
+					"name": "url",
+					"type": "string",
+					"required": true,
+					"description": "the url to push to."
+				},{
+					"name": "execution_timeout",
+					"type": "int",
+					"required": false,
+					"default": 30000,
+					"description": "the execution timeout."
+				},{
+					"name": "request_timeout",
+					"type": "int",
+					"required": false,
+					"default": 30000,
+					"description": "the request timeout."
+				},{
+					"name": "partition_key",
+					"type": "string",
+					"required": false,
+					"description": "the key to partition the data."
+				},
+				{
+					"name": "stream_name",
+					"type": "string",
+					"required": true,
+					"description": "the name of the stream to push to."
+				}
+			]
+        }
+    ]
+}

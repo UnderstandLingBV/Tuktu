@@ -168,8 +168,8 @@ object utils {
         case a: Short              => a
         case a: Int                => a
         case a: Long               => a
-        case a: Float              => a
-        case a: Double             => a
+        case a: Float              => if (a.isNaN || a.isInfinite || a.isPosInfinity || a.isNegInfinity) a.toString else a
+        case a: Double             => if (a.isNaN || a.isInfinite || a.isPosInfinity || a.isNegInfinity) a.toString else a
         case a: BigDecimal         => a
         case a: Date               => if (!mongo) a else Json.obj("$date" -> a.getTime)
         case a: DateTime           => if (!mongo) a else Json.obj("$date" -> a.getMillis)

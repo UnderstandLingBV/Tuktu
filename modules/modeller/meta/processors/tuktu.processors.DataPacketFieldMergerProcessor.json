@@ -1,0 +1,44 @@
+{
+	"name": "DataPacket Field Merger Processor",
+	"description": "Merges the specified fields into one data packet.",
+	"class": "tuktu.processors.DataPacketFieldMergerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "value",
+					"description": "A Tuktu String to evaluate and add.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "is_numeric",
+					"description": "Convert Tuktu String to Long, or not.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "is_decimal",
+					"description": "Convert Tuktu String to Double, or not.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}

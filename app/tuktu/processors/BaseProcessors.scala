@@ -2,6 +2,7 @@ package tuktu.processors
 
 import java.io._
 import java.lang.reflect.Method
+
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -20,10 +21,12 @@ import tuktu.api._
 import java.text.SimpleDateFormat
 import tuktu.api.utils.evaluateTuktuString
 import play.api.Logger
-import scala.collection.GenTraversableOnce
+
+import scala.collection.{GenTraversableOnce, mutable}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Input
 import akka.routing.Broadcast
+
 import concurrent.duration.DurationLong
 
 /**
@@ -568,11 +571,54 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             if (!isNumeric)
-                datum + (resultName -> evaluateTuktuString(value, datum))
+                datum + (evaluateTuktuString(resultName, datum) -> evaluateTuktuString(value, datum))
             else
-                datum + (resultName -> evaluateTuktuString(value, datum).toLong)
+                datum + (evaluateTuktuString(resultName, datum) -> evaluateTuktuString(value, datum).toLong)
         }
     })
+}
+
+/**
+  * Merges the specified fields into one data packet.
+  */
+class DataPacketFieldMergerProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var value = ""
+    var isNumeric = false
+    var isDecimal = false
+
+    override def initialize(config: JsObject) {
+        value = (config \ "value").as[String]
+        isNumeric = (config \ "is_numeric").asOpt[Boolean].getOrElse(false)
+        isDecimal = (config \ "is_decimal").asOpt[Boolean].getOrElse(false)
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+
+        val merged = mutable.Map[String, Any]()
+
+        data.foreach {
+            datum => {
+                if (!isNumeric && !isDecimal)
+                    merged += evaluateTuktuString(resultName, datum) -> evaluateTuktuString(value, datum)
+                else if (isNumeric)
+                    merged += evaluateTuktuString(resultName, datum) -> evaluateTuktuString(value, datum).toLong
+                else
+                    merged += evaluateTuktuString(resultName, datum) -> evaluateTuktuString(value, datum).toDouble
+            }
+        }
+
+        DataPacket(List(merged.toMap))
+    })
+
+//
+//    // Iteratee to take the data we need
+//    def groupPackets: Iteratee[DataPacket, DataPacket] = for (
+//        dps <- Enumeratee.take[DataPacket](maxSize) &>> Iteratee.getChunks
+//    ) yield DataPacket(dps.flatMap(data => data.data))
+//
+//    // Use the iteratee and Enumeratee.grouped
+//    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets) compose
+//      Enumeratee.filter(!_.data.isEmpty)
 }
 
 /**
