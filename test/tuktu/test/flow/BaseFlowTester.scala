@@ -102,7 +102,9 @@ class EnumForwarder(actor: ActorRef) {
 class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(as) {
     implicit val timeout = Timeout(timeoutSeconds seconds)
     
-    def apply(outputs: List[List[DataPacket]], flowName: String): Unit = {
+    def apply(outputs: List[List[DataPacket]], flowName: String): Unit = apply(outputs, flowName, true)
+    
+    def apply(outputs: List[List[DataPacket]], flowName: String, ignoreOrder: Boolean): Unit = {
         // Open the file and pass on
         val configFile = scala.io.Source.fromFile(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs") +
                 "/" + flowName + ".json", "utf-8")
@@ -111,10 +113,11 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
         apply(outputs, cfg)
     }
     
+    def apply(outputs: List[List[DataPacket]], config: JsObject): Unit = apply(outputs, config, true)
     /**
      * Executes a flow to capture its output and match it with a set of expected outputs
      */
-    def apply(outputs: List[List[DataPacket]], config: JsObject): Unit = {
+    def apply(outputs: List[List[DataPacket]], config: JsObject, ignoreOrder: Boolean): Unit = {
         // Build processor map
         val processorMap = Dispatcher.buildProcessorMap((config \ "processors").as[List[JsObject]])
         
@@ -176,15 +179,34 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
             val expectedList = packetLists._2
             
             // Inspect the next level
-            obtainedList.size == expectedList.size &&
-            obtainedList.zip(expectedList).forall(packets => {
-                val obtained = packets._1
-                val expected = packets._2
-                
-                // Inspect the data inside the packets
-                (obtained.data.isEmpty && expected.data.isEmpty) ||
-                    obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
-            })
+            obtainedList.size == expectedList.size && {
+                if (ignoreOrder)
+                    obtainedList.sortBy {dp =>
+                        // Sort by all values that occur to make sure the order of expected and obtained is equal
+                        dp.data.map(_.values.map(_.toString).mkString("")).map(_.toString).mkString("")
+                    }.zip(
+                        // Sort by all values that occur to make sure the order of expected and obtained is equal
+                        expectedList.sortBy {dp =>
+                            dp.data.map(_.values.map(_.toString).mkString("")).map(_.toString).mkString("")
+                        }
+                    ).forall(packets => {
+                        val obtained = packets._1
+                        val expected = packets._2
+                        
+                        // Inspect the data inside the packets
+                        (obtained.data.isEmpty && expected.data.isEmpty) ||
+                            obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
+                    })
+                else
+                    obtainedList.zip(expectedList).forall(packets => {
+                        val obtained = packets._1
+                        val expected = packets._2
+                        
+                        // Inspect the data inside the packets
+                        (obtained.data.isEmpty && expected.data.isEmpty) ||
+                            obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
+                    })
+            }
         })
         
         assertResult(true, "Obtained output is:\r\n" + obtainedOutput + "\r\nExpected:\r\n" + outputs) {
