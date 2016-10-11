@@ -2,18 +2,13 @@ package tuktu.web.processors.analytics
 
 import play.api.libs.json.JsObject
 import play.api.libs.iteratee.Enumeratee
-import tuktu.api.BaseProcessor
-import scala.concurrent.Future
-import tuktu.api.DataPacket
+import tuktu.api.{ BaseProcessor, DataPacket }
 import java.net.URL
-import scala.concurrent.ExecutionContext.Implicits.global
-import org.apache.http.client.utils.URLEncodedUtils
-import scala.annotation.meta.param
-import org.apache.http.NameValuePair
-import java.net.URI
-import scala.annotation.meta.param
-import scala.collection.JavaConversions._
 import java.net.MalformedURLException
+import org.apache.http.client.utils.URLEncodedUtils
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.JavaConversions._
 
 /**
  * Parses a URL and adds a map with key/value pairs
@@ -60,14 +55,12 @@ class URLQueryStringParserProcessor(resultName: String) extends BaseProcessor(re
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
-            // Get URL 
-            val url = new URI(datum(field).asInstanceOf[String])
-            val params = URLEncodedUtils.parse(url, "UTF-8")
+            // Get URL
+            val params = URLEncodedUtils.parse(datum(field).asInstanceOf[String], java.nio.charset.StandardCharsets.UTF_8)
 
             datum ++ (
-                    if (flatten) params.map(nvp => nvp.getName -> nvp.getValue).toMap
-                    else Map(resultName -> params.map(nvp => nvp.getName -> nvp.getValue).toList)
-            )
+                if (flatten) params.map(nvp => nvp.getName -> nvp.getValue).toMap
+                else Map(resultName -> params.map(nvp => nvp.getName -> nvp.getValue).toList))
         }
     })
 }
