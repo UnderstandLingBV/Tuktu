@@ -1,15 +1,12 @@
 package tuktu.test.flow.tests
 
 import org.scalatest.DoNotDiscover
-import org.scalatestplus.play.OneAppPerSuite
 import org.scalatestplus.play.PlaySpec
 
+import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import tuktu.api.DataPacket
 import tuktu.test.flow.BaseFlowTester
-import org.scalatest.BeforeAndAfter
-
-import play.api.Play.current
 
 @DoNotDiscover
 class FlowTests extends PlaySpec {
