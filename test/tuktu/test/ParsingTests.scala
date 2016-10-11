@@ -1,9 +1,9 @@
 package tuktu.test
 
+import play.api.libs.json._
 import tuktu.utils.{ ArithmeticParser, TuktuArithmeticsParser, PredicateParser, TuktuPredicateParser }
 import scala.util.Random
 import org.scalatest._
-import play.api.libs.json._
 import org.scalatestplus.play.PlaySpec
 import Matchers._
 
