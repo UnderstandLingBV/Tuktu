@@ -25,38 +25,28 @@ class ParsingTests extends PlaySpec {
             ArithmeticParser("-1.7e-2") should be(-1.7e-2)
             ArithmeticParser("-.7e-2") should be(-.7e-2)
         }
-    }
 
-    "ArithmeticParser" should {
         "do some basic arithmetic" in {
             ArithmeticParser("17 + 23 + 18") should be(17 + 23 + 18)
             ArithmeticParser("1.7e2 - 1.8e1 + .9e0") should be(1.7e2 - 1.8e1 + .9e0)
             ArithmeticParser("1.7e2 * 1.8e1 * 17") should be(1.7e2 * 1.8e1 * 17)
             ArithmeticParser("1.7e2 / 1.8e1 / 17") should be(1.7e2 / 1.8e1 / 17)
         }
-    }
 
-    "ArithmeticParser" should {
         "honor operation order" in {
             ArithmeticParser("1.7e2 - 1.8e1 * 2 + 12") should be(1.7e2 - 1.8e1 * 2 + 12)
             ArithmeticParser("1.7e2 - 1.8e1 / 2 - 12") should be(1.7e2 - 1.8e1 / 2 - 12)
         }
-    }
 
-    "ArithmeticParser" should {
         "honor bracket order" in {
             ArithmeticParser("17 + (1.7e2 - 1.8e1) * (2 + 7) - 23") should be(17 + (1.7e2 - 1.8e1) * (2 + 7) - 23)
             ArithmeticParser("17 + (1.7e2 - 1.8e1) / (2 + 7) - 23") should be(17 + (1.7e2 - 1.8e1) / (2 + 7) - 23)
         }
-    }
 
-    "ArithmeticParser" should {
         "support nested brackets" in {
             ArithmeticParser("((17)) + ((1.7e2 - 1.8e1) * (2 + 7) - (23))") should be(((17)) + ((1.7e2 - 1.8e1) * (2 + 7) - (23)))
         }
-    }
 
-    "ArithmeticParser" should {
         "ignore white space" in {
             ArithmeticParser("  1e3  ") should be(1e3)
             ArithmeticParser(" 17 + ( 1.7e2 - 1.8e1 ) * ( 2 + 7 ) - 23 ") should be(17 + (1.7e2 - 1.8e1) * (2 + 7) - 23)
@@ -107,9 +97,7 @@ class ParsingTests extends PlaySpec {
             PredicateParser("!(true)") should be(false)
             PredicateParser("!(false)") should be(true)
         }
-    }
 
-    "PredicateParser" should {
         "support multiple negation of literals" in {
             PredicateParser("!(!(true))") should be(true)
             PredicateParser("!(!true)") should be(true)
@@ -120,18 +108,14 @@ class ParsingTests extends PlaySpec {
             PredicateParser("!!false") should be(false)
             PredicateParser("!!!(!!!(!!!false))") should be(true)
         }
-    }
 
-    "PredicateParser" should {
         "support basic predicates" in {
             PredicateParser("true && false") should be(false)
             PredicateParser("true && !false") should be(true)
             PredicateParser("!true || !true") should be(false)
             PredicateParser("!!true || false") should be(true)
         }
-    }
 
-    "PredicateParser" should {
         "support number comparisons" in {
             PredicateParser("1.7e1 == 17") should be(true)
             PredicateParser("(1.7e1) == (17)") should be(true)
@@ -139,32 +123,24 @@ class ParsingTests extends PlaySpec {
             PredicateParser(".7e1 > -.0") should be(true)
             PredicateParser(".0 == -0") should be(true)
         }
-    }
 
-    "PredicateParser" should {
         "support string comparisons" in {
             PredicateParser("AbS == AbS") should be(true)
             PredicateParser("AbS != Abs") should be(true)
             PredicateParser("!(ABS != abs)") should be(false)
         }
-    }
 
-    "PredicateParser" should {
         "support operator priority" in {
             PredicateParser("true || false && false") should be(true)
             PredicateParser("(true || false) && false") should be(false)
             PredicateParser("(true && false == false)") should be(true)
         }
-    }
 
-    "PredicateParser" should {
         "support different comparisons" in {
             PredicateParser("false || true && 1.7e1 != 17 || ABS == abs") should be(false)
             PredicateParser("!false && !(true && 1.7e1 != 17) && !(ABS == abs)") should be(true)
         }
-    }
 
-    "Predicateparser" should {
         "support nested brackets" in {
             PredicateParser("((asd == asd) && (false == false) == true)") should be(true)
         }
