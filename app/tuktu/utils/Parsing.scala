@@ -179,7 +179,8 @@ object PredicateParser {
 
     val basePredicate: P[Boolean] = (literal | arithExpr | stringExpr)
 
-    val and: P[Boolean] = P(factor ~ ("&&".! ~/ factor).rep).map(eval)
+    val equals: P[Boolean] = P(factor ~ (("==" | "!=").! ~/ factor).rep).map(eval)
+    val and: P[Boolean] = P(equals ~ ("&&".! ~/ equals).rep).map(eval)
     val or: P[Boolean] = P(and ~ ("||".! ~/ and).rep).map(eval)
 
     val parens: P[Boolean] = P("!".rep.! ~ "(" ~ or ~ ")").map(negate)
@@ -193,6 +194,8 @@ object PredicateParser {
             case (left, (op, right)) => op match {
                 case "&&" => left && right
                 case "||" => left || right
+                case "==" => left == right
+                case "!=" => left != right
             }
         }
     }
@@ -267,7 +270,8 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     // Boolean base logic
     val basePredicate: P[Boolean] = (allFunctions | PredicateParser.literal | PredicateParser.arithExpr | PredicateParser.stringExpr)
 
-    val and: P[Boolean] = P(factor ~ ("&&".! ~/ factor).rep).map(PredicateParser.eval)
+    val equals: P[Boolean] = P(factor ~ (("==" | "!=").! ~/ factor).rep).map(PredicateParser.eval)
+    val and: P[Boolean] = P(equals ~ ("&&".! ~/ equals).rep).map(PredicateParser.eval)
     val or: P[Boolean] = P(and ~ ("||".! ~/ and).rep).map(PredicateParser.eval)
 
     val parens: P[Boolean] = P("!".rep.! ~ "(" ~ or ~ ")").map(PredicateParser.negate)

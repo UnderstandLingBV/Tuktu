@@ -123,11 +123,16 @@ class ParsingTests extends FlatSpec with Matchers {
     "PredicateParser" should "support operator priority" in {
         PredicateParser("true || false && false") should be(true)
         PredicateParser("(true || false) && false") should be(false)
+        PredicateParser("(true && false == false)") should be(true)
     }
 
     "PredicateParser" should "support different comparisons" in {
         PredicateParser("false || true && 1.7e1 != 17 || ABS == abs") should be(false)
         PredicateParser("!false && !(true && 1.7e1 != 17) && !(ABS == abs)") should be(true)
+    }
+
+    "Predicateparser" should "support nested brackets" in {
+        PredicateParser("((asd == asd) && (false == false) == true)") should be(true)
     }
 
     /**
