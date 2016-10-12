@@ -42,7 +42,7 @@ class BaseFlowTesterCollector(as: ActorSystem) extends Actor with ActorLogging {
     val buffer = collection.mutable.ListBuffer.empty[DataPacket]
     var done = false
     var schedulerActor: Cancellable = null
-    
+
     def receive() = {
         case dp: DataPacket => buffer += dp
         case sp: StopPacket => done = true
@@ -50,8 +50,7 @@ class BaseFlowTesterCollector(as: ActorSystem) extends Actor with ActorLogging {
             if (done) {
                 sender ! buffer
                 self ! PoisonPill
-            }
-            else {
+            } else {
                 schedulerActor = as.scheduler.schedule(
                     1000 milliseconds,
                     1000 milliseconds,
@@ -64,14 +63,12 @@ class BaseFlowTesterCollector(as: ActorSystem) extends Actor with ActorLogging {
             if (done) {
                 cp.sender ! buffer.toList
                 self ! PoisonPill
-            }
-            else {
+            } else {
                 if (cp.iteration == 3) {
                     // Tried too long, fail
                     cp.sender ! null
                     self ! PoisonPill
-                }
-                else {
+                } else {
                     // Try again
                     schedulerActor = as.scheduler.schedule(
                         1000 milliseconds,
@@ -101,18 +98,18 @@ class EnumForwarder(actor: ActorRef) {
  */
 class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(as) {
     implicit val timeout = Timeout(timeoutSeconds seconds)
-    
+
     def apply(outputs: List[List[DataPacket]], flowName: String): Unit = apply(outputs, flowName, true)
-    
+
     def apply(outputs: List[List[DataPacket]], flowName: String, ignoreOrder: Boolean): Unit = {
         // Open the file and pass on
         val configFile = scala.io.Source.fromFile(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs") +
-                "/" + flowName + ".json", "utf-8")
+            "/" + flowName + ".json", "utf-8")
         val cfg = Json.parse(configFile.mkString).as[JsObject]
         configFile.close
         apply(outputs, cfg)
     }
-    
+
     def apply(outputs: List[List[DataPacket]], config: JsObject): Unit = apply(outputs, config, true)
     /**
      * Executes a flow to capture its output and match it with a set of expected outputs
@@ -120,7 +117,7 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
     def apply(outputs: List[List[DataPacket]], config: JsObject, ignoreOrder: Boolean): Unit = {
         // Build processor map
         val processorMap = Dispatcher.buildProcessorMap((config \ "processors").as[List[JsObject]])
-        
+
         // Get the data generators
         val generator = (config \ "generators").as[List[JsObject]].head
         // Get all fields
@@ -128,7 +125,7 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
         val generatorConfig = (generator \ "config").as[JsObject]
         val resultName = (generator \ "result").as[String]
         val next = (generator \ "next").as[List[String]]
-        
+
         // Build the processor pipeline for this generator
         val (enums, actors) = {
             val builtEnums = {
@@ -137,80 +134,44 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
                 if (e.isEmpty) {
                     val dummy: Enumeratee[DataPacket, DataPacket] = Enumeratee.map(dp => dp)
                     List(dummy)
-                }
-                else e
+                } else e
             }
-            
+
             val enumActors = for ((procEnum, index) <- builtEnums.zipWithIndex) yield {
                 // Create actor that will fetch the results
                 val collectionActor = as.actorOf(Props(classOf[BaseFlowTesterCollector], as),
-                        name = "testActor_" + java.util.UUID.randomUUID.toString)
-    
+                    name = "testActor_" + java.util.UUID.randomUUID.toString)
+
                 // Append enumeratee with actor sending functionality
                 (
-                        procEnum compose new EnumForwarder(collectionActor)(),
-                        collectionActor
-                )
+                    procEnum compose new EnumForwarder(collectionActor)(),
+                    collectionActor)
             }
-            
-            (enumActors.map(_._1), enumActors.map(_._2)) 
+
+            (enumActors.map(_._1), enumActors.map(_._2))
         }
-        
+
         // Set up the generator
         val clazz = Class.forName(generatorName)
         // Run the flow
         val flow = as.actorOf(Props(clazz, resultName, enums, None),
-            name = clazz.getName +  "_" + java.util.UUID.randomUUID.toString
-        )
+            name = clazz.getName + "_" + java.util.UUID.randomUUID.toString)
         flow ! new InitPacket
         flow ! generatorConfig
-        
+
         // Ask all the actors for completion
         val obtainedOutput = Await.result(
-                Future.sequence(for (actor <- actors) yield (actor ? new ResultPacket()).asInstanceOf[Future[List[DataPacket]]]),
-                timeout.duration
-        )
+            Future.sequence(for (actor <- actors) yield (actor ? new ResultPacket()).asInstanceOf[Future[List[DataPacket]]]),
+            timeout.duration)
 
         // Compare data packet by data packet
         val res =
             obtainedOutput.size == outputs.size &&
-            obtainedOutput.zip(outputs).forall(packetLists => {
-            val obtainedList = packetLists._1
-            val expectedList = packetLists._2
-            
-            // Inspect the next level
-            obtainedList.size == expectedList.size && {
-                if (ignoreOrder)
-                    obtainedList.sortBy {dp =>
-                        // Sort by all values that occur to make sure the order of expected and obtained is equal
-                        dp.data.map(_.values.map(_.toString).mkString("")).map(_.toString).mkString("")
-                    }.zip(
-                        // Sort by all values that occur to make sure the order of expected and obtained is equal
-                        expectedList.sortBy {dp =>
-                            dp.data.map(_.values.map(_.toString).mkString("")).map(_.toString).mkString("")
-                        }
-                    ).forall(packets => {
-                        val obtained = packets._1
-                        val expected = packets._2
-                        
-                        // Inspect the data inside the packets
-                        (obtained.data.isEmpty && expected.data.isEmpty) ||
-                            obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
-                    })
-                else
-                    obtainedList.zip(expectedList).forall(packets => {
-                        val obtained = packets._1
-                        val expected = packets._2
-                        
-                        // Inspect the data inside the packets
-                        (obtained.data.isEmpty && expected.data.isEmpty) ||
-                            obtained.data.zip(expected.data).forall(data => testUtil.inspectMaps(data._1, data._2))
-                    })
-            }
-        })
-        
-        assertResult(true, "Obtained output is:\r\n" + obtainedOutput + "\r\nExpected:\r\n" + outputs) {
-            (obtainedOutput.isEmpty && outputs.isEmpty) || (!obtainedOutput.isEmpty && !outputs.isEmpty && res)
-        }
+                obtainedOutput.zip(outputs).forall {
+                    case (obtainedList, expectedList) =>
+                        testUtil.inspectDataPacketList(obtainedList, expectedList, ignoreOrder)
+                }
+
+        assertResult(true, "Obtained output is:\r\n" + obtainedOutput + "\r\nExpected:\r\n" + outputs)(res)
     }
 }
