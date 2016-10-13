@@ -33,17 +33,19 @@ object Monitor extends Controller {
         // Get the monitor overview result
         val fut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorOverviewRequest).asInstanceOf[Future[MonitorOverviewResult]]
         fut.map(res => {
+            val sortedRunningJobs = res.runningJobs.toList.sortWith((a,b) => a._2.startTime > b._2.startTime)
+            val sortedFinishedJobs = res.finishedJobs.toList.sortWith((a,b) => a._2.endTime.getOrElse(a._2.startTime) > b._2.endTime.getOrElse(b._2.startTime))
             // If we are out of range, go back into range
-            if (runningPage < 1 || runningPage > math.max(math.ceil(res.runningJobs.size / 100.0), 1) || finishedPage < 1 || finishedPage > math.max(math.ceil(res.finishedJobs.size / 100.0), 1))
+            if (runningPage < 1 || runningPage > math.max(math.ceil(sortedRunningJobs.size / 100.0), 1) || finishedPage < 1 || finishedPage > math.max(math.ceil(sortedFinishedJobs.size / 100.0), 1))
                 Redirect(routes.Monitor.fetchLocalInfo(
-                    math.max(math.min(runningPage, math.ceil(res.runningJobs.size / 100.0).toInt), 1),
-                    math.max(math.min(finishedPage, math.ceil(res.finishedJobs.size / 100.0).toInt), 1)))
+                    math.max(math.min(runningPage, math.ceil(sortedRunningJobs.size / 100.0).toInt), 1),
+                    math.max(math.min(finishedPage, math.ceil(sortedFinishedJobs.size / 100.0).toInt), 1)))
             else
                 Ok(views.html.monitor.showApps(
                     runningPage,
                     finishedPage,
-                    res.runningJobs.toList.sortBy(elem => elem._2.startTime),
-                    res.finishedJobs.toList.sortBy(elem => elem._2.startTime),
+                    sortedRunningJobs,
+                    sortedFinishedJobs,
                     res.subflows,
                     util.flashMessagesToMap(request)))
         })
