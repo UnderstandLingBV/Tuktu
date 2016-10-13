@@ -72,13 +72,11 @@ object testUtil {
      * Inspects and matches an obtained map with an expected map
      */
     def inspectMaps(obtained: Map[String, Any], expected: Map[String, Any]): Boolean = {
-        // Check keys first
-        if (obtained.keySet.equals(expected.keySet)) {
-            // Keys match, inspect all values
-            (for ((key, value) <- obtained) yield {
-                inspectValue(value, expected(key))
-            }).foldLeft(true)(_ && _)
-        } else
+        // Check first if keys coincide
+        if (obtained.keySet.equals(expected.keySet))
+            // Keys match, inspect all corresponding values
+            obtained.forall { case (key, value) => inspectValue(value, expected(key)) }
+        else
             false
     }
 
