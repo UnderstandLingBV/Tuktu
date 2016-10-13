@@ -1,6 +1,7 @@
 package tuktu.test
 
 import tuktu.api.DataPacket
+import play.api.libs.json._
 
 object testUtil {
     /**
@@ -72,14 +73,13 @@ object testUtil {
      */
     def inspectMaps(obtained: Map[String, Any], expected: Map[String, Any]): Boolean = {
         // Check keys first
-        if (!obtained.keys.toList.diff(expected.keys.toList).isEmpty)
-            false
-        else {
+        if (obtained.keySet.equals(expected.keySet)) {
             // Keys match, inspect all values
             (for ((key, value) <- obtained) yield {
                 inspectValue(value, expected(key))
             }).foldLeft(true)(_ && _)
-        }
+        } else
+            false
     }
 
     /**
@@ -108,9 +108,48 @@ object testUtil {
         } catch {
             // TODO: Maybe differentiate on types of exceptions?
             case e: Throwable => {
-                e.printStackTrace()
+                play.api.Logger.error("testUtil.inspectValue", e)
                 false
             }
+        }
+    }
+
+    /**
+     * Inspects and matches an obtained JsValue with an expected JsValue
+     */
+    def inspectJsValue(obtained: JsValue, expected: JsValue, ignoreOrder: Boolean): Boolean = {
+        (obtained, expected) match {
+            case (obtained: JsNumber, expected: JsNumber)       => obtained.value == expected.value
+            case (obtained: JsString, expected: JsString)       => obtained.value == expected.value
+            case (obtained: JsBoolean, expected: JsBoolean)     => obtained.value == expected.value
+            case (obtained: JsUndefined, expected: JsUndefined) => obtained.error == expected.error
+            case (JsNull, JsNull)                               => true
+            case (obtained: JsObject, expected: JsObject) => {
+                if (obtained.keys.equals(expected.keys)) {
+                    obtained.keys.forall { key => inspectJsValue(obtained \ key, expected \ key, ignoreOrder) }
+                } else
+                    false
+            }
+            case (obtained: JsArray, expected: JsArray) => {
+                obtained.value.size == expected.value.size && {
+                    if (ignoreOrder) {
+                        def helper(s1: List[JsValue], s2: List[JsValue]): Boolean = s1 match {
+                            case Nil => true
+                            case head :: tail => {
+                                val index = s2.indexWhere(value => inspectJsValue(head, value, ignoreOrder))
+                                if (index == -1)
+                                    false
+                                else
+                                    helper(tail, s2.take(index) ++ s2.drop(index + 1))
+                            }
+                        }
+                        helper(obtained.value.toList.sortBy(_.toString), expected.value.toList.sortBy(_.toString))
+                    } else {
+                        obtained.value.zip(expected.value).forall { case (v1, v2) => inspectJsValue(v1, v2, ignoreOrder) }
+                    }
+                }
+            }
+            case (_, _) => false
         }
     }
 }

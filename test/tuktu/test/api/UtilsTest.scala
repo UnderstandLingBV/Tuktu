@@ -1,6 +1,7 @@
 package tuktu.test.api
 
 import play.api.libs.json._
+import tuktu.test.testUtil
 import tuktu.api.utils
 import org.scalatest._
 import org.scalatestplus.play.PlaySpec
@@ -30,6 +31,54 @@ class utilsTests extends PlaySpec {
         "parse a JSON string to the correct type" in {
             val datum: Map[String, Any] = Map("List" -> List(1, 2, 3))
             utils.evaluateTuktuJsString(JsString("$JSON.parse{$JSON.stringify{List}}"), datum, '$') should be(Json.arr(1, 2, 3))
+        }
+    }
+
+    "mergeJson" should {
+        "merge key-disjoint objects" in {
+            testUtil.inspectJsValue(
+                utils.mergeJson(
+                    Json.obj("a" -> Json.obj("b" -> 3)),
+                    Json.obj("c" -> Json.arr(true, 1, "17"))),
+                Json.obj("c" -> Json.arr(true, 1, "17"), "a" -> Json.obj("b" -> 3)),
+                false) should be(true)
+
+            testUtil.inspectJsValue(
+                utils.mergeJson(
+                    Json.obj("a" -> Json.obj("b" -> 3)),
+                    Json.obj("c" -> Json.arr(true, 1, "17"))),
+                Json.obj("c" -> Json.arr(1, true, "17"), "a" -> Json.obj("b" -> 3)),
+                false) should be(false)
+
+            testUtil.inspectJsValue(
+                utils.mergeJson(
+                    Json.obj("a" -> Json.obj("b" -> 3)),
+                    Json.obj("c" -> Json.arr(true, 1, "17"))),
+                Json.obj("c" -> Json.arr("17", 1, true), "a" -> Json.obj("b" -> 3)),
+                true) should be(true)
+        }
+
+        "merge objects by overwriting everything with the values of the second argument" in {
+            testUtil.inspectJsValue(
+                utils.mergeJson(
+                    Json.obj("a" -> Json.obj("c" -> Json.arr(1), "d" -> false)),
+                    Json.obj("a" -> Json.obj("c" -> Json.arr(true, 1, "17")))),
+                Json.obj("a" -> Json.obj("c" -> Json.arr(true, 1, "17"), "d" -> false)),
+                false) should be(true)
+
+            testUtil.inspectJsValue(
+                utils.mergeJson(
+                    Json.obj("a" -> Json.obj("c" -> Json.arr(1), "d" -> false)),
+                    Json.obj("a" -> Json.obj("c" -> Json.arr(true, 1, "17")))),
+                Json.obj("a" -> Json.obj("c" -> Json.arr(1, true, "17"), "d" -> false)),
+                false) should be(false)
+
+            testUtil.inspectJsValue(
+                utils.mergeJson(
+                    Json.obj("a" -> Json.obj("c" -> Json.arr(1), "d" -> false)),
+                    Json.obj("a" -> Json.obj("c" -> Json.arr(true, 1, "17")))),
+                Json.obj("a" -> Json.obj("c" -> Json.arr(1, true, "17"), "d" -> false)),
+                true) should be(true)
         }
     }
 
