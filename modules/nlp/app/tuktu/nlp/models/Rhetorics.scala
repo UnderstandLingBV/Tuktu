@@ -21,8 +21,13 @@ object Rhetorics {
         if (conjunctions.contains(language))
             conjunctions(language)
         else {
+            
             // Load conjunctions from disk
-            val br = new BufferedReader(new InputStreamReader(getClass.getResourceAsStream("/" + language + "-conj.json")))
+            val br = try {
+                new BufferedReader(new InputStreamReader(getClass.getResourceAsStream("/" + language + "-conj.json")))
+            } catch {
+                case e: Exception => new BufferedReader(new InputStreamReader(getClass.getResourceAsStream("/en_UK-conj.json")))
+            }
             val sb = new StringBuilder()
             var read: String = br.readLine()
             while(read != null) {
