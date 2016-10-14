@@ -1,6 +1,6 @@
 package tuktu.test
 
-import tuktu.api.DataPacket
+import tuktu.api.{ DataPacket, utils }
 import play.api.libs.json._
 
 object testUtil {
@@ -89,24 +89,24 @@ object testUtil {
             obtained match {
                 case v: Map[Any, Any] => {
                     val w = expected.asInstanceOf[Map[Any, Any]]
-                    v.keys.toList.diff(w.keys.toList).isEmpty && v.forall(elem => inspectValue(elem._2, w(elem._1)))
+                    v.keySet.equals(w.keySet) && v.forall { case (key, value) => inspectValue(value, w(key)) }
                 }
-                case v: List[Any] => {
-                    val w = expected.asInstanceOf[List[Any]]
-                    v.zip(w).forall(elems => inspectValue(elems._1, elems._2))
+                case v: Seq[Any] => {
+                    val w = expected.asInstanceOf[Seq[Any]]
+                    v.length == w.length && v.zip(w).forall { case (a, b) => inspectValue(a, b) }
                 }
                 // Rounding errors
-                case v: Double => Math.abs(v - expected.asInstanceOf[Double]) < 0.000000001
+                case v: Double => utils.nearlyEqual(v, expected.asInstanceOf[Double])
                 case _: Any => expected match {
                     // Rounding errors
-                    case v: Double => Math.abs(v - obtained.asInstanceOf[Double]) < 0.000000001
+                    case v: Double => utils.nearlyEqual(v, obtained.asInstanceOf[Double])
                     case _: Any    => obtained.toString == expected.toString
                 }
             }
         } catch {
             // TODO: Maybe differentiate on types of exceptions?
             case e: Throwable => {
-                play.api.Logger.error("testUtil.inspectValue", e)
+                play.api.Logger.error("testUtil.inspectValue(\n  obtained = " + obtained.toString + ",\n  expected = " + expected.toString + "\n)", e)
                 false
             }
         }

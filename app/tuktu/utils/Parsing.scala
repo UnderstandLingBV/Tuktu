@@ -2,7 +2,7 @@ package tuktu.utils
 
 import fastparse.WhitespaceApi
 import play.api.libs.json.{ JsArray, JsObject, JsString, JsNull, JsValue }
-import tuktu.api.utils.fieldParser
+import tuktu.api.utils.{ fieldParser, nearlyEqual }
 import tuktu.processors.bucket.statistics.StatHelper
 import scala.util.Try
 
@@ -25,7 +25,7 @@ object ArithmeticParser {
                 // Otherwise, we need a number
                 "-".? ~ CharIn('0' to '9').rep(min = 1))
                 ~ ("e" ~ "-".? ~ CharIn('0' to '9').rep(min = 1)).?).! map { _.toDouble })
-    val parens: P[Double] = P("(" ~/ addSub ~ ")")
+    val parens: P[Double] = P("-".!.? ~ "(" ~/ addSub ~ ")").map { case (neg, double) => if (neg.isDefined) -double else double }
     val factor: P[Double] = P(parens | number)
 
     val divMul: P[Double] = P(factor ~ (CharIn("*/").! ~/ factor).rep).map(eval)
@@ -122,7 +122,7 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
             }
         }
 
-    val parens: P[Double] = P("(" ~/ addSub ~ ")")
+    val parens: P[Double] = P("-".!.? ~ "(" ~/ addSub ~ ")").map { case (neg, double) => if (neg.isDefined) -double else double }
     val factor: P[Double] = P(parens | ArithmeticParser.number | functions)
 
     val divMul: P[Double] = P(factor ~ (CharIn("*/").! ~/ factor).rep).map(ArithmeticParser.eval)
@@ -155,15 +155,15 @@ object PredicateParser {
     val literal: P[Boolean] = P("!".rep.! ~ ("true" | "false").!).map { case (neg, pred) => negate((neg, pred.toBoolean)) }
 
     // Evaluate arithmetic expressions on numbers using the ArithmeticParser
-    val arithExpr: P[Boolean] = P(ArithmeticParser.addSub ~ ("<" | ">" | ">=" | "<=" | "==" | "!=").! ~ ArithmeticParser.addSub)
+    val arithExpr: P[Boolean] = P(ArithmeticParser.addSub ~ (">=" | "<=" | "==" | "!=" | "<" | ">").! ~ ArithmeticParser.addSub)
         .map {
             case (left, op, right) => op match {
                 case "<"  => left < right
                 case ">"  => left > right
-                case "<=" => left <= right
-                case ">=" => left >= right
-                case "==" => left == right
-                case "!=" => left != right
+                case "<=" => left < right || nearlyEqual(left, right)
+                case ">=" => left > right || nearlyEqual(left, right)
+                case "==" => nearlyEqual(left, right)
+                case "!=" => !nearlyEqual(left, right)
             }
         }
 

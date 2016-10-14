@@ -122,6 +122,10 @@ class ParsingTests extends PlaySpec {
             PredicateParser("!((1.7e1) == (17))") should be(false)
             PredicateParser(".7e1 > -.0") should be(true)
             PredicateParser(".0 == -0") should be(true)
+            PredicateParser(".2 + .1 == .3") should be(true)
+            PredicateParser(".2 + .1 <= .3") should be(true)
+            PredicateParser(".2 + .1 >= .3") should be(true)
+            PredicateParser("-.1 / .3 + 0.333333333333333333 == .1 / -.3 + 0.333333333333333333") should be(true)
         }
 
         "support string comparisons" in {

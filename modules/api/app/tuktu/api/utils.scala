@@ -357,4 +357,24 @@ object utils {
         // Build merged config
         Json.obj("generators" -> mergedGenerators, "processors" -> mergedProcessors)
     }
+
+    /**
+     * Checks if two Doubles are nearly equal
+     * Source: http://floating-point-gui.de/errors/comparison/
+     */
+    def nearlyEqual(a: Double, b: Double, epsilon: Double = 0.000000001): Boolean = {
+        val absA = math.abs(a)
+        val absB = math.abs(b)
+        val diff = math.abs(a - b)
+
+        if (a == b)
+            // Shortcut, if they happen to actually coincide, also handles infinity
+            true
+        else if (a == 0 || b == 0 || diff < java.lang.Double.MIN_NORMAL)
+            // Use absolute error if one is zero or they are both extremely close together
+            diff < epsilon * java.lang.Double.MIN_NORMAL
+        else
+            // Use relative error
+            diff / math.min(absA + absB, Double.MaxValue) < epsilon
+    }
 }

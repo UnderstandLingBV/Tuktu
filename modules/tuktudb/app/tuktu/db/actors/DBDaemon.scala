@@ -172,7 +172,7 @@ class DBDaemon() extends Actor with ActorLogging {
             // Increase persistence counter
             if (persistType == "size") persistUpdates += 1
             // If we persist based on number of updates (size) or if we persist on each update, do it now
-            if (persistUpdates >= persistValue || persistValue == "update") {
+            if (persistUpdates >= persistValue || persistType == "update") {
                 self ! new PersistRequest
                 persistUpdates = 0
             }

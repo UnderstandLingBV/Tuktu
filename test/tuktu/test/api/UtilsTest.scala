@@ -82,4 +82,83 @@ class utilsTests extends PlaySpec {
         }
     }
 
+    "nearlyEqual" should {
+        "compare positive large numbers" in {
+            utils.nearlyEqual(1000000000d, 1000000001d) should be(true)
+            utils.nearlyEqual(100000000d, 100000001d) should be(false)
+        }
+
+        "compare negative large numbers" in {
+            utils.nearlyEqual(-1000000000d, -1000000001d) should be(true)
+            utils.nearlyEqual(-100000000d, -100000001d) should be(false)
+        }
+
+        "compare numbers around 1" in {
+            utils.nearlyEqual(1.000000000, 1.000000001) should be(true)
+            utils.nearlyEqual(1.00000000, 1.00000001) should be(false)
+        }
+
+        "compare numbers around -1" in {
+            utils.nearlyEqual(-1.000000000, -1.000000001) should be(true)
+            utils.nearlyEqual(-1.00000000, -1.00000001) should be(false)
+        }
+
+        "compare numbers between 0 and 1" in {
+            utils.nearlyEqual(0.0000000001000000001, 0.0000000001000000002) should be(true)
+            utils.nearlyEqual(0.000000000100000001, 0.000000000100000002) should be(false)
+        }
+
+        "compare numbers between 0 and -1" in {
+            utils.nearlyEqual(-0.0000000001000000001, -0.0000000001000000002) should be(true)
+            utils.nearlyEqual(-0.000000000100000001, -0.000000000100000002) should be(false)
+        }
+
+        "compare numbers involving 0" in {
+            utils.nearlyEqual(0.0, 0.0) should be(true)
+            utils.nearlyEqual(0.0, -0.0) should be(true)
+            utils.nearlyEqual(-0.0, -0.0) should be(true)
+            utils.nearlyEqual(0.0000000001, -0.0) should be(false)
+            utils.nearlyEqual(-0.0000000001, 0.0) should be(false)
+        }
+
+        "compare extreme values" in {
+            utils.nearlyEqual(Double.MaxValue, Double.MaxValue) should be(true)
+            utils.nearlyEqual(Double.MaxValue, -Double.MaxValue) should be(false)
+            utils.nearlyEqual(Double.MaxValue, Double.MinValue) should be(false)
+            utils.nearlyEqual(Double.MaxValue, -Double.MinValue) should be(true)
+            utils.nearlyEqual(Double.MaxValue, Double.MaxValue / 2) should be(false)
+        }
+
+        "compare infinities" in {
+            utils.nearlyEqual(Double.PositiveInfinity, Double.PositiveInfinity) should be(true)
+            utils.nearlyEqual(Double.NegativeInfinity, Double.NegativeInfinity) should be(true)
+            utils.nearlyEqual(Double.PositiveInfinity, -Double.NegativeInfinity) should be(true)
+            utils.nearlyEqual(Double.PositiveInfinity, Double.NegativeInfinity) should be(false)
+            utils.nearlyEqual(Double.PositiveInfinity, Double.MaxValue) should be(false)
+            utils.nearlyEqual(Double.NegativeInfinity, Double.MinValue) should be(false)
+        }
+
+        "compare NaN" in {
+            utils.nearlyEqual(Double.NaN, Double.NaN) should be(false)
+            utils.nearlyEqual(Double.NaN, Double.NegativeInfinity) should be(false)
+            utils.nearlyEqual(Double.NaN, Double.MinValue) should be(false)
+            utils.nearlyEqual(Double.NaN, Double.MinPositiveValue) should be(false)
+            utils.nearlyEqual(Double.NaN, Double.MaxValue) should be(false)
+            utils.nearlyEqual(Double.NaN, Double.PositiveInfinity) should be(false)
+            utils.nearlyEqual(Double.NaN, 0.0) should be(false)
+            utils.nearlyEqual(Double.NaN, 1e40) should be(false)
+            utils.nearlyEqual(Double.NaN, -1e40) should be(false)
+            utils.nearlyEqual(Double.NaN, 1e-40) should be(false)
+            utils.nearlyEqual(Double.NaN, -1e-40) should be(false)
+        }
+
+        "compare numbers very close to 0" in {
+            utils.nearlyEqual(Double.MinPositiveValue, Double.MinPositiveValue) should be(true)
+            utils.nearlyEqual(Double.MinPositiveValue, -Double.MinPositiveValue) should be(true)
+            utils.nearlyEqual(Double.MinPositiveValue, 0) should be(true)
+            utils.nearlyEqual(-Double.MinPositiveValue, 0) should be(true)
+            utils.nearlyEqual(0.0000000000001, Double.MinPositiveValue) should be(false)
+        }
+    }
+
 }
