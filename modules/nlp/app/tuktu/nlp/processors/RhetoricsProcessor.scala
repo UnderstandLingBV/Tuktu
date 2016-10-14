@@ -5,9 +5,9 @@ import play.api.libs.json.JsObject
 import play.api.libs.iteratee.Enumeratee
 import scala.concurrent.Future
 import tuktu.api.DataPacket
-import com.understandling.Rhetorics
 import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.api.utils
+import tuktu.nlp.models.Rhetorics
 
 /**
  * Gets the rhetorical figures present in a sentence
