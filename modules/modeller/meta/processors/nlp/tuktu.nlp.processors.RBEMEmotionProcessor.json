@@ -37,6 +37,13 @@
 					"description": "The field that contains an Array of POS tags.",
 					"type": "string",
 					"required": true
+				},
+				{
+					"name": "discretize",
+					"description": "Whether or not to return discrete (1.0, 0.0, -1.0) or the actual continuous forms.",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}

@@ -84,17 +84,10 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
                         res
                     }
                     case None => List()
-                }),
-                "geos" -> (geos match {
-                    case Some(gs) => {
-                        // TODO: Implement this
-                        List()
-                    }
-                    case None => List()
                 }))
 
             // See if we need to exclude
-            none = tags("keywords").isEmpty && tags("users").isEmpty && tags("geos").isEmpty
+            none = tags("keywords").isEmpty && tags("users").isEmpty
             if (!excludeOnNone || !none)
         } yield {
             // Append the tags
@@ -131,15 +124,6 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
 
             item = datum(objField).asInstanceOf[JsObject]
             tags = Map(
-                // Keyword tagging
-                "keywords" -> (keywords match {
-                    case Some(kw) => {
-                        // Get the tweet body and see which keywords occur
-                        val itm = (item \ "message").asOpt[String].getOrElse("")
-                        kw.filter(k => itm.toLowerCase.contains(k.toLowerCase))
-                    }
-                    case None => List()
-                }),
                 "users" -> (users match {
                     case Some(usrs) => {
                         // User could be either in the from-field or the to-field
@@ -167,7 +151,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
                 }))
 
             // See if we need to exclude
-            none = tags("keywords").isEmpty && tags("users").isEmpty
+            none = tags("users").isEmpty
             if (!excludeOnNone || !none)
         } yield {
             datum + (resultName -> tags)

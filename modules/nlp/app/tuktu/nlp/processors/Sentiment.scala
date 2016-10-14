@@ -22,11 +22,13 @@ class RBEMPolarityProcessor(resultName: String) extends BaseProcessor(resultName
     var lang = ""
     var tokens = ""
     var tags = ""
+    var discretize: Boolean = _
 
     override def initialize(config: JsObject) {
         lang = (config \ "language").as[String]
         tokens = (config \ "tokens").as[String]
         tags = (config \ "pos").as[String]
+        discretize = (config \ "discretize").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -62,7 +64,9 @@ class RBEMPolarityProcessor(resultName: String) extends BaseProcessor(resultName
             }
 
             // Add the actual score
-            datum + (resultName -> polarity.getRight)
+            datum + (resultName -> {
+                if (discretize) pol else polarity.getRight
+            })
         }
     })
 }
@@ -77,11 +81,13 @@ class RBEMEmotionProcessor(resultName: String) extends BaseProcessor(resultName)
     var lang = ""
     var tokens = ""
     var tags = ""
+    var discretize: Boolean = _
 
     override def initialize(config: JsObject) {
         lang = (config \ "language").as[String]
         tokens = (config \ "tokens").as[String]
         tags = (config \ "pos").as[String]
+        discretize = (config \ "discretize").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -109,7 +115,12 @@ class RBEMEmotionProcessor(resultName: String) extends BaseProcessor(resultName)
             }
 
             // Apply emotion detection, normalize
-            val emotions = models(language).classify(tkns, posTags, true).asScala.toMap
+            val emotions = {
+                val emos = models(language).classify(tkns, posTags, true).asScala.toMap
+                if (discretize) emos.map(e => e._1 -> {
+                    if (e._2 > 0.0) 1.0 else if (e._2 < 0.0) -1.0 else 0.0
+                }) else emos.map(e => e._1 -> e._2.toDouble)
+            }
 
             // Add the actual score
             datum + (resultName -> emotions)

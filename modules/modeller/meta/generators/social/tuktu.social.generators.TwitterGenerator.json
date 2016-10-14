@@ -111,55 +111,6 @@
 									"required": true
 								}
 							]
-						},
-						{
-							"name": "geo",
-							"type": "object",
-							"required": false,
-							"parameters": [
-								{
-									"name": "p1",
-									"type": "object",
-									"required": false,
-									"parameters": [
-										{
-											"name": "long",
-											"label": "P1 longitude",
-											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
-											"type": "string",
-											"required": false
-										},
-										{
-											"name": "lat",
-											"label": "P1 latitude",
-											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
-											"type": "string",
-											"required": false
-										}
-									]
-								},
-								{
-									"name": "p2",
-									"type": "object",
-									"required": false,
-									"parameters": [
-										{
-											"name": "long",
-											"label": "P2 longitude",
-											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
-											"type": "string",
-											"required": false
-										},
-										{
-											"name": "lat",
-											"label": "P2 latitude",
-											"description": "Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.",
-											"type": "string",
-											"required": false
-										}
-									]
-								}
-							]
 						}
 					]
 				}

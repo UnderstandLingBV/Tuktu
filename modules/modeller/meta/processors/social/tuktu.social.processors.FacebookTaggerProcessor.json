@@ -30,19 +30,6 @@
 					"required": true,
 					"parameters": [
 						{
-							"name": "keywords",
-							"description": "The keywords to be filtered for what can be found in the message.",
-							"type": "array",
-							"required": true,
-							"parameters": [
-								{
-									"name": "",
-									"type": "string",
-									"required": true
-								}
-							]
-						},
-						{
 							"name": "users",
 							"description": "The users to be filtered for who is relevant to a message, that is the author and the recipient.",
 							"type": "array",
