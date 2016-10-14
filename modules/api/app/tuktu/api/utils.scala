@@ -59,7 +59,7 @@ object utils {
                             case _            => a.toString
                         }
                         case Some("JSON.stringify") => AnyToJsValue(a).toString
-                        case Some("SQL") => {
+                        case Some("SQL") =>
                             def evaluateSQLParameter(any: Any): String = any match {
                                 case el: JsValue => evaluateSQLParameter(JsValueToAny(el))
                                 case el: Boolean => if (el) "1" else "0"
@@ -67,7 +67,9 @@ object utils {
                                 case _           => any.toString
                             }
                             evaluateSQLParameter(a)
-                        }
+                        case Some(function) =>
+                            play.api.Logger.warn("TuktuString function " + function + " not yet implemented.")
+                            specialChar + function + "{" + key + "}"
                     }
                 }
         }

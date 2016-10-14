@@ -147,7 +147,8 @@ object testUtil {
                     }
                 }
             }
-            case (_, _) => false
+            // Different types
+            case _ => false
         }
     }
 }

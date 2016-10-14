@@ -125,6 +125,7 @@ class ParsingTests extends PlaySpec {
             PredicateParser(".2 + .1 == .3") should be(true)
             PredicateParser(".2 + .1 <= .3") should be(true)
             PredicateParser(".2 + .1 >= .3") should be(true)
+            PredicateParser(".2 + .1 != .3") should be(false)
             PredicateParser("-.1 / .3 + 0.333333333333333333 == .1 / -.3 + 0.333333333333333333") should be(true)
         }
 

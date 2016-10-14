@@ -98,8 +98,6 @@ class SQLBulkProcessor(resultName: String) extends BaseProcessor(resultName) {
                 case d: Double => NamedParameter((field + "_" + i), d)
                 case d: Float => NamedParameter((field + "_" + i), d)
                 case d: java.util.Date => NamedParameter((field + "_" + i), d)
-                case d: java.sql.Timestamp => NamedParameter((field + "_" + i), new java.util.Date(d.getTime))
-                case d: java.sql.Date => NamedParameter((field + "_" + i), new java.util.Date(d.getTime))
                 case d: String => NamedParameter((field + "_" + i), d)
                 case d: Any => NamedParameter((field + "_" + i), d.toString)
             })

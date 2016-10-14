@@ -82,6 +82,129 @@ class utilsTests extends PlaySpec {
         }
     }
 
+    "mergeConfig" should {
+        "merge generators by index" in {
+            testUtil.inspectJsValue(
+                utils.mergeConfig(
+                    Json.obj(
+                        "generators" -> Json.arr(
+                            Json.obj("a" -> 1),
+                            Json.obj("a" -> 2)),
+                        "processors" -> Json.arr()),
+                    Json.obj(
+                        "generators" -> Json.arr(
+                            Json.obj("a" -> 3)),
+                        "processors" -> Json.arr())),
+                Json.obj(
+                    "generators" -> Json.arr(
+                        Json.obj("a" -> 3),
+                        Json.obj("a" -> 2)),
+                    "processors" -> Json.arr()),
+                false) should be(true)
+
+            testUtil.inspectJsValue(
+                utils.mergeConfig(
+                    Json.obj(
+                        "generators" -> Json.arr(
+                            Json.obj("a" -> 1),
+                            Json.obj("a" -> 2)),
+                        "processors" -> Json.arr()),
+                    Json.obj(
+                        "generators" -> Json.arr(
+                            Json.obj(),
+                            Json.obj("a" -> 3)),
+                        "processors" -> Json.arr())),
+                Json.obj(
+                    "generators" -> Json.arr(
+                        Json.obj("a" -> 1),
+                        Json.obj("a" -> 3)),
+                    "processors" -> Json.arr()),
+                false) should be(true)
+
+            testUtil.inspectJsValue(
+                utils.mergeConfig(
+                    Json.obj(
+                        "generators" -> Json.arr(
+                            Json.obj("a" -> 1),
+                            Json.obj("a" -> 2)),
+                        "processors" -> Json.arr()),
+                    Json.obj(
+                        "generators" -> Json.arr(
+                            Json.obj(),
+                            Json.obj(),
+                            Json.obj("a" -> 3)),
+                        "processors" -> Json.arr())),
+                Json.obj(
+                    "generators" -> Json.arr(
+                        Json.obj("a" -> 1),
+                        Json.obj("a" -> 2),
+                        Json.obj("a" -> 3)),
+                    "processors" -> Json.arr()),
+                false) should be(true)
+        }
+
+        "merge processors by id" in {
+            testUtil.inspectJsValue(
+                utils.mergeConfig(
+                    Json.obj(
+                        "generators" -> Json.arr(),
+                        "processors" -> Json.arr(
+                            Json.obj(
+                                "id" -> "b",
+                                "b" -> "b"),
+                            Json.obj(
+                                "id" -> "a",
+                                "b" -> "a"))),
+                    Json.obj(
+                        "generators" -> Json.arr(),
+                        "processors" -> Json.arr(
+                            Json.obj(
+                                "id" -> "a",
+                                "b" -> "c")))),
+                Json.obj(
+                    "generators" -> Json.arr(),
+                    "processors" -> Json.arr(
+                        Json.obj(
+                            "id" -> "b",
+                            "b" -> "b"),
+                        Json.obj(
+                            "id" -> "a",
+                            "b" -> "c"))),
+                true) should be(true)
+
+            testUtil.inspectJsValue(
+                utils.mergeConfig(
+                    Json.obj(
+                        "generators" -> Json.arr(),
+                        "processors" -> Json.arr(
+                            Json.obj(
+                                "id" -> "b",
+                                "b" -> "b"),
+                            Json.obj(
+                                "id" -> "a",
+                                "b" -> "a"))),
+                    Json.obj(
+                        "generators" -> Json.arr(),
+                        "processors" -> Json.arr(
+                            Json.obj(
+                                "id" -> "c",
+                                "b" -> "c")))),
+                Json.obj(
+                    "generators" -> Json.arr(),
+                    "processors" -> Json.arr(
+                        Json.obj(
+                            "id" -> "b",
+                            "b" -> "b"),
+                        Json.obj(
+                            "id" -> "a",
+                            "b" -> "a"),
+                        Json.obj(
+                            "id" -> "c",
+                            "b" -> "c"))),
+                true) should be(true)
+        }
+    }
+
     "nearlyEqual" should {
         "compare positive large numbers" in {
             utils.nearlyEqual(1000000000d, 1000000001d) should be(true)

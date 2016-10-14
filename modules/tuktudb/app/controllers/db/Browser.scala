@@ -33,7 +33,7 @@ object Browser extends Controller {
     def index() = Action {
         Ok(views.html.db.browser())
     }
-    
+
     /**
      * Fetch the buckets and their sizes
      */
@@ -47,24 +47,24 @@ object Browser extends Controller {
             }
         }
     }
-    
+
     /**
      * Gets a bucket's content
      */
     def getBucket() = Action.async { implicit request =>
         // Check which bucket
         val bucket = java.net.URLDecoder.decode(
-                request.body.asFormUrlEncoded.get("key").head
-        )
-        
+            request.body.asFormUrlEncoded.get("key").head,
+            "UTF-8")
+
         // Fetch the bucket's content
         val fut = (Akka.system.actorSelection("user/tuktu.db.Daemon") ? new ContentRequest(bucket, 0)).asInstanceOf[Future[ContentReply]]
-        
+
         fut.map {
             case cr: ContentReply => {
                 // Convert everything to JSON
                 val content = cr.data.map(d => Json.prettyPrint(utils.AnyToJsValue(d)))
-                
+
                 Ok(views.html.db.content(content, request.body.asFormUrlEncoded.get("idx").head.toInt))
             }
         }
