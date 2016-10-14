@@ -1,0 +1,5 @@
+{
+	"conjunctions": ["CC", "IN", "IN/that", "TO"],
+	"conjunctionWords": ["by", "without", "as", "because", "for", "and", "nor", "but", "or", "yet", "so", "before", "after", "on", "with"],
+	"determiners": ["DT", "WDT"]
+}

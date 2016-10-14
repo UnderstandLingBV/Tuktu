@@ -1,0 +1,5 @@
+{
+	"conjunctions": ["conjcoord", "conjsubo", "prep", "prepabbr", "partte"],
+	"conjunctionWords": ["door", "zonder", "als", "alsook", "omdat", "want", "en", "of", "noch", "maar", "doch", "dus", "voordat", "nadat", "op", "met", "tegen"],
+	"determiners": ["det__art", "det__quest"]
+}
