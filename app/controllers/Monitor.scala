@@ -33,8 +33,8 @@ object Monitor extends Controller {
         // Get the monitor overview result
         val fut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorOverviewRequest).asInstanceOf[Future[MonitorOverviewResult]]
         fut.map(res => {
-            val sortedRunningJobs = res.runningJobs.toList.sortWith((a,b) => a._2.startTime > b._2.startTime)
-            val sortedFinishedJobs = res.finishedJobs.toList.sortWith((a,b) => a._2.endTime.getOrElse(a._2.startTime) > b._2.endTime.getOrElse(b._2.startTime))
+            val sortedRunningJobs = res.runningJobs.toList.sortWith((a, b) => a._2.startTime > b._2.startTime)
+            val sortedFinishedJobs = res.finishedJobs.toList.sortWith((a, b) => a._2.endTime.getOrElse(a._2.startTime) > b._2.endTime.getOrElse(b._2.startTime))
             // If we are out of range, go back into range
             if (runningPage < 1 || runningPage > math.max(math.ceil(sortedRunningJobs.size / 100.0), 1) || finishedPage < 1 || finishedPage > math.max(math.ceil(sortedFinishedJobs.size / 100.0), 1))
                 Redirect(routes.Monitor.fetchLocalInfo(
@@ -84,6 +84,23 @@ object Monitor extends Controller {
             Ok(Json.arr(res._1, res._2))
         })
     }
+    
+    /**
+     * Renames a config file
+     */
+    def rename() = Action { implicit request =>
+        // Get the variables we need
+        val data = request.body.asFormUrlEncoded.getOrElse(Map[String, Seq[String]]())
+        val oldPath = data("old").head + ".json"
+        val newName = data("new").head + ".json"
+        
+        // Rename old file to new
+        val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
+        val path = Paths.get(configsRepo + "/" + oldPath).toAbsolutePath.normalize
+        Files.move(path, path.resolveSibling(newName))
+        
+        Ok("")
+    }
 
     /**
      * Terminates a Tuktu job
@@ -100,6 +117,22 @@ object Monitor extends Controller {
                 case _    => "stopped"
             }
         } + " job " + uuid))
+    }
+
+    /**
+     * Terminates all jobs currently running
+     */
+    def terminateAll() = Action.async {
+        // Get all the runnign jobs
+        val jobsFut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorOverviewRequest)
+            .asInstanceOf[Future[MonitorOverviewResult]]
+        jobsFut map {
+            case jobs: MonitorOverviewResult => {
+                for (job <- jobs.runningJobs) yield Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(job._1, "stop")
+                
+                Redirect(routes.Monitor.fetchLocalInfo(1, 1)).flashing("success" -> ("Successfully stopped all flows"))
+            }
+        }
     }
 
     /**
@@ -154,9 +187,11 @@ object Monitor extends Controller {
     /**
      * Shows the start-job view
      */
-    def browseConfigs() = Action { implicit request => {
+    def browseConfigs() = Action { implicit request =>
+        {
             Ok(views.html.monitor.browseConfigs(util.flashMessagesToMap(request)))
-    }}
+        }
+    }
 
     case class job(
         name: String)
@@ -222,14 +257,14 @@ object Monitor extends Controller {
             // Get config repo
             val configsRepo = Cache.getOrElse[String]("configRepo")("configs")
             val configsPath = Paths.get(configsRepo).toAbsolutePath.normalize
-            
+
             // Get file
             val filename = request.body.asFormUrlEncoded("path").headOption.getOrElse("") + "/" + fName.filename
             val contentType = fName.contentType
-            
+
             // Get path, determine proper name
             val withEnding = if (filename.endsWith(".json")) filename else filename + ".json"
-            
+
             // Check if absolute normalized path starts with configs repo and new file doesnt exist yet
             val path = Paths.get(configsRepo, withEnding).toAbsolutePath.normalize
             if (!path.startsWith(configsPath) || Files.exists(path))
@@ -240,7 +275,7 @@ object Monitor extends Controller {
             else {
                 // First move the file
                 fName.ref.moveTo(new File(path.toString))
-                
+
                 // Check for validity
                 val valid = try {
                     // Parse JSON into a JSObject
@@ -249,11 +284,10 @@ object Monitor extends Controller {
                     val generators = (json \ "generators").as[List[JsObject]]
                     val processors = (json \ "processors").as[List[JsObject]]
                     true
-                }
-                catch {
+                } catch {
                     case e: Exception => false
                 }
-                
+
                 // Return properly, or not
                 if (valid) Redirect(routes.Monitor.browseConfigs)
                 else {

@@ -67,7 +67,7 @@
         </div>
         
         <table class="table table-hover" id="configTable">
-            @for(config <- configs) {
+            @for((config, idx) <- configs.zipWithIndex) {
                 <tr>
                    <td width="20px">
                        <input type="checkbox" value="@path.mkString("/")/@config">
@@ -75,7 +75,7 @@
                     <td>
                         <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
                         &nbsp;
-                        @config
+                        <span id="jobName_@idx" onclick="renameInitiate('jobName_@idx', '@path.mkString("/")/@config', '@config')">@config</span>
                     </td>
                     <td width="10%">
                         <form method="post" action="@routes.Monitor.startJob">
@@ -101,6 +101,37 @@
     }
 
     <script type="text/javascript">
+        function renameInitiate(elem, path, name) {
+            $("#" + elem).removeAttr('onclick');
+            $("#" + elem).html("<input type='text' value='" + name + "' onblur='renameComplete(\"" + elem + "\", this, \"" + path + "\", \"" + name + "\")'>");
+        }
+        
+        function renameComplete(parent, elem, oldPath, oldName) {
+            var newName = $(elem).val();
+            console.log($('#' + parent));
+            
+            $.ajax({
+                method : "POST",
+                url : "@routes.Monitor.rename",
+                data : {
+                    old : oldPath,
+                    new: newName
+                },
+                success: function() {
+                    var arr = oldPath.split("/");
+                    arr.pop();
+                    var newPath = arr.join("/") + "/" + newName;
+                    
+                    $("#" + parent).attr('onclick', "renameInitiate('" + parent + "', '" + newPath + "', '" + newName + "')");
+                    $("#" + parent).html(newName);
+                },
+                error: function() {
+                    $("#" + parent).attr('onclick', "renameInitiate('" + parent + "', '" + oldPath + "', '" + oldName + "')");
+                    $("#" + parent).html(oldName);
+                }
+            });
+        }
+    
         function navigateFolder(folder) {
             $.ajax({
                 method : "POST",

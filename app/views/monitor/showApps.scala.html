@@ -5,6 +5,11 @@
 } {
     <h2>
        The following jobs are currently running on Tuktu
+       @if(running.size > 1) {
+           <a href="@routes.Monitor.terminateAll">
+               <button class="pull-right btn btn-danger">Stop all jobs</button>
+           </a>
+       }
     </h2>
 
     @if(running.size > 100) {

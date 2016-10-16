@@ -17,6 +17,8 @@ POST    /sync                               controllers.Synchronous.loadJsonPost
 
 # Monitoring
 GET     /terminate/:id/:force/:r/:f         controllers.Monitor.terminate(id, force: Boolean, r: Int, f: Int)
+GET     /terminateAll                       controllers.Monitor.terminateAll
+POST    /rename                             controllers.Monitor.rename
 POST    /showConfigs                        controllers.Monitor.showConfigs
 GET     /browseConfigs                      controllers.Monitor.browseConfigs
 POST    /startJob                           controllers.Monitor.startJob
