@@ -6,7 +6,7 @@ MAINTAINER UnderstandLing <contact@understandling.com>
 ENV SBT_VERSION 0.13.12
 ENV SCALA_VERSION 2.11.8
 ENV ACTIVATOR_VERSION 1.3.10
-ENV TUKTU_VERSION 1.2
+ENV TUKTU_VERSION 1.3
 
 # general stuff
 USER root
