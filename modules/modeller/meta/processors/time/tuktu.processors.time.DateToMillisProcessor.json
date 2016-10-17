@@ -20,7 +20,7 @@
 			"parameters": [
 				{
 					"name": "field",
-					"description": "The field in which the date is; will be converted to Long in-place.",
+					"description": "The field in which the date is; will be converted to a unix epoch Long.",
 					"type": "string",
 					"required": true
 				}

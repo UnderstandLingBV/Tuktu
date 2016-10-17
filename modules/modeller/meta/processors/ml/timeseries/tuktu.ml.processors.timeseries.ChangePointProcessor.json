@@ -1,0 +1,67 @@
+{
+	"name": "Change Point Processor",
+	"description": "Computes change points in a timeseries (observations as doubles)",
+	"class": "tuktu.ml.processors.timeseries.ChangePointProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the timeseries. Can either be a double if batch is set to true, or a sequence of doubles if batch is set to false.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "batch",
+					"description": "If set to true, the algorithm will run by making a list out of all values (indicated by field name) of each datum. Set to false will make the algorithm run on each datum separately, assuming that field contains a sequence of observations.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "min_change",
+					"description": "The minimum change that should occur to make a change count as a peak.",
+					"type": "double",
+					"required": true
+				},
+				{
+					"name": "min_ratio",
+					"type": "double",
+					"required": true,
+					"description": "The minimum ratio from last observation to new to make a change count as a peak."
+				},
+				{
+					"name": "min_z_score",
+					"type": "double",
+					"required": true,
+					"description": "The minimum Z-score (normalized score) for a change to be called a peak."
+				},
+				{
+					"name": "inactive_threshold",
+					"type": "double",
+					"required": true,
+					"description": "Threshold determining when a series of observations is called inactive."
+				},
+				{
+					"name": "window_size",
+					"type": "int",
+					"required": true,
+					"description": "The amount of observations to take into account."
+				}
+			]
+		}
+	]
+}

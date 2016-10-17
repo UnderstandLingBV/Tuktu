@@ -21,7 +21,7 @@ class DateToMillisProcessor(resultName: String) extends BaseProcessor(resultName
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
-            datum + (field -> {
+            datum + (resultName -> {
                 datum(field) match {
                     case d: Date      => d.getTime
                     case d: DateTime  => d.getMillis

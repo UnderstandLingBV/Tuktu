@@ -24,10 +24,18 @@ object ChangePointDetection {
             cpType: ChangePointType
     )
     
-    def apply(data: List[Double], minChange: Int, minRatio: Double, minZScore: Double, inactiveThreshold: Int, windowSize: Int) =
+    def changePointToMap(cp: ChangePoint) = {
+        Map(
+                "size" -> cp.size,
+                "index" -> cp.index,
+                "type" -> cp.cpType.toString
+        )
+    }
+    
+    def apply(data: List[Double], minChange: Double, minRatio: Double, minZScore: Double, inactiveThreshold: Double, windowSize: Int) =
         findSignificantPoints(data.toArray, minChange, minRatio, minZScore, inactiveThreshold, windowSize)
         
-    def apply(data: Array[Double], minChange: Int, minRatio: Double, minZScore: Double, inactiveThreshold: Int, windowSize: Int) =
+    def apply(data: Array[Double], minChange: Double, minRatio: Double, minZScore: Double, inactiveThreshold: Double, windowSize: Int) =
         findSignificantPoints(data, minChange, minRatio, minZScore, inactiveThreshold, windowSize)
 
     /**
@@ -36,14 +44,14 @@ object ChangePointDetection {
      * @param data The array of integers in which to search
      * @return A list of pairs of integers of the form (index, size)
      */
-    def findSignificantPoints(data: Array[Double], minChange: Int, minRatio: Double, minZScore: Double, inactiveThreshold: Int, windowSize: Int) = {
+    def findSignificantPoints(data: Array[Double], minChange: Double, minRatio: Double, minZScore: Double, inactiveThreshold: Double, windowSize: Int) = {
         val rv = collection.mutable.ListBuffer[ChangePoint]()
         rv ++= findAndSmoothOverPeaks(data, minChange, minZScore, windowSize)
         rv ++= findChangePoints(data, minChange, minRatio, minZScore, inactiveThreshold, windowSize)
         rv.toList
     }
 
-    def findChangePoints(data: Array[Double], minChange: Int, minRatio: Double, minZScore: Double, inactiveThreshold: Int, windowSize: Int) = {
+    def findChangePoints(data: Array[Double], minChange: Double, minRatio: Double, minZScore: Double, inactiveThreshold: Double, windowSize: Int) = {
         val rvList = collection.mutable.ListBuffer[ChangePoint]()
         for (i <- 2 to data.size - 1) {
             val startIndex = Math.max(i - windowSize + 1, 0)
@@ -62,14 +70,14 @@ object ChangePointDetection {
         rvList.toList
     }
 
-    def chooseTypeForChange(before: Double, after: Double, inactiveThreshold: Int) = {
+    def chooseTypeForChange(before: Double, after: Double, inactiveThreshold: Double) = {
         if (before > after)
             if (after > inactiveThreshold) ChangePointType.FALL else ChangePointType.STOP
         else
             if (before < inactiveThreshold) ChangePointType.START else ChangePointType.RISE
     }
 
-    def findAndSmoothOverPeaks(data: Array[Double], minChange: Int, minZscore: Double, width: Int) = {
+    def findAndSmoothOverPeaks(data: Array[Double], minChange: Double, minZscore: Double, width: Int) = {
         val rvList = collection.mutable.ListBuffer[ChangePoint]()
         for (i <- 0 to data.size - 1) {
             val leftEndpoint = Math.max(0, i - width)
