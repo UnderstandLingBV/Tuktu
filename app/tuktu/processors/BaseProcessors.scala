@@ -593,32 +593,16 @@ class DataPacketFieldMergerProcessor(resultName: String) extends BaseProcessor(r
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-
-        val merged = mutable.Map[String, Any]()
-
-        data.foreach {
-            datum => {
-                if (!isNumeric && !isDecimal)
-                    merged += evaluateTuktuString(resultName, datum) -> evaluateTuktuString(value, datum)
-                else if (isNumeric)
-                    merged += evaluateTuktuString(resultName, datum) -> evaluateTuktuString(value, datum).toLong
-                else
-                    merged += evaluateTuktuString(resultName, datum) -> evaluateTuktuString(value, datum).toDouble
-            }
-        }
-
-        DataPacket(List(merged.toMap))
+        new DataPacket(for (datum <- data.data) yield {
+            Map(
+                    evaluateTuktuString(resultName, datum) -> {
+                        if (!isNumeric && !isDecimal) evaluateTuktuString(value, datum)
+                        else if (isNumeric) evaluateTuktuString(value, datum).toLong
+                        else evaluateTuktuString(value, datum).toDouble
+                    }
+            )
+        })
     })
-
-//
-//    // Iteratee to take the data we need
-//    def groupPackets: Iteratee[DataPacket, DataPacket] = for (
-//        dps <- Enumeratee.take[DataPacket](maxSize) &>> Iteratee.getChunks
-//    ) yield DataPacket(dps.flatMap(data => data.data))
-//
-//    // Use the iteratee and Enumeratee.grouped
-//    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets) compose
-//      Enumeratee.filter(!_.data.isEmpty)
 }
 
 /**

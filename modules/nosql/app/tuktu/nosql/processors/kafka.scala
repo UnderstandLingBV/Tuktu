@@ -34,7 +34,7 @@ class KafkaProcessor(resultName: String) extends BaseProcessor(resultName) {
         (config \ "key_field").as[String]
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Send the data to kafka
         for (datum <- data) {
             // Get the key
@@ -46,7 +46,7 @@ class KafkaProcessor(resultName: String) extends BaseProcessor(resultName) {
             producer.send(message)
         }
 
-        Future { data }
+        data
     }) compose Enumeratee.onEOF(() => {
         producer.close
     })
