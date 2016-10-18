@@ -63,7 +63,7 @@ object ChangePointDetection {
             val changeRatio = -1 + (nextValue.toDouble) / Math.max(predicted, 1.0)
             if (Math.abs(zScoreDiff) > minZScore && Math.abs(diff) > minChange && Math.abs(changeRatio) > minRatio) {
                 val cpType = chooseTypeForChange(mean(currSlice), nextValue, inactiveThreshold)
-                rvList += new ChangePoint(diff.toInt, i, cpType)
+                rvList += new ChangePoint(diff, i, cpType)
             }
         }
         
@@ -87,8 +87,8 @@ object ChangePointDetection {
             if (sd(neighborhood) > minZscore * sd(neighborhoodWithout)) {
                 val change = data(i) - mean(neighborhoodWithout)
                 if (Math.abs(change) > minChange) {
-                    rvList += new ChangePoint(change.toInt, i, ChangePointType.PEAK)
-                    data(i) = mean(neighborhoodWithout).toLong
+                    rvList += new ChangePoint(change, i, ChangePointType.PEAK)
+                    data(i) = mean(neighborhoodWithout)
                 }
             }
         }
@@ -111,8 +111,8 @@ object ChangePointDetection {
         val xx = collection.mutable.ListBuffer[Double]()
         val xy = collection.mutable.ListBuffer[Double]()
         for (i <- 0 to data.size - 1) {
-            xx += (i * i).toLong
-            xy += (i * data(i)).toLong
+            xx += i * i
+            xy += i * data(i)
         }
         val meanx = 0.5 * (data.size - 1.0)
         val slope = (mean(xy.toArray) - meanx * mean(data)) / (mean(xx.toArray) - Math.pow(meanx, 2))
