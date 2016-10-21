@@ -46,30 +46,30 @@
 				{
 					"name": "min_change",
 					"description": "The minimum change that should occur to make a change count as a peak.",
-					"type": "double",
+					"type": "string",
 					"required": true
 				},
 				{
 					"name": "min_ratio",
-					"type": "double",
+					"type": "string",
 					"required": true,
 					"description": "The minimum ratio from last observation to new to make a change count as a peak."
 				},
 				{
 					"name": "min_z_score",
-					"type": "double",
+					"type": "string",
 					"required": true,
 					"description": "The minimum Z-score (normalized score) for a change to be called a peak."
 				},
 				{
 					"name": "inactive_threshold",
-					"type": "double",
+					"type": "string",
 					"required": true,
 					"description": "Threshold determining when a series of observations is called inactive."
 				},
 				{
 					"name": "window_size",
-					"type": "int",
+					"type": "string",
 					"required": true,
 					"description": "The amount of observations to take into account."
 				}
