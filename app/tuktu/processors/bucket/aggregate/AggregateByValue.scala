@@ -2,9 +2,8 @@ package tuktu.processors.bucket.aggregate
 
 import play.api.libs.json.{ Json, JsArray, JsObject, JsString }
 import tuktu.processors.bucket.BaseBucketProcessor
-import tuktu.utils.TuktuArithmeticsParser
+import tuktu.api.Parsing._
 import tuktu.api.utils
-import tuktu.utils.ArithmeticParser
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.iteratee.Enumeratee
 import tuktu.api.DataPacket

@@ -1,10 +1,11 @@
-package tuktu.utils
+package tuktu.api.Parsing
 
 import fastparse.WhitespaceApi
 import play.api.libs.json.{ JsArray, JsObject, JsString, JsNull, JsValue }
 import tuktu.api.utils.{ fieldParser, nearlyEqual }
-import tuktu.processors.bucket.statistics.StatHelper
 import scala.util.Try
+import tuktu.api.statistics.StatHelper
+import fastparse.all.NoTrace
 
 /**
  * Performs arithmetics over a string representation

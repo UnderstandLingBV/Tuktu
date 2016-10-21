@@ -1,39 +1,37 @@
 package tuktu.ml.processors.timeseries
 
-import tuktu.api.DataPacket
-import play.api.libs.json.JsObject
-import play.api.libs.iteratee.Enumeratee
-import tuktu.api.BaseProcessor
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
+import play.api.libs.iteratee.Enumeratee
+import play.api.libs.json.JsObject
+import tuktu.api.BaseProcessor
+import tuktu.api.DataPacket
 import tuktu.ml.models.timeseries.ChangePointDetection
-import scala.annotation.meta.field
 import org.joda.time.DateTime
 import java.util.Date
-import scala.annotation.meta.field
-import scala.annotation.meta.field
-import scala.annotation.meta.field
+import tuktu.api.Parsing.TuktuArithmeticsParser
 
 /**
  * Detects change points in a series of observations
  */
 class ChangePointProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var minChange: Double = _
-    var minRatio: Double = _
-    var minZScore: Double = _
-    var inactiveThreshold: Double = _
-    var windowSize: Int = _
+    var minChange: String = _
+    var minRatio: String = _
+    var minZScore: String = _
+    var inactiveThreshold: String = _
+    var windowSize: String = _
     
     var key: List[String] = _
     var timestampField: String = _
     var valueField: String = _
     
     override def initialize(config: JsObject) {
-        minChange = (config \ "min_change").as[Double]
-        minRatio = (config \ "min_ratio").as[Double]
-        minZScore = (config \ "min_z_score").as[Double]
-        inactiveThreshold = (config \ "inactive_threshold").as[Double]
-        windowSize = (config \ "window_size").as[Int]
+        minChange = (config \ "min_change").as[String]
+        minRatio = (config \ "min_ratio").as[String]
+        minZScore = (config \ "min_z_score").as[String]
+        inactiveThreshold = (config \ "inactive_threshold").as[String]
+        windowSize = (config \ "window_size").as[String]
         
         key = (config \ "key").as[List[String]]
         timestampField = (config \ "timestamp_field").as[String]
@@ -81,13 +79,13 @@ class ChangePointProcessor(resultName: String) extends BaseProcessor(resultName)
             // Convert to a list of doubles of all means
             val series = timeseries.map(datum => valueToDouble(datum(resultName)))
             
-            // @TODO: Move parsing to API //Evaluate parameters
-            //val parser = new tuktu.utils.TuktuArithmeticsParser(group._2)
-            val newMinChange = minChange//parser(minChange)
-            val newMinRatio = minRatio//parser(minRatio)
-            val newMinZScore = minZScore//parser(minZScore)
-            val newThreshold = inactiveThreshold//parser(inactiveThreshold)
-            val newWindowSize = windowSize//parser(windowSize)
+            // Evaluate parameters
+            val parser = new TuktuArithmeticsParser(timeseries)
+            val newMinChange = parser(minChange)
+            val newMinRatio = parser(minRatio)
+            val newMinZScore = parser(minZScore)
+            val newThreshold = parser(inactiveThreshold)
+            val newWindowSize = parser(windowSize).toInt
             
             // Run peak detection
             val peaks = {

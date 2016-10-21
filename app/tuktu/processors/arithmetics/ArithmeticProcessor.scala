@@ -2,11 +2,13 @@ package tuktu.processors.arithmetics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
+import tuktu.api.Parsing._
 
 /**
  * Calculates arithmetic
@@ -25,7 +27,7 @@ class ArithmeticProcessor(resultName: String) extends BaseProcessor(resultName) 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             val formula = utils.evaluateTuktuString(calculate, datum)
-            val result = tuktu.utils.ArithmeticParser(formula)
+            val result = ArithmeticParser(formula)
             if (doRounding)
                 datum + (resultName -> (math rint result * math.pow(10, numberOfDecimals)) / math.pow(10, numberOfDecimals))
             else
@@ -51,7 +53,7 @@ class ArithmeticAggregateProcessor(resultName: String) extends BaseProcessor(res
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         // Compute on entire DataPacket
         val formula = utils.evaluateTuktuString(calculate, data.data.headOption.getOrElse(Map.empty))
-        val res = new tuktu.utils.TuktuArithmeticsParser(data.data)(formula)
+        val res = new TuktuArithmeticsParser(data.data)(formula)
         data.map { datum => datum + (resultName -> res) }
     })
 }

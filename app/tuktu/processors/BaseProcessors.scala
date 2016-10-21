@@ -18,6 +18,7 @@ import play.api.libs.iteratee.Iteratee
 import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import tuktu.api._
+import tuktu.api.Parsing._
 import java.text.SimpleDateFormat
 import tuktu.api.utils.evaluateTuktuString
 import play.api.Logger
@@ -402,7 +403,7 @@ class PredicateProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             // Get the predicate parser
-            val p = new tuktu.utils.TuktuPredicateParser(datum)
+            val p = new TuktuPredicateParser(datum)
             datum + (resultName -> utils.evaluateTuktuString(predicate, datum))
         }
     })
@@ -434,7 +435,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                 // Replace expression with values
                 val replacedExpression = evaluateTuktuString(expression, datum)
                 // Evaluate
-                val parser = new tuktu.utils.TuktuPredicateParser(datum)
+                val parser = new TuktuPredicateParser(datum)
                 val result = parser(replacedExpression)
 
                 // Negate or not?
