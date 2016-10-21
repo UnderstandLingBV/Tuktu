@@ -1,4 +1,4 @@
-package tuktu.test
+package tuktu.test.api
 
 import play.api.libs.json._
 import tuktu.api.Parsing._
@@ -125,6 +125,8 @@ class ParsingTests extends PlaySpec {
             PredicateParser(".2 + .1 == .3") should be(true)
             PredicateParser(".2 + .1 <= .3") should be(true)
             PredicateParser(".2 + .1 >= .3") should be(true)
+            PredicateParser(".2 + .1 > .3") should be(false)
+            PredicateParser(".2 + .1 < .3") should be(false)
             PredicateParser(".2 + .1 != .3") should be(false)
             PredicateParser("-.1 / .3 + 0.333333333333333333 == .1 / -.3 + 0.333333333333333333") should be(true)
         }

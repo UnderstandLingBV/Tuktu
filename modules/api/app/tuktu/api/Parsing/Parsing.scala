@@ -159,8 +159,8 @@ object PredicateParser {
     val arithExpr: P[Boolean] = P(ArithmeticParser.addSub ~ (">=" | "<=" | "==" | "!=" | "<" | ">").! ~ ArithmeticParser.addSub)
         .map {
             case (left, op, right) => op match {
-                case "<"  => left < right
-                case ">"  => left > right
+                case "<"  => left < right && !nearlyEqual(left, right)
+                case ">"  => left > right && !nearlyEqual(left, right)
                 case "<=" => left < right || nearlyEqual(left, right)
                 case ">=" => left > right || nearlyEqual(left, right)
                 case "==" => nearlyEqual(left, right)
