@@ -51,8 +51,6 @@ lazy val nlpDependencies = Seq(
     cache,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "org.apache.opennlp" % "opennlp-tools" % "1.5.3",
-    "org.nd4j" %% "nd4s" % "0.4-rc3",
-    "org.nd4j" % "nd4j-jblas" % "0.4-rc3.4",
     "com.github.rholder" % "snowball-stemmer" % "1.3.0.581.1"
 )
 
@@ -105,10 +103,11 @@ lazy val mlDependencies = Seq(
 lazy val dlDependencies = Seq(
     cache,
     "org.scalanlp" %% "breeze" % "0.10",
-    "org.deeplearning4j" % "deeplearning4j-core" % "0.4-rc3.10" excludeAll(ExclusionRule(organization = "org.spark-project"),ExclusionRule(organization = "org.spark-project.akka"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote")),
-    "org.deeplearning4j" % "deeplearning4j-nlp" % "0.4-rc3.10" excludeAll(ExclusionRule(organization = "org.spark-project"),ExclusionRule(organization = "org.spark-project.akka"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote"), ExclusionRule("org.deeplearning4j","spark")),
-    "org.nd4j" % "nd4j-x86" % "0.4-rc3.8",
-    "org.nd4j" % "canova-api" % "0.0.0.14",
+    "org.deeplearning4j" % "deeplearning4j-core" % "0.6.0" excludeAll(ExclusionRule(organization = "org.spark-project"),ExclusionRule(organization = "org.spark-project.akka"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote")),
+    "org.deeplearning4j" % "deeplearning4j-nlp" % "0.6.0" excludeAll(ExclusionRule(organization = "org.spark-project"),ExclusionRule(organization = "org.spark-project.akka"), ExclusionRule(organization = "io.netty"), ExclusionRule(organization = "com.typesafe.akka"), ExclusionRule(artifact = "akka-remote"), ExclusionRule("org.deeplearning4j","spark")),
+    "org.nd4j" % "nd4j-native-platform" % "0.6.0",
+    "org.nd4j" % "nd4j-native" % "0.6.0",
+    "org.nd4j" % "nd4j-native" % "0.6.0" classifier "windows-x86_64",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
