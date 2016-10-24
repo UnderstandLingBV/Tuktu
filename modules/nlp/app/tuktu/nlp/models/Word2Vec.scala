@@ -24,7 +24,6 @@ import org.apache.commons.compress.compressors.gzip.GzipUtils
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.ops.transforms.Transforms
-import org.nd4s.Implicits.floatArray2INDArray
 
 import tuktu.ml.models.BaseModel
 
@@ -129,7 +128,7 @@ class Word2Vec() extends BaseModel {
                     layerSize = split.length - 1
                     val vector = split.drop(1).map(java.lang.Float.parseFloat).toArray
 
-                    wordMap += word -> vector.toNDArray
+                    wordMap += word -> Nd4j.create(vector)
                 }
             }
 
@@ -168,7 +167,7 @@ class Word2Vec() extends BaseModel {
                     readFloat(dis)
                 }).toArray
 
-                wordMap += word -> vector.toNDArray
+                wordMap += word -> Nd4j.create(vector)
             }
 
             // clean up
