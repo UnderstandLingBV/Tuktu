@@ -15,6 +15,7 @@ import play.api.Play.current
 import akka.actor.PoisonPill
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.json.JsValue
 
 case class GetEnumerator()
 case class EnumeratorReply(
@@ -57,7 +58,7 @@ class ChartingActor(name: String, parent: ActorRef, expiration: Long, isHistoric
             sender ! new EnumeratorReply(enumerator, history.toList)
         case sh: SetHistorical =>
             historical = sh.historical
-        case packet: JsObject => {
+        case packet: JsValue => {
             lastPacket = System.currentTimeMillis
             try {
                 // Add to history, then push
