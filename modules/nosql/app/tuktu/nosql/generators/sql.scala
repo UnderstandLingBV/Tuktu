@@ -47,5 +47,6 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                 rowEnumerator |>> (onEOF compose rowToDP compose processor) &>> sinkIteratee
             })
         }
+        case sp: StopPacket => cleanup(false)
     }
 }
