@@ -146,7 +146,7 @@ class EOFBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
     // Iteratee to take the data we need
     def groupPackets: Iteratee[DataPacket, DataPacket] = for (
             dps <- Enumeratee.takeWhile[DataPacket](_ != Input.EOF) &>> Iteratee.getChunks
-    ) yield DataPacket(dps.flatMap(data => data.data))
+    ) yield new DataPacket(dps.flatMap(data => data.data))
 
     // Use the iteratee and Enumeratee.grouped
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
