@@ -36,6 +36,8 @@ class ParsingTests extends PlaySpec {
         "honor operation order" in {
             ArithmeticParser("1.7e2 - 1.8e1 * 2 + 12") should be(1.7e2 - 1.8e1 * 2 + 12)
             ArithmeticParser("1.7e2 - 1.8e1 / 2 - 12") should be(1.7e2 - 1.8e1 / 2 - 12)
+            ArithmeticParser("3 + 3 * 3 ^ 3") should be(3 + 3 * Math.pow(3, 3))
+            ArithmeticParser("2 + 2 * 2 ^ 2 ^ 3") should be(514)
         }
 
         "honor bracket order" in {

@@ -29,11 +29,18 @@ object ArithmeticParser {
     val parens: P[Double] = P("-".!.? ~ "(" ~/ addSub ~ ")").map { case (neg, double) => if (neg.isDefined) -double else double }
     val factor: P[Double] = P(parens | number)
 
-    val pow: P[Double] = P(factor ~ (CharIn("^").! ~/ factor).rep).map(eval)
+    val pow: P[Double] = P(factor ~ (CharIn("^") ~/ factor).rep).map(evalPower)
     val divMul: P[Double] = P(pow ~ (CharIn("*/").! ~/ pow).rep).map(eval)
     val addSub: P[Double] = P(divMul ~ (CharIn("+-").! ~/ divMul).rep).map(eval)
     val expr: P[Double] = P(Start ~/ addSub ~ End)
 
+    def evalPower(tree: (Double, Seq[Double])): Double = {
+        def helper(list: List[Double]): Double = list match {
+            case Nil       => 1
+            case a :: tail => Math.pow(a, helper(tail))
+        }
+        helper(tree._1 :: tree._2.toList)
+    }
     def eval(tree: (Double, Seq[(String, Double)])): Double = {
         val (base, ops) = tree
         ops.foldLeft(base) {
@@ -42,7 +49,6 @@ object ArithmeticParser {
                 case "-" => left - right
                 case "*" => left * right
                 case "/" => left / right
-                case "^" => Math.pow(left, right)
             }
         }
     }
@@ -128,7 +134,8 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     val parens: P[Double] = P("-".!.? ~ "(" ~/ addSub ~ ")").map { case (neg, double) => if (neg.isDefined) -double else double }
     val factor: P[Double] = P(parens | ArithmeticParser.number | functions)
 
-    val divMul: P[Double] = P(factor ~ (CharIn("*/").! ~/ factor).rep).map(ArithmeticParser.eval)
+    val pow: P[Double] = P(factor ~ (CharIn("^") ~/ factor).rep).map(ArithmeticParser.evalPower)
+    val divMul: P[Double] = P(pow ~ (CharIn("*/").! ~/ pow).rep).map(ArithmeticParser.eval)
     val addSub: P[Double] = P(divMul ~ (CharIn("+-").! ~/ divMul).rep).map(ArithmeticParser.eval)
     val expr: P[Double] = P(Start ~/ addSub ~ End)
 
