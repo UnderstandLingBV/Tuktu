@@ -294,9 +294,9 @@ class Generator
 					$(elem).val(elem.dataset.default)
 			when 'JsObject', 'any'
 				try
-					if array and config?
+					if array and config isnt undefined
 						$(elem).val(JSON.stringify(config, null, '  '))
-					else if config[elem.dataset.key]?
+					else if config[elem.dataset.key] isnt undefined
 						$(elem).val(JSON.stringify(config[elem.dataset.key], null, '  '))
 					else
 						$(elem).val(JSON.stringify(JSON.parse(elem.dataset.default), null, '  '))
@@ -349,9 +349,10 @@ class Generator
 			nextElements = $(elem).find('*[data-depth="' + depth + '"]')
 		for data in nextElements
 			do (data) =>
-				myDefault = null
+				myDefault = undefined
 				try
 					myDefault = JSON.parse(data.dataset.default)
+				myValue = undefined
 				myValue = switch data.dataset.type
 					when 'string'
 						$(data).val() if $(data).prop('required') is true or ($(data).val() isnt '' and $(data).val() isnt data.dataset.default)
@@ -377,7 +378,7 @@ class Generator
 							$(intInputTester).prop('required', $(data).prop('required'))
 							$(intInputTester).val($(data).val())
 							if not intInputTester.validity.valid or $(intInputTester).val() is ''
-								null
+								undefined
 							else
 								parseFloat($(intInputTester).val())
 
@@ -388,7 +389,7 @@ class Generator
 							$(floatInputTester).prop('required', $(data).prop('required'))
 							$(floatInputTester).val($(data).val())
 							if not floatInputTester.validity.valid or $(floatInputTester).val() is ''
-								null
+								undefined
 							else
 								parseFloat($(floatInputTester).val())
 
@@ -398,19 +399,19 @@ class Generator
 					when 'object'
 						newObject = {}
 						@setConfig(newObject, data, depth + 1)
-						if _.isEmpty(newObject) and data.dataset.required is 'false' then null else newObject
+						if _.isEmpty(newObject) and data.dataset.required is 'false' then undefined else newObject
 
 					when 'array'
 						newArray = []
 						@setConfig(newArray, data, depth + 1, true)
-						if _.isEmpty(newArray) and data.dataset.required is 'false' then null else newArray
+						if _.isEmpty(newArray) and data.dataset.required is 'false' then undefined else newArray
 
-					else null
+					else undefined
 
 				if array
-					config.push(myValue) if myValue?
+					config.push(myValue) if myValue isnt undefined
 				else
-					config[data.dataset.key] = myValue if myValue?
+					config[data.dataset.key] = myValue if myValue isnt undefined
 		return
 
 	activateForm: ->
