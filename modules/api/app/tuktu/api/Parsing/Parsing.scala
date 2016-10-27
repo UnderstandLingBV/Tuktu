@@ -29,7 +29,8 @@ object ArithmeticParser {
     val parens: P[Double] = P("-".!.? ~ "(" ~/ addSub ~ ")").map { case (neg, double) => if (neg.isDefined) -double else double }
     val factor: P[Double] = P(parens | number)
 
-    val divMul: P[Double] = P(factor ~ (CharIn("*/").! ~/ factor).rep).map(eval)
+    val pow: P[Double] = P(factor ~ (CharIn("^").! ~/ factor).rep).map(eval)
+    val divMul: P[Double] = P(pow ~ (CharIn("*/").! ~/ pow).rep).map(eval)
     val addSub: P[Double] = P(divMul ~ (CharIn("+-").! ~/ divMul).rep).map(eval)
     val expr: P[Double] = P(Start ~/ addSub ~ End)
 
@@ -41,6 +42,7 @@ object ArithmeticParser {
                 case "-" => left - right
                 case "*" => left * right
                 case "/" => left / right
+                case "^" => Math.pow(left, right)
             }
         }
     }

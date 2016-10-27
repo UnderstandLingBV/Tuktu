@@ -37,6 +37,53 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "batch",
+					"description": "If set to true, works on the entire DP, otherwise it works on a datum a time.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "fields",
+					"description": "The fields to be filtered.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "default",
+									"description": "The value to be used if the path cannot be traversed until the end.",
+									"type": "any",
+									"required": false
+								},
+								{
+									"name": "path",
+									"description": "The path at which the value is located.",
+									"type": "array",
+									"required": true,
+									"parameters": [
+										{
+											"name": "",
+											"type": "string",
+											"required": true
+										}
+									]
+								},
+								{
+									"name": "result",
+									"description": "The new result name of the value at the end of the path (or the default).",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
 				}
 			]
 		}

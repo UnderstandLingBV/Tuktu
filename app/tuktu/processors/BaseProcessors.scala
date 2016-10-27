@@ -586,23 +586,41 @@ class DataPacketFieldMergerProcessor(resultName: String) extends BaseProcessor(r
     var value = ""
     var isNumeric = false
     var isDecimal = false
+    var batch: Boolean = _
+    var fieldList = List[JsObject]()
 
     override def initialize(config: JsObject) {
         value = (config \ "value").as[String]
         isNumeric = (config \ "is_numeric").asOpt[Boolean].getOrElse(false)
         isDecimal = (config \ "is_decimal").asOpt[Boolean].getOrElse(false)
+        batch  = (config \ "batch").asOpt[Boolean].getOrElse(false)
+        fieldList = (config \ "fields").as[List[JsObject]]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        new DataPacket(for (datum <- data.data) yield {
-            Map(
-                    evaluateTuktuString(resultName, datum) -> {
-                        if (!isNumeric && !isDecimal) evaluateTuktuString(value, datum)
-                        else if (isNumeric) evaluateTuktuString(value, datum).toLong
-                        else evaluateTuktuString(value, datum).toDouble
-                    }
-            )
-        })
+        val maps = for (datum <- data.data) yield {
+            val map = (for {
+                fieldItem <- fieldList
+                default = (fieldItem \ "default").asOpt[JsValue]
+                fields = (fieldItem \ "path").as[List[String]]
+                fieldName = evaluateTuktuString((fieldItem \ "result").as[String], datum)
+                field = fields.head
+            } yield {
+                fieldName -> utils.fieldParser(datum, fields).getOrElse(default.get)
+            }).toMap
+
+            val map2 = Map(evaluateTuktuString(resultName, datum) -> {
+                if (!isNumeric && !isDecimal) evaluateTuktuString(value, datum)
+                else if (isNumeric) evaluateTuktuString(value, datum).toLong
+                else evaluateTuktuString(value, datum).toDouble
+            })
+
+            map ++ map2
+        }
+
+        // If it is a batch, we merge the individual maps into one datum
+        if (batch) DataPacket(List(maps.flatten.toMap))
+        else DataPacket(maps)
     })
 }
 
