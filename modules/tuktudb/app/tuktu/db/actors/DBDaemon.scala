@@ -1,26 +1,32 @@
 package tuktu.db.actors
 
-import scala.concurrent.{ Await, Future }
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationInt
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+
 import scala.collection.JavaConversions.collectionAsScalaIterable
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 import scala.util.Random
-import akka.actor.{ Actor, ActorRef, ActorIdentity, ActorLogging, Identify, actorRef2Scala }
+
+import org.apache.commons.collections4.map.PassiveExpiringMap
+
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
-import java.io.File
-import java.nio.file.Files
-import java.io.FileOutputStream
-import java.io.ObjectOutputStream
-import java.io.FileInputStream
-import java.io.ObjectInputStream
 import tuktu.api._
-import org.apache.commons.collections4.map.PassiveExpiringMap
+import scala.collection.mutable.Queue
 
 // helper case class to get Overview from each node separately
 case class InternalOverview(
@@ -39,11 +45,8 @@ case class IntiateDaemonUpdate()
 /**
  * Daemon for Tuktu's DB operations
  */
-class DBDaemon() extends Actor with ActorLogging {    
+class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor with ActorLogging {    
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    
-    // Local in-memory database
-    private val tuktudb = collection.mutable.Map[String, collection.mutable.ListBuffer[Map[String, Any]]]()
     
     // Get this local node
     val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
@@ -54,28 +57,14 @@ class DBDaemon() extends Actor with ActorLogging {
     val dataDir = new File(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))
     if (!dataDir.exists)
         dataDir.mkdirs
-        
-    // Check the persist strategy
-    val (persistType, persistValue) = (
-        Play.current.configuration.getString("tuktu.db.persiststrategy.type").getOrElse("time"),
-        Play.current.configuration.getInt("tuktu.db.persiststrategy.value").getOrElse(1)
-    )
-    // Persist only when a time limit has collapsed
-    if (persistType == "time") {
-        Akka.system.scheduler.schedule(
-                persistValue seconds,
-                persistValue seconds,
-                self,
-                new PersistRequest
-        )
-    }
-    // For size persistence
-    var persistUpdates = 0
     
     // Map to get all the other daemons, use 4 * timeout so the periodic check is supposedly faster
     val dbDaemons = new PassiveExpiringMap[String, ActorRef](4 * timeout.duration.toMillis)
     // Always add ourselves, so TuktuDB will always function
     dbDaemons.put(homeAddress, self)
+    
+    // Check the persist strategy
+    val persistType = Play.current.configuration.getString("tuktu.db.persiststrategy.type").getOrElse("time")
     
     /**
      * Hashes a list of keys and a data packet to specific set of nodes
@@ -125,9 +114,10 @@ class DBDaemon() extends Actor with ActorLogging {
             
             // Read out and initialize the persisted DB
             val filename = dataDir + File.separator + "db.data"
-            if (new File(filename).exists) {
+            if (new File(filename).exists) Future {
                 val ois = new ObjectInputStream(new FileInputStream(dataDir + File.separator + "db.data"))
-                tuktudb ++= ois.readObject.asInstanceOf[Map[String, ListBuffer[Map[String, Any]]]]
+                tuktudb ++= ois.readObject.asInstanceOf[TrieMap[String, List[Map[String, Any]]]]
+                    .map(l => l._1 -> (Queue.empty[Map[String, Any]] ++ l._2))
                 ois.close
             }
         }
@@ -163,19 +153,15 @@ class DBDaemon() extends Actor with ActorLogging {
             // Add the data packet to our in-memory store
             rr.elements.foreach(elem => {
                 if (!tuktudb.contains(elem.key))
-                    tuktudb += elem.key -> collection.mutable.ListBuffer[Map[String, Any]]()
+                    tuktudb += elem.key -> Queue[Map[String, Any]]()
                 tuktudb(elem.key) += elem.value
             })
             
             if (rr.needReply) sender ! "ok"
             
-            // Increase persistence counter
-            if (persistType == "size") persistUpdates += 1
             // If we persist based on number of updates (size) or if we persist on each update, do it now
-            if (persistUpdates >= persistValue || persistType == "update") {
+            if (persistType == "update")
                 self ! new PersistRequest
-                persistUpdates = 0
-            }
         }
         case rr: ReadRequest => {
             // Probe first
@@ -210,10 +196,10 @@ class DBDaemon() extends Actor with ActorLogging {
             tuktudb -= dar.key
             if (dar.needReply) sender ! "ok"
         }
-        case pp: PersistRequest => {
+        case pp: PersistRequest => Future {
             // Persist to disk
             val oos = new ObjectOutputStream(new FileOutputStream(dataDir + File.separator + "db.data"))
-            oos.writeObject(tuktudb.toMap)
+            oos.writeObject(tuktudb.map(l => l._1 -> l._2.toList).asInstanceOf[TrieMap[String, List[Map[String, Any]]]])
             oos.close
         }
         case or: OverviewRequest => {
