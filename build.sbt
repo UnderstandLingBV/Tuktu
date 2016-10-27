@@ -74,6 +74,7 @@ lazy val socialDependencies = Seq(
 lazy val nosqlDependencies = Seq(
     cache,
     ws,
+    jdbc,
     "com.typesafe.play" %% "anorm" % "2.5.2",
     "com.typesafe.play" %% "anorm-iteratee" % "2.5.2",
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
@@ -87,8 +88,7 @@ lazy val nosqlDependencies = Seq(
     "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.4",
     "org.elasticsearch" % "elasticsearch" % "1.4.4",
     "org.apache.hadoop" % "hadoop-client" % "2.6.0",
-    "org.apache.commons" % "commons-dbcp2" % "2.1.1",
-    "com.typesafe.slick" %% "slick" % "3.1.1"
+    "com.jolbox" % "bonecp" % "0.8.0.RELEASE"
 )
 
 lazy val mlDependencies = Seq(

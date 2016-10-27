@@ -1,6 +1,5 @@
 package tuktu.nosql.util
 
-import org.apache.commons.dbcp2.BasicDataSource
 import java.sql.Connection
 import anorm.SqlParser._
 import anorm._
@@ -8,6 +7,8 @@ import play.api.libs.iteratee.Enumerator
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.HashSet
+import com.jolbox.bonecp.BoneCP
+import com.jolbox.bonecp.BoneCPConfig
 
 /**
  * Keeps track of connections
@@ -18,49 +19,47 @@ object sql {
         user: String,
         password: String,
         driver: String)
-
-    val pools = TrieMap[ConnectionDefinition, HashSet[BasicDataSource]]()
+    
+    val pools = TrieMap[ConnectionDefinition, HashSet[BoneCP]]()
 
     // Gets a single connection
     def getConnection(conn: ConnectionDefinition, minSize: Int = 5, maxSize: Int = 10): Connection = {
         // Check if a pool exists which still has open slots
         pools.get(conn).flatMap { map =>
-            map.find { basicDataSource => basicDataSource.getNumActive < minSize }
+            map.find { cp => cp.getTotalFree > 0 }
         } match {
-            case Some(basicDataSource) => {
-                if (basicDataSource.isClosed) {
-                    // It's closed, remove it and try again
-                    pools.get(conn).collect { case set => set -= basicDataSource }
-                    getConnection(conn, minSize, maxSize)
-                } else
-                    basicDataSource.getConnection
-            }
+            case Some(cp) => cp.getConnection
             case None => {
                 // Create new source
-                val connectionPool = new BasicDataSource()
-                connectionPool.setDriverClassName(conn.driver)
-                connectionPool.setUrl(conn.url)
-                connectionPool.setUsername(conn.user)
-                connectionPool.setPassword(conn.password)
-                connectionPool.setInitialSize(minSize)
-                connectionPool.setMaxIdle(maxSize)
-                pools.getOrElseUpdate(conn, HashSet.empty) += connectionPool
-                connectionPool.getConnection
+                Class.forName(conn.driver)
+                val config = new BoneCPConfig()
+                config.setJdbcUrl(conn.url)
+                config.setUsername(conn.user)
+                config.setPassword(conn.password)
+                config.setMinConnectionsPerPartition(minSize)
+                config.setMaxConnectionsPerPartition(maxSize)
+                config.setPartitionCount(3)
+                config.setCloseConnectionWatch(true)
+                val c = new BoneCP(config)
+                pools.getOrElseUpdate(conn, HashSet.empty) += c
+                c.getConnection
             }
         }
     }
 
     // Releases a connection, and closes its BasicDataSource if it has no more active connections
     def releaseConnection(connDef: ConnectionDefinition, conn: Connection) = {
-        conn.close
+        if (!conn.isClosed) conn.close
+        
+        // Need to clean up our pool?
         pools.get(connDef).collect {
             case set =>
-                set.foreach { basicDataSource =>
+                set.foreach { cp =>
                     // Check if BasicDataSource has no active connections
-                    if (basicDataSource.getNumActive == 0) {
-                        // Close it and remove it from set
-                        set -= basicDataSource
-                        basicDataSource.close
+                    if (cp.getTotalLeased == 0) {
+                        // Close Remove it from out set
+                        set -= cp
+                        cp.close
                     }
                 }
                 if (set.isEmpty)
