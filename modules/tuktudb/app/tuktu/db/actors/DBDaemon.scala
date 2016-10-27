@@ -53,10 +53,7 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
     // Get cluster nodes
     val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
     
-    // Create data directory
     val dataDir = new File(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))
-    if (!dataDir.exists)
-        dataDir.mkdirs
     
     // Map to get all the other daemons, use 4 * timeout so the periodic check is supposedly faster
     val dbDaemons = new PassiveExpiringMap[String, ActorRef](4 * timeout.duration.toMillis)
@@ -109,18 +106,7 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
             // Another DB daemon is letting us know its presence
             dbDaemons.put(id.node, id.id)
         }
-        case ip: InitPacket => {
-            getOtherDaemons
-            
-            // Read out and initialize the persisted DB
-            val filename = dataDir + File.separator + "db.data"
-            if (new File(filename).exists) Future {
-                val ois = new ObjectInputStream(new FileInputStream(dataDir + File.separator + "db.data"))
-                tuktudb ++= ois.readObject.asInstanceOf[TrieMap[String, List[Map[String, Any]]]]
-                    .map(l => l._1 -> (Queue.empty[Map[String, Any]] ++ l._2))
-                ois.close
-            }
-        }
+        case ip: InitPacket => getOtherDaemons
         case sr: StoreRequest => {
             val elementsPerNode = ({
                 for {
