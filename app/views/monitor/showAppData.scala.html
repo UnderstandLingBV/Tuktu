@@ -59,46 +59,53 @@
         </thead>
         <tbody>
             @defining({
-                try{
-                    appProps.processorDataPacketCount.keys.toSeq.sorted.zip(appProps.processorDataPacketCount.map(x => java.util.UUID.randomUUID.toString))
+                try {
+                    appProps.processorDataPacketCount.keys.toSeq.sorted
+                } catch {
+                    case e: Exception => Seq.empty[String]
                 }
-                catch {
-                    case e: Exception => Seq.empty[(String, String)]
+            }) { processorIds =>
+                @for(id <- processorIds) {
+                    <tr@if(appProps.errors.contains(id)){ class="danger"}>
+                        <td>
+                            <button data-flow="@flow_name" class="btn btn-primary btn-sm processor_monitor_collapse" type="button">@id</button>
+                        </td>
+                        <td title="@appProps.processorDataPacketCount(id).getOrElse(BeginType, 0) DataPackets containing a total of @appProps.processorDatumCount(id).getOrElse(BeginType, 0) Datums">
+                            @appProps.processorDataPacketCount(id).getOrElse(BeginType, 0) (@appProps.processorDatumCount(id).getOrElse(BeginType, 0))
+                        </td>
+                        <td title="@appProps.processorDataPacketCount(id).getOrElse(EndType, 0) DataPackets containing a total of @appProps.processorDatumCount(id).getOrElse(EndType, 0) Datums">
+                            @appProps.processorDataPacketCount(id).getOrElse(EndType, 0) (@appProps.processorDatumCount(id).getOrElse(EndType, 0))
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            @if(appProps.processorDurations.getOrElse(id, Nil).nonEmpty) {
+                                Min: @{math.round(appProps.processorDurations(id).min) / 1000.0} s <br>
+                                Max: @{math.round(appProps.processorDurations(id).max) / 1000.0} s <br>
+                                Avg: @{math.round(appProps.processorDurations(id).sum / appProps.processorDurations(id).size.toDouble) / 1000.0} s <br>
+                                Med: @{
+                                    val sorted = appProps.processorDurations(id).sorted
+                                    math.round({
+                                        if (sorted.size % 2 == 0)
+                                            (sorted(sorted.size / 2) + sorted(sorted.size / 2 - 1)) / 2.0
+                                        else
+                                            sorted((sorted.size - 1) / 2)
+                                    }) / 1000.0
+                                } s
+                            }
+                        </td>
+                        <td>
+                            <div class="collapse last_DP_received">
+                                <div class="well" style="white-space: pre-wrap;"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="collapse last_DP_processed">
+                                <div class="well" style="white-space: pre-wrap;"></div>
+                            </div>
+                        </td>
+                    </tr>
                 }
-            }) { appData =>
-	            @for((id, uuid) <- appData) {
-	                <tr@if(appProps.errors.contains(id)){ class="danger"}>
-	                    <td>
-	                        <button data-flow="@flow_name" class="btn btn-primary btn-sm processor_monitor_collapse" type="button">@id</button>
-	                    </td>
-	                    <td title="@appProps.processorDataPacketCount.get(id).getOrElse(BeginType, 0) DataPackets containing a total of @appProps.processorDatumCount.get(id).getOrElse(BeginType, 0) Datums">
-	                        @appProps.processorDataPacketCount.get(id).getOrElse(BeginType, 0) (@appProps.processorDatumCount.get(id).getOrElse(BeginType, 0))
-	                    </td>
-	                    <td title="@appProps.processorDataPacketCount(id).getOrElse(EndType, 0) DataPackets containing a total of @appProps.processorDatumCount.get(id).getOrElse(EndType, 0) Datums">
-	                        @appProps.processorDataPacketCount.get(id).getOrElse(EndType, 0) (@appProps.processorDatumCount.get(id).getOrElse(EndType, 0))
-	                    </td>
-	                </tr>
-	                <tr>
-	                    <td>
-	                        @if(appProps.processorDurations.getOrElse(id, Nil).nonEmpty) {
-	                            Min: @{math.round(appProps.processorDurations(id).min) / 1000.0} s <br>
-	                            Max: @{math.round(appProps.processorDurations(id).max) / 1000.0} s <br>
-	                            Avg: @{math.round(appProps.processorDurations(id).sum / appProps.processorDurations(id).size.toDouble) / 1000.0} s <br>
-	                            Med: @{math.round(appProps.processorDurations(id).sorted.apply(appProps.processorDurations(id).size / 2)) / 1000.0} s
-	                        }
-	                    </td>
-	                    <td>
-	                        <div class="collapse last_DP_received">
-	                            <div class="well" style="white-space: pre-wrap;"></div>
-	                        </div>
-	                    </td>
-	                    <td>
-	                        <div class="collapse last_DP_processed">
-	                            <div class="well" style="white-space: pre-wrap;"></div>
-	                        </div>
-	                    </td>
-	                </tr>
-	            }
             }
         </tbody>
     </table>
