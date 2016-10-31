@@ -83,7 +83,7 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        DataPacket({
+        new DataPacket({
             // See if this is the first one
             val first = headers == null
 
