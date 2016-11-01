@@ -451,7 +451,7 @@ class TextTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends Act
                     val fName = Paths.get(trr.filename).normalize.toString
                     val eofs = Cache.getAs[collection.mutable.Map[String, Int]]("tuktu.dfs.NodeFileTable.eofs")
                         .getOrElse(collection.mutable.Map.empty[String, Int])
-                    if (eofs.contains(trr.filename)) eofs(fName) == trr.part
+                    if (eofs.contains(fName)) eofs(fName) == trr.part
                     else false
                 }
                 requester ! new TDFSReadContentEOF(globalEof)
@@ -495,7 +495,7 @@ class BinaryTDFSReaderActor(trr: TDFSReadRequest, requester: ActorRef) extends A
                     val fName = Paths.get(trr.filename).normalize.toString
                     val eofs = Cache.getAs[collection.mutable.Map[String, Int]]("tuktu.dfs.NodeFileTable.eofs")
                         .getOrElse(collection.mutable.Map.empty[String, Int])
-                    if (eofs.contains(trr.filename)) eofs(fName) == trr.part
+                    if (eofs.contains(fName)) eofs(fName) == trr.part
                     else false
                 }
                 requester ! new TDFSReadContentEOF(globalEof)

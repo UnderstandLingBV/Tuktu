@@ -48,8 +48,9 @@ class TDFSLineReaderGenerator(resultName: String, processors: List[Enumeratee[Da
                     case Some(el) => lineOffset <= el
                 }
             })
-                // Make a proper string and output it
-                channel.push(DataPacket(List(Map(resultName -> new String(tcp.content)))))
+              
+            // Make a proper string and output it
+            channel.push(DataPacket(List(Map(resultName -> new String(tcp.content)))))
         }
     }
 }

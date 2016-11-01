@@ -84,9 +84,6 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         DataPacket({
-            // See if this is the first one
-            val first = headers == null
-
             // Get lines to mimic a CSV file
             (for (datum <- data.data) yield {
                 val value = datum(field).toString
@@ -110,12 +107,9 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
                     val toAdd = headers.zip(line.toList).toMap
                     toAdd
                 }
-            }).drop(first match {
-                case true if headersFromFirst => 1
-                case _ => 0
             })
         })
-    })
+    }) compose Enumeratee.drop(if (headersFromFirst) 1 else 0)
 }
 
 /**
