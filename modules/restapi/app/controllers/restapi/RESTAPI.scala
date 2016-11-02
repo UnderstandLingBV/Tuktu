@@ -177,7 +177,7 @@ object RESTAPI extends Controller {
     /**
      * Helps in setting up a job and streaming the result back
      */
-    class jobHelperActor(name: String, config: Option[JsObject], sendData: Option[JsObject]) extends Actor with ActorLogging {
+    class jobHelperActor(name: String, config: Option[JsObject], sendData: Option[JsObject], terminate: Boolean) extends Actor with ActorLogging {
         val (enum, channel) = Concurrent.broadcast[JsObject]
 
         def receive() = {
@@ -190,14 +190,17 @@ object RESTAPI extends Controller {
                             case None => {}
                             case Some(data) => {
                                 gen ! DataPacket(List(utils.JsObjectToMap(data)))
-                                gen ! Input.EOF
+                                if (terminate)
+                                    gen ! new StopPacket()
                             }
                         }
                     }
                 }
                 sender ! enum
             }
-            case dp: DataPacket => dp.data.foreach(datum => channel.push(utils.MapToJsObject(datum, false)))
+            case dp: DataPacket => {
+                dp.data.foreach(datum => channel.push(utils.MapToJsObject(datum, false)))
+            }
             case sp: StopPacket => {
                 channel.eofAndEnd()
                 self ! PoisonPill
@@ -226,6 +229,9 @@ object RESTAPI extends Controller {
             val sendData = if (postBody.keys.contains("data")) {
                 Some((postBody \ "data").as[JsObject])
             } else None
+            
+            // Terminate after sending the data or not?
+            val sendEof = (postBody \ "terminate").asOpt[Boolean].getOrElse(false)
 
             if (config == null) Future { BadRequest(Json.obj("error" -> "Bad POST body")) }
             else {
@@ -233,7 +239,7 @@ object RESTAPI extends Controller {
                 if (returnResult) {
                     // Set up helper actor
                     val helper = Akka.system.actorOf(Props(classOf[jobHelperActor],
-                            (postBody \ "name").as[String], config, sendData), java.util.UUID.randomUUID.toString)
+                            (postBody \ "name").as[String], config, sendData, sendEof), java.util.UUID.randomUUID.toString)
                     val fut = (helper ? new InitPacket).asInstanceOf[Future[Enumerator[JsObject]]]
 
                     fut.map(enum =>

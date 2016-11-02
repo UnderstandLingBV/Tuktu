@@ -11,6 +11,7 @@ import akka.actor.PoisonPill
 import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout
+import play.api.Logger
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
@@ -21,7 +22,6 @@ import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsValue
 import tuktu.api._
-import play.api.Logger
 
 /**
  * Async 'special' generator that just waits for DataPackets to come in and processes them
@@ -38,6 +38,8 @@ class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataP
  */
 class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends Actor with ActorLogging {
     implicit var timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    var processorsRunning = 0
+    var hasReceivedStopPacket = false
     
     // Add our parent (the Router of this Routee) to cache
     Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
@@ -61,17 +63,18 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
             if (!dontReturnAtAll) {
                 senderActor match {
                     case Some(ar) => ar ! d
-                    case None => {}
+                    case None => sActor ! d
                 }
-                
-                sActor ! d
             }
             
             d
         })
         
         def runProcessor() = {
-            Enumerator(dp) |>> (processors.head compose sendBackEnum) &>> sinkIteratee
+            Enumerator(dp).andThen(Enumerator.eof) |>> (processors.head compose Enumeratee.onEOF { () =>
+                    processorsRunning -= 1
+                    if (processorsRunning == 0 && hasReceivedStopPacket) self ! new StopPacket()
+                } compose sendBackEnum) &>> sinkIteratee
         }
     }
 
@@ -90,27 +93,38 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
             }
         }
         case sp: StopPacket => {
-            // Send message to the monitor actor
-            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
-                    self,
-                    "done"
-            )
-            
-            // Remove parent relationship from Cache
-            Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
-                .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) -= self
-            
-            val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
-            enum |>> processors.head &>> sinkIteratee
-
-            channel.eofAndEnd           
-            self ! PoisonPill
+            hasReceivedStopPacket = true
+            if (processorsRunning == 0) {
+                // Send message to the monitor actor
+                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(
+                        self,
+                        "done"
+                )
+                
+                // Remove parent relationship from Cache
+                Cache.getAs[collection.mutable.Map[ActorRef, ActorRef]]("router.mapping")
+                    .getOrElse(collection.mutable.Map[ActorRef, ActorRef]()) -= self
+                    
+                val enum: Enumerator[DataPacket] = Enumerator.enumInput(Input.EOF)
+                enum |>> (processors.head compose Enumeratee.onEOF {() =>
+                        if (!dontReturnAtAll) {
+                            senderActor match {
+                                case Some(ar) => ar ! new StopPacket()
+                                case None => sender ! new StopPacket()
+                            }
+                        }
+                    }) &>> sinkIteratee
+    
+                channel.eofAndEnd           
+                self ! PoisonPill
+            }
         }
         case dp: DataPacket => {
             // Push to all async processors
             channel.push(dp)
 
             // Send through our enumeratee
+            processorsRunning += 1
             val p = new senderReturningProcessor(sender, dp)
             p.runProcessor()
         }
