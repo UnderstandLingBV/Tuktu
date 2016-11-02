@@ -71,10 +71,10 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         })
         
         def runProcessor() = {
-            Enumerator(dp).andThen(Enumerator.eof) |>> (processors.head compose Enumeratee.onEOF { () =>
+            Enumerator(dp).andThen(Enumerator.eof) |>> (processors.head compose sendBackEnum compose Enumeratee.onEOF { () =>
                     processorsRunning -= 1
                     if (processorsRunning == 0 && hasReceivedStopPacket) self ! new StopPacket()
-                } compose sendBackEnum) &>> sinkIteratee
+                }) &>> sinkIteratee
         }
     }
 
