@@ -1,0 +1,43 @@
+{
+	"name": "Template Processor",
+	"description": "Generates a text output based on a template and changing data (using the Apache FreeMarker template engine).",
+	"class": "tuktu.dlib.processors.TemplateProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "template",
+					"description": "The URL at which the FTL template to apply can be found.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "encodings",
+					"description": "The template encodings.",
+					"type": "string",
+					"required": false,
+					"default": "UTF-8"
+				},
+				{
+					"name": "data",
+					"description": "The field containing the changing data used to fill in the template.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
