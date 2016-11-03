@@ -47,13 +47,23 @@ class TemplateProcessor(resultName: String) extends BaseProcessor(resultName)
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         DataPacket(for (datum <- data.data) yield {
-            val filler: Map[String,Object] = datum( field ).asInstanceOf[Map[String,Object]]
-            import scala.collection.JavaConverters._
+            val filler = toJava( datum( field ).asInstanceOf[Map[String,Object]] )
             val output = new StringWriter
-            template.process(filler.asJava, output)
+            template.process(filler, output)
             datum + ( resultName -> output.toString )
         })
     })
+    
+    def toJava( m: Map[String,Object] ): java.util.Map[String, Object] =
+    {
+        import scala.collection.JavaConverters._
+        val result = m map {case (key, value) => (key, (value match{
+          case s: Seq[String] => s.asJava
+          case mp: Map[String, Object] => toJava( mp )
+          case _ => value
+        }))}
+        result.asJava
+    }
 }
 
 class DlibTemplateLoader extends freemarker.cache.URLTemplateLoader
