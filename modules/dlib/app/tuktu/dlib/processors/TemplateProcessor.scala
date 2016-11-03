@@ -38,7 +38,7 @@ class TemplateProcessor(resultName: String) extends BaseProcessor(resultName)
         
         // Get configuration and template
         val templateLoader: TemplateLoader = new DlibTemplateLoader() 
-        val cfg = new Configuration
+        val cfg = new Configuration(Configuration.VERSION_2_3_23)
         cfg.setDefaultEncoding( encodings )
         cfg.setLocalizedLookup( false )
         cfg.setTemplateLoader( templateLoader )
