@@ -123,7 +123,7 @@ object Dispatcher {
                 // Create generator
                 val generator = sync match {
                     case true => {
-                        if (classOf[EOFBufferProcessor].isAssignableFrom(procClazz)) {
+                        /*if (classOf[EOFBufferProcessor].isAssignableFrom(procClazz)) {
                             Akka.system.actorOf(SmallestMailboxPool(1).props(
                                 Props(classOf[tuktu.generators.EOFSyncStreamGenerator], "",
                                     pd.next.map(processorName => {
@@ -132,10 +132,14 @@ object Dispatcher {
                                         buildSequential(processorName, utils.logEnumeratee(idString, configName), iterationCount + 1, branch) compose
                                         monitorEnumeratee(subIdString, branch, EndType)
                                     }),
-                                    genActor
+                                    {
+                                        // If sync is set to true, this is the last one in the line and we need to send bakc
+                                        if (sync) genActor
+                                        else None
+                                    }
                                 )), name = "subflows_" + subIdString
                             )
-                        } else {
+                        } else {*/
                             Akka.system.actorOf(SmallestMailboxPool(1).props(
                                     Props(classOf[tuktu.generators.SyncStreamGenerator], "",
                                         pd.next.map(processorName => {
@@ -145,12 +149,16 @@ object Dispatcher {
                                             monitorEnumeratee(subIdString, branch, EndType)
                                         }),
                                         {
-                                            if (classOf[BufferProcessor].isAssignableFrom(procClazz)) genActor
+                                            if (classOf[BufferProcessor].isAssignableFrom(procClazz)) {
+                                                // If sync is set to true, this is the last one in the line and we need to send bakc
+                                                if (sync) genActor
+                                                else None
+                                            }
                                             else None
                                         }
                                     )), name = "subflows_" + subIdString
                             )
-                        }
+                        //}
                     }
                     case false => {
                         Akka.system.actorOf(SmallestMailboxPool(1).props(
@@ -449,7 +457,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     } else {
                         if (!startRemotely) {
                             // Build the processor pipeline for this generator
-                            val (idString, processorEnumeratees, subflows) = Dispatcher.buildEnums(next, processorMap, dr.sourceActor, dr.configName, stopOnError)
+                            val (idString, processorEnumeratees, subflows) = Dispatcher.buildEnums(next, processorMap, sourceActor, dr.configName, stopOnError)
 
                             // Set up the generator
                             val clazz = Class.forName(generatorName)
@@ -468,7 +476,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
 
                                     Akka.system.actorOf(
                                         SmallestMailboxPool(instanceCount).props(
-                                            Props(clazz, refererName, resultName, processorEnumeratees, dr.sourceActor)
+                                            Props(clazz, refererName, resultName, processorEnumeratees, sourceActor)
                                         ),
                                         name = dr.configName.replaceAll("/| ", "_") +  "_" + clazz.getName +  "_" + idString
                                     )
@@ -479,7 +487,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                             Props(clazz, resultName, processorEnumeratees, {
                                                 // If there are subflows, then we should not send back from the actor, but
                                                 // from the subflows instead
-                                                if (subflows.isEmpty) dr.sourceActor else None
+                                                if (subflows.isEmpty) sourceActor else None
                                             })
                                         ),
                                         name = dr.configName.replaceAll("/| ", "_") +  "_" + clazz.getName +  "_" + idString
