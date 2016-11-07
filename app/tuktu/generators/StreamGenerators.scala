@@ -71,10 +71,14 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
         })
         
         def runProcessor() = {
-            Enumerator(dp).andThen(Enumerator.eof) |>> (processors.head compose sendBackEnum compose Enumeratee.onEOF { () =>
+            Enumerator(dp).andThen(Enumerator.eof) |>> (Enumeratee.onEOF { () =>
                     processorsRunning -= 1
                     if (processorsRunning == 0 && hasReceivedStopPacket) self ! new StopPacket()
-                }) &>> sinkIteratee
+                } compose (Enumeratee.mapInputFlatten[DataPacket][DataPacket] {
+                          case Input.El(dp) => Enumerator(dp)
+                          case Input.Empty => Enumerator.empty
+                          case Input.EOF => Enumerator.empty
+                }) compose processors.head compose sendBackEnum) &>> sinkIteratee
         }
     }
 
@@ -110,12 +114,12 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
                         if (!dontReturnAtAll) {
                             senderActor match {
                                 case Some(ar) => ar ! new StopPacket()
-                                case None => sender ! new StopPacket()
+                                case None => {}
                             }
                         }
                     }) &>> sinkIteratee
     
-                channel.eofAndEnd           
+                channel.eofAndEnd
                 self ! PoisonPill
             }
         }

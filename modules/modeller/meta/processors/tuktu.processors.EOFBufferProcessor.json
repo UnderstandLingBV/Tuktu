@@ -16,7 +16,16 @@
 		{
 			"name": "config",
 			"type": "object",
-			"required": true
+			"required": true,
+			"parameters": [
+				{
+					"name": "sync",
+					"type": "boolean",
+					"required": false,
+					"default": false,
+					"description": "Whether or not the result of the remaining flow is required to be send back."
+				}
+			]
 		}
 	]
 }

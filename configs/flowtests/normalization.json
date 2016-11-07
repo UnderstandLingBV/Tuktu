@@ -20,7 +20,9 @@
         {
             "id": "eofbuffer",
             "result": "eofbuffer",
-            "config": {},
+            "config": {
+				"sync": true
+			},
             "name": "tuktu.processors.EOFBufferProcessor",
             "next": [
                 "normTrain"

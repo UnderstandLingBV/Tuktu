@@ -142,14 +142,21 @@ class TimeBufferProcessor(genActor: ActorRef, resultName: String) extends Buffer
 /**
  * Buffers until EOF (end of data stream) is found
  */
-class EOFBufferProcessor(resultName: String) extends BaseProcessor(resultName) {
-    // Iteratee to take the data we need
-    def groupPackets: Iteratee[DataPacket, DataPacket] = for (
-            dps <- Enumeratee.takeWhile[DataPacket](_ != Input.EOF) &>> Iteratee.getChunks
-    ) yield new DataPacket(dps.flatMap(data => data.data))
+class EOFBufferProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
-    // Use the iteratee and Enumeratee.grouped
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
+    // Set up the buffering actor
+    val bufferActor = Akka.system.actorOf(Props(classOf[BufferActor], genActor))
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        // Iterate over our data and add to the buffer
+        data.data.foreach(datum => bufferActor ! datum)
+
+        data
+    }) compose Enumeratee.onEOF(() => {
+        Await.result(bufferActor ? "release", Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+        bufferActor ! new StopPacket
+    })
 }
 
 /**

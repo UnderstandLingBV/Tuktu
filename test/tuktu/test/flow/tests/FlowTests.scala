@@ -17,7 +17,7 @@ class FlowTests extends PlaySpec {
         }
     }
 
-    "Normalization flow" must {
+    /*"Normalization flow" must {
         "normalize values to range [-1, 1]" in {
             val data = List(DataPacket(List(
                 Map("data" -> 0.6),
@@ -26,5 +26,5 @@ class FlowTests extends PlaySpec {
                 Map("data" -> -0.6))))
             new BaseFlowTester(Akka.system)(List(data), "flowtests/normalization")
         }
-    }
+    }*/
 }
