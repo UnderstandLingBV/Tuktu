@@ -63,7 +63,7 @@ class SyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataPa
             if (!dontReturnAtAll) {
                 senderActor match {
                     case Some(ar) => ar ! d
-                    case None => sActor ! d
+                    case None => {}
                 }
             }
             

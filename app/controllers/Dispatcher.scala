@@ -476,7 +476,11 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                 else
                                     Akka.system.actorOf(
                                         SmallestMailboxPool(instanceCount).props(
-                                            Props(clazz, resultName, processorEnumeratees, dr.sourceActor)
+                                            Props(clazz, resultName, processorEnumeratees, {
+                                                // If there are subflows, then we should not send back from the actor, but
+                                                // from the subflows instead
+                                                if (subflows.isEmpty) dr.sourceActor else None
+                                            })
                                         ),
                                         name = dr.configName.replaceAll("/| ", "_") +  "_" + clazz.getName +  "_" + idString
                                     )

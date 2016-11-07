@@ -36,6 +36,13 @@
 					"description": "The name of the node the signallee lives on. If set, the signal can be sent to a remote note from the signaller to the signalee.",
 					"required": false,
 					"default": ""
+				},
+				{
+					"name": "sync",
+					"type": "boolean",
+					"required": false,
+					"default": false,
+					"description": "Whether or not the result of the remaining flow is required to be send back."
 				}
 			]
 		}
