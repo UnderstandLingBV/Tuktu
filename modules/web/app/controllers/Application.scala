@@ -96,7 +96,7 @@ object Application extends Controller {
                                         val fut = Akka.system.actorSelection("user/TuktuDispatcher") ?
                                             new DispatchRequest(
                                                 webRepo.drop(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs").size)
-                                                    + "/" + id + "/" + fn, None, false, true, true, None)
+                                                    + "/" + id + "/" + fn, None, false, true, false, None)
                                         // We must wait here
                                         val actorRef = Await.result(fut, timeout.duration).asInstanceOf[ActorRef]
                                         // Add to our map

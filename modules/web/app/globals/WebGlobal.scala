@@ -56,7 +56,7 @@ class WebGlobal() extends TuktuGlobal() {
                             (fldr.getName, Akka.system.actorSelection("user/TuktuDispatcher") ?
                                 new DispatchRequest(
                                         webRepo.drop(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs").size) + "/" + fldr.getName + "/Tuktu",
-                                        None, false, true, true, None))
+                                        None, false, true, false, None))
                             
                         } else ("", Future { }) 
                     } catch {
