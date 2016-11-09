@@ -116,6 +116,7 @@ lazy val dlibDependencies = Seq(
     cache,
     "commons-io" % "commons-io" % "2.4",
     "org.json" % "json" % "20151123",
+    "org.freemarker" % "freemarker" % "2.3.23",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
