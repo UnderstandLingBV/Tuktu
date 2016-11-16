@@ -67,8 +67,8 @@ lazy val socialDependencies = Seq(
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "org.twitter4j" % "twitter4j-core" % "4.0.4",
     "org.twitter4j" % "twitter4j-stream" % "4.0.4",
-    "com.github.scribejava" % "scribejava-apis" % "2.3.0",
-    "com.googlecode.batchfb" % "batchfb" % "2.1.6"
+    "com.github.scribejava" % "scribejava-apis" % "3.2.0",
+    "com.restfb" % "restfb" % "1.33.0"
 )
 
 lazy val nosqlDependencies = Seq(

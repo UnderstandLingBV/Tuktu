@@ -5,9 +5,6 @@ import scala.concurrent.duration.DurationLong
 
 import org.joda.time.format.DateTimeFormat
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.googlecode.batchfb.FacebookBatcher
-
 import akka.actor._
 import tuktu.api._
 import play.api.Play.current
@@ -18,13 +15,26 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 
+import com.restfb.DefaultFacebookClient
+import com.restfb.Version
+import com.fasterxml.jackson.databind.JsonNode
+import com.restfb.batch.BatchRequest.BatchRequestBuilder
+import com.restfb.Parameter
+
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+import com.restfb.types.Post
+import com.restfb.Connection
+import com.restfb.json.JsonObject
+import scala.concurrent.Future
+
 case class FBDataRequest(
     urls: List[String],
     start: Option[Long],
     end: Option[Long]
 )
 
-class AsyncFacebookCollector(parentActor: ActorRef, fbClient: FacebookBatcher, updateTime: Long) extends Actor with ActorLogging {
+class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, updateTime: Long, fields: String) extends Actor with ActorLogging {
     val fbTimeFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ")
 
     def receive() = {
@@ -42,104 +52,166 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: FacebookBatcher, u
             }
 
             // Get the URLs in batched fasion
-            val searches = (for (url <- urls) yield fbClient.paged({
-                url + {
-                    if (fbdr.start != None) "&since=" + fbdr.start.getOrElse(0L).toString else ""
-                } + {
-                    if (fbdr.end != None) "&until=" + fbdr.end.getOrElse(13592062088L).toString else ""
-                }
-            }, classOf[JsonNode])).toList
-            // Go through them
-            val newUrls = (for ((search, index) <- searches.zipWithIndex) yield {
-                var resultsFound = false
-                var currentSearch = search.get
-                var numResults = 0
-                do {
-                    if (currentSearch != null) {
-                        // Get the individual JSON results
-                        val objects = currentSearch.toList
-                        if (objects.nonEmpty) resultsFound = true
-                        for (obj <- objects) {
-                            val playJs = Json.parse(obj.toString)
-                            // Get the unix timestamp of this object
-                            val timestamp = (playJs \ "created_time").as[String]
-                            val unixTime = fbTimeFormat.parseDateTime(timestamp).getMillis() / 1000
-                            // See if the creation time was within our interval
-                            if (unixTime <= endTime && unixTime >= startTime) {
-                                // Send result to parent
-                                parentActor ! new ResponsePacket(playJs)
-                                numResults += 1
-                            }
+            val requests = for (url <- urls) yield {
+                // Build the start and end parameters
+                val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", fields)) ++ {
+                        fbdr.start match {
+                            case Some(s) => Array(Parameter.`with`("since", s))
+                            case None => Array[Parameter]()
                         }
-
-                        // Get next
-                        if (search.next != null)
-                            currentSearch = search.next.get
-                        else currentSearch = null
+                    } ++ {
+                        fbdr.end match {
+                            case Some(e) => Array(Parameter.`with`("until", e))
+                            case None => Array[Parameter]()
+                        }
                     }
-                } while (currentSearch != null && numResults == 50)
-
-                // We are done with this backtracking, see if we need to do more for this search
-                if (resultsFound) {
-                    // Construct the url
-                    urls(index)
-                } else ""
-            }).toList.filter(elem => elem != "")
-
-            // Schedule next request, if applicable
-            // TODO: Maybe simplify this
-            (fbdr.start, fbdr.end) match {
-                case (start: Option[Long], end: Option[Long]) if start != None && end != None => now match {
-                    case n if n < start.getOrElse(0L) => {
-                        // Start-time is yet to come, schedule next polling
-                        Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
-                            new FBDataRequest(newUrls, fbdr.start, fbdr.end))
-                    }
-                    case n if (n >= start.getOrElse(0L) && n <= end.getOrElse(13592062088L)) => {
-                        // End time is still in the future, so we start from where we left off (which is 'now')
-                        Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
-                            new FBDataRequest(newUrls, Some(now), fbdr.end))
-                    }
-                    case n if n > end.getOrElse(13592062088L) => {
-                        // Stop, end-time is already in the past
-                        parentActor ! new StopPacket
-                        self ! PoisonPill
-                    }
-                }
-                case (start: Option[Long], end: Option[Long]) if start != None && end == None => now match {
-                    case n if n < start.getOrElse(0L) => {
-                        // Start-time is yet to come, schedule next one
-                        Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
-                            new FBDataRequest(newUrls, fbdr.start, fbdr.end))
-                    }
-                    case n if n >= start.getOrElse(0L) => {
-                        // Start time was in the past, but there is no end-time, we have to keep on going perpetually
-                        Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
-                            new FBDataRequest(newUrls, Some(now), fbdr.end))
-                    }
-                }
-                case (start: Option[Long], end: Option[Long]) if start == None && end != None => now match {
-                    case n if n <= end.getOrElse(13592062088L) => {
-                        // End time is still in the future, so we start from where we left off (which is 'now')
-                        Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
-                            new FBDataRequest(newUrls, Some(now), fbdr.end))
-                    }
-                    case n if n > end.getOrElse(13592062088L) => {
-                        // Stop, end-time is already in the past
-                        parentActor ! new StopPacket
-                    }
-                }
-                case _ => {
-                    // Default, get next one
-                    Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
-                        new FBDataRequest(newUrls, fbdr.start, fbdr.end))
-                }
+                    
+                // Add the batched request
+                new BatchRequestBuilder(url)
+                        .parameters(parameters: _*)
+                        .build()
             }
+            
+            // Make the requests
+            val responses = fbClient.executeBatch(requests.asJava)
+            
+            Future.sequence((for ((response, index) <- responses.zipWithIndex) yield Future {
+                // Keep track of time for new requests
+                var resultsFound = false
+                var numResults = 0
+                
+                val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
+                for (objects <- objectList) yield {
+                    // Update if we found something
+                    if (objects.size > 0) resultsFound = true
+                    
+                    for (obj <- objects) {
+                        // Get the post
+                        val post = fbClient.getJsonMapper.toJavaObject(obj.toString, classOf[Post])
+                        
+                        // Parse time and all that
+                        val unixTime = post.getCreatedTime.getTime / 1000
+                        // See if the creation time was within our interval
+                        if (unixTime <= endTime && unixTime >= startTime) {
+                                // Send result to parent
+                                parentActor ! new ResponsePacket(Json.parse(obj.toString))
+                                numResults += 1
+                        }
+                    }
+                }
+                
+                // Need more?
+                if (resultsFound) urls(index) else ""
+            }).toList).map(resultList => {
+                // Filter empty ones
+                val newUrls = resultList.filter(_ != "")
+                
+                // Schedule next request, if applicable
+                (fbdr.start, fbdr.end) match {
+                    case (start: Option[Long], end: Option[Long]) if start != None && end != None => now match {
+                        case n if n < start.getOrElse(0L) => {
+                            // Start-time is yet to come, schedule next polling
+                            Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
+                                new FBDataRequest(newUrls, fbdr.start, fbdr.end))
+                        }
+                        case n if (n >= start.getOrElse(0L) && n <= end.getOrElse(13592062088L)) => {
+                            // End time is still in the future, so we start from where we left off (which is 'now')
+                            Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
+                                new FBDataRequest(newUrls, Some(now), fbdr.end))
+                        }
+                        case n if n > end.getOrElse(13592062088L) => {
+                            // Stop, end-time is already in the past
+                            parentActor ! new StopPacket
+                            self ! PoisonPill
+                        }
+                    }
+                    case (start: Option[Long], end: Option[Long]) if start != None && end == None => now match {
+                        case n if n < start.getOrElse(0L) => {
+                            // Start-time is yet to come, schedule next one
+                            Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
+                                new FBDataRequest(newUrls, fbdr.start, fbdr.end))
+                        }
+                        case n if n >= start.getOrElse(0L) => {
+                            // Start time was in the past, but there is no end-time, we have to keep on going perpetually
+                            Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
+                                new FBDataRequest(newUrls, Some(now), fbdr.end))
+                        }
+                    }
+                    case (start: Option[Long], end: Option[Long]) if start == None && end != None => now match {
+                        case n if n <= end.getOrElse(13592062088L) => {
+                            // End time is still in the future, so we start from where we left off (which is 'now')
+                            Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
+                                new FBDataRequest(newUrls, Some(now), fbdr.end))
+                        }
+                        case n if n > end.getOrElse(13592062088L) => {
+                            // Stop, end-time is already in the past
+                            parentActor ! new StopPacket
+                        }
+                    }
+                    case _ => {
+                        // Default, get next one
+                        Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
+                            new FBDataRequest(newUrls, fbdr.start, fbdr.end))
+                    }
+                }
+            })
         }
     }
 }
 
 class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
+    val allFields = List(
+            "id",
+            "application",
+            "call_to_action",
+            "caption",
+            "child_attachments",
+            "comments_mirroring_domain",
+            "coordinates",
+            "created_time",
+            "description",
+            "event",
+            "expanded_height",
+            "expanded_width",
+            "feed_targeting",
+            "from",
+            "full_picture",
+            "height",
+            "icon",
+            "instagram_eligibility",
+            "is_expired",
+            "is_hidden",
+            "is_instagram_eligible",
+            "is_popular",
+            "is_published",
+            "is_spherical",
+            "link",
+            "message",
+            "message_tags",
+            "name",
+            "object_id",
+            "parent_id",
+            "permalink_url",
+            "picture",
+            "place",
+            "privacy",
+            "promotion_status",
+            "properties",
+            "scheduled_publish_time",
+            "shares",
+            "source",
+            "status_type",
+            "story",
+            "story_tags",
+            "target",
+            "targeting",
+            "timeline_visibility",
+            "type",
+            "updated_time",
+            "via",
+            "width"
+    )
+    
     override def _receive = {
         case config: JsValue => {
             // Get credentials
@@ -147,14 +219,17 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val aToken = (credentials \ "access_token").as[String]
             // Get update time
             val updateTime = (config \ "update_time").asOpt[Long].getOrElse(5L)
+            
+            // Get the fields we need
+            val fields = (config \ "fields").asOpt[List[String]].getOrElse(allFields).mkString(",")
 
             // Set up Scribe client
-            val fbClient = new FacebookBatcher(aToken)
+            val fbClient = new DefaultFacebookClient(aToken, Version.VERSION_2_8)
 
             // Filters that we need to check
             val filters = Common.getFilters(config)
-            val keywords = filters("keywords").asInstanceOf[Array[String]]
-            val users = filters("userids").asInstanceOf[Array[String]]
+            val users = filters("userids")
+                .asInstanceOf[Array[String]].map(_ + "/feed")
 
             // Check period, if given
             val interval = (config \ "interval").asOpt[JsObject]
@@ -177,26 +252,9 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val now = System.currentTimeMillis / 1000
             if (startTime == null && endTime == null) startTime = Some(now)
 
-            // Set up the initial URLs
-            val userUrls = {
-                if (users != null) {
-                    (for (userid <- users) yield {
-                        userid + "/feed?limit=50"
-                    }).toList
-                } else List()
-            }
-            val keywordUrls = {
-                if (keywords != null) {
-                    (for (keyword <- keywords) yield {
-                        "/search?q=" + keyword + "&type=post&limit=50"
-                    }).toList
-                } else List()
-            }
-
             // Merge URLs and send to periodic actor
-            val urls = userUrls ++ keywordUrls
-            val pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime))
-            pollerActor ! new FBDataRequest(urls, startTime, endTime)
+            val pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime, fields))
+            pollerActor ! new FBDataRequest(users.toList, startTime, endTime)
         }
         case data: ResponsePacket => channel.push(DataPacket(List(Map(resultName -> data.json))))
     }

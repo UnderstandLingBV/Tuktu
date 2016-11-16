@@ -89,6 +89,20 @@
 					]
 				},
 				{
+					"name": "fields",
+					"description": "The Graph API fields to request. If not specified, gets all fields known to exist.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"description": "Field name.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
 					"name": "update_time",
 					"label": "Update frequency",
 					"description": "Time in seconds between requests, if applicable.",
