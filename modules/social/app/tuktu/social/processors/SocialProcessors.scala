@@ -132,6 +132,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
                                 case Some(fr) => {
                                     List(
                                         (fr \ "name").asOpt[String].getOrElse("").toLowerCase,
+                                        (fr \ "username").asOpt[String].getOrElse("").toLowerCase,
                                         (fr \ "id").asOpt[String].getOrElse("-1")
                                     )
                                 }
@@ -142,7 +143,11 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
                             (item \ "to").asOpt[JsObject] match {
                                 case Some(to) => {
                                     (to \ "data").as[List[JsObject]].flatMap(t => {
-                                        List((t \ "name").as[String], (t \ "id").as[String])
+                                        List(
+                                                (t \ "name").as[String],
+                                                (t \ "username").as[String],
+                                                (t \ "id").as[String]
+                                        )
                                     })
                                 }
                                 case None => List()
