@@ -127,16 +127,23 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
                 "users" -> (users match {
                     case Some(usrs) => {
                         // User could be either in the from-field or the to-field
-                        val fromName = {
+                        val from = {
                             (item \ "from").asOpt[JsObject] match {
-                                case Some(fr) => (fr \ "name").asOpt[String].getOrElse("").toLowerCase
-                                case None     => ""
+                                case Some(fr) => {
+                                    List(
+                                        (fr \ "name").asOpt[String].getOrElse("").toLowerCase,
+                                        (fr \ "id").asOpt[String].getOrElse("-1")
+                                    )
+                                }
+                                case None     => List()
                             }
                         }
-                        val toNames = {
+                        val to = {
                             (item \ "to").asOpt[JsObject] match {
                                 case Some(to) => {
-                                    (to \ "data").as[List[JsObject]].map(t => (t \ "name").as[String])
+                                    (to \ "data").as[List[JsObject]].flatMap(t => {
+                                        List((t \ "name").as[String], (t \ "id").as[String])
+                                    })
                                 }
                                 case None => List()
                             }
@@ -144,7 +151,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
 
                         // Now check for all users
                         usrs.filter(usr => {
-                            fromName.toLowerCase.contains(usr) || toNames.foldLeft(false)(_ || _.toLowerCase.contains(usr))
+                            from.exists(_ == usr) || to.exists(_ == usr)
                         })
                     }
                     case None => List()

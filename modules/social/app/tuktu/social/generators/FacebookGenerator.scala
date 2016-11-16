@@ -223,7 +223,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             // Get the fields we need
             val fields = (config \ "fields").asOpt[List[String]].getOrElse(allFields).mkString(",")
 
-            // Set up Scribe client
+            // Set up RestFB
             val fbClient = new DefaultFacebookClient(aToken, Version.VERSION_2_8)
 
             // Filters that we need to check
