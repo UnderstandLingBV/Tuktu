@@ -1,15 +1,17 @@
 package tuktu.api
 
+import java.nio.file.{ Files, Paths }
 import java.util.Date
+import scala.util.Try
 import scala.util.hashing.MurmurHash3
 import org.joda.time.DateTime
+import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.json._
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.concurrent.Akka
 import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.Play
 import scala.xml.{ XML, Elem, Node, NodeSeq }
 import fastparse.all._
 
@@ -378,5 +380,15 @@ object utils {
         else
             // Use relative error
             diff / math.min(absA + absB, Double.MaxValue) < epsilon
+    }
+
+    /**
+     * Loads a config from the config folder
+     */
+    def loadConfig(name: String): Try[JsObject] = Try {
+        val path = Paths.get(
+            Cache.getAs[String]("configRepo").getOrElse("configs"),
+            name + { if (name.endsWith(".json")) "" else ".json" })
+        Json.parse(Files.readAllBytes(path)).as[JsObject]
     }
 }

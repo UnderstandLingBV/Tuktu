@@ -6,12 +6,9 @@ import java.nio.file.Paths
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+import scala.util.{ Try, Success, Failure }
 
-import akka.actor.Actor
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
-import akka.actor.PoisonPill
-import akka.actor.Props
+import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play
@@ -27,7 +24,6 @@ import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.Controller
 import tuktu.api._
-import akka.pattern.ask
 
 /**
  * Controller for all REST API functionality of Tuktu
@@ -72,24 +68,26 @@ object RESTAPI extends Controller {
             case mor: MonitorOverviewResult => {
                 // TODO: Extend with more fields per flow
                 Ok(Json.obj(
-                        "running" -> mor.runningJobs.map(job => {
+                        "running" -> mor.runningJobs.map { case (_, job) => 
                             Json.obj(
-                                    "uuid" -> job._2.uuid,
-                                    "instance" -> job._2.instances,
-                                    "start_time" -> job._2.startTime,
-                                    "finished_instances" -> job._2.finished_instances,
-                                    "end_time" -> job._2.endTime.getOrElse(null).asInstanceOf[Long]
+                                    "uuid" -> job.uuid,
+                                    "config_name" -> job.configName,
+                                    "instance" -> job.instances,
+                                    "finished_instances" -> job.finished_instances,
+                                    "start_time" -> job.startTime,
+                                    "end_time" -> job.endTime.getOrElse(null).asInstanceOf[Long]
                             )
-                        }),
-                        "finished" -> mor.finishedJobs.map(job => {
+                        },
+                        "finished" -> mor.runningJobs.map { case (_, job) => 
                             Json.obj(
-                                    "uuid" -> job._2.uuid,
-                                    "instance" -> job._2.instances,
-                                    "start_time" -> job._2.startTime,
-                                    "finished_instances" -> job._2.finished_instances,
-                                    "end_time" -> job._2.endTime.getOrElse(null).asInstanceOf[Long]
+                                    "uuid" -> job.uuid,
+                                    "config_name" -> job.configName,
+                                    "instance" -> job.instances,
+                                    "finished_instances" -> job.finished_instances,
+                                    "start_time" -> job.startTime,
+                                    "end_time" -> job.endTime.getOrElse(null).asInstanceOf[Long]
                             )
-                        })
+                        }
                 ))
             }
         }
@@ -99,17 +97,10 @@ object RESTAPI extends Controller {
      * Gets the config for a specific job
      */
     def getConfig(name: String) = Action.async { Future {
-        // Read config from disk
-        val filename = Cache.getAs[String]("configRepo").getOrElse("configs") + "/" + name + ".json"
-        if (Files.exists(Paths.get(filename))) {
-            val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
-                    "/" + name + ".json", "utf-8")
-            val cfg = Json.parse(configFile.mkString).as[JsObject]
-            configFile.close
-            
-            Ok(cfg)
-        } else {
-            NotFound(Json.obj("error" -> "The specified config file could not be found."))
+        utils.loadConfig(name) match {
+            case Success(obj) => Ok(obj)
+            case Failure(e: java.io.FileNotFoundException) => NotFound(Json.obj("error" -> "The specified config file could not be found."))
+            case Failure(e) => BadRequest(Json.obj("error" -> e.getMessage))
         }
     }}
 
