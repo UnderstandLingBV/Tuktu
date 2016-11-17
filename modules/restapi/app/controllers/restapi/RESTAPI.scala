@@ -79,12 +79,37 @@ object RESTAPI extends Controller {
                         "flow_datum_count" -> utils.AnyToJsValue(job.flowDatumCount),
                         "processor_datapacket_count" -> utils.AnyToJsValue(job.processorDataPacketCount),
                         "processor_datum_count" -> utils.AnyToJsValue(job.processorDatumCount),
-                        "processor_durations" -> utils.AnyToJsValue(job.processorDurations))
+                        "processor_durations" -> utils.AnyToJsValue(job.processorDurations.toMap.mapValues { list =>
+                            if (list.isEmpty)
+                                Map.empty
+                            else {
+                                def round(d: Double, n: Int): Double = Math.round(d * Math.pow(10, n)) / Math.pow(10, n)
+                                val sorted = list.toList.sorted
+                                val n = sorted.size
+                                val minimum = sorted.head
+                                val maximum = sorted.last
+                                val average = sorted.sum.toDouble / n
+                                val variance = sorted.map { dur => Math.pow(dur - average, 2) }.sum / n
+                                val median = 
+                                    if (n % 2 ==  1) 
+                                        sorted((n - 1) / 2) 
+                                    else 
+                                        round((sorted(n / 2) + sorted(n / 2 - 1)) / 2.0, 3)
+                                val mode = sorted.groupBy { dur => dur }.maxBy { case (_, l) => l.size }._1
+                                Map(
+                                    "minimum" -> minimum,
+                                    "maximum" -> maximum,
+                                    "mode" -> mode,
+                                    "average" -> round(average, 3),
+                                    "variance" -> round(variance, 3),
+                                    "stdev" -> round(Math.sqrt(variance), 3),
+                                    "median" -> round(median, 3))
+                            }
+                        }))
 
                 Ok(Json.obj(
                     "running" -> mor.runningJobs.map { case (_, job) => toJson(job) },
-                    "finished" -> mor.finishedJobs.map { case (_, job) => toJson(job) }
-                ))
+                    "finished" -> mor.finishedJobs.map { case (_, job) => toJson(job) }))
         }
     }
 
