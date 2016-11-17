@@ -12,6 +12,7 @@ import play.api.libs.json._
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.concurrent.Akka
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.GenMap
 import scala.xml.{ XML, Elem, Node, NodeSeq }
 import fastparse.all._
 
@@ -178,11 +179,12 @@ object utils {
         case a: Date               => if (!mongo) a else Json.obj("$date" -> a.getTime)
         case a: DateTime           => if (!mongo) a else Json.obj("$date" -> a.getMillis)
         case a: JsValue            => a
-        case a: (_, _)             => MapToJsObject(Map(a._1 -> a._2), mongo)
-        case a: Map[_, _]          => MapToJsObject(a, mongo)
+        case a: (_, _)             => MapToJsObject(Map(a), mongo)
+        case a: GenMap[_, _]       => MapToJsObject(a, mongo)
         case a: TraversableOnce[_] => SeqToJsArray(a.toSeq, mongo)
         case a: Array[_]           => SeqToJsArray(a, mongo)
-        case _                     => if (a == null) "null" else a.toString
+        case null                  => "null" // Why not JsNull?
+        case _                     => a.toString
     }
 
     /**
@@ -194,14 +196,14 @@ object utils {
     /**
      * Turns any Seq[Any] into a JsArray
      */
-    def SeqToJsArray(seq: Seq[Any], mongo: Boolean = false): JsArray =
+    def SeqToJsArray(seq: Seq[_], mongo: Boolean = false): JsArray =
         Json.arr(seq.map(value => AnyToJsValueWrapper(value, mongo)): _*)
 
     /**
      * Turns a Map[Any, Any] into a JsObject
      */
-    def MapToJsObject(map: Map[_ <: Any, Any], mongo: Boolean = false): JsObject =
-        Json.obj(map.map(tuple => tuple._1.toString -> AnyToJsValueWrapper(tuple._2, mongo)).toSeq: _*)
+    def MapToJsObject(map: GenMap[_, _], mongo: Boolean = false): JsObject =
+        Json.obj(map.map { case (key, value) => key.toString -> AnyToJsValueWrapper(value, mongo) }.toList: _*)
 
     /**
      * Takes a JsValue and returns a scala object

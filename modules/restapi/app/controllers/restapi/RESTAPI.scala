@@ -65,31 +65,26 @@ object RESTAPI extends Controller {
         // Ask the monitor for all jobs
         val fut = (Akka.system.actorSelection("user/TuktuMonitor") ? new MonitorOverviewRequest).asInstanceOf[Future[MonitorOverviewResult]]
         fut.map {
-            case mor: MonitorOverviewResult => {
-                // TODO: Extend with more fields per flow
+            case mor: MonitorOverviewResult =>
+                def toJson(job: AppMonitorObject): JsObject =
+                    Json.obj(
+                        "uuid" -> job.uuid,
+                        "config_name" -> job.configName,
+                        "instance" -> job.instances,
+                        "finished_instances" -> job.finished_instances,
+                        "start_time" -> job.startTime,
+                        "end_time" -> job.endTime.getOrElse(null).asInstanceOf[Long],
+                        "errors" -> utils.AnyToJsValue(job.errors),
+                        "flow_datapacket_count" -> utils.AnyToJsValue(job.flowDataPacketCount),
+                        "flow_datum_count" -> utils.AnyToJsValue(job.flowDatumCount),
+                        "processor_datapacket_count" -> utils.AnyToJsValue(job.processorDataPacketCount),
+                        "processor_datum_count" -> utils.AnyToJsValue(job.processorDatumCount),
+                        "processor_durations" -> utils.AnyToJsValue(job.processorDurations))
+
                 Ok(Json.obj(
-                        "running" -> mor.runningJobs.map { case (_, job) => 
-                            Json.obj(
-                                    "uuid" -> job.uuid,
-                                    "config_name" -> job.configName,
-                                    "instance" -> job.instances,
-                                    "finished_instances" -> job.finished_instances,
-                                    "start_time" -> job.startTime,
-                                    "end_time" -> job.endTime.getOrElse(null).asInstanceOf[Long]
-                            )
-                        },
-                        "finished" -> mor.runningJobs.map { case (_, job) => 
-                            Json.obj(
-                                    "uuid" -> job.uuid,
-                                    "config_name" -> job.configName,
-                                    "instance" -> job.instances,
-                                    "finished_instances" -> job.finished_instances,
-                                    "start_time" -> job.startTime,
-                                    "end_time" -> job.endTime.getOrElse(null).asInstanceOf[Long]
-                            )
-                        }
+                    "running" -> mor.runningJobs.map { case (_, job) => toJson(job) },
+                    "finished" -> mor.finishedJobs.map { case (_, job) => toJson(job) }
                 ))
-            }
         }
     }
 

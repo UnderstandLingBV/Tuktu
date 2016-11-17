@@ -133,11 +133,11 @@ case class AppMonitorObject(
         if (force || endTime != None)
             endTime = Some(current)
     }
-    def is_expired(current: Long = System.currentTimeMillis): Boolean = endTime match {
+    def is_expired(current: Long): Boolean = endTime match {
         case None      => false
         case Some(end) => end + { if (errors.isEmpty) expirationTime else errorExpirationTime } <= current
     }
-    def is_expired: Boolean = is_expired()
+    def is_expired: Boolean = is_expired(System.currentTimeMillis)
 }
 
 case class AppMonitorPacket(
