@@ -86,7 +86,7 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
      */
     def getOtherDaemons() {
         // Update self
-        dbDaemons.put(homeAddress, self)
+        dbDaemons.put(homeAddress, context.parent)
         
         // Request all other daemons for their IDs
         val otherNodes = clusterNodes.keys.toList diff List(Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
@@ -100,7 +100,7 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
         case initiate: IntiateDaemonUpdate => getOtherDaemons
         case idr: DBIdentityRequest => {
             // Another DB daemon asked us to send it our address
-            sender ! new DBActorIdentity(homeAddress, self)
+            sender ! new DBActorIdentity(homeAddress, context.parent)
         }
         case id: DBActorIdentity => {
             // Another DB daemon is letting us know its presence

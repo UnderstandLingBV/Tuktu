@@ -32,9 +32,9 @@ class HealthMonitor() extends Actor with ActorLogging {
     
     // Keep track of how many times we sent a failed message to each node
     val healthChecks = collection.mutable.Map[String, Int]()
-    var cNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+    val initcNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
     val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
-    cNodes.foreach(node => {
+    initcNodes.foreach(node => {
         if (node._1 != homeAddress)
             healthChecks += node._1 -> 0
     })
@@ -53,14 +53,11 @@ class HealthMonitor() extends Actor with ActorLogging {
     
     def receive() = {
         case hr: HealthRound => {
-            cNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+            val cNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
             
             // Send out health checks to all nodes
             val clusterNodes = cNodes - homeAddress
             val futures = for ((hostname, node) <- clusterNodes) yield {
-                // Add to health checks
-                healthChecks += hostname -> 0
-                
                 // Return future
                 val location = "akka.tcp://application@" + hostname  + ":" + node.akkaPort + "/user/TuktuDispatcher"
                 (hostname, (Akka.system.actorSelection(location) ? new HealthCheck).asInstanceOf[Future[HealthReply]])
