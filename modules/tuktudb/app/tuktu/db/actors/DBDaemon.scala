@@ -27,6 +27,7 @@ import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import tuktu.api._
 import scala.collection.mutable.Queue
+import scala.concurrent.Await
 
 // helper case class to get Overview from each node separately
 case class InternalOverview(
@@ -160,11 +161,10 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
                 if (nodes.isEmpty) sender ! new ReadResponse(List())
                 else {
                     // One must have it, pick any
-                    val fut = dbDaemons.get(Random.shuffle(nodes).head) ? rr
-                    
-                    fut.map {
+                    val fut = (dbDaemons.get(Random.shuffle(nodes).head) ? rr).map {
                         case rr: ReadResponse => sender ! rr
                     }
+                    Await.ready(fut, timeout.duration)
                 }
             }
         }
