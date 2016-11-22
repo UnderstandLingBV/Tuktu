@@ -156,7 +156,7 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
                 case None => sender ! new ReadResponse(tuktudb(rr.key) toList)
                 case Some(s) => s ! new ReadResponse(tuktudb(rr.key) toList)
             }
-            else {
+            else if (rr.isFirst) {
                 // We need to query other nodes
                 val nodes = hash(List(rr.key)) diff List(homeAddress)
                 
@@ -169,10 +169,16 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
                     // One must have it, pick any
                     dbDaemons.get(Random.shuffle(nodes).head) ! {
                         rr.originalSender match {
-                            case None => new ReadRequest(rr.key, Some(sender))
-                            case Some(s) => rr
+                            case None => new ReadRequest(rr.key, false, Some(sender))
+                            case Some(s) => new ReadRequest(rr.key, false, rr.originalSender)
                         }
                     }
+            } else {
+                // We failed to find the bucket
+                rr.originalSender match {
+                    case None => sender ! new ReadResponse(List())
+                    case Some(s) => s ! new ReadResponse(List())
+                }
             }
         }
         case dr: DeleteRequest => {
