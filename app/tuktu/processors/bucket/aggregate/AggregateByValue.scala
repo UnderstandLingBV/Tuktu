@@ -74,7 +74,7 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
                 }
                 // Peplace functions with field value names
                 val newExpression = parser.allowedFunctions.foldLeft(evaluatedExpression.get)((a, b) => {
-                    a.replace(b + "()", b + "(" + jsStrings.mkString(",") + ")")
+                    a.replace(b + "()", b + "(" + JsString(jsStrings.mkString(",")).toString + ")")
                 })
 
                 // Build nested result: split by '.' and nest the whole way down; then mergeMaps

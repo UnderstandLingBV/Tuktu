@@ -1,7 +1,7 @@
 package tuktu.api.Parsing
 
 import fastparse.WhitespaceApi
-import play.api.libs.json.{ JsArray, JsObject, JsString, JsNull, JsValue }
+import play.api.libs.json.{ Json, JsArray, JsObject, JsString, JsNull, JsValue }
 import tuktu.api.utils.{ fieldParser, nearlyEqual }
 import scala.util.Try
 import tuktu.api.statistics.StatHelper
@@ -72,9 +72,14 @@ class TuktuArithmeticsParser(data: List[Map[String, Any]]) {
     // List of allowed functions
     val allowedFunctions = List("count", "avg", "median", "sum", "max", "min", "stdev")
 
+    // Function parameter
+    val parameter: P[String] = P("\"" ~ ("\\\"" | CharPred(_ != '"')).rep ~ "\"").!.map {
+        str => Json.parse(str).as[String]
+    }
+
     // All Tuktu-defined arithmetic functions
     val functions: P[Double] = P(
-        StringIn(allowedFunctions: _*).! ~/ "(" ~/ CharPred(_ != ')').rep(0).! ~ ")").map {
+        StringIn(allowedFunctions: _*).! ~/ "(" ~/ (parameter | CharPred(_ != ')').rep.!) ~ ")").map {
             case ("avg", field) => {
                 val (sum, count) = data.foldLeft(0.0, 0) {
                     case ((sum, count), datum) =>
