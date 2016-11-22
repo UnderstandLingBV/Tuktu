@@ -152,19 +152,32 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
         }
         case rr: ReadRequest => {
             // Probe first
-            if (tuktudb.contains(rr.key)) sender ! new ReadResponse(tuktudb(rr.key) toList)
-            else {
+            if (tuktudb.contains(rr.key)) rr.originalSender match {
+                case None => sender ! new ReadResponse(tuktudb(rr.key) toList)
+                case Some(s) => s ! new ReadResponse(tuktudb(rr.key) toList)
+            }
+            else if (rr.isFirst) {
                 // We need to query other nodes
                 val nodes = hash(List(rr.key)) diff List(homeAddress)
                 
                 // There are no other nodes
-                if (nodes.isEmpty) sender ! new ReadResponse(List())
-                else {
+                if (nodes.isEmpty) rr.originalSender match {
+                    case None => sender ! new ReadResponse(List())
+                    case Some(s) => s ! new ReadResponse(List())
+                }
+                else
                     // One must have it, pick any
-                    val fut = (dbDaemons.get(Random.shuffle(nodes).head) ? rr).map {
-                        case rr: ReadResponse => sender ! rr
+                    dbDaemons.get(Random.shuffle(nodes).head) ! {
+                        rr.originalSender match {
+                            case None => new ReadRequest(rr.key, false, Some(sender))
+                            case Some(s) => new ReadRequest(rr.key, false, rr.originalSender)
+                        }
                     }
-                    Await.ready(fut, timeout.duration)
+            } else {
+                // We failed to find the bucket
+                rr.originalSender match {
+                    case None => sender ! new ReadResponse(List())
+                    case Some(s) => s ! new ReadResponse(List())
                 }
             }
         }

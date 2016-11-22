@@ -24,7 +24,7 @@ class ReadGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
             
             for (key <- keys) {
                 // Request value from daemon
-                val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? new ReadRequest(key)
+                val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? new ReadRequest(key, true, None)
                 
                 fut.onSuccess {
                     case rr: ReadResponse => {

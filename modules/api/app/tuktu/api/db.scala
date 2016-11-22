@@ -1,5 +1,7 @@
 package tuktu.api
 
+import akka.actor.ActorRef
+
 /**
  * Requests
  */
@@ -16,7 +18,9 @@ case class ReplicateRequest(
         needReply: Boolean
 )
 case class ReadRequest(
-        key: String
+        key: String,
+        isFirst: Boolean,
+        originalSender: Option[ActorRef]
 )
 case class DeleteRequest(
         key: String,
