@@ -26,11 +26,9 @@ import play.api.libs.json.Json
  * Gets a webpage's content based on REST request
  */
 class TuktuJSGenerator(
-        referer: String,
         resultName: String,
         processors: List[Enumeratee[DataPacket, DataPacket]],
-        senderActor: Option[ActorRef]
-) extends TuktuBaseJSGenerator(referer, resultName, processors, senderActor) {
+        senderActor: Option[ActorRef]) extends TuktuBaseJSGenerator(resultName, processors, senderActor) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     // Channeling
@@ -72,10 +70,7 @@ class TuktuJSGenerator(
     }
 
     def receive() = {
-        case ip: InitPacket => {
-            // Add ourselves to the cache
-            Cache.getOrElse[collection.mutable.Map[String, ActorRef]]("web.hostmap")(collection.mutable.Map.empty) += (referer -> self)
-        }
+        case ip: InitPacket => {}
         case config: JsValue => {
             add_ip = (config \ "add_ip").asOpt[Boolean].getOrElse(false)
         }
@@ -84,10 +79,6 @@ class TuktuJSGenerator(
             Cache.getOrElse("JSGenerator.requesters")(collection.mutable.ListBuffer.empty[ActorRef]).foreach(_ ! error)
         }
         case sp: StopPacket => {
-            // Remove ourselves from the cache
-            Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap")
-                .getOrElse(collection.mutable.Map[String, ActorRef]()) -= referer
-
             // Send message to the monitor actor
             Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorPacket(self, "done")
 

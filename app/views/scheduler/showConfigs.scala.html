@@ -11,7 +11,7 @@
     @for(folder <- folders) {
         <div class="row">
             <div class="col-xs-12">
-                <a href="#" onClick="navigateFolder('@path.mkString("/")/@folder')">
+                <a href="#" onClick="navigateFolder('@{(path :+ folder).mkString("/")}')">
                     <span aria-hidden="true" class="glyphicon glyphicon-folder-open"></span>
                     &nbsp;
                     @folder
@@ -27,7 +27,7 @@
             @for((config, index) <- configs.zipWithIndex) {
                 <tr>
                    <td width="20px">
-                       <input type="checkbox" value="@path.mkString("/")/@config" name="jobs[@index]" value="@path.mkString("/")/@config">
+                       <input type="checkbox" value="@{(path :+ config).mkString("/")}" name="jobs[@index]">
                    </td>
                     <td>
                         <span aria-hidden="true" class="glyphicon glyphicon-file"> </span>
