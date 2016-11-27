@@ -117,6 +117,20 @@ class BaseFlowTester(as: ActorSystem, timeoutSeconds: Int = 5) extends TestKit(a
     def apply(outputs: List[List[DataPacket]], config: JsObject, ignoreOrder: Boolean): Unit = {
         // Build processor map
         val processorMap = Dispatcher.buildProcessorMap((config \ "processors").as[List[JsObject]])
+        
+        // To the processor map, we add our forwarding Enumeratee to following every sink processor
+        val id = java.util.UUID.randomUUID.toString
+        val forwardProcessor = Json.parse(
+                s"""
+                {
+                    "id": "${id}",
+                    "result": "",
+                    "config": {},
+                    "name": "tuktu.test.flow.EnumForwarder",
+                    "next": []
+                }
+                """
+        )
 
         // Get the data generators
         val generator = (config \ "generators").as[List[JsObject]].head

@@ -50,6 +50,7 @@ lazy val apiDependencies = Seq(
 lazy val nlpDependencies = Seq(
     cache,
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
+    "com.optimaize.languagedetector" % "language-detector" % "0.6",
     "org.apache.opennlp" % "opennlp-tools" % "1.5.3",
     "com.github.rholder" % "snowball-stemmer" % "1.3.0.581.1"
 )

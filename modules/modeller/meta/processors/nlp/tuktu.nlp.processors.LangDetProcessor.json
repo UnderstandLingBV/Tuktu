@@ -1,0 +1,37 @@
+{
+	"name": "Language Detection Processor",
+	"description": "Performs language detection on a given field. This algorithm supports more languages and is faster than LIGA but is less accurate.",
+	"class": "tuktu.nlp.processors.LangDetProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field to be performed language detection on.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "short_texts",
+					"description": "Whether or not to load models tailored towards short texts. Less languages are supported for short texts.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}
