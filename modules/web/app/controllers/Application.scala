@@ -1,29 +1,21 @@
 package controllers.web
 
+import java.nio.file.{ Files, Paths }
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+
+import akka.actor.ActorRef
+import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout
-import akka.actor.ActorRef
-import java.net.URL
-import java.nio.file._
-import play.api.cache.Cache
-import play.api._
-import play.api.Play
 import play.api.Play.current
+import play.api.cache.Cache
+import play.api.libs.json.{ Json, JsObject }
 import play.api.mvc._
-import play.api.libs.concurrent.Akka
-import play.api.libs.json.{ Json, JsArray, JsObject, JsString }
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Await
-import tuktu.api.{ DataPacket, DispatchRequest }
-import scala.concurrent.Future
-import tuktu.api.WebJsObject
-import tuktu.api.utils
-import tuktu.api.WebJsNextFlow
+import tuktu.api._
 import tuktu.web.js.JSGeneration
-import tuktu.api.WebJsOrderedObject
-import tuktu.api.ErrorPacket
-import tuktu.api.RequestPacket
 
 object Application extends Controller {
     val byteArray = Files.readAllBytes(Paths.get("public", "images", "pixel.gif"))
@@ -49,7 +41,9 @@ object Application extends Controller {
      */
     def handleRequest(id: String, isGET: Boolean)(implicit request: Request[AnyContent]): Future[Result] =
         // Try to get actual actor from hostmap
-        Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap").flatMap { _.get(id) } match {
+        Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap").flatMap { hostmap =>
+            hostmap.get(id)
+        } match {
             case None => Future { BadRequest("// The analytics script is not enabled.") }
             case Some(actorRef) =>
                 implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
@@ -58,10 +52,10 @@ object Application extends Controller {
                 (actorRef ? RequestPacket(request, isGET)).map {
                     case dp: DataPacket =>
                         // Get all the JS elements and output them one after the other
-                        val jsResult = JSGeneration.PacketToJsBuilder(dp)
-                        Ok(views.js.Tuktu(jsResult._2, jsResult._1,
+                        val (jsResult, nextFlow, includes) = JSGeneration.PacketToJsBuilder(dp)
+                        Ok(views.js.Tuktu(nextFlow, jsResult,
                             Cache.getOrElse[String]("web.url")("http://localhost:9000") + routes.Application.TuktuJsPost(id).url,
-                            jsResult._3))
+                            includes))
                             .withCookies(cookies: _*)
                     case error: ErrorPacket =>
                         BadRequest("// Internal error occured.")
@@ -82,7 +76,11 @@ object Application extends Controller {
      * Handles analytics by id
      */
     def TuktuJsPost(id: String) = Action.async { implicit request =>
-        handleRequest(id, false)
+        request.body.asJson.getOrElse(Json.obj()).asOpt[JsObject]
+            .flatMap { obj => (obj \ "f").asOpt[String] }
+            .map { fn => id + "/" + fn }
+            .map { id => handleRequest(id, false) }
+            .getOrElse(Future { BadRequest("// The analytics script is not enabled.") })
     }
 
     /**
