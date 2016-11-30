@@ -30,7 +30,7 @@ class ReadProcessor(resultName: String) extends BaseProcessor(resultName) {
             val evalKey = utils.evaluateTuktuString(key, data.data.head)
 
             // Request value from daemon
-            val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? new ReadRequest(evalKey, true, None)
+            val fut = Akka.system.actorSelection("user/tuktu.db.Daemon") ? new ReadRequest(evalKey, true)
 
             fut.map {
                 case rr: ReadResponse => DataPacket(rr.value)

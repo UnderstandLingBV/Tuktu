@@ -19,8 +19,7 @@ case class ReplicateRequest(
 )
 case class ReadRequest(
         key: String,
-        isFirst: Boolean,
-        originalSender: Option[ActorRef]
+        isFirst: Boolean
 )
 case class DeleteRequest(
         key: String,
