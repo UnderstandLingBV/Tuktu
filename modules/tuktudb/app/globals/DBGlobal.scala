@@ -43,7 +43,6 @@ class DBGlobal() extends TuktuGlobal() {
             SmallestMailboxPool(Play.current.configuration.getInt("tuktu.db.daemons").getOrElse(10))
                 .props(Props(classOf[DBDaemon], tuktudb)), name = "tuktu.db.Daemon")
         dbActor ! Broadcast(new InitPacket)
-
         
         // Create data directory
         val dataDir = new File(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))

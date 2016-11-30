@@ -56,11 +56,6 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
     
     val dataDir = new File(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))
     
-    // Map to get all the other daemons, use 4 * timeout so the periodic check is supposedly faster
-    val dbDaemons = new PassiveExpiringMap[String, ActorRef](4 * timeout.duration.toMillis)
-    // Always add ourselves, so TuktuDB will always function
-    dbDaemons.put(homeAddress, self)
-    
     // Check the persist strategy
     val persistType = Play.current.configuration.getString("tuktu.db.persiststrategy.type").getOrElse("time")
     
@@ -73,41 +68,9 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
                 Cache.getAs[Int]("tuktu.db.replication"),
                 true
         )
-        
-    // Periodically schedule checking of DB daemons
-    Akka.system.scheduler.schedule(
-            2 * timeout.duration,
-            2 * timeout.duration,
-            self,
-            new IntiateDaemonUpdate
-    )
-    
-    /**
-     * Helper function to get the other DB daemons
-     */
-    def getOtherDaemons() {
-        // Update self
-        dbDaemons.put(homeAddress, context.parent)
-        
-        // Request all other daemons for their IDs
-        val otherNodes = clusterNodes.keys.toList diff List(Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
-        otherNodes.foreach(hostname => {
-            val location = "akka.tcp://application@" + hostname + ":" + clusterNodes(hostname).akkaPort + "/user/tuktu.db.Daemon"
-            Akka.system.actorSelection(location) ! new DBIdentityRequest()
-        })
-    }
     
     def receive() = {
-        case initiate: IntiateDaemonUpdate => getOtherDaemons
-        case idr: DBIdentityRequest => {
-            // Another DB daemon asked us to send it our address
-            sender ! new DBActorIdentity(homeAddress, context.parent)
-        }
-        case id: DBActorIdentity => {
-            // Another DB daemon is letting us know its presence
-            dbDaemons.put(id.node, id.id)
-        }
-        case ip: InitPacket => getOtherDaemons
+        case ip: InitPacket => {}
         case sr: StoreRequest => {
             val elementsPerNode = ({
                 for {
@@ -124,12 +87,20 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
             
             // Send replicate request to all
             if (sr.needReply) {
-                val futs = for (elemWithNode <- elementsPerNode) yield dbDaemons.get(elemWithNode._1) ? new ReplicateRequest(elemWithNode._2.map(_._2), true)
+                val futs = for (elemWithNode <- elementsPerNode) yield {
+                    val location = if (elemWithNode._1 == homeAddress) "/user/tuktu.db.Daemon"
+                        else ("akka.tcp://application@" + elemWithNode._1  + ":"
+                            + clusterNodes(elemWithNode._1).akkaPort + "/user/tuktu.db.Daemon")
+                    Akka.system.actorSelection(location) ? new ReplicateRequest(elemWithNode._2.map(_._2), true)
+                }
                 Future.sequence(futs).map(_ => sender ! "ok")
             }
             else {
                 elementsPerNode.foreach(elemWithNode => {
-                    dbDaemons.get(elemWithNode._1) ! new ReplicateRequest(
+                    val location = if (elemWithNode._1 == homeAddress) "/user/tuktu.db.Daemon"
+                        else ("akka.tcp://application@" + elemWithNode._1  + ":"
+                            + clusterNodes(elemWithNode._1).akkaPort + "/user/tuktu.db.Daemon")
+                    Akka.system.actorSelection(location) ! new ReplicateRequest(
                             elemWithNode._2.map(_._2),
                             false
                     )
@@ -151,45 +122,57 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
                 self ! new PersistRequest
         }
         case rr: ReadRequest => {
+            val originalSender = sender
+            
             // Probe first
-            if (tuktudb.contains(rr.key)) rr.originalSender match {
-                case None => sender ! new ReadResponse(tuktudb(rr.key) toList)
-                case Some(s) => s ! new ReadResponse(tuktudb(rr.key) toList)
-            }
+            if (tuktudb.contains(rr.key))
+                sender ! new ReadResponse(tuktudb(rr.key) toList)
             else if (rr.isFirst) {
-                // We need to query other nodes
-                val nodes = hash(List(rr.key)) diff List(homeAddress)
+                // We need to query all other nodes
+                val nodes = clusterNodes.keys.toList diff List(Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
                 
                 // There are no other nodes
-                if (nodes.isEmpty) rr.originalSender match {
-                    case None => sender ! new ReadResponse(List())
-                    case Some(s) => s ! new ReadResponse(List())
-                }
-                else
-                    // One must have it, pick any
-                    dbDaemons.get(Random.shuffle(nodes).head) ! {
-                        rr.originalSender match {
-                            case None => new ReadRequest(rr.key, false, Some(sender))
-                            case Some(s) => new ReadRequest(rr.key, false, rr.originalSender)
+                if (nodes.isEmpty) originalSender ! new ReadResponse(List())
+                else {
+                    // Request all other daemons for the data
+                    val requests = clusterNodes.map(node => {
+                        val location = if (node._1 == homeAddress) "/user/tuktu.db.Daemon"
+                            else ("akka.tcp://application@" + node._1  + ":"
+                                + node._2.akkaPort + "/user/tuktu.db.Daemon")
+                        (Akka.system.actorSelection(location) ? new ReadRequest(rr.key, false)).asInstanceOf[Future[ReadResponse]]
+                    })
+                    
+                    // Get all the responses
+                    Future.sequence(requests).map {responses =>
+                        // Find the first response
+                        responses.find(r => !r.value.isEmpty) match {
+                            case None =>
+                                // No one had data, tough luck
+                                originalSender ! new ReadResponse(List())
+                            case Some(r) => originalSender ! r
                         }
                     }
-            } else {
-                // We failed to find the bucket
-                rr.originalSender match {
-                    case None => sender ! new ReadResponse(List())
-                    case Some(s) => s ! new ReadResponse(List())
                 }
-            }
+            } else
+                // We failed to find the bucket
+                originalSender ! new ReadResponse(List())
         }
-        case dr: DeleteRequest => {
-            // Remove the data packet
-            val nodes = hash(List(dr.key))
-            
+        case dr: DeleteRequest => {            
             // Need reply or not?
             if (dr.needReply) {
-                val futs = for (node <- nodes) yield dbDaemons.get(node) ? new DeleteActionRequest(dr.key, true)
+                val futs = for (node <- clusterNodes) yield {
+                    val location = if (node._1 == homeAddress) "/user/tuktu.db.Daemon"
+                        else ("akka.tcp://application@" + node._1  + ":"
+                            + node._2.akkaPort + "/user/tuktu.db.Daemon")
+                    Akka.system.actorSelection(location) ? new DeleteActionRequest(dr.key, true)
+                }
                 Future.sequence(futs).map(_ => sender ! "ok")
-            } else nodes.foreach(node => dbDaemons.get(node) ! new DeleteActionRequest(dr.key, false))
+            } else clusterNodes.foreach(node => {
+                val location = if (node._1 == homeAddress) "/user/tuktu.db.Daemon"
+                    else ("akka.tcp://application@" + node._1  + ":"
+                        + node._2.akkaPort + "/user/tuktu.db.Daemon")
+                Akka.system.actorSelection(location) ! new DeleteActionRequest(dr.key, false)
+            })
         }
         case dar: DeleteActionRequest => {
             tuktudb -= dar.key
@@ -202,14 +185,20 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
             oos.close
         }
         case or: OverviewRequest => {
-            // need to store original sender
+            // We need to store original sender
             val originalSender = sender
             
-            val requests = dbDaemons.values.toArray(Array[ActorRef]()).toSeq
-                .map(_ ? new InternalOverview(or.offset)).asInstanceOf[Seq[Future[OverviewReply]]]
+            val requests = clusterNodes.map(node => {
+                val location = if (node._1 == homeAddress) "/user/tuktu.db.Daemon"
+                    else ("akka.tcp://application@" + node._1  + ":"
+                        + node._2.akkaPort + "/user/tuktu.db.Daemon")
+                (Akka.system.actorSelection(location) ? new InternalOverview(or.offset)).asInstanceOf[Future[OverviewReply]]
+            })
 
             Future.fold(requests)(Map.empty[String, Int])(_ ++ _.bucketCounts).map {
-                result => originalSender ! new OverviewReply(result) 
+                result => {
+                    originalSender ! new OverviewReply(result) 
+                }
             }
         }
         case or: InternalOverview => {
@@ -221,11 +210,17 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
             // Need to store original sender
             val originalSender = sender
             
-            val requests = dbDaemons.values.toArray(Array[ActorRef]()).toSeq
-                .map(_ ? new InternalContent(cr)).asInstanceOf[Seq[Future[ContentReply]]]
+            val requests = clusterNodes.map(node => {
+                val location = if (node._1 == homeAddress) "/user/tuktu.db.Daemon"
+                    else ("akka.tcp://application@" + node._1  + ":"
+                        + node._2.akkaPort + "/user/tuktu.db.Daemon")
+                (Akka.system.actorSelection(location) ? new InternalContent(cr)).asInstanceOf[Future[ContentReply]]
+            })
 
             Future.fold(requests)(List.empty[Map[String, Any]])(_ ++ _.data).map {
-                result => originalSender ! new ContentReply(result) 
+                result => {
+                    originalSender ! new ContentReply(result) 
+                }
             }
         }
         case ic: InternalContent => {
