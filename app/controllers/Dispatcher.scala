@@ -29,6 +29,7 @@ import tuktu.processors.meta.ConcurrentProcessor
 import mailbox.DeadLetterWatcher
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
+import java.nio.file.Paths
 
 case class treeNode(
         name: String,
@@ -105,17 +106,17 @@ object Dispatcher {
         ): Enumeratee[DataPacket, DataPacket] = {
             // Get processor definition
             val pd = processorMap(procName)
-            
+
             // Get class of the processor
             val procClazz = Class.forName(pd.name)
-            
+
             // Check if this processor is a bufferer
             if (classOf[BufferProcessor].isAssignableFrom(procClazz) || classOf[BaseConcurrentProcessor].isAssignableFrom(procClazz)) {
                 /*
                  * Bufferer processor, we pass on an actor that can take up the datapackets with the regular
                  * flow and cut off regular flow for now
                  */
-                
+
                 // Get sync or not
                 val sync = (pd.config \ "sync").asOpt[Boolean].getOrElse(false)
                 // Create an idString for the subflow
@@ -174,11 +175,11 @@ object Dispatcher {
                         )
                     }
                 }
-                
+
                 // Dead letter watcher
                 val watcher = Akka.system.actorOf(Props(classOf[DeadLetterWatcher], generator), "watcher_" + "subflows_" + subIdString)
                 Akka.system.eventStream.subscribe(watcher, classOf[DeadLetter])
-                
+
                 // Notify the monitor so we can recover from errors
                 Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(
                         subIdString,
@@ -189,7 +190,7 @@ object Dispatcher {
                 )
                 // Add to subflow list
                 subflows += generator
-                
+
                 // Instantiate the processor now
                 val iClazz = {
                     // Check if we already converted this processor or not
@@ -202,14 +203,14 @@ object Dispatcher {
                                 generator,
                                 pd.resultName
                         )
-                        
+
                         // Initialize the processor first
                         val initMethod = procClazz.getMethods.find(m => m.getName == "initialize").get
                         initMethod.invoke(ic, pd.config)
-                        
+
                         // Update mapping
                         instantiatedProcessors += procName -> ic
-                        
+
                         ic
                     }
                 }
@@ -235,28 +236,27 @@ object Dispatcher {
                         procEnum compose
                         utils.logEnumeratee(idString, configName)
                 }
-            }
-            else {
+            } else {
                 // 'Regular' processor
                 val iClazz = {
                     // Check if we already converted this processor or not
                     if (instantiatedProcessors.contains(procName)) instantiatedProcessors(procName)
                     else {
                         val ic = procClazz.getConstructor(classOf[String]).newInstance(pd.resultName)
-                        
+
                         // Initialize the processor first
                         val initMethod = procClazz.getMethods.find(m => m.getName == "initialize").get
                         initMethod.invoke(ic, pd.config)
                         // Update mapping
                         instantiatedProcessors += procName -> ic
-                        
+
                         ic
                     }
                 }
 
                 // Get Enumeratee
                 val method = procClazz.getMethods.find(m => m.getName == "processor").get
-                val procEnum = 
+                val procEnum =
                     // Check if this processor is one that is referenced by multiple subflows
                     if (referenceCounts.contains(pd.id)) {
                         // Prepend the Enumeratee which will ignore all EOFs but the last
@@ -304,7 +304,7 @@ object Dispatcher {
             //val queueSize = Cache.getAs[Int]("mon.bp.blocking_queue_size").getOrElse(Play.configuration.getInt("tuktu.monitor.backpressure.blocking_queue_size").getOrElse(1000))
             // Set up the broadcast
             val (enumerator, channel) = Concurrent.broadcast[DataPacket]
-            
+
             // Set up broadcast
             val queues = for (processor <- nextProcessors)
                 enumerator |>> processor &>> Iteratee.ignore
@@ -329,7 +329,7 @@ object Dispatcher {
                 subflows toList
         )
     }
-    
+
     /**
      * Builds the processor map
      */
@@ -342,7 +342,7 @@ object Dispatcher {
             val processorConfig = (processor \ "config").as[JsObject]
             val resultName = (processor \ "result").as[String]
             val next = (processor \ "next").as[List[String]]
-            
+
             // Create processor definition
             val procDef = new ProcessorDefinition(
                     processorId,
@@ -351,7 +351,7 @@ object Dispatcher {
                     resultName,
                     next
             )
-            
+
             // Return map
             processorId -> procDef
         }).toMap
@@ -364,7 +364,7 @@ object Dispatcher {
  */
 class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    
+
     /**
      * Receive function that does all the magic
      */
@@ -377,13 +377,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
             // Get config
             val config = dr.config match {
                 case Some(cfg) => cfg
-                case None => {
-                    val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
-                            "/" + dr.configName + ".json", "utf-8")
-                    val cfg = Json.parse(configFile.mkString).as[JsObject]
-                    configFile.close
-                    cfg
-                }
+                case None      => utils.loadConfig(dr.configName).get
             }
 
             // Get source actor if not set yet
@@ -454,67 +448,69 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                             }
                             case false => remoteDispatcher ! new DispatchRequest(dr.configName, Some(config), true, dr.returnRef, dr.sync, sourceActor)
                         }
-                    } else {
-                        if (!startRemotely) {
-                            // Build the processor pipeline for this generator
-                            val (idString, processorEnumeratees, subflows) = Dispatcher.buildEnums(next, processorMap, sourceActor, dr.configName, stopOnError)
+                    } else if (!startRemotely) {
+                        // Build the processor pipeline for this generator
+                        val (idString, processorEnumeratees, subflows) = Dispatcher.buildEnums(next, processorMap, sourceActor, dr.configName, stopOnError)
 
-                            // Set up the generator
-                            val clazz = Class.forName(generatorName)
+                        // Set up the generator
+                        val clazz = Class.forName(generatorName)
 
-                            // Make the amount of actors we require
-                            val actorRef = {
-                                // See if this is the JS generator or not
-                                if (classOf[TuktuBaseJSGenerator].isAssignableFrom(clazz)) {
-                                    // Define name based on config location
-                                    val refererName = {
-                                        // TODO: do properly
-                                        val split = dr.configName.split("/").takeRight(2)
-                                        if (split(1) == "Tuktu") split(0)
-                                        else split.mkString(".")
-                                    }
-
-                                    Akka.system.actorOf(
-                                        SmallestMailboxPool(instanceCount).props(
-                                            Props(clazz, refererName, resultName, processorEnumeratees, sourceActor)
-                                        ),
-                                        name = dr.configName.replaceAll("/| ", "_") +  "_" + clazz.getName +  "_" + idString
-                                    )
+                        // Make the amount of actors we require
+                        val actorRef = {
+                            // See if this is the JS generator or not
+                            if (classOf[TuktuBaseJSGenerator].isAssignableFrom(clazz)) {
+                                // Define id based on config location
+                                val id: String = {
+                                    val analytics = Paths.get(current.configuration.getString("tuktu.configrepo").getOrElse("configs"))
+                                        .relativize(Paths.get(current.configuration.getString("tuktu.webrepo").getOrElse("configs/analytics")))
+                                    val path = analytics.relativize(Paths.get(dr.configName))
+                                    path.toString.replace('\\', '/').replaceFirst("[.]json^", "")
                                 }
-                                else
-                                    Akka.system.actorOf(
-                                        SmallestMailboxPool(instanceCount).props(
-                                            Props(clazz, resultName, processorEnumeratees, {
-                                                // If there are subflows, then we should not send back from the actor, but
-                                                // from the subflows instead
-                                                if (subflows.isEmpty) sourceActor else None
-                                            })
-                                        ),
-                                        name = dr.configName.replaceAll("/| ", "_") +  "_" + clazz.getName +  "_" + idString
-                                    )
-                            }
-                            
-                            // Dead letter watcher
-                            val watcher = Akka.system.actorOf(Props(classOf[DeadLetterWatcher], actorRef), "watcher_" + dr.configName.replaceAll("/", "_") +  "_" + clazz.getName +  "_" + idString)
-                            Akka.system.eventStream.subscribe(watcher, classOf[DeadLetter])
 
-                            // Notify the monitor so we can recover from errors
-                            Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, dr.configName, instanceCount, stopOnError, Some(actorRef))
-                            // Send all subflows
-                            Akka.system.actorSelection("user/TuktuMonitor") ! new SubflowMapPacket(actorRef, subflows)
+                                val actorRef = Akka.system.actorOf(
+                                    SmallestMailboxPool(instanceCount).props(
+                                        Props(clazz, resultName, processorEnumeratees, sourceActor)),
+                                    name = dr.configName.replaceAll("[^a-zA-Z0-9-_.*$+:@&=,!~';]", "_") + "_" + clazz.getName + "_" + idString)
 
-                            // Send init packet
-                            actorRef ! Broadcast(new InitPacket)
-                            // Send it the config
-                            actorRef ! Broadcast(generatorConfig)
-
-                            // Return reference
-                            if (dr.returnRef) sender ! actorRef
+                                // Add mailbox to hostmap, watch it (to be notified when it's terminated), and return
+                                Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap").getOrElse(collection.mutable.Map[String, ActorRef]()) += id -> actorRef
+                                context.watch(actorRef)
+                                actorRef
+                            } else
+                                Akka.system.actorOf(
+                                    SmallestMailboxPool(instanceCount).props(
+                                        Props(clazz, resultName, processorEnumeratees, {
+                                            // If there are subflows, then we should not send back from the actor, but
+                                            // from the subflows instead
+                                            if (subflows.isEmpty) sourceActor else None
+                                        })),
+                                    name = dr.configName.replaceAll("[^a-zA-Z0-9-_.*$+:@&=,!~';]", "_") + "_" + clazz.getName + "_" + idString)
                         }
+
+                        // Dead letter watcher
+                        val watcher = Akka.system.actorOf(Props(classOf[DeadLetterWatcher], actorRef), "watcher_" + dr.configName.replaceAll("[^a-zA-Z0-9-_.*$+:@&=,!~';]", "_") + "_" + clazz.getName + "_" + idString)
+                        Akka.system.eventStream.subscribe(watcher, classOf[DeadLetter])
+
+                        // Notify the monitor so we can recover from errors
+                        Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, dr.configName, instanceCount, stopOnError, Some(actorRef))
+                        // Send all subflows
+                        Akka.system.actorSelection("user/TuktuMonitor") ! new SubflowMapPacket(actorRef, subflows)
+
+                        // Send init packet
+                        actorRef ! Broadcast(new InitPacket)
+                        // Send it the config
+                        actorRef ! Broadcast(generatorConfig)
+
+                        // Return reference
+                        if (dr.returnRef) sender ! actorRef
                     }
                 }
             }
         }
+        case Terminated(actor) =>
+            // Right now, the only actors we watch, are web mailboxes; remove them from the hostmap
+            val hostmap = Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap").getOrElse(collection.mutable.Map[String, ActorRef]())
+            hostmap --= (for ((id, actorRef) <- hostmap if actor == actorRef) yield id)
         case _ => {}
     }
 }

@@ -1,6 +1,6 @@
 package tuktu.api
 
-import java.nio.file.{ Files, Paths }
+import java.nio.file.{ Files, Paths, Path }
 import java.util.Date
 import scala.util.Try
 import scala.util.hashing.MurmurHash3
@@ -387,10 +387,12 @@ object utils {
     /**
      * Loads a config from the config folder
      */
-    def loadConfig(name: String): Try[JsObject] = Try {
-        val path = Paths.get(
-            Cache.getAs[String]("configRepo").getOrElse("configs"),
-            name + { if (name.endsWith(".json")) "" else ".json" })
+    def loadConfig(path: Path): Try[JsObject] = Try {
         Json.parse(Files.readAllBytes(path)).as[JsObject]
     }
+    def loadConfig(name: String): Try[JsObject] = Try {
+        Paths.get(
+            Cache.getAs[String]("configRepo").getOrElse("configs"),
+            name + { if (name.endsWith(".json")) "" else ".json" })
+    }.flatMap(loadConfig)
 }

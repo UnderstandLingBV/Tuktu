@@ -15,7 +15,6 @@ import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import tuktu.api.DispatchRequest
-import tuktu.api.DispatchRequest
 
 case class DelayedScheduler(
         name: String,

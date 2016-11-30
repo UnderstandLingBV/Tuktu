@@ -41,7 +41,6 @@ case class WebJsOrderedObject(
 ) extends BaseJsObject()
 
 abstract class TuktuBaseJSGenerator(
-        referer: String,
         resultName: String,
         processors: List[Enumeratee[DataPacket, DataPacket]],
         senderActor: Option[ActorRef]

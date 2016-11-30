@@ -17,9 +17,9 @@ function tuktuFlow(nf) {
 	var s = document.createElement("script");
 	s.setAttribute("type", "text/javascript");
 	s.innerHTML = "var xhr = new XMLHttpRequest();" +
-		"xhr.open('POST', '@jsUrl', true);" +
+		"xhr.open('POST', '@jsUrl/../" + nf + ".js', true);" +
 		"xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');" +
-		"xhr.send(JSON.stringify({f: '" + nf + "', d: tuktuvars}));" +
+		"xhr.send(JSON.stringify({d: tuktuvars}));" +
 		"xhr.onreadystatechange = function() {" +
 			"if (xhr.readyState == 4) {" +
 				"var se = document.createElement('script');" +
