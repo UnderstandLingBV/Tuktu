@@ -463,29 +463,21 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                 // Usually that is just the path directory/filename relative to the analytics folder, stripped from file ending
                                 // For backwards compatibility, directory.filename(instead of /) will also work (both POST)
                                 // Main GET path are the directories which contain Tuktu.json
-                                val id: List[String] = {
+                                val option: Option[String] = {
                                     val analytics = Paths.get(current.configuration.getString("tuktu.configrepo").getOrElse("configs"))
                                         .relativize(Paths.get(current.configuration.getString("tuktu.webrepo").getOrElse("configs/analytics")))
                                     val path = analytics.relativize(Paths.get(dr.configName))
 
                                     // Only depth 2 configs are allowed for now in analytics
                                     if (path.getNameCount != 2)
-                                        Nil
+                                        None
+                                    else if (path.endsWith("Tuktu") || path.endsWith("Tuktu.js") || path.endsWith("Tuktu.json"))
+                                        // Directories will be represented by their containing Tuktu.json file if present to shorten links of main GET endpoints
+                                        Some(path.getParent.toString.replace('\\', '/'))
                                     else
-                                        // POST
-                                        List(
-                                            // This is the proper new POST path; just the regular path, stripped from file ending
-                                            path.toString.replace('\\', '/').replaceFirst("[.]json^", ""),
-                                            // This is for backwards compatibility: *directories.filename in addition to new *directories/filename from above
-                                            path.getParent.toString.replace('\\', '/') + "." + path.getFileName.toString.replaceFirst("[.]json^", "")) ++
-                                            {
-                                                // GET
-                                                if (path.getNameCount > 1 && (path.endsWith("Tuktu") || path.endsWith("Tuktu.js") || path.endsWith("Tuktu.json")))
-                                                    // Directories will be represented by their containing Tuktu.json file if present to shorten links of main GET endpoints
-                                                    List(path.getParent.toString.replace('\\', '/'))
-                                                else
-                                                    Nil
-                                            }
+                                        // This is the POST path; regular path, stripped from file ending
+                                        // Routes are currently set up in such a way that these cannot be called directly, but only through a JSON body parameter
+                                        Some(path.toString.replace('\\', '/').replaceFirst("[.]json^", ""))
                                 }
 
                                 val actorRef = Akka.system.actorOf(
@@ -494,11 +486,13 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                     name = dr.configName.replaceAll("[^a-zA-Z0-9-_.*$+:@&=,!~';]", "_") + "_" + clazz.getName + "_" + idString)
 
                                 // Add mailbox to hostmap, watch it (to be notified when it's terminated), and return
-                                Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap") match {
-                                    case None          => play.api.Logger.warn("web.hostmap is not set")
-                                    case Some(hostmap) => for (i <- id) { hostmap += i -> actorRef }
+                                option.map { id =>
+                                    Cache.getAs[collection.mutable.Map[String, ActorRef]]("web.hostmap") match {
+                                        case None          => play.api.Logger.warn("web.hostmap is not set")
+                                        case Some(hostmap) => hostmap += id -> actorRef
+                                    }
+                                    context.watch(actorRef)
                                 }
-                                context.watch(actorRef)
                                 actorRef
                             } else
                                 Akka.system.actorOf(
