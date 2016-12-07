@@ -85,11 +85,9 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                         // Parse time and all that
                         val unixTime = post.getCreatedTime.getTime / 1000
                         // See if the creation time was within our interval
-                        if (unixTime <= endTime && unixTime >= startTime) {
+                        if (unixTime <= endTime && unixTime >= startTime)
                                 // Send result to parent
                                 parentActor ! new ResponsePacket(Json.parse(obj.toString))
-                                println("Sending a result to parent")
-                        }
                     }
                 }
             }).toList
