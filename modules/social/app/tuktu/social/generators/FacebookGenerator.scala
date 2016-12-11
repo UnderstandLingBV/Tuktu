@@ -434,17 +434,21 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
             val responses = fbClient.executeBatch(requests.asJava)
             
             userActor ! new CommentRequest(responses.flatMap(response => {
-                // Weird bug in RestFB when data field cannot be found
-                val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
-                objectList.flatMap(objects => {
-                    objects.map(obj => {
-                        val json = Json.parse(obj.toString).asInstanceOf[JsObject]
-                        new FBIntrospect(
-                                json,
-                                (json \ "from" \ "id").as[String]
-                        )
+                // Use try since sometimes comments are removed before we see them
+                try {
+                    val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
+                    objectList.flatMap(objects => {
+                        objects.map(obj => {
+                            val json = Json.parse(obj.toString).asInstanceOf[JsObject]
+                            new FBIntrospect(
+                                    json,
+                                    (json \ "from" \ "id").as[String]
+                            )
+                        })
                     })
-                })
+                } catch {
+                    case e: com.restfb.json.JsonException => List()
+                }
             }).toList)
         }
     }
