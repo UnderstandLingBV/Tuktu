@@ -129,6 +129,20 @@
 							"required": false
 						}
 					]
+				},
+				{
+					"name": "get_comments",
+					"description": "Whether or not to fetch all comments belonging to every post. A field named is_comment with value true indicates something is a comment, if set to false, it is a real post.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "run_once",
+					"description": "All data from start until end time is collected. If the generator should keep on running after that (still respecting your start and end time), set this to true.",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}

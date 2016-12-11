@@ -97,25 +97,13 @@
             "id": "langFilter",
             "result": "",
             "config": {
-                "expressions": [
-                    {
-                        "type": "simple",
-                        "expression": "${language}=nl_NL"
-                    },
-                    {
-                        "type": "simple",
-                        "expression": "${language}=de_DE"
-                    },
-                    {
-                        "type": "simple",
-                        "expression": "${language}=en_UK"
-                    }
-                ],
+                "type": "simple",
+                "expression": "${language}==nl_NL||${language}==en_UK||${language}==de_DE",
                 "batch_min_count": 1
             },
             "name": "tuktu.processors.PacketFilterProcessor",
             "next": [
-                "postagger"
+                "removeUnwantedLangs"
             ]
         },
         {
@@ -189,6 +177,17 @@
             "name": "tuktu.processors.JsonFetcherProcessor",
             "next": [
                 "tokenizer"
+            ]
+        },
+        {
+            "id": "removeUnwantedLangs",
+            "result": "",
+            "config": {
+                "remove_empty_datums": true
+            },
+            "name": "tuktu.processors.RemoveEmptyPacketProcessor",
+            "next": [
+                "postagger"
             ]
         }
     ]

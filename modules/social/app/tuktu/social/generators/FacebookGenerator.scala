@@ -34,9 +34,14 @@ case class FBDataRequest(
     end: Option[Long]
 )
 
-class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, updateTime: Long, fields: String) extends Actor with ActorLogging {
-    val fbTimeFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ")
-
+/**
+ * Gets all posts from a facebook page
+ */
+class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, updateTime: Long, fields: String, getComments: Boolean, runOnce: Boolean) extends Actor with ActorLogging {
+    // If we need to get the comments too, make sure we set up the actor
+    val commentsActor = if (getComments) Some(Akka.system.actorOf(Props(classOf[CommentsCollector], parentActor, fbClient))) else None
+    val postIds = collection.mutable.ListBuffer.empty[String]
+    
     def receive() = {
         case fbdr: FBDataRequest => {
             val urls = fbdr.urls
@@ -85,29 +90,103 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                         // Parse time and all that
                         val unixTime = post.getCreatedTime.getTime / 1000
                         // See if the creation time was within our interval
-                        if (unixTime <= endTime && unixTime >= startTime)
+                        if (unixTime <= endTime && unixTime >= startTime) {
                                 // Send result to parent
-                                parentActor ! new ResponsePacket(Json.parse(obj.toString))
+                                parentActor ! new ResponsePacket(Json.parse(obj.toString).asInstanceOf[JsObject]
+                                        ++ Json.obj("is_comment" -> false))
+                                // Get comments if we have to
+                                commentsActor match {
+                                    case Some(ca) if postIds.size == 10 => {
+                                        // Get comments
+                                        ca ! new FBDataRequest(postIds.toList, fbdr.start, fbdr.end)
+                                        postIds.clear
+                                    }
+                                    case Some(ca) => postIds += post.getId
+                                    case None => {}
+                                }
+                        }
                     }
                 }
             }).toList
             
             // Schedule next request, if applicable
-            now match {
-                case n if n < fbdr.start.getOrElse(0L) => {
-                    // Start-time is yet to come, schedule next polling
-                    Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
-                        new FBDataRequest(urls, fbdr.start, fbdr.end))
+            if (!runOnce) {
+                now match {
+                    case n if n < fbdr.start.getOrElse(0L) => {
+                        // Start-time is yet to come, schedule next polling
+                        Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
+                            new FBDataRequest(urls, fbdr.start, fbdr.end))
+                    }
+                    case n if (n >= fbdr.start.getOrElse(0L) && n <= fbdr.end.getOrElse(13592062088L)) => {
+                        // End time is still in the future, so we start from where we left off (which is 'now')
+                        Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
+                            new FBDataRequest(urls, Some(now), fbdr.end))
+                    }
+                    case n if n > fbdr.end.getOrElse(13592062088L) =>
+                        // Stop, end-time is already in the past
+                        parentActor ! new StopPacket
                 }
-                case n if (n >= fbdr.start.getOrElse(0L) && n <= fbdr.end.getOrElse(13592062088L)) => {
-                    // End time is still in the future, so we start from where we left off (which is 'now')
-                    Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
-                        new FBDataRequest(urls, Some(now), fbdr.end))
-                }
-                case n if n > fbdr.end.getOrElse(13592062088L) => {
-                    // Stop, end-time is already in the past
-                    parentActor ! new StopPacket
-                    self ! PoisonPill
+            } else parentActor ! new StopPacket
+        }
+    }
+}
+
+/**
+ * Collects comments of posts
+ */
+class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient) extends Actor with ActorLogging {
+    def receive() = {
+        case fbdr: FBDataRequest => {
+            // Make sure we get all the comments of all the post IDs given
+            val urls = fbdr.urls.map(_ + "/comments")
+            val now = System.currentTimeMillis / 1000
+            // Get start and end time
+            val startTime = fbdr.start match {
+                case Some(st) => st
+                case None     => System.currentTimeMillis / 1000;
+            }
+            val endTime = fbdr.end match {
+                case Some(en) => en
+                case None     => 13592062088L // Some incredibly large number
+            }
+            
+            // Get the URLs in batched fasion
+            val requests = for (url <- urls) yield {
+                // Build the start and end parameters
+                val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes")) ++ {
+                        fbdr.start match {
+                            case Some(s) => Array(Parameter.`with`("since", s))
+                            case None => Array[Parameter]()
+                        }
+                    } ++ {
+                        fbdr.end match {
+                            case Some(e) => Array(Parameter.`with`("until", e))
+                            case None => Array[Parameter]()
+                        }
+                    }
+                    
+                // Add the batched request
+                new BatchRequestBuilder(url)
+                        .parameters(parameters: _*)
+                        .build()
+            }
+            
+            // Make the requests
+            val responses = fbClient.executeBatch(requests.asJava)
+            
+            for ((response, index) <- responses.zipWithIndex) {
+                // Weird bug in RestFB when data field cannot be found
+                try {
+                    val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
+                    for (objects <- objectList) {
+                        objects.foreach(obj => {
+                            // Send result to parent
+                            parentActor ! new ResponsePacket(Json.parse(obj.toString).asInstanceOf[JsObject]
+                                ++ Json.obj("is_comment" -> true))
+                        })
+                    }
+                } catch {
+                    case e: com.restfb.json.JsonException => List()
                 }
             }
         }
@@ -182,10 +261,13 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val aToken = (credentials \ "access_token").as[String]
             // Get update time
             val updateTime = (config \ "update_time").asOpt[Long].getOrElse(5L)
-            
             // Get the fields we need
             val fields = (config \ "fields").asOpt[List[String]].getOrElse(allFields).mkString(",")
-
+            // See if we need to get comments
+            val getComments = (config \ "get_comments").asOpt[Boolean].getOrElse(false)
+            // Since we get all data back to start time in one go, we might just stop there
+            val runOnce = (config \ "run_once").asOpt[Boolean].getOrElse(false)
+            
             // Set up RestFB
             val fbClient = new DefaultFacebookClient(aToken, Version.VERSION_2_8)
 
@@ -216,7 +298,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             if (startTime == None && endTime == None) startTime = Some(now)
 
             // Merge URLs and send to periodic actor
-            pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime, fields))
+            pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime, fields, getComments, runOnce))
             pollerActor ! new FBDataRequest(users.toList, startTime, endTime)
         }
         case data: ResponsePacket => channel.push(DataPacket(List(Map(resultName -> data.json))))
