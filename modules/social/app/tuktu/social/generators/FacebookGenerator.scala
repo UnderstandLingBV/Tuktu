@@ -27,6 +27,10 @@ import com.restfb.types.Post
 import com.restfb.Connection
 import com.restfb.json.JsonObject
 import scala.concurrent.Future
+import akka.pattern.ask
+import scala.concurrent.duration.DurationInt
+import play.api.cache.Cache
+import akka.util.Timeout
 
 case class FBDataRequest(
     urls: List[String],
@@ -34,22 +38,54 @@ case class FBDataRequest(
     end: Option[Long]
 )
 
+case class FBIntrospect(
+    data: JsObject,
+    from: String
+)
+
+case class PostRequest(
+    posts: List[FBIntrospect]
+)
+
+case class CommentRequest(
+    comments: List[FBIntrospect]
+)
+
 /**
  * Gets all posts from a facebook page
  */
 class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, updateTime: Long, fields: String, getComments: Boolean, runOnce: Boolean) extends Actor with ActorLogging {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    // Set up the author fetching actor
+    val authorActor = Akka.system.actorOf(Props(classOf[UserCollector], parentActor, fbClient))
     // If we need to get the comments too, make sure we set up the actor
-    val commentsActor = if (getComments) Some(Akka.system.actorOf(Props(classOf[CommentsCollector], parentActor, fbClient))) else None
+    val commentsActor = if (getComments) Some(Akka.system.actorOf(Props(classOf[CommentsCollector], parentActor, fbClient, authorActor))) else None
     val postIds = collection.mutable.ListBuffer.empty[String]
     
+    // Also keep track of all posts obtained so far, so we can get author stuff properly
+    val posts = collection.mutable.ListBuffer.empty[FBIntrospect]
+    
     def receive() = {
+        case sp: StopPacket => {
+            commentsActor match {
+                case Some(ca) => {
+                    if (postIds.size > 0)
+                        ca ! new FBDataRequest(postIds.toList, None, None)
+                    if (posts.size > 0)
+                        authorActor ! new PostRequest(posts.toList)
+                    Future.sequence(List(ca ? sp, authorActor ? sp)).onComplete { case a => self ! PoisonPill }
+                }
+                case None => {}
+            }
+        }
         case fbdr: FBDataRequest => {
             val urls = fbdr.urls
             val now = System.currentTimeMillis / 1000
             // Get start and end time
             val startTime = fbdr.start match {
                 case Some(st) => st
-                case None     => System.currentTimeMillis / 1000;
+                case None     => System.currentTimeMillis / 1000
             }
             val endTime = fbdr.end match {
                 case Some(en) => en
@@ -80,9 +116,9 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
             // Make the requests
             val responses = fbClient.executeBatch(requests.asJava)
             
-            val resultList = (for ((response, index) <- responses.zipWithIndex) yield {
+            for ((response, index) <- responses.zipWithIndex) {
                 val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
-                for (objects <- objectList) yield {
+                for (objects <- objectList) {
                     for (obj <- objects) {
                         // Get the post
                         val post = fbClient.getJsonMapper.toJavaObject(obj.toString, classOf[Post])
@@ -91,12 +127,20 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                         val unixTime = post.getCreatedTime.getTime / 1000
                         // See if the creation time was within our interval
                         if (unixTime <= endTime && unixTime >= startTime) {
-                                // Send result to parent
-                                parentActor ! new ResponsePacket(Json.parse(obj.toString).asInstanceOf[JsObject]
-                                        ++ Json.obj("is_comment" -> false))
+                                // Add to our buffer
+                                posts += new FBIntrospect(
+                                        Json.parse(obj.toString).asInstanceOf[JsObject],
+                                        post.getFrom.getId
+                                )
+                                if (posts.size == 50) {
+                                    // Get the from/to fields using our user collector actor
+                                    authorActor ! new PostRequest(posts.toList)
+                                    posts.clear
+                                }
+
                                 // Get comments if we have to
                                 commentsActor match {
-                                    case Some(ca) if postIds.size == 10 => {
+                                    case Some(ca) if postIds.size == 50 => {
                                         // Get comments
                                         ca ! new FBDataRequest(postIds.toList, fbdr.start, fbdr.end)
                                         postIds.clear
@@ -107,7 +151,7 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                         }
                     }
                 }
-            }).toList
+            }
             
             // Schedule next request, if applicable
             if (!runOnce) {
@@ -132,10 +176,225 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
 }
 
 /**
+ * Gets a full user profile given an object (post/comment)
+ */
+class UserCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient) extends Actor with ActorLogging {
+    /*
+     * Not all fields can just be obtained using public tokens. Here we keep the mapping of those fields
+     * that we can actually get per node type
+     */
+    val eligibleFields = Map(
+            "page" -> List("id",
+                "about",
+                "affiliation",
+                "artists_we_like",
+                "attire",
+                "awards",
+                "band_interests",
+                "band_members",
+                "best_page",
+                "bio",
+                "birthday",
+                "booking_agent",
+                "built",
+                "business",
+                "can_checkin",
+                "can_post",
+                "category",
+                "category_list",
+                "checkins",
+                "company_overview",
+                "contact_address",
+                "country_page_likes",
+                "cover",
+                "culinary_team",
+                "current_location",
+                "description",
+                "description_html",
+                "directed_by",
+                "display_subtext",
+                "emails",
+                "features",
+                "food_styles",
+                "founded",
+                "general_info",
+                "general_manager",
+                "genre",
+                "global_brand_page_name",
+                "global_brand_root_id",
+                "has_added_app",
+                "hometown",
+                "hours",
+                "influences",
+                "is_community_page",
+                "is_permanently_closed",
+                "is_published",
+                "is_unclaimed",
+                "is_verified",
+                "leadgen_tos_accepted",
+                "link",
+                "location",
+                "members",
+                "mission",
+                "mpg",
+                "name",
+                "network",
+                "new_like_count",
+                "offer_eligible",
+                "overall_star_rating",
+                "parent_page",
+                "parking",
+                "payment_options",
+                "personal_info",
+                "personal_interests",
+                "pharma_safety_info",
+                "phone",
+                "place_type",
+                "plot_outline",
+                "press_contact",
+                "price_range",
+                "produced_by",
+                "products",
+                "promotion_ineligible_reason",
+                "public_transit",
+                "publisher_space",
+                "rating_count",
+                "record_label",
+                "release_date",
+                "restaurant_services",
+                "restaurant_specialties",
+                "schedule",
+                "screenplay_by",
+                "season",
+                "single_line_address",
+                "starring",
+                "store_number",
+                "studio",
+                "talking_about_count",
+                "unread_message_count",
+                "unread_notif_count",
+                "unseen_message_count",
+                "username",
+                "voip_info",
+                "website",
+                "were_here_count",
+                "written_by"),
+        "user" -> List("id",
+                "about",
+                "age_range",
+                "birthday",
+                "cover",
+                "currency",
+                "devices",
+                "education",
+                "email",
+                "favorite_athletes",
+                "favorite_teams",
+                "first_name",
+                "gender",
+                "hometown",
+                "inspirational_people",
+                "install_type",
+                "installed",
+                "interested_in",
+                "is_verified",
+                "languages",
+                "last_name",
+                "link",
+                "locale",
+                "location",
+                "meeting_for",
+                "middle_name",
+                "name",
+                "name_format",
+                "payment_pricepoints",
+                "political",
+                "public_key",
+                "quotes",
+                "relationship_status",
+                "religion",
+                "security_settings",
+                "significant_other",
+                "sports",
+                "third_party_id",
+                "timezone",
+                "updated_time",
+                "verified",
+                "video_upload_limits",
+                "viewer_can_send_gift",
+                "website",
+                "work")
+    )
+    
+    def receive() = {
+        case sp: StopPacket => {
+            sender ! "ok"
+            self ! PoisonPill
+        }
+        case comments: CommentRequest => getProfiles(comments.comments, true)
+        case posts: PostRequest => getProfiles(posts.posts, false)
+    }
+    
+    def getProfiles(objs: List[FBIntrospect], isComment: Boolean) = {
+        // We don't know the type, so are constrained to using metadata to figure it out
+        val requestList = objs.map(obj => {
+            // Add the batched request for from
+            new BatchRequestBuilder(obj.from)
+                    .parameters(Parameter.`with`("metadata", 1))
+                    .build()
+        })
+        
+        // Make the requests, per 50
+        requestList.grouped(50).foreach(requests => {
+            val responses = fbClient.executeBatch(requests.asJava)
+        
+            // Using the metadata, make subsequent requests for the specific page types
+            val profileRequests = responses.map(response => {
+                val json = Json.parse(response.getBody)
+                // Get the type
+                val nodeType = (json \ "metadata" \ "type").as[String]
+                // Get all the eligible fields
+                val fields = eligibleFields(nodeType)
+                
+                // Make new request with all the fields we can get
+                (nodeType, new BatchRequestBuilder((json \ "id").as[String])
+                    .parameters(Parameter.`with`("fields", fields.mkString(",")))
+                    .build())
+            })
+            
+            // Get all the real profile data
+            val profileResponses = fbClient.executeBatch(profileRequests.map(_._2).asJava)
+        
+            profileResponses.zipWithIndex.zip(objs.map(_.data)).foreach(el => el match {
+                case (r, obj) => r match {
+                    case (response, index) => {
+                        // Get the type
+                        val nodeType = profileRequests(index)._1
+                        
+                        // Fill in the blanks
+                        val json = Json.parse(response.getBody).as[JsObject]
+                        val newObject = (obj ++ Json.obj("is_comment" -> isComment)).deepMerge(
+                                Json.obj("from" -> (json ++ Json.obj("type" -> nodeType)))
+                        )
+                        
+                        // Send to our parent
+                        parentActor ! new ResponsePacket(newObject)
+                    }
+                }
+            })
+        })
+    }
+}
+
+/**
  * Collects comments of posts
  */
-class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient) extends Actor with ActorLogging {
+class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, userActor: ActorRef) extends Actor with ActorLogging {
     def receive() = {
+        case sp: StopPacket => {
+            sender ! "ok"
+            self ! PoisonPill
+        }
         case fbdr: FBDataRequest => {
             // Make sure we get all the comments of all the post IDs given
             val urls = fbdr.urls.map(_ + "/comments")
@@ -143,14 +402,14 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient) 
             // Get start and end time
             val startTime = fbdr.start match {
                 case Some(st) => st
-                case None     => System.currentTimeMillis / 1000;
+                case None     => System.currentTimeMillis / 1000
             }
             val endTime = fbdr.end match {
                 case Some(en) => en
                 case None     => 13592062088L // Some incredibly large number
             }
             
-            // Get the URLs in batched fasion
+            // Get the URLs in batched fashion
             val requests = for (url <- urls) yield {
                 // Build the start and end parameters
                 val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes")) ++ {
@@ -174,21 +433,19 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient) 
             // Make the requests
             val responses = fbClient.executeBatch(requests.asJava)
             
-            for ((response, index) <- responses.zipWithIndex) {
+            userActor ! new CommentRequest(responses.flatMap(response => {
                 // Weird bug in RestFB when data field cannot be found
-                try {
-                    val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
-                    for (objects <- objectList) {
-                        objects.foreach(obj => {
-                            // Send result to parent
-                            parentActor ! new ResponsePacket(Json.parse(obj.toString).asInstanceOf[JsObject]
-                                ++ Json.obj("is_comment" -> true))
-                        })
-                    }
-                } catch {
-                    case e: com.restfb.json.JsonException => List()
-                }
-            }
+                val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
+                objectList.flatMap(objects => {
+                    objects.map(obj => {
+                        val json = Json.parse(obj.toString).asInstanceOf[JsObject]
+                        new FBIntrospect(
+                                json,
+                                (json \ "from" \ "id").as[String]
+                        )
+                    })
+                })
+            }).toList)
         }
     }
 }
@@ -243,16 +500,16 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             "updated_time",
             "via",
             "width",
-            "likes.summary(true)",
-            "from{id,about,affiliation,artists_we_like,attire,awards,band_interests,band_members,best_page,bio,birthday,booking_agent,built,business,can_checkin,can_post,category,category_list,checkins,company_overview,contact_address,country_page_likes,cover,culinary_team,current_location,description,description_html,directed_by,display_subtext,emails,features,food_styles,founded,general_info,general_manager,genre,global_brand_page_name,global_brand_root_id,has_added_app,hometown,hours,influences,is_community_page,is_permanently_closed,is_published,is_unclaimed,is_verified,leadgen_tos_accepted,link,location,members,mission,mpg,name,network,new_like_count,offer_eligible,overall_star_rating,parent_page,parking,payment_options,personal_info,personal_interests,pharma_safety_info,phone,place_type,plot_outline,press_contact,price_range,produced_by,products,promotion_ineligible_reason,public_transit,publisher_space,rating_count,record_label,release_date,restaurant_services,restaurant_specialties,schedule,screenplay_by,season,single_line_address,starring,store_number,studio,talking_about_count,unread_message_count,unread_notif_count,unseen_message_count,username,voip_info,website,were_here_count,written_by}",
-            "to{id,about,affiliation,artists_we_like,attire,awards,band_interests,band_members,best_page,bio,birthday,booking_agent,built,business,can_checkin,can_post,category,category_list,checkins,company_overview,contact_address,country_page_likes,cover,culinary_team,current_location,description,description_html,directed_by,display_subtext,emails,features,food_styles,founded,general_info,general_manager,genre,global_brand_page_name,global_brand_root_id,has_added_app,hometown,hours,influences,is_community_page,is_permanently_closed,is_published,is_unclaimed,is_verified,leadgen_tos_accepted,link,location,members,mission,mpg,name,network,new_like_count,offer_eligible,overall_star_rating,parent_page,parking,payment_options,personal_info,personal_interests,pharma_safety_info,phone,place_type,plot_outline,press_contact,price_range,produced_by,products,promotion_ineligible_reason,public_transit,publisher_space,rating_count,record_label,release_date,restaurant_services,restaurant_specialties,schedule,screenplay_by,season,single_line_address,starring,store_number,studio,talking_about_count,unread_message_count,unread_notif_count,unseen_message_count,username,voip_info,website,were_here_count,written_by}"
+            "likes.limit(0).summary(true)",
+            "from",
+            "to"
     )
     
     var pollerActor: ActorRef = _
     
     override def _receive = {
         case sp: StopPacket => {
-            pollerActor ! PoisonPill
+            pollerActor ! new StopPacket
             cleanup
         }
         case config: JsValue => {
