@@ -30,7 +30,15 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
                 if (datum(fieldName).isInstanceOf[JsString]) datum(fieldName).asInstanceOf[JsString].value
                 else datum(fieldName).asInstanceOf[String]
             }
-            val tokens = Tokenizer.tokenize(fieldValue)
+            val tokens = {
+                // Remove links and mentions, add stuff around sentence closures
+                val clean = fieldValue.replaceAll("(http:|ftp:|https:|www.)[^ ]+[ |\r|\n|\t]", " ").replaceAll("(http:|ftp:|https:|www.).*", "")
+                    .replaceAll("#[0-9a-zA-z]+", " ").replaceAll("@[0-9a-zA-z]+", " ").replaceAll("\"", " \" ")
+                    .replaceAll("\\.", " . ").replaceAll("!", " ! ").replaceAll("\\?", " ? ").replaceAll(",", " , ")
+                    .replaceAll(" +", " ")
+                // Now split on space
+                clean.split(" ").map(_.trim).filter(!_.isEmpty)
+            }
 
             // See if we need to concat into a space-separated string
             if (asString)
