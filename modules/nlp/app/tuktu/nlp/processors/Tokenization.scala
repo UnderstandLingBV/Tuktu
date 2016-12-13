@@ -3,7 +3,6 @@ package tuktu.nlp.processors
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-import nl.et4it.Tokenizer
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
@@ -33,9 +32,9 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
             val tokens = {
                 // Remove links and mentions, add stuff around sentence closures
                 val clean = fieldValue.replaceAll("(http:|ftp:|https:|www.)[^ ]+[ |\r|\n|\t]", " ").replaceAll("(http:|ftp:|https:|www.).*", "")
-                    .replaceAll("#[0-9a-zA-z]+", " ").replaceAll("@[0-9a-zA-z]+", " ").replaceAll("\"", " \" ")
-                    .replaceAll("\\.", " . ").replaceAll("!", " ! ").replaceAll("\\?", " ? ").replaceAll(",", " , ")
-                    .replaceAll(" +", " ")
+                    .replaceAll("#[0-9a-zA-z]+", " ").replaceAll("@[0-9a-zA-z]+", " ")
+                    .replaceAll("([\\.|!|\\?|\"|¡|¿|,|:|;])", " $1 ")
+                    .replaceAll(" +", " ").replaceAll("(.)\\1{3,}", "$1")
                 // Now split on space
                 clean.split(" ").map(_.trim).filter(!_.isEmpty)
             }
