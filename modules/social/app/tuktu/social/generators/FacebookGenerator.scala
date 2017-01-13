@@ -31,6 +31,8 @@ import akka.pattern.ask
 import scala.concurrent.duration.DurationInt
 import play.api.cache.Cache
 import akka.util.Timeout
+import scala.collection.mutable.Queue
+import scala.collection.mutable.ListBuffer
 
 case class FBDataRequest(
     urls: List[String],
@@ -44,7 +46,7 @@ case class FBIntrospect(
 )
 
 case class PostRequest(
-    posts: List[FBIntrospect]
+    post: FBIntrospect
 )
 
 case class CommentRequest(
@@ -59,12 +61,15 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
     
     // Set up the author fetching actor
     val authorActor = Akka.system.actorOf(Props(classOf[UserCollector], parentActor, fbClient))
+    
+//    val postCollector = Akka.system.actorOf(Props(classOf[PostCollector], authorActor))
+    
     // If we need to get the comments too, make sure we set up the actor
     val commentsActor = if (getComments) Some(Akka.system.actorOf(Props(classOf[CommentsCollector], parentActor, fbClient, authorActor))) else None
     val postIds = collection.mutable.ListBuffer.empty[String]
     
     // Also keep track of all posts obtained so far, so we can get author stuff properly
-    val posts = collection.mutable.ListBuffer.empty[FBIntrospect]
+//    val posts = collection.mutable.ListBuffer.empty[FBIntrospect]
     
     def receive() = {
         case sp: StopPacket => {
@@ -72,8 +77,10 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                 case Some(ca) => {
                     if (postIds.size > 0)
                         ca ! new FBDataRequest(postIds.toList, None, None)
-                    if (posts.size > 0)
-                        authorActor ! new PostRequest(posts.toList)
+                    authorActor ! "posts"
+                    authorActor ! "comments"
+//                    if (posts.size > 0)
+//                        authorActor ! new PostRequest(posts.toList)
                     Future.sequence(List(ca ? sp, authorActor ? sp)).onComplete { case a => self ! PoisonPill }
                 }
                 case None => {}
@@ -127,16 +134,23 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                         val unixTime = post.getCreatedTime.getTime / 1000
                         // See if the creation time was within our interval
                         if (unixTime <= endTime && unixTime >= startTime) {
-                                // Add to our buffer
-                                posts += new FBIntrospect(
+                                authorActor ! new PostRequest(new FBIntrospect(
                                         Json.parse(obj.toString).asInstanceOf[JsObject],
                                         post.getFrom.getId
-                                )
-                                if (posts.size == 50) {
-                                    // Get the from/to fields using our user collector actor
-                                    authorActor ! new PostRequest(posts.toList)
-                                    posts.clear
-                                }
+                                ))
+                                
+                                
+                                
+//                                // Add to our buffer
+//                                posts += new FBIntrospect(
+//                                        Json.parse(obj.toString).asInstanceOf[JsObject],
+//                                        post.getFrom.getId
+//                                )
+//                                if (posts.size == 50) {
+//                                    // Get the from/to fields using our user collector actor
+//                                    authorActor ! new PostRequest(posts.toList)
+//                                    posts.clear
+//                                }
 
                                 // Get comments if we have to
                                 commentsActor match {
@@ -214,6 +228,7 @@ class UserCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient) exte
                 "directed_by",
                 "display_subtext",
                 "emails",
+                "fan_count",
                 "features",
                 "food_styles",
                 "founded",
@@ -326,13 +341,70 @@ class UserCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient) exte
                 "work")
     )
     
+    val posts = new Queue[FBIntrospect]
+    val comments = new Queue[FBIntrospect]
+    
+    var cancellablePosts: Cancellable = _
+    var timerRunningPosts = false
+    
+    var cancellableComments: Cancellable = _
+    var timerRunningComments = false
+    
     def receive() = {
         case sp: StopPacket => {
             sender ! "ok"
             self ! PoisonPill
         }
-        case comments: CommentRequest => getProfiles(comments.comments, true)
-        case posts: PostRequest => getProfiles(posts.posts, false)
+        case comments: CommentRequest => addToQueue(comments.comments, true)
+        case posts: PostRequest => addToQueue(List(posts.post), false)
+        case "comments" => processComments
+        case "posts" => processPosts
+    }
+    
+    def addToQueue(obj: List[FBIntrospect], isComment: Boolean) = {
+        if(isComment) {
+            comments ++= obj
+        } else {
+            posts ++= obj
+        }
+        
+        if(comments.size >= 50) {            
+            processComments
+        } else {
+            updateTimer(false)
+        }
+        
+        if(posts.size >= 50) {
+            processPosts             
+        } else {
+            updateTimer(false)
+        }
+    }
+    
+    def processComments = {
+        cancellableComments.cancel
+        timerRunningComments = false
+        getProfiles(comments.dequeueAll{_ => true}.toList, true)
+    }
+    
+    def processPosts = {
+        cancellablePosts.cancel
+        timerRunningPosts = false
+        getProfiles(posts.dequeueAll{_ => true}.toList, true)
+    }
+    
+    def updateTimer(isComment: Boolean) = {
+        if(isComment) {
+            if(!timerRunningComments) {
+                cancellableComments = context.system.scheduler.scheduleOnce(10 seconds, self, "comments")
+                timerRunningComments = true
+            }               
+        } else {
+            if(!timerRunningPosts) {
+                cancellablePosts = context.system.scheduler.scheduleOnce(10 seconds, self, "posts")
+                timerRunningPosts = true
+            }             
+        }     
     }
     
     def getProfiles(objs: List[FBIntrospect], isComment: Boolean) = {
