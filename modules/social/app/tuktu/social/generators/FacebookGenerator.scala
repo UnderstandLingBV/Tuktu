@@ -85,7 +85,7 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
         context.system.scheduler.schedule(commentInterval seconds, commentInterval seconds, self, new CommentProcessing)
     
     def processPosts() {
-        posts.map(post => processedPosts += (post.data \ "id").as[String] -> post.data)
+        posts.foreach(post => processedPosts += (post.data \ "id").as[String] -> post.data)
         posts.clear
     }
     
@@ -117,14 +117,14 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                 // Add the posts to our processed list
                 processPosts
             }
+            
+            context.system.scheduler.scheduleOnce(flushInterval seconds, self, new FlushAuthors)
         }
         case sp: StopPacket => {
             commentsActor match {
                 case Some(ca) => {
-                    // @TODO: Make this work for processedPosts too
-                    if (processedPosts.size > 0) {
-                        // TODO
-                    }
+                    if (processedPosts.size > 0)
+                        commentsActor.get ! new FBCommentDataRequest(processedPosts toMap)
                     if (posts.size > 0)
                         authorActor ! new PostRequest(posts.toList)
                     Future.sequence(List(ca ? sp, authorActor ? sp)).onComplete { case a => self ! PoisonPill }
@@ -185,26 +185,16 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                                         Json.parse(obj.toString).asInstanceOf[JsObject],
                                         post.getFrom.getId
                                 )
+                                
+                                // Cancel the time flushing actor and reset
+                                cancellablePosts.cancel
+                                cancellablePosts = context.system.scheduler.scheduleOnce(flushInterval seconds, self, new FlushAuthors)
+                                
                                 if (posts.size == 50) {
-                                    // Cancel the time flushing actor and reset
-                                    cancellablePosts.cancel
-                                    cancellablePosts = context.system.scheduler.scheduleOnce(flushInterval seconds, self, new FlushAuthors)
-                                    
                                     // Get the from/to fields using our user collector actor
                                     authorActor ! new PostRequest(posts.toList)
                                     processPosts
                                 }
-
-                                // Get comments if we have to
-                                /*commentsActor match {
-                                    case Some(ca) if postIds.size == 50 => {
-                                        // Get comments
-                                        ca ! new FBDataRequest(postIds.toList, fbdr.start, fbdr.end)
-                                        postIds.clear
-                                    }
-                                    case Some(ca) => postIds += post.getId
-                                    case None => {}
-                                }*/
                         }
                     }
                 }
@@ -316,46 +306,49 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
         }
         case fdr: FBCommentDataRequest => {
             // Make sure we get all the comments of all the post IDs given
-            val urls = fdr.posts.keys.map(_ + "/comments") toList
+            val ids = fdr.posts.keys toList
+            val urls = ids.map(_ + "/comments")
             
-            // Get the URLs in batched fashion
-            val requests = for (url <- urls) yield {
-                // Build the start and end parameters
-                val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes"))
-                    
-                // Add the batched request
-                new BatchRequestBuilder(url)
-                        .parameters(parameters: _*)
-                        .build()
-            }
-            
-            // Make the requests
-            val responses = fbClient.executeBatch(requests.asJava)
-            
-            var offset = 0
-            userActor ! new CommentRequest(responses.flatMap(response => {
-                // Use try since sometimes comments are removed before we see them
-                val res = try {
-                    val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
-                    objectList.flatMap(objects => {
-                        objects.map(obj => {
-                            val json = Json.parse(obj.toString).asInstanceOf[JsObject]
-                            new FBIntrospect(
-                                    // Merge the original post into the comment
-                                    json.deepMerge(fdr.posts(urls(offset))),
-                                    (json \ "from" \ "id").as[String]
-                            )
-                        })
-                    })
-                } catch {
-                    case e: com.restfb.json.JsonException => List()
+            if (urls.size > 0) {
+                // Get the URLs in batched fashion
+                val requests = for (url <- urls) yield {
+                    // Build the start and end parameters
+                    val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes"))
+                        
+                    // Add the batched request
+                    new BatchRequestBuilder(url)
+                            .parameters(parameters: _*)
+                            .build()
                 }
                 
-                // Increase the offset
-                offset += 1
+                // Make the requests
+                val responses = fbClient.executeBatch(requests.asJava)
                 
-                res
-            }).toList)
+                var offset = 0
+                userActor ! new CommentRequest(responses.flatMap(response => {
+                    // Use try since sometimes comments are removed before we see them
+                    val res = try {
+                        val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
+                        objectList.flatMap(objects => {
+                            objects.map(obj => {
+                                val json = Json.parse(obj.toString).asInstanceOf[JsObject]
+                                new FBIntrospect(
+                                        // Merge the original post into the comment
+                                        json ++ Json.obj("post" -> fdr.posts(ids(offset))),
+                                        (json \ "from" \ "id").as[String]
+                                )
+                            })
+                        })
+                    } catch {
+                        case e: com.restfb.json.JsonException => List()
+                    }
+                    
+                    // Increase the offset
+                    offset += 1
+                    
+                    res
+                }).toList)
+            }
         }
     }
 }
@@ -386,7 +379,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val runOnce = (config \ "run_once").asOpt[Boolean].getOrElse(false)
             
             // Get flush and comment intervals
-            val flushInterval = (config \ "flush_interval").asOpt[Int].getOrElse(10)
+            val flushInterval = (config \ "flush_interval").asOpt[Int].getOrElse(60)
             val commentInterval = (config \ "comment_interval").asOpt[Int].getOrElse(3600)
             
             // Set up RestFB

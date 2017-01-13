@@ -143,6 +143,20 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "flush_interval",
+					"description": "The time in seconds to wait before flushing posts if the limit of 50 is not reached before.",
+					"type": "int",
+					"required": false,
+					"default": 60
+				},
+				{
+					"name": "comment_interval",
+					"description": "The interval in seconds to wait before collecting the comments to a post. This is done retroactively because comments are not made realtime. Make sure to set this interval frequent enough to not run out of memory and fit your application's real-time need, yet long enough to get almost all comments that will be made.",
+					"type": "int",
+					"required": false,
+					"default": 3600
 				}
 			]
 		}
