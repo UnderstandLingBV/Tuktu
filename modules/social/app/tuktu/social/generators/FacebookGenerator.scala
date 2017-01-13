@@ -31,13 +31,17 @@ import akka.pattern.ask
 import scala.concurrent.duration.DurationInt
 import play.api.cache.Cache
 import akka.util.Timeout
-import scala.collection.mutable.Queue
-import scala.collection.mutable.ListBuffer
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 case class FBDataRequest(
     urls: List[String],
     start: Option[Long],
     end: Option[Long]
+)
+
+case class FBCommentDataRequest(
+    posts: Map[String, JsObject]
 )
 
 case class FBIntrospect(
@@ -46,41 +50,83 @@ case class FBIntrospect(
 )
 
 case class PostRequest(
-    post: FBIntrospect
+    posts: List[FBIntrospect]
 )
 
 case class CommentRequest(
     comments: List[FBIntrospect]
 )
 
+case class FlushAuthors()
+case class CommentProcessing()
+
 /**
  * Gets all posts from a facebook page
  */
-class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, updateTime: Long, fields: String, getComments: Boolean, runOnce: Boolean) extends Actor with ActorLogging {
+class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, updateTime: Long, fields: String, getComments: Boolean, runOnce: Boolean, flushInterval: Int, commentInterval: Int) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Set up the author fetching actor
     val authorActor = Akka.system.actorOf(Props(classOf[UserCollector], parentActor, fbClient))
-    
-//    val postCollector = Akka.system.actorOf(Props(classOf[PostCollector], authorActor))
-    
     // If we need to get the comments too, make sure we set up the actor
     val commentsActor = if (getComments) Some(Akka.system.actorOf(Props(classOf[CommentsCollector], parentActor, fbClient, authorActor))) else None
-    val postIds = collection.mutable.ListBuffer.empty[String]
-    
+
     // Also keep track of all posts obtained so far, so we can get author stuff properly
-//    val posts = collection.mutable.ListBuffer.empty[FBIntrospect]
+    val posts = collection.mutable.ListBuffer.empty[FBIntrospect]
+    
+    // Keep track of posts that have been processed so we can get the comments after a while
+    val processedPosts = collection.mutable.Map.empty[String, JsObject]
+    
+    // When it takes too long to send posts to fetch the authors
+    var cancellablePosts: Cancellable = context.system.scheduler.scheduleOnce(flushInterval seconds, self, new FlushAuthors)
+    
+    // We start fetching comments every comment interval
+    if (commentsActor != None)
+        context.system.scheduler.schedule(commentInterval seconds, commentInterval seconds, self, new CommentProcessing)
+    
+    def processPosts() {
+        posts.map(post => processedPosts += (post.data \ "id").as[String] -> post.data)
+        posts.clear
+    }
     
     def receive() = {
+        case cp: CommentProcessing => {
+            val tooOldTime = System.currentTimeMillis - commentInterval * 1000
+            // Process all the comments that are 'old' -> find everything that is older than commentInterval
+            val eligiblePosts = processedPosts.filter { post =>
+                val id = post._1
+                val json = post._2
+                // Get the timestamp
+                val time = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.ENGLISH)
+                    .parse((json \ "created_time").as[String]).getTime
+                // See if it is too old
+                time < tooOldTime
+            }
+            
+            // Forward them
+            commentsActor.get ! new FBCommentDataRequest(eligiblePosts toMap)
+            
+            // Remove them all
+            processedPosts --= eligiblePosts.keys
+        }
+        case fa: FlushAuthors => {
+            // Check if there is even data
+            if (posts.size > 0) {
+                // Send to the author actor
+                authorActor ! new PostRequest(posts.toList)
+                // Add the posts to our processed list
+                processPosts
+            }
+        }
         case sp: StopPacket => {
             commentsActor match {
                 case Some(ca) => {
-                    if (postIds.size > 0)
-                        ca ! new FBDataRequest(postIds.toList, None, None)
-                    authorActor ! "posts"
-                    authorActor ! "comments"
-//                    if (posts.size > 0)
-//                        authorActor ! new PostRequest(posts.toList)
+                    // @TODO: Make this work for processedPosts too
+                    if (processedPosts.size > 0) {
+                        // TODO
+                    }
+                    if (posts.size > 0)
+                        authorActor ! new PostRequest(posts.toList)
                     Future.sequence(List(ca ? sp, authorActor ? sp)).onComplete { case a => self ! PoisonPill }
                 }
                 case None => {}
@@ -134,26 +180,23 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                         val unixTime = post.getCreatedTime.getTime / 1000
                         // See if the creation time was within our interval
                         if (unixTime <= endTime && unixTime >= startTime) {
-                                authorActor ! new PostRequest(new FBIntrospect(
+                                // Add to our buffer
+                                posts += new FBIntrospect(
                                         Json.parse(obj.toString).asInstanceOf[JsObject],
                                         post.getFrom.getId
-                                ))
-                                
-                                
-                                
-//                                // Add to our buffer
-//                                posts += new FBIntrospect(
-//                                        Json.parse(obj.toString).asInstanceOf[JsObject],
-//                                        post.getFrom.getId
-//                                )
-//                                if (posts.size == 50) {
-//                                    // Get the from/to fields using our user collector actor
-//                                    authorActor ! new PostRequest(posts.toList)
-//                                    posts.clear
-//                                }
+                                )
+                                if (posts.size == 50) {
+                                    // Cancel the time flushing actor and reset
+                                    cancellablePosts.cancel
+                                    cancellablePosts = context.system.scheduler.scheduleOnce(flushInterval seconds, self, new FlushAuthors)
+                                    
+                                    // Get the from/to fields using our user collector actor
+                                    authorActor ! new PostRequest(posts.toList)
+                                    processPosts
+                                }
 
                                 // Get comments if we have to
-                                commentsActor match {
+                                /*commentsActor match {
                                     case Some(ca) if postIds.size == 50 => {
                                         // Get comments
                                         ca ! new FBDataRequest(postIds.toList, fbdr.start, fbdr.end)
@@ -161,7 +204,7 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
                                     }
                                     case Some(ca) => postIds += post.getId
                                     case None => {}
-                                }
+                                }*/
                         }
                     }
                 }
@@ -198,213 +241,17 @@ class UserCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient) exte
      * that we can actually get per node type
      */
     val eligibleFields = Map(
-            "page" -> List("id",
-                "about",
-                "affiliation",
-                "artists_we_like",
-                "attire",
-                "awards",
-                "band_interests",
-                "band_members",
-                "best_page",
-                "bio",
-                "birthday",
-                "booking_agent",
-                "built",
-                "business",
-                "can_checkin",
-                "can_post",
-                "category",
-                "category_list",
-                "checkins",
-                "company_overview",
-                "contact_address",
-                "country_page_likes",
-                "cover",
-                "culinary_team",
-                "current_location",
-                "description",
-                "description_html",
-                "directed_by",
-                "display_subtext",
-                "emails",
-                "fan_count",
-                "features",
-                "food_styles",
-                "founded",
-                "general_info",
-                "general_manager",
-                "genre",
-                "global_brand_page_name",
-                "global_brand_root_id",
-                "has_added_app",
-                "hometown",
-                "hours",
-                "influences",
-                "is_community_page",
-                "is_permanently_closed",
-                "is_published",
-                "is_unclaimed",
-                "is_verified",
-                "leadgen_tos_accepted",
-                "link",
-                "location",
-                "members",
-                "mission",
-                "mpg",
-                "name",
-                "network",
-                "new_like_count",
-                "offer_eligible",
-                "overall_star_rating",
-                "parent_page",
-                "parking",
-                "payment_options",
-                "personal_info",
-                "personal_interests",
-                "pharma_safety_info",
-                "phone",
-                "place_type",
-                "plot_outline",
-                "press_contact",
-                "price_range",
-                "produced_by",
-                "products",
-                "promotion_ineligible_reason",
-                "public_transit",
-                "publisher_space",
-                "rating_count",
-                "record_label",
-                "release_date",
-                "restaurant_services",
-                "restaurant_specialties",
-                "schedule",
-                "screenplay_by",
-                "season",
-                "single_line_address",
-                "starring",
-                "store_number",
-                "studio",
-                "talking_about_count",
-                "unread_message_count",
-                "unread_notif_count",
-                "unseen_message_count",
-                "username",
-                "voip_info",
-                "website",
-                "were_here_count",
-                "written_by"),
-        "user" -> List("id",
-                "about",
-                "age_range",
-                "birthday",
-                "cover",
-                "currency",
-                "devices",
-                "education",
-                "email",
-                "favorite_athletes",
-                "favorite_teams",
-                "first_name",
-                "gender",
-                "hometown",
-                "inspirational_people",
-                "install_type",
-                "installed",
-                "interested_in",
-                "is_verified",
-                "languages",
-                "last_name",
-                "link",
-                "locale",
-                "location",
-                "meeting_for",
-                "middle_name",
-                "name",
-                "name_format",
-                "payment_pricepoints",
-                "political",
-                "public_key",
-                "quotes",
-                "relationship_status",
-                "religion",
-                "security_settings",
-                "significant_other",
-                "sports",
-                "third_party_id",
-                "timezone",
-                "updated_time",
-                "verified",
-                "video_upload_limits",
-                "viewer_can_send_gift",
-                "website",
-                "work")
+        "page" -> List("id", "about", "affiliation", "artists_we_like", "attire", "awards", "band_interests", "band_members", "best_page", "bio", "birthday", "booking_agent", "built", "business", "can_checkin", "can_post", "category", "category_list", "checkins", "company_overview", "contact_address", "country_page_likes", "cover", "culinary_team", "current_location", "description", "description_html", "directed_by", "display_subtext", "emails", "fan_count", "features", "food_styles", "founded", "general_info", "general_manager", "genre", "global_brand_page_name", "global_brand_root_id", "has_added_app", "hometown", "hours", "influences", "is_community_page", "is_permanently_closed", "is_published", "is_unclaimed", "is_verified", "leadgen_tos_accepted", "link", "location", "members", "mission", "mpg", "name", "network", "new_like_count", "offer_eligible", "overall_star_rating", "parent_page", "parking", "payment_options", "personal_info", "personal_interests", "pharma_safety_info", "phone", "place_type", "plot_outline", "press_contact", "price_range", "produced_by", "products", "promotion_ineligible_reason", "public_transit", "publisher_space", "rating_count", "record_label", "release_date", "restaurant_services", "restaurant_specialties", "schedule", "screenplay_by", "season", "single_line_address", "starring", "store_number", "studio", "talking_about_count", "unread_message_count", "unread_notif_count", "unseen_message_count", "username", "voip_info", "website", "were_here_count", "written_by"),
+        "user" -> List("id", "about", "age_range", "birthday", "cover", "currency", "devices", "education", "email", "favorite_athletes", "favorite_teams", "first_name", "gender", "hometown", "inspirational_people", "install_type", "installed", "interested_in", "is_verified", "languages", "last_name", "link", "locale", "location", "meeting_for", "middle_name", "name", "name_format", "payment_pricepoints", "political", "public_key", "quotes", "relationship_status", "religion", "security_settings", "significant_other", "sports", "third_party_id", "timezone", "updated_time", "verified", "video_upload_limits", "viewer_can_send_gift", "website", "work")
     )
-    
-    val posts = new Queue[FBIntrospect]
-    val comments = new Queue[FBIntrospect]
-    
-    var cancellablePosts: Cancellable = _
-    var timerRunningPosts = false
-    
-    var cancellableComments: Cancellable = _
-    var timerRunningComments = false
     
     def receive() = {
         case sp: StopPacket => {
             sender ! "ok"
             self ! PoisonPill
         }
-        case comments: CommentRequest => addToQueue(comments.comments, true)
-        case posts: PostRequest => addToQueue(List(posts.post), false)
-        case "comments" => processComments
-        case "posts" => processPosts
-    }
-    
-    def addToQueue(obj: List[FBIntrospect], isComment: Boolean) = {
-        if(isComment) {
-            comments ++= obj
-        } else {
-            posts ++= obj
-        }
-        
-        if(comments.size >= 50) {            
-            processComments
-        } else {
-            updateTimer(false)
-        }
-        
-        if(posts.size >= 50) {
-            processPosts             
-        } else {
-            updateTimer(false)
-        }
-    }
-    
-    def processComments = {
-        cancellableComments.cancel
-        timerRunningComments = false
-        getProfiles(comments.dequeueAll{_ => true}.toList, true)
-    }
-    
-    def processPosts = {
-        cancellablePosts.cancel
-        timerRunningPosts = false
-        getProfiles(posts.dequeueAll{_ => true}.toList, true)
-    }
-    
-    def updateTimer(isComment: Boolean) = {
-        if(isComment) {
-            if(!timerRunningComments) {
-                cancellableComments = context.system.scheduler.scheduleOnce(10 seconds, self, "comments")
-                timerRunningComments = true
-            }               
-        } else {
-            if(!timerRunningPosts) {
-                cancellablePosts = context.system.scheduler.scheduleOnce(10 seconds, self, "posts")
-                timerRunningPosts = true
-            }             
-        }     
+        case comments: CommentRequest => getProfiles(comments.comments, true)
+        case posts: PostRequest => getProfiles(posts.posts, false)
     }
     
     def getProfiles(objs: List[FBIntrospect], isComment: Boolean) = {
@@ -467,34 +314,14 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
             sender ! "ok"
             self ! PoisonPill
         }
-        case fbdr: FBDataRequest => {
+        case fdr: FBCommentDataRequest => {
             // Make sure we get all the comments of all the post IDs given
-            val urls = fbdr.urls.map(_ + "/comments")
-            val now = System.currentTimeMillis / 1000
-            // Get start and end time
-            val startTime = fbdr.start match {
-                case Some(st) => st
-                case None     => System.currentTimeMillis / 1000
-            }
-            val endTime = fbdr.end match {
-                case Some(en) => en
-                case None     => 13592062088L // Some incredibly large number
-            }
+            val urls = fdr.posts.keys.map(_ + "/comments") toList
             
             // Get the URLs in batched fashion
             val requests = for (url <- urls) yield {
                 // Build the start and end parameters
-                val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes")) ++ {
-                        fbdr.start match {
-                            case Some(s) => Array(Parameter.`with`("since", s))
-                            case None => Array[Parameter]()
-                        }
-                    } ++ {
-                        fbdr.end match {
-                            case Some(e) => Array(Parameter.`with`("until", e))
-                            case None => Array[Parameter]()
-                        }
-                    }
+                val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes"))
                     
                 // Add the batched request
                 new BatchRequestBuilder(url)
@@ -505,15 +332,17 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
             // Make the requests
             val responses = fbClient.executeBatch(requests.asJava)
             
+            var offset = 0
             userActor ! new CommentRequest(responses.flatMap(response => {
                 // Use try since sometimes comments are removed before we see them
-                try {
+                val res = try {
                     val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
                     objectList.flatMap(objects => {
                         objects.map(obj => {
                             val json = Json.parse(obj.toString).asInstanceOf[JsObject]
                             new FBIntrospect(
-                                    json,
+                                    // Merge the original post into the comment
+                                    json.deepMerge(fdr.posts(urls(offset))),
                                     (json \ "from" \ "id").as[String]
                             )
                         })
@@ -521,6 +350,11 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
                 } catch {
                     case e: com.restfb.json.JsonException => List()
                 }
+                
+                // Increase the offset
+                offset += 1
+                
+                res
             }).toList)
         }
     }
@@ -528,57 +362,7 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
 
 class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     val allFields = List(
-            "id",
-            "application",
-            "call_to_action",
-            "caption",
-            "child_attachments",
-            "comments_mirroring_domain",
-            "coordinates",
-            "created_time",
-            "description",
-            "event",
-            "expanded_height",
-            "expanded_width",
-            "feed_targeting",
-            "full_picture",
-            "height",
-            "icon",
-            "instagram_eligibility",
-            "is_expired",
-            "is_hidden",
-            "is_instagram_eligible",
-            "is_popular",
-            "is_published",
-            "is_spherical",
-            "link",
-            "message",
-            "message_tags",
-            "name",
-            "object_id",
-            "parent_id",
-            "permalink_url",
-            "picture",
-            "place",
-            "privacy",
-            "promotion_status",
-            "properties",
-            "scheduled_publish_time",
-            "shares",
-            "source",
-            "status_type",
-            "story",
-            "story_tags",
-            "target",
-            "targeting",
-            "timeline_visibility",
-            "type",
-            "updated_time",
-            "via",
-            "width",
-            "likes.limit(0).summary(true)",
-            "from",
-            "to"
+        "id", "application", "call_to_action", "caption", "child_attachments", "comments_mirroring_domain", "coordinates", "created_time", "description", "event", "expanded_height", "expanded_width", "feed_targeting", "full_picture", "height", "icon", "instagram_eligibility", "is_expired", "is_hidden", "is_instagram_eligible", "is_popular", "is_published", "is_spherical", "link", "message", "message_tags", "name", "object_id", "parent_id", "permalink_url", "picture", "place", "privacy", "promotion_status", "properties", "scheduled_publish_time", "shares", "source", "status_type", "story", "story_tags", "target", "targeting", "timeline_visibility", "type", "updated_time", "via", "width", "likes.limit(0).summary(true)", "from", "to"
     )
     
     var pollerActor: ActorRef = _
@@ -600,6 +384,10 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val getComments = (config \ "get_comments").asOpt[Boolean].getOrElse(false)
             // Since we get all data back to start time in one go, we might just stop there
             val runOnce = (config \ "run_once").asOpt[Boolean].getOrElse(false)
+            
+            // Get flush and comment intervals
+            val flushInterval = (config \ "flush_interval").asOpt[Int].getOrElse(10)
+            val commentInterval = (config \ "comment_interval").asOpt[Int].getOrElse(3600)
             
             // Set up RestFB
             val fbClient = new DefaultFacebookClient(aToken, Version.VERSION_2_8)
@@ -631,7 +419,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             if (startTime == None && endTime == None) startTime = Some(now)
 
             // Merge URLs and send to periodic actor
-            pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime, fields, getComments, runOnce))
+            pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime, fields, getComments, runOnce, flushInterval, commentInterval))
             pollerActor ! new FBDataRequest(users.toList, startTime, endTime)
         }
         case data: ResponsePacket => channel.push(DataPacket(List(Map(resultName -> data.json))))
