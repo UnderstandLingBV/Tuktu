@@ -1208,7 +1208,10 @@ class GetListElementProcessor(resultName: String) extends BaseProcessor(resultNa
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         new DataPacket(data.data.map {datum =>
-            datum + (resultName -> datum(field).asInstanceOf[Seq[Any]](index))
+            val seq = datum(field).asInstanceOf[Seq[Any]]
+            if (seq.size > index)
+                datum + (resultName -> seq(index))
+            else datum
         })
     })
 }
