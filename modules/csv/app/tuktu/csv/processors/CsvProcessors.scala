@@ -4,6 +4,7 @@ import java.io.BufferedWriter
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.io.StringWriter
+import java.io.StringReader
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import com.opencsv.CSVWriter
@@ -14,44 +15,40 @@ import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
 import tuktu.api.utils
 import com.opencsv.CSVReader
-import java.io.StringReader
 
 /**
  * Converts all fields into a CSV string
  */
 class CSVStringProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var separator = ';'
-    var quote = '"'
-    var escape = '\\'
+    var separator: Char = _
+    var quote: Char = _
+    var escape: Char = _
 
     override def initialize(config: JsObject) {
-        separator = (config \ "separator").asOpt[String].getOrElse(";").head
-        quote = (config \ "quote").asOpt[String].getOrElse("\"").head
-        escape = (config \ "escape").asOpt[String].getOrElse("\\").head
+        separator = (config \ "separator").asOpt[String].flatMap { _.headOption }.getOrElse(';')
+        quote = (config \ "quote").asOpt[String].flatMap { _.headOption }.getOrElse('\"')
+        escape = (config \ "escape").asOpt[String].flatMap { _.headOption }.getOrElse('\\')
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
-        // Set up writer
-        val sw = new StringWriter
-        val csvWriter = new CSVWriter(sw, separator, quote, escape, "")
-
+    override def processor: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Convert data to CSV
-        val newData = for (datum <- data) yield {
+        for (datum <- data) yield {
+            // Set up writers
+            val sw = new StringWriter
+            val csvWriter = new CSVWriter(sw, separator, quote, escape, "")
+
             // Sort the datum by key to guarantee a consistent order for all similar data packets,
             // before mapping to their value's string representation
             val stringDatum = datum.toArray.sortBy(_._1).map(_._2.toString)
             csvWriter.writeNext(stringDatum)
             val res = sw.toString
 
-            // See if we need to append headers or not
+            // Close the underlying stream writer flushing any buffered content
+            csvWriter.close
+
+            // Append result
             datum + (resultName -> res)
         }
-
-        // Close
-        csvWriter.close
-        sw.close
-
-        Future { newData }
     })
 }
 
@@ -59,57 +56,59 @@ class CSVStringProcessor(resultName: String) extends BaseProcessor(resultName) {
  * Reads a field as CSV into a map that is put into the datapacket
  */
 class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var headers: List[String] = null
-    var headersFromFirst = false
-    var field = ""
+    var headers: Option[Seq[String]] = _
+    var headersFromFirst: Boolean = _
+    var usedHeadersFromFirst: Boolean = false
+    var field: String = _
 
-    var separator = ';'
-    var quote = '"'
-    var escape = '\\'
+    var separator: Char = _
+    var quote: Char = _
+    var escape: Char = _
 
-    var removeOriginal = false
+    var removeOriginal: Boolean = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         // Get headers
-        headers = (config \ "headers").asOpt[List[String]].getOrElse(null)
+        headers = (config \ "headers").asOpt[Seq[String]]
         headersFromFirst = (config \ "headers_from_first").asOpt[Boolean].getOrElse(false)
 
-        separator = (config \ "separator").asOpt[String].getOrElse(",").head
-        quote = (config \ "quote").asOpt[String].getOrElse("\"").head
-        escape = (config \ "escape").asOpt[String].getOrElse("\\").head
+        separator = (config \ "separator").asOpt[String].flatMap { _.headOption }.getOrElse(';')
+        quote = (config \ "quote").asOpt[String].flatMap { _.headOption }.getOrElse('\"')
+        escape = (config \ "escape").asOpt[String].flatMap { _.headOption }.getOrElse('\\')
 
         removeOriginal = (config \ "remove_original").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        DataPacket({
-            // Get lines to mimic a CSV file
-            (for (datum <- data.data) yield {
-                val value = datum(field).toString
+    override def processor: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        // Get lines to mimic a CSV file
+        for (datum <- data) yield {
+            val value = datum(field).toString
 
-                // Read CSV and process
-                val reader = new CSVReader(new StringReader(value), separator, quote, escape)
-                val line = reader.readNext
-                reader.close
+            // Read CSV and process
+            val reader = new CSVReader(new StringReader(value), separator, quote, escape)
+            val line = reader.readNext
+            reader.close
 
-                // Check if these are our headers
-                if (headers == null) {
-                    if (headersFromFirst) headers = line.toList
-                    else headers = (for (i <- 0 to line.size - 1) yield i.toString).toList
-                }
+            // Check if these are our headers
+            if (headers.isEmpty) {
+                if (headersFromFirst) {
+                    headers = Some(line)
+                    usedHeadersFromFirst = true
+                } else headers = Some(for (i <- 0 until line.size) yield i.toString)
+            }
 
-                // Add to result
-                {
-                    if (removeOriginal) datum - field
-                    else datum
-                } ++ {
-                    val toAdd = headers.zip(line.toList).toMap
-                    toAdd
-                }
-            })
-        })
-    }) compose Enumeratee.drop(if (headersFromFirst) 1 else 0)
+            // Optionally remove original field, and add to result
+            {
+                if (removeOriginal) datum - field
+                else datum
+            } ++ {
+                if (headers.get.size != line.size)
+                    throw new NoSuchElementException("Header size (" + headers.get.size + ") and line size (" + line.size + ") do no match.")
+                headers.get.zip(line).toMap
+            }
+        }
+    }) compose Enumeratee.drop(if (usedHeadersFromFirst) 1 else 0)
 }
 
 /**
@@ -118,7 +117,7 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
 class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var writers = scala.collection.mutable.Map[String, CSVWriter]()
     var headers = scala.collection.mutable.Map[String, Array[String]]()
-    var fields: Option[Array[String]] = None
+    var fields: Option[Array[String]] = _
     var fileName, encoding: String = _
     var separator, quote, escape: Char = _
 
@@ -127,14 +126,14 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
         fileName = (config \ "file_name").as[String]
         encoding = (config \ "encoding").asOpt[String].getOrElse("utf-8")
 
-        separator = (config \ "separator").asOpt[String].getOrElse(";").head
-        quote = (config \ "quote").asOpt[String].getOrElse("\"").head
-        escape = (config \ "escape").asOpt[String].getOrElse("\\").head
+        separator = (config \ "separator").asOpt[String].flatMap { _.headOption }.getOrElse(';')
+        quote = (config \ "quote").asOpt[String].flatMap { _.headOption }.getOrElse('\"')
+        escape = (config \ "escape").asOpt[String].flatMap { _.headOption }.getOrElse('\\')
 
         fields = (config \ "fields").asOpt[Array[String]]
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+    override def processor: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         // Convert data to CSV
         for (datum <- data.data) {
             val evaluated_fileName = utils.evaluateTuktuString(fileName, datum)
@@ -145,7 +144,7 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
                 headers += evaluated_fileName -> {
                     fields match {
                         case Some(flds) => flds
-                        case None => datum.map(elem => elem._1).toArray
+                        case None       => datum.map(elem => elem._1).toArray
                     }
                 }
 
@@ -183,37 +182,35 @@ class FixedWidthProcessor(resultName: String) extends BaseProcessor(resultName) 
     var field: String = _
     var widths: List[Int] = _
     var flatten: Boolean = _
-    var numberHeaders: List[String] = _
+    var numberHeaders: Seq[String] = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         widths = (config \ "widths").as[List[Int]]
         headers = (config \ "headers").asOpt[List[String]]
         flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
-        numberHeaders = (0 to widths.size).toList.map(_.toString)
-    }
-    
-    def substringFetch(curWidths: List[Int], string: String): List[String] = curWidths match {
-        case Nil => List(string)
-        case width::trail => string.take(width)::substringFetch(trail, string.drop(width))
+        numberHeaders = (0 to widths.size).map(_.toString)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(
-                for (datum <- data.data) yield {
-                    // Get the field to split on
-                    val values = substringFetch(widths, datum(field).toString)
-                    
-                    // Merge with headers or add to DP
-                    if (flatten) headers match {
-                        case Some(hdrs) => datum ++ hdrs.zip(values).toMap
-                        case None => datum ++ numberHeaders.zip(values).toMap
-                    }
-                    else datum + (resultName -> (headers match {
-                        case Some(hdrs) => headers.zip(values).toMap
-                        case None => values
-                    }))
-                }
-        )
+    def substringFetch(curWidths: List[Int], string: String): List[String] = curWidths match {
+        case Nil            => List(string)
+        case width :: trail => string.take(width) :: substringFetch(trail, string.drop(width))
+    }
+
+    override def processor: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        for (datum <- data) yield {
+            // Get the field to split on
+            val values = substringFetch(widths, datum(field).toString)
+
+            // Merge with headers or add to DP
+            if (flatten) headers match {
+                case Some(hdrs) => datum ++ hdrs.zip(values).toMap
+                case None       => datum ++ numberHeaders.zip(values).toMap
+            }
+            else datum + (resultName -> (headers match {
+                case Some(hdrs) => headers.zip(values).toMap
+                case None       => values
+            }))
+        }
     })
 }
