@@ -1,0 +1,36 @@
+{
+	"name": "Get List Element Processor",
+	"class": "tuktu.processors.GetListElementProcessor",
+	"description": "Gets an element of a list inside a datum.",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"type": "string",
+					"description": "The field name that contains the list.",
+					"required": true
+				},
+				{
+					"name": "index",
+					"type": "int",
+					"description": "The index of the element to fetch from the list.",
+					"required": true
+				}
+			]
+		}
+	]
+}

@@ -1193,3 +1193,22 @@ class RemoveEmptyPacketProcessor(resultName: String) extends BaseProcessor(resul
             data
     }) compose Enumeratee.filter { (data: DataPacket) => data.nonEmpty }
 }
+
+/**
+ * Gets an element of a list at a specified index
+ */
+class GetListElementProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field: String = _
+    var index: Int = _
+
+    override def initialize(config: JsObject) {
+        field = (config \ "field").as[String]
+        index = (config \ "index").as[Int]
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(data.data.map {datum =>
+            datum + (resultName -> datum(field).asInstanceOf[Seq[Any]](index))
+        })
+    })
+}

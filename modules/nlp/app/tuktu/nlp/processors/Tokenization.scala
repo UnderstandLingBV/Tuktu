@@ -31,7 +31,9 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
             }
             val tokens = {
                 // Remove links and mentions, add stuff around sentence closures
-                val clean = fieldValue.replaceAll("(http:|ftp:|https:|www.)[^ ]+[ |\r|\n|\t]", " ").replaceAll("(http:|ftp:|https:|www.).*", "")
+                val clean = fieldValue
+                    .replaceAll("[\r|\n|\t]", " ")
+                    .replaceAll("(http:|ftp:|https:|www.)[^ ]+", " ").replaceAll("(http:|ftp:|https:|www.).*", "")
                     .replaceAll("#[0-9a-zA-z_]+", " ").replaceAll("@[0-9a-zA-z_]+", " ")
                     .replaceAll("([\\.|!|\\?|\"|¡|¿|,|:|;])", " $1 ")
                     .replaceAll(" +", " ").replaceAll("(.)\\1{3,}", "$1")
