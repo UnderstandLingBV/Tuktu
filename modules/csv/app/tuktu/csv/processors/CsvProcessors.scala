@@ -56,9 +56,9 @@ class CSVStringProcessor(resultName: String) extends BaseProcessor(resultName) {
  * Reads a field as CSV into a map that is put into the datapacket
  */
 class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var predefHeaders: Option[Seq[String]] = _
     var headers: Option[Seq[String]] = _
     var headersFromFirst: Boolean = _
-    var usedHeadersFromFirst: Boolean = false
     var field: String = _
 
     var separator: Char = _
@@ -70,6 +70,7 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         // Get headers
+        predefHeaders = (config \ "headers").asOpt[Seq[String]]
         headers = (config \ "headers").asOpt[Seq[String]]
         headersFromFirst = (config \ "headers_from_first").asOpt[Boolean].getOrElse(false)
 
@@ -92,10 +93,8 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
 
             // Check if these are our headers
             if (headers.isEmpty) {
-                if (headersFromFirst) {
-                    headers = Some(line)
-                    usedHeadersFromFirst = true
-                } else headers = Some(for (i <- 0 until line.size) yield i.toString)
+                if (headersFromFirst) headers = Some(line)
+                else headers = Some(for (i <- 0 until line.size) yield i.toString)
             }
 
             // Optionally remove original field, and add to result
@@ -108,7 +107,7 @@ class CSVReaderProcessor(resultName: String) extends BaseProcessor(resultName) {
                 headers.get.zip(line).toMap
             }
         }
-    }) compose Enumeratee.drop(if (usedHeadersFromFirst) 1 else 0)
+    }) compose Enumeratee.drop { if (predefHeaders.isEmpty && headersFromFirst) 1 else 0 }
 }
 
 /**
