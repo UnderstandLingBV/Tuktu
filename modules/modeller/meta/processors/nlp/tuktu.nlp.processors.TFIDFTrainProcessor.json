@@ -43,6 +43,12 @@
 					"type": "string",
 					"required": true,
 					"description": "The field the data resides in. Data can be textual (String) or Seq[String]."
+				},
+				{
+					"name": "label_field",
+					"type": "string",
+					"required": false,
+					"description": "Optional field containing the label of the document. If set, a document will only be considered new if it has a previously unseen label, otherwise it is appended to the existing label's document."
 				}
 			]
 		}

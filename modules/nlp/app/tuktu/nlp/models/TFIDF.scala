@@ -9,23 +9,44 @@ import java.io.ObjectInputStream
 
 class TFIDF() extends BaseModel {
     // Keep track of word counts
-    var wordCounts = collection.mutable.Map.empty[String, Int]
-    var docCounts = 0
+    var wordCounts = collection.mutable.Map.empty[String, collection.mutable.Map[String, Int]]
+    var docCounts = collection.mutable.Map.empty[String, Int]
 
     /**
      * Adds documents to the word counts
      */
-    def addDocument(document: String): Unit = addDocument(Tokenizer.tokenize(document) toList)
+    def addDocument(document: String, label: Option[String]): Unit = addDocument(Tokenizer.tokenize(document) toList, label)
 
-    def addDocument(tokens: List[String]): Unit = {
+    def addDocument(tokens: List[String], label: Option[String]): Unit = {
         // Increment all distinct token counts and document count
         for (token <- tokens.distinct) {
-            if (wordCounts.contains(token))
-                wordCounts(token) += 1
-            else
-                wordCounts += token -> 1
+            if (!wordCounts.contains(token))
+                wordCounts += token -> collection.mutable.Map.empty[String, Int]
+                
+            label match {
+                case Some(lbl) => {
+                    if (!wordCounts.contains(token)) wordCounts += token -> collection.mutable.Map.empty[String, Int]
+                    if (!wordCounts(token).contains(lbl)) wordCounts(token) += lbl -> 0
+                    wordCounts(token)(lbl) += 1
+                }
+                case None => {
+                    if (!wordCounts.contains(token)) wordCounts += token -> collection.mutable.Map.empty[String, Int]
+                    if (!wordCounts(token).contains("")) wordCounts(token) += "" -> 0
+                    wordCounts(token)("") += 1
+                }
+            }
         }
-        docCounts += 1
+        
+        label match {
+            case Some(lbl) => {
+                if (!docCounts.contains(lbl)) docCounts += lbl -> 0
+                docCounts(lbl) += 1
+            }
+            case None => {
+                if (!docCounts.contains("")) docCounts += "" -> 0
+                docCounts(lbl) += 1
+            }
+        }
     }
 
     /**
@@ -38,8 +59,15 @@ class TFIDF() extends BaseModel {
 
         for ((token, count) <- tokensByCount) yield {
             token -> (count * math.log(
-                    (1 + docCounts) / // Total document counts
-                    (1 + wordCounts.getOrElse(token, 0)) // Occurrences in documents
+                    (1.0 + {
+                        // Total document counts
+                        if (docCounts.size == 1 && docCounts.head._1 == "") docCounts("").toDouble
+                        else docCounts.keySet.size.toDouble
+                    }) / (1.0 + {
+                        // Occurrences in documents
+                        if (!wordCounts.contains(token)) 0.0
+                        else wordCounts(token).map(_._2).sum.toDouble
+                    }) 
             ))
         }
     }
@@ -61,7 +89,7 @@ class TFIDF() extends BaseModel {
         ois.close
 
         // Set back weights
-        wordCounts = obj("w").asInstanceOf[collection.mutable.Map[String, Int]]
-        docCounts = obj("d").asInstanceOf[Int]
+        wordCounts = obj("w").asInstanceOf[collection.mutable.Map[String, collection.mutable.Map[String, Int]]]
+        docCounts = obj("d").asInstanceOf[collection.mutable.Map[String, Int]]
     }
 }

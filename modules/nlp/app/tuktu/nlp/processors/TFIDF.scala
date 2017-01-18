@@ -11,9 +11,11 @@ import tuktu.ml.processors.BaseMLDeserializeProcessor
  */
 class TFIDFTrainProcessor(resultName: String) extends BaseMLTrainProcessor[TFIDF](resultName) {
     var field: String = _
+    var labelField: Option[String] = _
     
     override def initialize(config: JsObject) {
         field = (config \ "data_field").as[String]
+        labelField = (config \ "label_field").asOpt[String]
         super.initialize(config)
     }
     
@@ -23,10 +25,15 @@ class TFIDFTrainProcessor(resultName: String) extends BaseMLTrainProcessor[TFIDF
     override def train(data: List[Map[String, Any]], model: TFIDF): TFIDF = {
         data.foreach(datum => {
             val value = datum(field)
+            val label = labelField match {
+                case Some(l) => Some(datum(l).toString)
+                case None => None
+            }
+            
             // Check field type
             value match {
-                case dtm: Seq[String] => model.addDocument(dtm.toList)
-                case dtm: Any => model.addDocument(dtm.toString)
+                case dtm: Seq[String] => model.addDocument(dtm.toList, label)
+                case dtm: Any => model.addDocument(dtm.toString, label)
             }
         })
         
