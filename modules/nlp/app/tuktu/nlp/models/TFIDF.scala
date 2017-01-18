@@ -44,7 +44,7 @@ class TFIDF() extends BaseModel {
             }
             case None => {
                 if (!docCounts.contains("")) docCounts += "" -> 0
-                docCounts(lbl) += 1
+                docCounts("") += 1
             }
         }
     }
