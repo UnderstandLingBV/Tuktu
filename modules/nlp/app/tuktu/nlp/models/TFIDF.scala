@@ -48,6 +48,22 @@ class TFIDF() extends BaseModel {
             }
         }
     }
+    
+    /**
+     * Computes the inverse document frequency, defined as N / N_t (# docs / # docs containing term)
+     */
+    def computeIDF(term: String) = {
+        // Get the total number of documents
+        val N = docCounts.map(_._2).sum.toDouble
+        // Get the total number of documents containing this token
+        val N_t = if (wordCounts.contains(term)) {
+            if (wordCounts(term).size == 1 && wordCounts(term).head._1 == "")
+                wordCounts(term)("").toDouble // The count is the number of documents
+            else wordCounts(term).size.toDouble // The number of keys is the number of labels/documents
+        } else 0.0
+        
+        Math.log(N / (1.0 + N_t))
+    }
 
     /**
      * Computes TF-IDF scores
@@ -58,17 +74,10 @@ class TFIDF() extends BaseModel {
         val tokensByCount = tokens.groupBy(t => t).map(t => t._1 -> t._2.size)
 
         for ((token, count) <- tokensByCount) yield {
-            token -> (count * math.log(
-                    (1.0 + {
-                        // Total document counts
-                        if (docCounts.size == 1 && docCounts.head._1 == "") docCounts("").toDouble
-                        else docCounts.keySet.size.toDouble
-                    }) / (1.0 + {
-                        // Occurrences in documents
-                        if (!wordCounts.contains(token)) 0.0
-                        else wordCounts(token).map(_._2).sum.toDouble
-                    }) 
-            ))
+            token -> {
+                (1.0 + Math.log(count)) * //TF
+                computeIDF(token) // IDF
+            }
         }
     }
 
