@@ -52,3 +52,31 @@ class Word2VecNearestWordsProcessor(resultName: String) extends BaseMLApplyProce
         }
     }
 }
+
+/**
+ * Computes a document vector by taking the average of the word vectors - this is a heuristic
+ */
+class Word2VecAverageWordsVector(resultName: String) extends BaseMLApplyProcessor[Word2Vec](resultName) {
+    var field: String = _
+
+    override def initialize(config: JsObject) {
+        field = (config \ "data_field").as[String]
+        super.initialize(config)
+    }
+
+    override def applyModel(resultName: String, data: List[Map[String, Any]], model: Word2Vec): List[Map[String, Any]] = {
+        for (datum <- data) yield {
+            datum + (resultName -> {
+                // Check field type
+                val docVector = datum(field) match {
+                    case dtm: Seq[String] => model.getAverageDocVector(dtm)
+                    case dtm: String      => model.getAverageDocVector(dtm.split(" "))
+                    case dtm              => model.getAverageDocVector(dtm.toString.split(" "))
+                }
+                
+                // Convert to something usable
+                (0 to docVector.columns - 1).map(ind => docVector.getDouble(0, ind))
+            })
+        }
+    }
+}

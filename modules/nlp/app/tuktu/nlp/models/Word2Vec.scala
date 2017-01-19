@@ -25,6 +25,8 @@ import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.ops.transforms.Transforms
 
+import scala.collection.JavaConversions._
+
 import tuktu.ml.models.BaseModel
 
 class Word2Vec() extends BaseModel {
@@ -32,6 +34,23 @@ class Word2Vec() extends BaseModel {
     var wordMap: HashMap[String, INDArray] = new HashMap[String, INDArray]()
     // size of the input layers
     var layerSize = 300
+    
+    /**
+     * Gets a document vector by simply taking the mean of word vectors
+     */
+    def getAverageDocVector(inputWords: Seq[String]) = {
+        val containedWords = inputWords.filter(wordMap.contains(_))
+        if (containedWords.size != 0) {
+            val allWords = Nd4j.create(containedWords.size, layerSize)
+    
+            containedWords.zipWithIndex.foreach{wi =>
+                val (word, index) = (wi._1, wi._2)
+                allWords.putRow(index, wordMap(word))
+            }
+    
+            allWords.mean(0)
+        } else Nd4j.create((0 to layerSize - 1).map(_ => 0.0).toArray)
+    }
 
     /**
      * Calculate top nearest words to the given list of words.

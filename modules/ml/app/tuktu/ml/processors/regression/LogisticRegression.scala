@@ -23,8 +23,6 @@ class LogisticRegressionTrainProcessor(resultName: String) extends BaseMLTrainPr
     var tolerance: Double = _
     var maxIterations: Int = _
     
-    var trainOnNewData: Boolean = false
-    
     override def initialize(config: JsObject) {
         // Get parameters
         dataField = (config \ "data_field").as[String]
@@ -33,8 +31,6 @@ class LogisticRegressionTrainProcessor(resultName: String) extends BaseMLTrainPr
         lambda = (config \ "lambda").asOpt[Double].getOrElse(0.0)
         tolerance = (config \ "tolerance").asOpt[Double].getOrElse(1E-5)
         maxIterations = (config \ "max_iterations").asOpt[Int].getOrElse(500)
-        
-        trainOnNewData = (config \ "train_on_new_data").asOpt[Boolean].getOrElse(false)
 
         super.initialize(config)
     }
@@ -57,10 +53,8 @@ class LogisticRegressionTrainProcessor(resultName: String) extends BaseMLTrainPr
             // Add it
             model.addData(Array(data), Array(label))
         }
-        
-        // Check if we need to retrain
-        if (trainOnNewData)
-            model.train
+
+        model.train
         
         model
     }
