@@ -1,0 +1,22 @@
+{
+	"name": "MongoDB ID Processor",
+	"description": "Adds a MongoDB-compatible ID.",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBIDGenerator",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true
+		}
+	]
+}
