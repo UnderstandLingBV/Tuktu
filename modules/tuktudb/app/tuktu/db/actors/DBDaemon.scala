@@ -202,9 +202,14 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
             }
         }
         case or: InternalOverview => {
-            sender ! new OverviewReply(
-                    tuktudb.drop(or.offset * 50).take(50).map(bucket => (bucket._1, bucket._2.size)).toMap
-            )
+            if (or.offset == -1)
+                sender ! new OverviewReply(
+                        tuktudb.keys.map(name => name -> 0).toMap
+                )
+            else
+                sender ! new OverviewReply(
+                        tuktudb.drop(or.offset * 50).take(50).map(bucket => (bucket._1, bucket._2.size)).toMap
+                )
         }
         case cr: ContentRequest => {
             // Need to store original sender

@@ -1,0 +1,37 @@
+{
+	"name": "DB Get Buckets Processor",
+	"description": "Gets the names of buckets present in TuktuDB satisfying a given pattern",
+	"class": "tuktu.db.processors.GetBucketsProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "pattern",
+					"description": "A regex pattern that the bucket names must satisfy.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "flatten",
+					"description": "If set to true, the incoming DP is discarded and the resulting DP contains only the bucket names, a list with names is added to each datum otherwise.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}
