@@ -295,7 +295,7 @@ class JsonFetcherProcessor(resultName: String) extends BaseProcessor(resultName)
                 fieldName = (fieldItem \ "result").as[String]
                 field = fields.head
             } yield {
-                fieldName -> utils.fieldParser(datum, fields).getOrElse(default.get)
+                fieldName -> utils.fieldParser(datum, fields).getOrElse(utils.evaluateTuktuJsValue(default.get, datum))
             })
 
             datum ++ newData
