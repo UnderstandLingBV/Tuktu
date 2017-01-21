@@ -1,14 +1,26 @@
 package tuktu.nosql.util
 
 import java.sql.Connection
-import anorm.SqlParser._
-import anorm._
-import play.api.libs.iteratee.Enumerator
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.util.UUID
+import java.util.concurrent.Semaphore
+
+import scala.Right
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable.HashSet
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import com.jolbox.bonecp.BoneCP
 import com.jolbox.bonecp.BoneCPConfig
+
+import anorm.Iteratees
+import anorm.NamedParameter
+import anorm.ParameterValue.toParameterValue
+import anorm.Row
+import anorm.RowParser
+import anorm.SQL
+import anorm.SqlParser
+import anorm.SqlStringInterpolation
+import anorm.sqlToSimple
+import play.api.libs.iteratee.Enumerator
 
 /**
  * Keeps track of connections
@@ -20,31 +32,45 @@ object sql {
         password: String,
         driver: String)
     
-    val pools = TrieMap[ConnectionDefinition, HashSet[BoneCP]]()
+    val pools = TrieMap[ConnectionDefinition, collection.mutable.ListBuffer[BoneCP]]()
+    
+    // BoneCP is poo-slow, so use a mutex here
+    val semaphore = new Semaphore(1, true)
 
     // Gets a single connection
-    def getConnection(conn: ConnectionDefinition, minSize: Int = 5, maxSize: Int = 10): Connection = {
-        // Check if a pool exists which still has open slots
-        pools.get(conn).flatMap { map =>
-            map.find { cp => cp.getTotalFree > 0 }
-        } match {
-            case Some(cp) => cp.getConnection
-            case None => {
-                // Create new source
-                Class.forName(conn.driver)
-                val config = new BoneCPConfig()
-                config.setJdbcUrl(conn.url)
-                config.setUsername(conn.user)
-                config.setPassword(conn.password)
-                config.setMinConnectionsPerPartition(minSize)
-                config.setMaxConnectionsPerPartition(maxSize)
-                config.setPartitionCount(3)
-                config.setCloseConnectionWatch(true)
-                val c = new BoneCP(config)
-                pools.getOrElseUpdate(conn, HashSet.empty) += c
-                c.getConnection
-            }
+    def getConnection(conn: ConnectionDefinition, minSize: Int = 5, maxSize: Int = 10): Connection = try {
+        semaphore.acquire(1)
+        
+        def newConnection() = {
+            // Create new source
+            Class.forName(conn.driver)
+            val config = new BoneCPConfig()
+            //config.setPoolName(UUID.randomUUID.toString)
+            config.setJdbcUrl(conn.url)
+            config.setUsername(conn.user)
+            config.setPassword(conn.password)
+            config.setMinConnectionsPerPartition(minSize)
+            config.setMaxConnectionsPerPartition(maxSize)
+            config.setPartitionCount(3)
+            config.setCloseConnectionWatch(true)
+            val c = new BoneCP(config)
+            pools.getOrElseUpdate(conn, collection.mutable.ListBuffer.empty[BoneCP]) += c
+            c.getConnection
         }
+        
+        // Check if a pool exists which still has open slots
+        pools.get(conn) match {
+            case Some(map) => {
+                // Find empty one, if any
+                map.find { cp => cp.getTotalFree > 0 } match {
+                    case Some(c) => c.getConnection
+                    case None => newConnection
+                }
+            }
+            case None => newConnection
+        }
+    } finally {
+        semaphore.release(1)
     }
 
     // Releases a connection, and closes its BasicDataSource if it has no more active connections

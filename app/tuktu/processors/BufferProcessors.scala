@@ -250,12 +250,13 @@ class SignalBufferActor(remoteGenerator: ActorRef) extends Actor with ActorLoggi
 /**
  * Splits the elements of a single data packet into separate data packets (one per element)
  */
-class DataPacketSplitterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    // Iteratee to take the data we need
-    def groupPackets: Iteratee[DataPacket, DataPacket] = for (
-            dps <- Enumeratee.take[DataPacket](1) &>> Iteratee.getChunks
-    ) yield DataPacket(dps.flatMap(data => data.data))
+class DataPacketSplitterProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        // Send each datum separately to the remote generator
+        data.data.foreach(datum => genActor ! new DataPacket(List(datum)))
 
-    // Use the iteratee and Enumeratee.grouped
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.grouped(groupPackets)
+        data
+    }) compose Enumeratee.onEOF(() => {
+        genActor ! new StopPacket
+    })
 }

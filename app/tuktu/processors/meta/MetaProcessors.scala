@@ -188,7 +188,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     var sendWhole = false
     var replacements: Map[String, String] = _
     var keepAlive: Boolean = _
-    var remoteGeneratorFut: Future[Any] = _
+    var remoteGenerator: ActorRef = _
     val remaining = new AtomicInteger(0)
     val done = new AtomicBoolean(false)
 
@@ -240,7 +240,10 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
                 "processors" -> processors)
 
             // Send a message to our Dispatcher to create the (remote) actor and return us the ActorRef
-            remoteGeneratorFut = Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(name, Some(customConfig), false, true, false, None)
+            remoteGenerator = Await.result(
+                    Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(name, Some(customConfig), false, true, false, None),
+                    timeout.duration
+            ).asInstanceOf[ActorRef]
         }
     }
 
@@ -254,23 +257,20 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
             // Callback order on Futures is not guaranteed, so we need to keep track of number of remaining packages to be sent to actorRef
             // Increment count, and once the data has been sent, decrement the count; if it's 0 and we have reached EOF, broadcast Stop
             remaining.incrementAndGet
-            remoteGeneratorFut onSuccess { case actorRef: ActorRef =>
-                actorRef ! data
-                if (remaining.decrementAndGet == 0 && done.get == true)
-                    actorRef ! Broadcast(new StopPacket)
-            }
+            remoteGenerator ! data
+            if (remaining.decrementAndGet == 0 && done.get == true)
+                remoteGenerator ! Broadcast(new StopPacket)
         }
 
         data
     }) compose Enumeratee.onEOF(() => {
-        if (keepAlive)
-            remoteGeneratorFut onSuccess { case actorRef: ActorRef =>
-                // We have reached EOF, we are done; if no packages are remaining to be sent, broadcast Stop right away,
-                // otherwise it will be done right after the last package has been sent
-                done.set(true)
-                if (remaining.get == 0)
-                    actorRef ! Broadcast(new StopPacket)
-            }
+        if (keepAlive) {
+            // We have reached EOF, we are done; if no packages are remaining to be sent, broadcast Stop right away,
+            // otherwise it will be done right after the last package has been sent
+            done.set(true)
+            if (remaining.get == 0)
+                remoteGenerator ! Broadcast(new StopPacket)
+        }
     })
 
     def forwardData(data: List[Map[String, Any]]) {
