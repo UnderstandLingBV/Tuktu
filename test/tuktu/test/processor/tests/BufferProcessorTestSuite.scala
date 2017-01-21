@@ -70,12 +70,12 @@ class BufferProcessorTestSuite extends PlaySpec {
 
             new BaseProcessorTest()(proc, config, input, output)
         }
-    }*/
+    }
 
     "DataPacketSplitterProcessor" must {
         "split all Datums of a DataPacket into separate DataPackets" in {
             // Processor
-            val proc = new DataPacketSplitterProcessor("")
+            val proc = new DataPacketSplitterProcessor(dummyActor, "")
 
             // Config
             val config = Json.obj()
@@ -97,7 +97,7 @@ class BufferProcessorTestSuite extends PlaySpec {
         }
     }
     
-    /*"GroupByProcessor" must {
+    "GroupByProcessor" must {
         "group Datums into separate DataPackets based on their values in given fields" in {
 
             // Processor
