@@ -144,9 +144,9 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
                                 case Some(to) => {
                                     (to \ "data").as[List[JsObject]].flatMap(t => {
                                         List(
-                                                (t \ "name").as[String],
-                                                (t \ "username").as[String],
-                                                (t \ "id").as[String]
+                                                (t \ "name").asOpt[String].getOrElse(""),
+                                                (t \ "username").asOpt[String].getOrElse(""),
+                                                (t \ "id").asOpt[String].getOrElse("")
                                         )
                                     })
                                 }
