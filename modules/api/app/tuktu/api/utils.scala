@@ -179,10 +179,8 @@ object utils {
         case a: Date               => if (!mongo) a else Json.obj("$date" -> a.getTime)
         case a: DateTime           => if (!mongo) a else Json.obj("$date" -> a.getMillis)
         case a: JsValue            => a
-        case a: Option[Any]        => a match {
-                                          case None => JsNull
-                                          case Some(b) => AnyToJsValueWrapper(b, mongo)
-                                      }
+        case None                  => JsNull
+        case Some(b)               => AnyToJsValueWrapper(b, mongo)
         case a: (_, _)             => MapToJsObject(Map(a), mongo)
         case a: GenMap[_, _]       => MapToJsObject(a, mongo)
         case a: TraversableOnce[_] => SeqToJsArray(a.toSeq, mongo)
