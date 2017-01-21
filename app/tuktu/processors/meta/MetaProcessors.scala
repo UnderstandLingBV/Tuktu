@@ -188,7 +188,8 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     var sendWhole = false
     var replacements: Map[String, String] = _
     var keepAlive: Boolean = _
-    var remoteGenerator: ActorRef = _
+    var remoteGenerator: ActorRef = null
+    var remoteGeneratorFut: Future[ActorRef] = _
     val remaining = new AtomicInteger(0)
     val done = new AtomicBoolean(false)
 
@@ -240,10 +241,9 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
                 "processors" -> processors)
 
             // Send a message to our Dispatcher to create the (remote) actor and return us the ActorRef
-            remoteGenerator = Await.result(
-                    Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(name, Some(customConfig), false, true, false, None),
-                    timeout.duration
-            ).asInstanceOf[ActorRef]
+            remoteGeneratorFut = (
+                    Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(name, Some(customConfig), false, true, false, None)
+            ).asInstanceOf[Future[ActorRef]]
         }
     }
 
@@ -254,6 +254,10 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
                     forwardData(List(datum))
             } else forwardData(data.data)
         } else {
+            // Initialize the remote generator
+            if (remoteGenerator == null)
+                remoteGenerator = Await.result(remoteGeneratorFut, timeout.duration)
+                
             // Callback order on Futures is not guaranteed, so we need to keep track of number of remaining packages to be sent to actorRef
             // Increment count, and once the data has been sent, decrement the count; if it's 0 and we have reached EOF, broadcast Stop
             remaining.incrementAndGet
@@ -265,6 +269,10 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
         data
     }) compose Enumeratee.onEOF(() => {
         if (keepAlive) {
+            // Initialize the remote generator
+            if (remoteGenerator == null)
+                remoteGenerator = Await.result(remoteGeneratorFut, timeout.duration)
+
             // We have reached EOF, we are done; if no packages are remaining to be sent, broadcast Stop right away,
             // otherwise it will be done right after the last package has been sent
             done.set(true)

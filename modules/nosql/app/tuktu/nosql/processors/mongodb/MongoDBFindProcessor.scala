@@ -31,6 +31,8 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 
     var db: String = _
     var collection: String = _
+    
+    var flatten: Boolean = _
 
     var query: JsValue = _
     var filter: JsValue = _
@@ -54,6 +56,9 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         // DB and collection
         db = (config \ "db").as[String]
         collection = (config \ "collection").as[String]
+        
+        // Flatten
+        flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
 
         // Get query and filter
         query = (config \ "query")
@@ -92,14 +97,18 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
                 resultData.map { resultList =>
                     if (resultList.isEmpty)
                         datum + (resultName -> List.empty[JsObject])
-                    else {
+                    else
                         datum + (resultName -> resultList)
-                    }
                 }
             })
         })
 
-        results.map(nd => DataPacket(nd))
+        results.map(nd => DataPacket({
+            if (flatten) nd.map(datum => datum(resultName) match {
+                case o: JsObject => utils.JsObjectToMap(o)
+                case _ => Map.empty[String, Any]
+            }) else nd
+        }))
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }
 

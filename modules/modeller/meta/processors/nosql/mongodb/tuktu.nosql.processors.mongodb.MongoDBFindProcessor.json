@@ -70,6 +70,13 @@
 					"required": false
 				},
 				{
+					"name": "flatten",
+					"description": "If set to true, the results become the datums, overwriting existing DP content.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
 					"name": "mongo_options",
 					"description": "All possible mongo options, all optional.",
 					"type": "object",
