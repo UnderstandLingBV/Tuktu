@@ -50,6 +50,13 @@
 					"type": "boolean",
 					"required": true,
 					"default": false
+				},
+				{
+					"name": "combined",
+					"description": "Combine the tags? If set to false, a map with keys keywords and users is added with all tags. If set to true, a list is returned.",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}

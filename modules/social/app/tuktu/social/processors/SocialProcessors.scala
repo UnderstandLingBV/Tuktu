@@ -29,6 +29,7 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
     var users: Option[List[String]] = None
     var geos: Option[List[String]] = None
     var excludeOnNone = false
+    var combine: Boolean = _
 
     override def initialize(config: JsObject) {
         // Get name of the field in which the Twitter object is
@@ -36,9 +37,12 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
         // Get the actual tags
         tags = (config \ "tags").as[JsObject]
         keywords = (tags \ "keywords").asOpt[List[String]]
+        
         users = (tags \ "users").asOpt[List[String]]
         geos = (tags \ "geos").asOpt[List[String]]
         excludeOnNone = (config \ "exclude_on_none").asOpt[Boolean].getOrElse(false)
+        
+        combine = (config \ "combined").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -91,7 +95,9 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
             if (!excludeOnNone || !none)
         } yield {
             // Append the tags
-            datum + (resultName -> tags)
+            datum + (resultName -> {
+                if (combine) tags.flatMap(_._2).toList else tags
+            })
         })
     })
 }
@@ -107,6 +113,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
     var tags: JsObject = Json.obj()
     var keywords: Option[List[String]] = None
     var users: Option[List[String]] = None
+    var combine: Boolean = _
 
     override def initialize(config: JsObject) {
         // Get name of the field in which the Twitter object is
@@ -116,6 +123,8 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
         keywords = (tags \ "keywords").asOpt[List[String]]
         users = (tags \ "users").asOpt[List[String]]
         excludeOnNone = (config \ "exclude_on_none").as[Boolean]
+        
+        combine = (config \ "combined").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -166,7 +175,9 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
             none = tags("users").isEmpty
             if (!excludeOnNone || !none)
         } yield {
-            datum + (resultName -> tags)
+            datum + (resultName -> {
+                if (combine) tags.flatMap(_._2).toList else tags
+            })
         })
     })
 }
