@@ -135,7 +135,12 @@ object MongoPool {
      */
     def parseMongoOptions(opts: Option[JsObject]) = {
         opts match {
-            case None => MongoConnectionOptions()
+            case None => MongoConnectionOptions(
+                failoverStrategy = FailoverStrategy(
+                    retries = 8,
+                    delayFactor = n => n * 1.2
+                )
+            )
             case Some(o) => MongoConnectionOptions(
                 connectTimeoutMS = (o \ "connectTimeoutMS").asOpt[Int] match {
                     case None    => 0
