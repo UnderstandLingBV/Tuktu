@@ -306,7 +306,7 @@ object Dispatcher {
             val (enumerator, channel) = Concurrent.broadcast[DataPacket]
 
             // Set up broadcast
-            val queues = for (processor <- nextProcessors)
+            for (processor <- nextProcessors)
                 enumerator |>> processor &>> Iteratee.ignore
 
             // Make a broadcasting Enumeratee and sink Iteratee

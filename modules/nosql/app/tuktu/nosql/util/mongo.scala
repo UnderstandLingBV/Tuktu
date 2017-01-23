@@ -23,6 +23,7 @@ import reactivemongo.api.ScramSha1Authentication
 import reactivemongo.api.commands.WriteConcern
 import reactivemongo.core.nodeset.Authenticate
 import scala.concurrent.duration._
+import reactivemongo.api.FailoverStrategy
 
 object MongoPool {
     case class getConn(nodes: List[String], mongoOptions: MongoConnectionOptions, auth: Option[Authenticate])
@@ -134,7 +135,12 @@ object MongoPool {
      */
     def parseMongoOptions(opts: Option[JsObject]) = {
         opts match {
-            case None => MongoConnectionOptions()
+            case None => MongoConnectionOptions(
+                failoverStrategy = FailoverStrategy(
+                    retries = 8,
+                    delayFactor = n => n * 1.2
+                )
+            )
             case Some(o) => MongoConnectionOptions(
                 connectTimeoutMS = (o \ "connectTimeoutMS").asOpt[Int] match {
                     case None    => 0
@@ -181,7 +187,11 @@ object MongoPool {
                     case Some(a) if a.toLowerCase == "secondarypreferred" => ReadPreference.secondaryPreferred
                     case Some(a) if a.toLowerCase == "nearest" => ReadPreference.nearest
                     case _ => ReadPreference.primary
-                })
+                },
+                failoverStrategy = FailoverStrategy(
+                    retries = 8,
+                    delayFactor = n => n * 1.2
+                ))
         }
     }
 
