@@ -101,18 +101,20 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
  */
 class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
     // Get name of the field in which the Twitter object is
-    var objField = ""
+    var objField: String = _
     // Get the actual tags
-    var excludeOnNone = false
-    var tags: JsObject = Json.obj()
-    var keywords: Option[List[String]] = None
-    var users: Option[List[String]] = None
+    var excludeOnNone: Boolean = _
+    var userTagField: Option[String] = _
+    var tags: JsObject = _
+    var keywords: Option[List[String]] = _
+    var users: Option[List[String]] = _
 
     override def initialize(config: JsObject) {
         // Get name of the field in which the Twitter object is
         objField = (config \ "object_field").as[String]
         // Get the actual tags
         tags = (config \ "tags").as[JsObject]
+        userTagField = (config \ "user_tag_field").asOpt[String]
         keywords = (tags \ "keywords").asOpt[List[String]]
         users = (tags \ "users").asOpt[List[String]]
         excludeOnNone = (config \ "exclude_on_none").as[Boolean]
@@ -123,48 +125,33 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
             datum <- data.data
 
             item = datum(objField).asInstanceOf[JsObject]
-            tags = Map(
-                "users" -> (users match {
-                    case Some(usrs) => {
-                        // User could be either in the from-field or the to-field
-                        val from = {
-                            (item \ "from").asOpt[JsObject] match {
-                                case Some(fr) => {
-                                    List(
-                                        (fr \ "name").asOpt[String].getOrElse("").toLowerCase,
-                                        (fr \ "username").asOpt[String].getOrElse("").toLowerCase,
-                                        (fr \ "id").asOpt[String].getOrElse("-1")
-                                    )
-                                }
-                                case None     => List()
+            tags = users match {
+                case Some(usrs) =>
+                    def getTag(obj: JsObject): Option[String] = {
+                        val values = List("id", "username", "name").map { key => (obj \ key).asOpt[String] }.flatten
+                        // If the user can be found, identify him by tagField if it is defined;
+                        // or whatever he is defined by in the parameters
+                        usrs.find(u => values.contains(u)).flatMap { s =>
+                            userTagField match {
+                                case Some(field) => (obj \ field).asOpt[String]
+                                case None        => Some(s)
                             }
                         }
-                        val to = {
-                            (item \ "to").asOpt[JsObject] match {
-                                case Some(to) => {
-                                    (to \ "data").as[List[JsObject]].flatMap(t => {
-                                        List(
-                                                (t \ "name").asOpt[String].getOrElse(""),
-                                                (t \ "username").asOpt[String].getOrElse(""),
-                                                (t \ "id").asOpt[String].getOrElse("")
-                                        )
-                                    })
-                                }
-                                case None => List()
-                            }
-                        }
-
-                        // Now check for all users
-                        usrs.filter(usr => {
-                            from.exists(_ == usr) || to.exists(_ == usr)
-                        })
                     }
-                    case None => List()
-                }))
+
+                    // User could be either in the from-field or the to-field
+                    val from = (item \ "from").asOpt[JsObject].flatMap(getTag)
+                    val to = (item \ "to").asOpt[JsObject].flatMap { t =>
+                        (t \ "data").asOpt[List[JsObject]]
+                    }.getOrElse(Nil).map(getTag)
+
+                    // Remove None and flatten Some
+                    (from :: to).flatten
+                case None => Nil
+            }
 
             // See if we need to exclude
-            none = tags("users").isEmpty
-            if (!excludeOnNone || !none)
+            if (!excludeOnNone || !tags.isEmpty)
         } yield {
             datum + (resultName -> tags)
         })
