@@ -57,6 +57,13 @@
 						}
 					]
 				},
+                {
+                    "name": "user_tag_field",
+                    "description": "Define which field is used to retrieve user tags from. Usually it is either 'name', 'screen_name', 'id', or left empty. Leave empty to get at most those strings matching the above users list, which could be a mix of names and ids. Otherwise, get the value of this user tag field of those matching users. For example one could match them by id (put the ids in the above list), and then tag them by name (put 'name' or 'screen_name' here).",
+                    "type": "string",
+                    "required": false,
+                    "default": ""
+                },
 				{
 					"name": "exclude_on_none",
 					"description": "Exclude tweets which do not match any filter.",

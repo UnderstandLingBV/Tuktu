@@ -11,10 +11,11 @@ import com.github.scribejava.core.oauth.OAuth20Service
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumeratee
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
+import play.api.libs.json._
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
+
+import scala.util.Try
 
 /**
  * When a tweet is being searched for on the stream using a combination of filters, this processors will append to the data
@@ -22,26 +23,27 @@ import tuktu.api.DataPacket
  */
 class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
     // Get name of the field in which the Twitter object is
-    var objField = ""
+    var objField: String = _
     // Get the actual tags
-    var tags: JsObject = Json.obj()
-    var keywords: Option[List[String]] = None
-    var users: Option[List[String]] = None
-    var geos: Option[List[String]] = None
-    var excludeOnNone = false
+    var keywords: Option[List[String]] = _
+    var users: Option[List[String]] = _
+    var geos: Option[List[String]] = _
+    var userTagField: Option[String] = _
+    var excludeOnNone: Boolean = _
     var combine: Boolean = _
 
     override def initialize(config: JsObject) {
         // Get name of the field in which the Twitter object is
         objField = (config \ "object_field").as[String]
         // Get the actual tags
-        tags = (config \ "tags").as[JsObject]
+        val tags = (config \ "tags").as[JsObject]
         keywords = (tags \ "keywords").asOpt[List[String]]
-
         users = (tags \ "users").asOpt[List[String]]
         geos = (tags \ "geos").asOpt[List[String]]
-        excludeOnNone = (config \ "exclude_on_none").asOpt[Boolean].getOrElse(false)
 
+        userTagField = (config \ "user_tag_field").asOpt[String]
+
+        excludeOnNone = (config \ "exclude_on_none").asOpt[Boolean].getOrElse(false)
         combine = (config \ "combined").asOpt[Boolean].getOrElse(false)
     }
 
@@ -50,53 +52,49 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
             datum <- data.data
 
             tweet = datum(objField).asInstanceOf[JsObject]
-            tags = Map(
-                // Keyword tagging
-                "keywords" -> (keywords match {
-                    case Some(kw) => {
-                        // Get the tweet body and see which keywords occur
-                        val tw = (tweet \ "text").as[String]
-                        kw.filter(k => tw.toLowerCase.contains(k.toLowerCase))
-                    }
-                    case None => List()
-                }),
-                "users" -> (users match {
-                    case Some(usrs) => {
-                        // User could be in a number of places actually, so we need to search a bit more extensive than just tweet author ID
-                        val tw = (tweet \ "text").as[String]
-                        val author = (tweet \ "user" \ "id").as[Long].toString
-                        val inReplyId = try {
-                            (tweet \ "inReplyToUserId").as[Long].toString
-                        } catch {
-                            case _: Throwable => "-1"
-                        }
-                        val retweetId = try {
-                            (tweet \ "retweetedStatus" \ "user" \ "id").as[Long].toString
-                        } catch {
-                            case _: Throwable => "-1"
-                        }
-                        val mentions = try {
-                            (tweet \ "entities" \ "user_mentions").as[List[JsObject]].map(mention => (mention \ "id").as[Long].toString)
-                        } catch {
-                            case _: Throwable => List()
-                        }
 
-                        // Now check for all users
-                        val res = usrs.filter(usr => {
-                            author == usr || inReplyId == usr || retweetId == usr || mentions.contains(usr)
-                        })
-                        res
-                    }
-                    case None => List()
-                }))
+            k = keywords.map { list =>
+                val tw: String = (tweet \ "text").as[String].toLowerCase
+                list.filter { tw.contains(_) }
+            }.getOrElse(Nil).distinct
+
+            u = users.map { list =>
+                def findMatches(objects: List[JsValue]): List[String] = Try {
+                    list.map { user =>
+                        // For each user try to find an object such that it matches the given user in either of the following fields
+                        objects.find { obj =>
+                            List("id_str", "screen_name", "name")
+                                .exists { k => (obj \ k).asOpt[String] == Some(user) }
+                        } flatMap { obj =>
+                            // If a match was found and userTagField is defined, use that field, otherwise just use the user
+                            userTagField match {
+                                case None       => Some(user)
+                                case Some("id") => (obj \ "id_str").asOpt[String]
+                                case Some(key)  => (obj \ key).asOpt[String]
+                            }
+                        }
+                    }.flatten
+                }.getOrElse(Nil)
+
+                // User could be in a number of places actually, so we need to search a bit more extensive than just tweet author ID
+                val reply = Try {
+                    List(Json.obj(
+                        "id_str" -> tweet \ "in_reply_to_user_id_str",
+                        "screen_name" -> tweet \ "in_reply_to_screen_name",
+                        // Reply does not seem to provide name, so use screen name instead
+                        "name" -> tweet \ "in_reply_to_screen_name"))
+                } getOrElse { Nil }
+
+                // Now check for all users
+                findMatches((tweet \ "user") :: (tweet \ "entities" \ "user_mentions").as[List[JsObject]] ++ reply)
+            } getOrElse { Nil } distinct
 
             // See if we need to exclude
-            none = tags("keywords").isEmpty && tags("users").isEmpty
-            if (!excludeOnNone || !none)
+            if (!excludeOnNone || !k.isEmpty || !u.isEmpty)
         } yield {
             // Append the tags
             datum + (resultName -> {
-                if (combine) tags.flatMap(_._2).toList else tags
+                if (combine) (k ++ u) distinct else Map("keywords" -> k, "users" -> u)
             })
         })
     })
@@ -109,10 +107,10 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
     // Get name of the field in which the Twitter object is
     var objField: String = _
     // Get the actual tags
-    var excludeOnNone: Boolean = _
-    var userTagField: Option[String] = _
     var keywords: Option[List[String]] = _
     var users: Option[List[String]] = _
+    var userTagField: Option[String] = _
+    var excludeOnNone: Boolean = _
     var combine: Boolean = _
 
     override def initialize(config: JsObject) {
@@ -135,36 +133,35 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
             datum <- data.data
 
             item = datum(objField).asInstanceOf[JsObject]
-            u = users match {
-                case Some(usrs) =>
-                    def getTag(obj: JsObject): Option[String] = {
-                        val values = List("id", "username", "name").map { key => (obj \ key).asOpt[String] }.flatten
-                        // If the user can be found, identify him by tagField if it is defined;
-                        // or whatever he is defined by in the parameters
-                        usrs.find(u => values.contains(u)).flatMap { s =>
-                            userTagField match {
-                                case Some(field) => (obj \ field).asOpt[String]
-                                case None        => Some(s)
-                            }
+
+            u = users.map { usrs =>
+                def getTag(obj: JsObject): Option[String] = {
+                    val values = List("id", "username", "name").map { key => (obj \ key).asOpt[String] }.flatten
+                    // If the user can be found, identify him by tagField if it is defined;
+                    // or whatever he is defined by in the parameters
+                    usrs.find(u => values.contains(u)).flatMap { s =>
+                        userTagField match {
+                            case Some(field) => (obj \ field).asOpt[String]
+                            case None        => Some(s)
                         }
                     }
+                }
 
-                    // User could be either in the from-field or the to-field
-                    val from = (item \ "from").asOpt[JsObject].flatMap(getTag)
-                    val to = (item \ "to").asOpt[JsObject].flatMap { t =>
-                        (t \ "data").asOpt[List[JsObject]]
-                    }.getOrElse(Nil).map(getTag)
+                // User could be either in the from-field or the to-field
+                val from = (item \ "from").asOpt[JsObject].flatMap(getTag)
+                val to = (item \ "to").asOpt[JsObject].flatMap { t =>
+                    (t \ "data").asOpt[List[JsObject]]
+                }.getOrElse(Nil).map(getTag)
 
-                    // Remove None and flatten Some
-                    (from :: to).flatten
-                case None => Nil
-            }
+                // Remove None and flatten Some
+                (from :: to).flatten
+            }.getOrElse(Nil).distinct
 
             // See if we need to exclude
             if (!excludeOnNone || !u.isEmpty)
         } yield {
             datum + (resultName -> {
-                if (combine) users else Map("users" -> u)
+                if (combine) u else Map("users" -> u)
             })
         })
     })
