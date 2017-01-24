@@ -183,9 +183,8 @@ object PredicateParser {
         }
 
     // Evaluate string expressions
-    val strings: P[String] = P((
-        CharIn(('a' to 'z') ++ ('A' to 'Z') ++ "_-.,/\"'") ~
-        CharIn(('a' to 'z') ++ ('A' to 'Z') ++ "_-.,/\"'" ++ ('0' to '9')).rep).!)
+    val strings: P[String] = P(
+        CharIn(('a' to 'z') ++ ('A' to 'Z') ++ "_-+.,:;/\"'" ++ ('0' to '9')).rep.!)
     val stringExpr: P[Boolean] = P(strings ~ ("==" | "!=").! ~ strings)
         .map {
             case (left, "==", right) => left == right
