@@ -33,7 +33,7 @@
 							"name": "users",
 							"description": "The users to be filtered for who is relevant to a message, that is the author and the recipient.",
 							"type": "array",
-							"required": true,
+							"required": false,
 							"parameters": [
 								{
 									"name": "",

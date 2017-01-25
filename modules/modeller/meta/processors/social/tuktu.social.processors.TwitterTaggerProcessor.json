@@ -33,7 +33,7 @@
 							"name": "keywords",
 							"description": "The keywords to be filtered for what can be found in the tweet.",
 							"type": "array",
-							"required": true,
+							"required": false,
 							"parameters": [
 								{
 									"name": "",
@@ -46,7 +46,7 @@
 							"name": "users",
 							"description": "The users to be filtered for who is relevant to a tweet, for example as author, as mention, as retweeter, or as reply to that user.",
 							"type": "array",
-							"required": true,
+							"required": false,
 							"parameters": [
 								{
 									"name": "",

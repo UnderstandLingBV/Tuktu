@@ -55,11 +55,15 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
 
             k = keywords.map { list =>
                 val tw: String = (tweet \ "text").as[String].toLowerCase
-                list.filter { tw.contains(_) }
-            }.getOrElse(Nil).distinct
+                list.filter { tw.contains(_) }.distinct
+            }.getOrElse(Nil)
 
-            u = (users match {
-                case Some(list) => {
+            u = users match {
+                case None | Some(Nil) if (keywords == None || keywords == Some(Nil)) =>
+                    // No keywords and no users were specified, we always return the author of the Tweet
+                    List((tweet \ "user" \ "name").as[String])
+                case None | Some(Nil) => Nil
+                case Some(list) =>
                     def findMatches(objects: List[JsValue]): List[String] = Try {
                         list.map { user =>
                             // For each user try to find an object such that it matches the given user in either of the following fields
@@ -74,9 +78,9 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
                                     case Some(key)  => (obj \ key).asOpt[String]
                                 }
                             }
-                        }.flatten
+                        }.flatten.distinct
                     }.getOrElse(Nil)
-    
+
                     // User could be in a number of places actually, so we need to search a bit more extensive than just tweet author ID
                     val reply = Try {
                         List(Json.obj(
@@ -84,16 +88,11 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
                             "screen_name" -> tweet \ "in_reply_to_screen_name",
                             // Reply does not seem to provide name, so use screen name instead
                             "name" -> tweet \ "in_reply_to_screen_name"))
-                    } getOrElse { Nil }
-    
+                    }.getOrElse(Nil)
+
                     // Now check for all users
                     findMatches((tweet \ "user") :: (tweet \ "entities" \ "user_mentions").as[List[JsObject]] ++ reply)
-                }
-                case None if (keywords.isEmpty) => {
-                    // No keywords and no users were specified, we always return the author of the Tweet
-                    List((tweet \ "user" \ "name").as[String])
-                }
-            }).distinct
+            }
 
             // See if we need to exclude
             if (!excludeOnNone || !k.isEmpty || !u.isEmpty)
@@ -138,8 +137,12 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
 
             item = datum(objField).asInstanceOf[JsObject]
 
-            u = (users match {
-                case Some(usrs) => {
+            u = users match {
+                case None | Some(Nil) => (item \ "from").asOpt[JsObject] match {
+                    case Some(f) => List((f \ "name").as[String])
+                    case None    => Nil
+                }
+                case Some(usrs) =>
                     def getTag(obj: JsObject): Option[String] = {
                         val values = List("id", "username", "name").map { key => (obj \ key).asOpt[String] }.flatten
                         // If the user can be found, identify him by tagField if it is defined;
@@ -151,21 +154,16 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
                             }
                         }
                     }
-    
+
                     // User could be either in the from-field or the to-field
                     val from = (item \ "from").asOpt[JsObject].flatMap(getTag)
                     val to = (item \ "to").asOpt[JsObject].flatMap { t =>
                         (t \ "data").asOpt[List[JsObject]]
                     }.getOrElse(Nil).map(getTag)
-    
+
                     // Remove None and flatten Some
-                    (from :: to).flatten
-                }
-                case None => (item \ "from").asOpt[JsObject] match {
-                    case Some(f) => List((f \ "name").as[String])
-                    case None => Nil
-                }
-            }).distinct
+                    (from :: to).flatten.distinct
+            }
 
             // See if we need to exclude
             if (!excludeOnNone || !u.isEmpty)
