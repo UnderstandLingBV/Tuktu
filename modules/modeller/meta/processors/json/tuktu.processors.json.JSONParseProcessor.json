@@ -1,0 +1,30 @@
+{
+	"name": "Parse JSON Processor",
+	"description": "Parses a field's string content to JSON.",
+	"class": "tuktu.processors.json.JSONParseProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the value to be parsed to JSON.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
