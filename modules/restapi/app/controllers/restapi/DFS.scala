@@ -20,6 +20,8 @@ import play.api.cache.Cache
 import akka.util.Timeout
 import scala.concurrent.duration.DurationInt
 import tuktu.api.StopPacket
+import tuktu.dfs.actors.TDFSDeleteRequest
+import scala.concurrent.Future
 
 /**
  * DFS file handling from API
@@ -55,4 +57,13 @@ object DFS extends Controller {
      * Serves out a TDFS file
      */
     def get(name: String) = controllers.dfs.Browser.serveFile(name)
+    
+    /**
+     * Deletes a file from TDFS
+     */
+    def delete(name: String) = Action {
+        // Send delete request
+        Akka.system.actorSelection("user/tuktu.dfs.Daemon") ! new TDFSDeleteRequest(name)
+        Ok("")
+    }
 }

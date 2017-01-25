@@ -27,6 +27,7 @@ import tuktu.api.ClusterNode
 import tuktu.api.StopPacket
 import tuktu.dfs.util.util
 import java.nio.file.Paths
+import java.nio.file.Files
 
 case class TDFSWriteInitiateRequest(
         filename: String,
@@ -76,6 +77,9 @@ case class TDFSOverviewPacket(
 case class TDFSOverviewReply(
         files: Map[String, List[Int]] // File name to list of part indices
 )
+case class TDFSDeleteRequest(
+        file: String
+)
 
 /**
  * Daemon actor that handles write and read requests
@@ -89,6 +93,37 @@ class TDFSDaemon extends Actor with ActorLogging {
             // Set up the writer actor that will take care of the rest and return the ref to sender
             sender ! Akka.system.actorOf(Props(classOf[WriterDaemon], tir),
                     name = "tuktu.dfs.WriterDaemon." + fName.replaceAll("/|\\\\", "_") + "_" + System.currentTimeMillis)
+        }
+        case tdr: TDFSDeleteRequest => {
+            val name = Paths.get(tdr.file).normalize.toString
+            // Remove the file from our mapping
+            val fileTable = Cache.getAs[collection.mutable.Map[String, collection.mutable.ArrayBuffer[Int]]]("tuktu.dfs.NodeFileTable")
+                .getOrElse(collection.mutable.Map.empty[String, collection.mutable.ArrayBuffer[Int]])
+            val parts = fileTable.get(name)
+            fileTable -= name
+            
+            // Inform all other daemons
+            val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+            val futs = clusterNodes.foreach(node => {
+                if (node._1 != Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1"))
+                    Akka.system.actorSelection("akka.tcp://application@" + node._2.host + ":" + node._2.akkaPort + "/user/tuktu.dfs.Daemon") ! tdr
+            })
+            
+            // Remove anything we have on disk
+            parts match {
+                case Some(f) => try {
+                    // Delete the file
+                    val prefix = Cache.getAs[String]("tuktu.dfs.prefix").getOrElse(Play.current.configuration.getString("tuktu.dfs.prefix").getOrElse("dfs"))
+                    f.foreach {part =>
+                        Files.delete(Paths.get(prefix + "/" + name + ".part-" + part))
+                    }
+                } catch {
+                    case e: Exception => {}
+                }
+                case None => {}
+            }
+            
+            sender ! "ok"
         }
         case top: TDFSOverviewPacket => {
             // Check if we have files inside the request folder or parts for the requested filename
