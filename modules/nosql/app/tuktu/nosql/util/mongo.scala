@@ -189,8 +189,8 @@ object MongoPool {
                     case _ => ReadPreference.primary
                 },
                 failoverStrategy = FailoverStrategy(
-                    retries = 8,
-                    delayFactor = n => n * 1.2
+                    retries = 50,
+                    delayFactor = n => n * 1.1
                 ))
         }
     }
