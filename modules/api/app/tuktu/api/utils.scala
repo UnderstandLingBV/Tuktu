@@ -40,22 +40,50 @@ object utils {
     }
 
     /**
-     * Evaluates a Tuktu string to resolve variables in the actual string
+     * TuktuString helper object for Tuktu string evaluation
      */
-    def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$'): String = {
+    object TuktuString {
+        // Tree structure
+        abstract class TuktuStringNode
+        case class TuktuStringRoot(children: Seq[TuktuStringNode])
+        case class TuktuStringFunction(function: Option[String], children: Seq[TuktuStringNode]) extends TuktuStringNode
+        case class TuktuStringString(string: String) extends TuktuStringNode
+
         // Supported functions; empty String not properly supported by StringIn, so we will use Option instead
         val functionNames: Seq[String] = Seq("JSON.stringify", "SQL")
 
-        // A key can contain more Tuktu Strings, or go until closing } bracket
-        def key: P[String] = P(tuktuString | CharPred(_ != '}').!).rep.map { _.mkString }
-        // A Tuktu String is of the form $function{key}, try to get value at key, and do something with its value based on function
-        def tuktuString: P[String] = P(specialChar.toString ~ StringIn(functionNames: _*).!.? ~ "{" ~ key ~ "}").map {
-            case (optFunction, key) =>
+        // AnyChar and AnyChar but closing curly bracket
+        val anyChar: P[TuktuStringString] = P(AnyChar).!.map { TuktuStringString(_) }
+        val string: P[TuktuStringString] = P(CharPred(_ != '}')).!.map { TuktuStringString(_) }
+
+        // Tuktu strings
+        val tuktuKey: P[Seq[TuktuStringNode]] = P(tuktuString | string).rep
+        val tuktuString: P[TuktuStringFunction] = P("$" ~ StringIn(functionNames: _*).!.? ~ "{" ~ tuktuKey ~ "}").map {
+            case (optFunction, key) => TuktuStringFunction(optFunction, key)
+        }
+        val tuktuTotal: P[TuktuStringRoot] = P(Start ~ (tuktuString | anyChar).rep ~ End).map { TuktuStringRoot(_) }
+
+        // Config strings
+        val configKey: P[Seq[TuktuStringNode]] = P(configString | string).rep
+        val configString: P[TuktuStringFunction] = P("#" ~ StringIn(functionNames: _*).!.? ~ "{" ~ configKey ~ "}").map {
+            case (optFunction, key) => TuktuStringFunction(optFunction, key)
+        }
+        val configTotal: P[TuktuStringRoot] = P(Start ~ (configString | anyChar).rep ~ End).map { TuktuStringRoot(_) }
+
+        // Evaluate
+        def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$'): String = {
+            def evalFunc(f: TuktuStringFunction): String = {
+                // Get the key first
+                val key = f.children.foldLeft("") {
+                    case (acc, TuktuStringString(s))   => acc + s
+                    case (acc, a: TuktuStringFunction) => acc + evalFunc(a)
+                }
+
                 // Try to get value at key; does support dot notation
                 fieldParser(vars, key) match {
                     // No value found at key, return whole Tuktu String unchanged 
-                    case None => specialChar + optFunction.getOrElse("") + "{" + key + "}"
-                    case Some(a) => optFunction match {
+                    case None => specialChar + f.function.getOrElse("") + "{" + key + "}"
+                    case Some(a) => f.function match {
                         // We found a value, decide what to do with it based on function, None is empty string, ie. ${key}
                         case None => a match {
                             case js: JsString => js.value
@@ -75,14 +103,22 @@ object utils {
                             specialChar + function + "{" + key + "}"
                     }
                 }
+            }
+            val root = specialChar match {
+                case '$' => tuktuTotal.parse(str).get.value
+                case '#' => configTotal.parse(str).get.value
+            }
+            root.children.foldLeft("") {
+                case (acc, TuktuStringString(s))   => acc + s
+                case (acc, a: TuktuStringFunction) => acc + evalFunc(a)
+            }
         }
-        // Repeatedly parse either a tuktuString or anything (tuktuString first, hence higher priority, with full backtrack)
-        val either: P[String] = P(tuktuString | AnyChar.!)
-        val total: P[String] = P(Start ~ either.rep ~ End).map { _.mkString }
-
-        // Parse str and return its value
-        total.parse(str).get.value
     }
+    /**
+     * Evaluates a Tuktu string to resolve functions and variables in the actual string
+     */
+    def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$'): String =
+        TuktuString.evaluateTuktuString(str, vars, specialChar)
 
     /**
      * Recursively evaluates a Tuktu config to resolve variables in it
