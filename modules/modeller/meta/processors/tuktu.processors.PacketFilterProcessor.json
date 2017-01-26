@@ -26,7 +26,7 @@
 				},
 				{
 					"name": "expression",
-					"description": "The expression to evaluate, can be arithmetics, boolean logic and simple predicates like. Supported predicates are: containsFields(field.path.name,...), which checks the presence of all given field paths -- isNumeric(field), which checks if the field is numeric -- isJSON(field.path.name,...), which checks if all given paths exists and are JSON values -- isNull(field), which checks if the field is null -- isEmpty(), which checks if the datum is empty (ie. contains no keys) -- isEmptyValue(field), which checks if a field contains an empty value (empty string, empty Seq, empty Map).",
+					"description": "The expression to evaluate, can be arithmetics, boolean logic and simple predicates like. Supported predicates are: containsFields(field.path.name,...), which checks the presence of all given field paths -- isNumeric(field), which checks if the field is numeric -- isJSON(field.path.name,...), which checks if all given paths exists and are JSON values -- isNull(field), which checks if the field is null -- isEmpty(), which checks if the datum is empty (ie. contains no keys) -- isEmptyValue(field), which checks if a field contains an empty value (empty string, empty Seq, empty Map) -- listSize(field, operator, check), which checks if a field of type Seq[Any] matches check using the specified operator (supported are ==, !=, >=, <=, >, <).",
 					"type": "string",
 					"required": true
 				},

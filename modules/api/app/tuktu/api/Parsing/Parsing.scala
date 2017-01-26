@@ -231,7 +231,8 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
     import White._
 
     // All Tuktu-defined functions
-    val allowedFunctions: List[String] = List("containsFields", "isNumeric", "isNull", "isJSON", "containsSubstring", "isEmptyValue")
+    val allowedFunctions: List[String] = List("containsFields", "isNumeric", "isNull",
+            "isJSON", "containsSubstring", "isEmptyValue", "listSize")
     val functions: P[Boolean] = P(((StringIn(allowedFunctions: _*).! ~ "(" ~/ CharPred(_ != ')').rep.! ~/ ")"))).map {
         case ("containsFields", fields) => fields.split(',').forall { path =>
             // Get the path and evaluate it against the datum
@@ -273,6 +274,35 @@ class TuktuPredicateParser(datum: Map[String, Any]) {
                 case a: JsString           => a.value.isEmpty
                 case a: Any                => a.toString.isEmpty
             }
+        }
+        case ("listSize", params) => {
+            // Get the operator and the number to check against
+            val (field, operator, check) = {
+                val split = params.split(",")
+                (split(0), split(1), split(2).toInt)
+            }
+            // Get the list
+            fieldParser(datum, field) match {
+                case None => false
+                case Some(value) => value match {
+                    case a: Seq[Any] => {
+                        // Get the size of the list
+                        val size = a.size
+                        // Now match it, use simply matching here to avoid initializing another parser
+                        operator match {
+                            case "==" => size == check
+                            case ">=" => size >= check
+                            case "<=" => size <= check
+                            case "!=" => size != check
+                            case "<" => size < check
+                            case ">" => size > check
+                            case _ => false
+                        }
+                    }
+                    case _ => false
+                }
+            }
+            false
         }
     }
     def allowedParameterfreeFunctions: List[String] = List("isEmpty")
