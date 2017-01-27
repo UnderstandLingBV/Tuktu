@@ -43,17 +43,17 @@ class ArithmeticAggregateProcessor(resultName: String) extends BaseProcessor(res
     var calculate: String = _
     var numberOfDecimals: Int = _
     var doRounding: Boolean = _
-    
+
     override def initialize(config: JsObject) {
         calculate = (config \ "calculate").as[String]
         numberOfDecimals = (config \ "number_of_decimals").asOpt[Int].getOrElse(0)
         doRounding = (config \ "do_rounding").asOpt[Boolean].getOrElse(false)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         // Compute on entire DataPacket
         val formula = utils.evaluateTuktuString(calculate, data.data.headOption.getOrElse(Map.empty))
-        val res = new TuktuArithmeticsParser(data.data)(formula)
+        val res = ArithmeticParser(formula, data.data)
         data.map { datum => datum + (resultName -> res) }
     })
 }

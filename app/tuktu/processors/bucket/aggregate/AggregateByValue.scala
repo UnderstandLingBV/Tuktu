@@ -18,7 +18,7 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
     var group: List[String] = _
     // The base value for each distinct value; for count() this is probably 1; for everything else it probably is the value of the ${field} you want the expression to be executed on
     var base: String = _
-    // The expression, most of the time it probably is just min(), max(), count(), etc. (see TuktuArithmeticsParser for available functions), but can be combined
+    // The expression, most of the time it probably is just min(), max(), count(), etc. (see ArithmeticParser for available functions), but can be combined
     var expression: String = _
     var evaluatedExpression: Option[String] = None
 
@@ -58,8 +58,8 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
             // We have to get all the values for this key over all data
             val baseValues = preprocess(data.data)
 
-            // Create the parse for this field
-            val parser = new TuktuArithmeticsParser(baseValues.map(_._2))
+            // Create the parser data for this field
+            val d = baseValues.map(_._2)
 
             // Get all values
             val allValues = baseValues map { _._1 } distinct
@@ -73,7 +73,7 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
                     }
                 }
                 // Peplace functions with field value names
-                val newExpression = parser.allowedFunctions.foldLeft(evaluatedExpression.get)((a, b) => {
+                val newExpression = ArithmeticParser.allowedFunctions.foldLeft(evaluatedExpression.get)((a, b) => {
                     a.replace(b + "()", b + "(" + JsString(jsStrings.mkString(",")).toString + ")")
                 })
 
@@ -82,13 +82,13 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
                     case Nil => current
                     case head :: tail => {
                         def helper(path: List[String], value: Any): Map[String, Any] = path match {
-                            case head :: Nil => Map(head -> value)
+                            case head :: Nil  => Map(head -> value)
                             case head :: tail => Map(head -> helper(tail, value))
                         }
                         buildResult(tail, utils.mergeMap(current, helper(head._1.split('.').toList, head._2)))
                     }
                 }
-                buildResult(group.zip(values) ++ List(resultName -> parser(newExpression)))
+                buildResult(group.zip(values) ++ List(resultName -> ArithmeticParser(newExpression, d)))
             }
         })
     })
@@ -96,21 +96,18 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
     override def doProcess(data: List[Map[String, Any]]): List[Map[String, Any]] = {
         if (data.isEmpty) List()
         else {
-            // Create the parser
-            val parser = new TuktuArithmeticsParser(data)
-
             // Get all values
             val allValues = data.flatMap(_.keys).distinct
 
             // Compute stuff
             List((for (value <- allValues) yield {
-                // Peplace functions with field value names
-                val newExpression = parser.allowedFunctions.foldLeft(expression)((a, b) => {
+                // Replace functions with field value names
+                val newExpression = ArithmeticParser.allowedFunctions.foldLeft(expression)((a, b) => {
                     a.replace(b + "()", b + "(" + value + ")")
                 })
 
                 // Evaluate string
-                value -> parser(newExpression)
+                value -> ArithmeticParser(newExpression, data)
             }).toMap)
         }
     }
