@@ -91,146 +91,138 @@ class ParsingTests extends PlaySpec {
      */
 
     "PredicateParser" should {
+        val datum = Map(
+            "null" -> Map("1" -> null, "2" -> JsNull),
+            "JsNumber" -> JsNumber(-17.3e-1),
+            "Double" -> 1.723e3,
+            "Int" -> -182,
+            "String" -> "myString",
+            "Substring1" -> "String",
+            "Substring2" -> "string",
+            "JsObject" -> Json.obj("a" -> Json.obj("b" -> "c")),
+            "JsArray" -> Json.arr(1, "2", List(3)),
+            "empty1" -> Json.obj(),
+            "empty2" -> Json.arr(),
+            "empty3" -> JsString(""),
+            "empty4" -> "",
+            "empty5" -> List(),
+            "empty6" -> Map())
+
         "evaluate literal expressions correctly" in {
-            PredicateParser("true") should be(true)
-            PredicateParser("false") should be(false)
-            PredicateParser("!true") should be(false)
-            PredicateParser("!false") should be(true)
-            PredicateParser("!(true)") should be(false)
-            PredicateParser("!(false)") should be(true)
+            PredicateParser("true", datum) should be(true)
+            PredicateParser("false", datum) should be(false)
+            PredicateParser("!true", datum) should be(false)
+            PredicateParser("!false", datum) should be(true)
+            PredicateParser("!(true)", datum) should be(false)
+            PredicateParser("!(false)", datum) should be(true)
         }
 
         "support multiple negation of literals" in {
-            PredicateParser("!(!(true))") should be(true)
-            PredicateParser("!(!true)") should be(true)
-            PredicateParser("!!true") should be(true)
-            PredicateParser("!!!(!!(!!true))") should be(false)
-            PredicateParser("!(!(false))") should be(false)
-            PredicateParser("!(!false)") should be(false)
-            PredicateParser("!!false") should be(false)
-            PredicateParser("!!!(!!!(!!!false))") should be(true)
+            PredicateParser("!(!(true))", datum) should be(true)
+            PredicateParser("!(!true)", datum) should be(true)
+            PredicateParser("!!true", datum) should be(true)
+            PredicateParser("!!!(!!(!!true))", datum) should be(false)
+            PredicateParser("!(!(false))", datum) should be(false)
+            PredicateParser("!(!false)", datum) should be(false)
+            PredicateParser("!!false", datum) should be(false)
+            PredicateParser("!!!(!!!(!!!false))", datum) should be(true)
         }
 
         "support basic predicates" in {
-            PredicateParser("true && false") should be(false)
-            PredicateParser("true && !false") should be(true)
-            PredicateParser("!true || !true") should be(false)
-            PredicateParser("!!true || false") should be(true)
+            PredicateParser("true && false", datum) should be(false)
+            PredicateParser("true && !false", datum) should be(true)
+            PredicateParser("!true || !true", datum) should be(false)
+            PredicateParser("!!true || false", datum) should be(true)
         }
 
         "support number comparisons" in {
-            PredicateParser("1.7e1 == 17") should be(true)
-            PredicateParser("(1.7e1) == (17)") should be(true)
-            PredicateParser("!((1.7e1) == (17))") should be(false)
-            PredicateParser(".7e1 > -.0") should be(true)
-            PredicateParser(".0 == -0") should be(true)
-            PredicateParser(".2 + .1 == .3") should be(true)
-            PredicateParser(".2 + .1 <= .3") should be(true)
-            PredicateParser(".2 + .1 >= .3") should be(true)
-            PredicateParser(".2 + .1 > .3") should be(false)
-            PredicateParser(".2 + .1 < .3") should be(false)
-            PredicateParser(".2 + .1 != .3") should be(false)
-            PredicateParser("-.1 / .3 + 0.333333333333333333 == .1 / -.3 + 0.333333333333333333") should be(true)
+            PredicateParser("1.7e1 == 17", datum) should be(true)
+            PredicateParser("(1.7e1) == (17)", datum) should be(true)
+            PredicateParser("!((1.7e1) == (17))", datum) should be(false)
+            PredicateParser(".7e1 > -.0", datum) should be(true)
+            PredicateParser(".0 == -0", datum) should be(true)
+            PredicateParser(".2 + .1 == .3", datum) should be(true)
+            PredicateParser(".2 + .1 <= .3", datum) should be(true)
+            PredicateParser(".2 + .1 >= .3", datum) should be(true)
+            PredicateParser(".2 + .1 > .3", datum) should be(false)
+            PredicateParser(".2 + .1 < .3", datum) should be(false)
+            PredicateParser(".2 + .1 != .3", datum) should be(false)
+            PredicateParser("-.1 / .3 + 0.333333333333333333 == .1 / -.3 + 0.333333333333333333", datum) should be(true)
         }
 
         "support string comparisons" in {
-            PredicateParser("AbS == AbS") should be(true)
-            PredicateParser("AbS != Abs") should be(true)
-            PredicateParser("!(ABS != abs)") should be(false)
+            PredicateParser("AbS == AbS", datum) should be(true)
+            PredicateParser("AbS != Abs", datum) should be(true)
+            PredicateParser("!(ABS != abs)", datum) should be(false)
         }
 
         "support operator priority" in {
-            PredicateParser("true || false && false") should be(true)
-            PredicateParser("(true || false) && false") should be(false)
-            PredicateParser("(true && false == false)") should be(true)
+            PredicateParser("true || false && false", datum) should be(true)
+            PredicateParser("(true || false) && false", datum) should be(false)
+            PredicateParser("(true && false == false)", datum) should be(true)
         }
 
         "support different comparisons" in {
-            PredicateParser("false || true && 1.7e1 != 17 || ABS == abs") should be(false)
-            PredicateParser("!false && !(true && 1.7e1 != 17) && !(ABS == abs)") should be(true)
+            PredicateParser("false || true && 1.7e1 != 17 || ABS == abs", datum) should be(false)
+            PredicateParser("!false && !(true && 1.7e1 != 17) && !(ABS == abs)", datum) should be(true)
         }
 
         "support nested brackets" in {
-            PredicateParser("((asd == asd) && (false == false) == true)") should be(true)
+            PredicateParser("((asd == asd) && (false == false) == true)", datum) should be(true)
         }
-    }
 
-    /**
-     * TuktuPredicateParser
-     */
-
-    "TuktuPredicateParser" should {
         "return correct results for its functions" in {
-            val datum = Map(
-                "null" -> Map("1" -> null, "2" -> JsNull),
-                "JsNumber" -> JsNumber(-17.3e-1),
-                "Double" -> 1.723e3,
-                "Int" -> -182,
-                "String" -> "myString",
-                "Substring1" -> "String",
-                "Substring2" -> "string",
-                "JsObject" -> Json.obj("a" -> Json.obj("b" -> "c")),
-                "JsArray" -> Json.arr(1, "2", List(3)),
-                "empty1" -> Json.obj(),
-                "empty2" -> Json.arr(),
-                "empty3" -> JsString(""),
-                "empty4" -> "",
-                "empty5" -> List(),
-                "empty6" -> Map())
-            val parser = new TuktuPredicateParser(datum)
-
             // isNull
-            parser("isNull(null.1)") should be(true)
-            parser("isNull(null.2)") should be(true)
-            parser("isNull(Int)") should be(false)
-            parser("isNull(asd)") should be(false)
+            PredicateParser("isNull(null.1)", datum) should be(true)
+            PredicateParser("isNull(null.2)", datum) should be(true)
+            PredicateParser("isNull(Int)", datum) should be(false)
+            PredicateParser("isNull(asd)", datum) should be(false)
 
             // isNumeric
-            parser("isNumeric(JsNumber)") should be(true)
-            parser("isNumeric(Double)") should be(true)
-            parser("isNumeric(Int)") should be(true)
-            parser("isNumeric(String)") should be(false)
-            parser("isNumeric(asd)") should be(false)
+            PredicateParser("isNumeric(JsNumber)", datum) should be(true)
+            PredicateParser("isNumeric(Double)", datum) should be(true)
+            PredicateParser("isNumeric(Int)", datum) should be(true)
+            PredicateParser("isNumeric(String)", datum) should be(false)
+            PredicateParser("isNumeric(asd)", datum) should be(false)
 
             // isJSON
-            parser("isJSON(null.2)") should be(true)
-            parser("isJSON(JsNumber)") should be(true)
-            parser("isJSON(JsObject.a.b)") should be(true)
-            parser("isJSON(JsObject.a.asd)") should be(false)
-            parser("isJSON(JsArray)") should be(true)
-            parser("isJSON(empty3)") should be(true)
-            parser("isJSON(asd)") should be(false)
-            parser("isJSON(Int)") should be(false)
-            parser("isJSON(String)") should be(false)
-            parser("isJSON(null.2,JsObject.a.b)") should be(true)
+            PredicateParser("isJSON(null.2)", datum) should be(true)
+            PredicateParser("isJSON(JsNumber)", datum) should be(true)
+            PredicateParser("isJSON(JsObject.a.b)", datum) should be(true)
+            PredicateParser("isJSON(JsObject.a.asd)", datum) should be(false)
+            PredicateParser("isJSON(JsArray)", datum) should be(true)
+            PredicateParser("isJSON(empty3)", datum) should be(true)
+            PredicateParser("isJSON(asd)", datum) should be(false)
+            PredicateParser("isJSON(Int)", datum) should be(false)
+            PredicateParser("isJSON(String)", datum) should be(false)
+            PredicateParser("isJSON(null.2,JsObject.a.b)", datum) should be(true)
 
             // containsFields
-            parser("containsFields(null.1,JsObject.a.b,empty6)") should be(true)
-            parser("containsFields(null.1,asd)") should be(false)
-            parser("containsFields(" + datum.keys.mkString(",") + ")") should be(true)
-            parser("containsFields(" + datum.keys.mkString(",") + ",asd)") should be(false)
+            PredicateParser("containsFields(null.1,JsObject.a.b,empty6)", datum) should be(true)
+            PredicateParser("containsFields(null.1,asd)", datum) should be(false)
+            PredicateParser("containsFields(" + datum.keys.mkString(",") + ")", datum) should be(true)
+            PredicateParser("containsFields(" + datum.keys.mkString(",") + ",asd)", datum) should be(false)
 
             // containsSubstring
-            parser("containsSubstring(myString,string)") should be(false)
-            parser("containsSubstring(myString,String)") should be(true)
-            parser("containsSubstring(String,myString)") should be(false)
+            PredicateParser("containsSubstring(myString,string)", datum) should be(false)
+            PredicateParser("containsSubstring(myString,String)", datum) should be(true)
+            PredicateParser("containsSubstring(String,myString)", datum) should be(false)
 
             // isEmptyValue
-            parser("isEmptyValue(empty1)") should be(true)
-            parser("isEmptyValue(empty2)") should be(true)
-            parser("isEmptyValue(empty3)") should be(true)
-            parser("isEmptyValue(empty4)") should be(true)
-            parser("isEmptyValue(empty5)") should be(true)
-            parser("isEmptyValue(empty6)") should be(true)
-            parser("isEmptyValue(asd)") should be(false)
-            parser("isEmptyValue(JsObject)") should be(false)
-            parser("isEmptyValue(JsArray)") should be(false)
-            parser("isEmptyValue(String)") should be(false)
+            PredicateParser("isEmptyValue(empty1)", datum) should be(true)
+            PredicateParser("isEmptyValue(empty2)", datum) should be(true)
+            PredicateParser("isEmptyValue(empty3)", datum) should be(true)
+            PredicateParser("isEmptyValue(empty4)", datum) should be(true)
+            PredicateParser("isEmptyValue(empty5)", datum) should be(true)
+            PredicateParser("isEmptyValue(empty6)", datum) should be(true)
+            PredicateParser("isEmptyValue(asd)", datum) should be(false)
+            PredicateParser("isEmptyValue(JsObject)", datum) should be(false)
+            PredicateParser("isEmptyValue(JsArray)", datum) should be(false)
+            PredicateParser("isEmptyValue(String)", datum) should be(false)
 
             // isEmpty
-            parser("isEmpty()") should be(false)
-            new TuktuPredicateParser(Map())("isEmpty()") should be(true)
+            PredicateParser("isEmpty()", datum) should be(false)
+            PredicateParser("isEmpty()", Map()) should be(true)
         }
     }
-
 }

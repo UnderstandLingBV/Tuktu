@@ -403,8 +403,8 @@ class PredicateProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             // Get the predicate parser
-            val p = new TuktuPredicateParser(datum)
-            datum + (resultName -> utils.evaluateTuktuString(predicate, datum))
+            val p = PredicateParser(utils.evaluateTuktuString(predicate, datum), datum)
+            datum + (resultName -> p)
         }
     })
 }
@@ -435,8 +435,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                 // Replace expression with values
                 val replacedExpression = evaluateTuktuString(expression, datum)
                 // Evaluate
-                val parser = new TuktuPredicateParser(datum)
-                val result = parser(replacedExpression)
+                val result = PredicateParser(replacedExpression, datum)
 
                 // Negate or not?
                 if (expressionType == "negate") !result else result
