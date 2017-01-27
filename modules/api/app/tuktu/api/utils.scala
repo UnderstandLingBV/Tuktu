@@ -40,9 +40,9 @@ object utils {
     }
 
     /**
-     * TuktuString helper object for Tuktu string evaluation
+     * Evaluates a Tuktu string to resolve functions and variables in the actual string
      */
-    object TuktuString {
+    object evaluateTuktuString {
         // Tree structure
         abstract class TuktuStringNode
         case class TuktuStringRoot(children: Seq[TuktuStringNode])
@@ -71,7 +71,7 @@ object utils {
         val configTotal: P[TuktuStringRoot] = P(Start ~ (configString | anyChar).rep ~ End).map { TuktuStringRoot(_) }
 
         // Evaluate
-        def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$'): String = {
+        def apply(str: String, vars: Map[String, Any], specialChar: Char = '$'): String = {
             def evalFunc(f: TuktuStringFunction): String = {
                 // Get the key first
                 val key = f.children.foldLeft("") {
@@ -114,11 +114,6 @@ object utils {
             }
         }
     }
-    /**
-     * Evaluates a Tuktu string to resolve functions and variables in the actual string
-     */
-    def evaluateTuktuString(str: String, vars: Map[String, Any], specialChar: Char = '$'): String =
-        TuktuString.evaluateTuktuString(str, vars, specialChar)
 
     /**
      * Recursively evaluates a Tuktu config to resolve variables in it
