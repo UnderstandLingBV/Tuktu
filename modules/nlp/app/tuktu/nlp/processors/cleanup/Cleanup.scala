@@ -14,6 +14,7 @@ import java.io.InputStream
 import play.api.Play
 import play.api.Play.current
 import java.io.IOException
+import com.vdurmont.emoji.EmojiParser
 
 /**
  * Generic Base class for the cleaner classes.
@@ -50,6 +51,13 @@ class PunctuationRemoverProcessor(resultName: String) extends BaseCleaner(result
     val punc =  """(\p{P})""".r
  
     def clean(seq: Seq[String], datum: Map[String, Any]) = seq.filterNot(punc.pattern.matcher(_).matches)     
+}
+
+/**
+ * Removes emojis from a given sequence of Strings.
+ */
+class EmojiRemoverProcessor(resultName: String) extends BaseCleaner(resultName) {
+    def clean(seq: Seq[String], datum: Map[String, Any]) = seq.map(EmojiParser.removeAllEmojis(_))
 }
 
 /**
