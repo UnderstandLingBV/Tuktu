@@ -33,6 +33,8 @@ import play.api.cache.Cache
 import akka.util.Timeout
 import java.text.SimpleDateFormat
 import java.util.Locale
+import play.api.libs.json.JsResultException
+import play.api.Logger
 
 case class FBDataRequest(
     urls: List[String],
@@ -261,15 +263,22 @@ class UserCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient) exte
             val profileRequests = responses.map(response => {
                 val json = Json.parse(response.getBody)
                 // Get the type
-                val nodeType = (json \ "metadata" \ "type").as[String]
+                val nodeType = try {
+                    (json \ "metadata" \ "type").as[String]
+                } catch {
+                    case e: JsResultException => {
+                        Logger.warn("Could not fetch node type for Facebook profile: " + json)
+                        "Unknown"
+                    }
+                }
                 // Get all the eligible fields
-                val fields = eligibleFields(nodeType)
+                val fields = if (nodeType != "Unknown") eligibleFields(nodeType) else Nil
                 
                 // Make new request with all the fields we can get
                 (nodeType, new BatchRequestBuilder((json \ "id").as[String])
                     .parameters(Parameter.`with`("fields", fields.mkString(",")))
                     .build())
-            })
+            }).filter(_._1 != "Unknown")
             
             // Get all the real profile data
             val profileResponses = fbClient.executeBatch(profileRequests.map(_._2).asJava)
@@ -311,7 +320,7 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
             
             if (urls.size > 0) {
                 // Get the URLs in batched fashion
-                val requests = for (url <- urls) yield {
+                val rs = (for (url <- urls) yield {
                     // Build the start and end parameters
                     val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes"))
                         
@@ -319,35 +328,37 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
                     new BatchRequestBuilder(url)
                             .parameters(parameters: _*)
                             .build()
-                }
+                }).grouped(50)
                 
-                // Make the requests
-                val responses = fbClient.executeBatch(requests.asJava)
-                
-                var offset = 0
-                userActor ! new CommentRequest(responses.flatMap(response => {
-                    // Use try since sometimes comments are removed before we see them
-                    val res = try {
-                        val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
-                        objectList.flatMap(objects => {
-                            objects.map(obj => {
-                                val json = Json.parse(obj.toString).asInstanceOf[JsObject]
-                                new FBIntrospect(
-                                        // Merge the original post into the comment
-                                        json ++ Json.obj("post" -> fdr.posts(ids(offset))),
-                                        (json \ "from" \ "id").as[String]
-                                )
+                rs.foreach {requests =>
+                    // Make the requests
+                    val responses = fbClient.executeBatch(requests.asJava)
+                    
+                    var offset = 0
+                    userActor ! new CommentRequest(responses.flatMap(response => {
+                        // Use try since sometimes comments are removed before we see them
+                        val res = try {
+                            val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
+                            objectList.flatMap(objects => {
+                                objects.map(obj => {
+                                    val json = Json.parse(obj.toString).asInstanceOf[JsObject]
+                                    new FBIntrospect(
+                                            // Merge the original post into the comment
+                                            json ++ Json.obj("post" -> fdr.posts(ids(offset))),
+                                            (json \ "from" \ "id").as[String]
+                                    )
+                                })
                             })
-                        })
-                    } catch {
-                        case e: com.restfb.json.JsonException => List()
-                    }
-                    
-                    // Increase the offset
-                    offset += 1
-                    
-                    res
-                }).toList)
+                        } catch {
+                            case e: com.restfb.json.JsonException => List()
+                        }
+                        
+                        // Increase the offset
+                        offset += 1
+                        
+                        res
+                    }).toList)
+                }
             }
         }
     }
