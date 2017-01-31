@@ -322,7 +322,7 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
                 // Get the URLs in batched fashion
                 val rs = (for (url <- urls) yield {
                     // Build the start and end parameters
-                    val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes,likes.limit(0).summary(true),comments.limit(0).summary(true)"))
+                    val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes,likes.limit(0).summary(true),comments.limit(0).summary(true),shares"))
                         
                     // Add the batched request
                     new BatchRequestBuilder(url)
