@@ -75,7 +75,8 @@ object sql {
     }
 
     // Releases a connection, and closes its BasicDataSource if it has no more active connections
-    def releaseConnection(connDef: ConnectionDefinition, conn: Connection) = {
+    def releaseConnection(connDef: ConnectionDefinition, conn: Connection) = try {
+        semaphore.acquire(1)
         if (!conn.isClosed) conn.close
         
         // Need to clean up our pool?
@@ -93,6 +94,8 @@ object sql {
                 if (set.isEmpty)
                     pools -= connDef
         }
+    } finally {
+        semaphore.release(1)
     }
 
     /**
