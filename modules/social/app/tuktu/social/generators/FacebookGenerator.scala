@@ -322,7 +322,7 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
                 // Get the URLs in batched fashion
                 val rs = (for (url <- urls) yield {
                     // Build the start and end parameters
-                    val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes"))
+                    val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes,likes.limit(0).summary(true),comments.limit(0).summary(true)"))
                         
                     // Add the batched request
                     new BatchRequestBuilder(url)
@@ -366,7 +366,7 @@ class CommentsCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, 
 
 class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     val allFields = List(
-        "id", "application", "call_to_action", "caption", "child_attachments", "comments_mirroring_domain", "coordinates", "created_time", "description", "event", "expanded_height", "expanded_width", "feed_targeting", "full_picture", "height", "icon", "instagram_eligibility", "is_expired", "is_hidden", "is_instagram_eligible", "is_popular", "is_published", "is_spherical", "link", "message", "message_tags", "name", "object_id", "parent_id", "permalink_url", "picture", "place", "privacy", "promotion_status", "properties", "scheduled_publish_time", "shares", "source", "status_type", "story", "story_tags", "target", "targeting", "timeline_visibility", "type", "updated_time", "via", "width", "likes.limit(0).summary(true)", "from", "to"
+        "id", "application", "call_to_action", "caption", "child_attachments", "comments_mirroring_domain", "coordinates", "created_time", "description", "event", "expanded_height", "expanded_width", "feed_targeting", "full_picture", "height", "icon", "instagram_eligibility", "is_expired", "is_hidden", "is_instagram_eligible", "is_popular", "is_published", "is_spherical", "link", "message", "message_tags", "name", "object_id", "parent_id", "permalink_url", "picture", "place", "privacy", "promotion_status", "properties", "scheduled_publish_time", "shares", "source", "status_type", "story", "story_tags", "target", "targeting", "timeline_visibility", "type", "updated_time", "via", "width", "likes.limit(0).summary(true)", "comments.limit(0).summary(true)", "from", "to"
     )
     
     var pollerActor: ActorRef = _
