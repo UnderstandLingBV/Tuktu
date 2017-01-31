@@ -187,38 +187,27 @@ abstract class BaseProcessor(resultName: String) {
  * This processor is prepended by the Dispatcher to processors where merging happens to handle these EOFs by ignoring all but the last one
  */
 object BranchMergeProcessor {
-    // Keep track of how many EOFs were seen by each processor defined by their UUID
-    val map = collection.mutable.Map[String, AtomicInteger]()
-
     // Creates a new EOF ignoring Enumeratee
     def ignoreEOFs[M](EOFCount: Int): Enumeratee[M, M] = {
-        // Generate unique UUID and add to the map
-        var uuid = java.util.UUID.randomUUID.toString
-        while (map.contains(uuid))
-            uuid = java.util.UUID.randomUUID.toString
-        map += uuid -> new AtomicInteger(0)
+        // Keep track of how many EOFs have been seen
+        val count = new AtomicInteger(0)
 
         /**
-         * An enumeratee that passes all input through until EOFCount EOFs are reached, redeeming the final iteratee with EOF as the left over input. 
+         * An enumeratee that passes all input through until EOFCount EOFs are reached, redeeming the final iteratee with EOF as the left over input.
          * Based on: https://github.com/playframework/playframework/blob/2.3.x/framework/src/iteratees/src/main/scala/play/api/libs/iteratee/Enumeratee.scala#L672-L681
          */
         new Enumeratee.CheckDone[M, M] {
 
             def step[A](k: Input[M] => Iteratee[M, A]): Input[M] => Iteratee[M, Iteratee[M, A]] = {
-                return {
-                    case in @ (Input.El(_) | Input.Empty) => new Enumeratee.CheckDone[M, M] { def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k)) } &> k(in)
-                    case Input.EOF => {
-                        // We have reached an EOF, increment and check if we have reached the designated count
-                        if (map(uuid).incrementAndGet == EOFCount) {
-                            // We are done, sent out EOF for real
-                            map -= uuid
-                            Done(Cont(k), Input.EOF)
-                        } else {
-                            // We are not done yet, send Empty
-                            new Enumeratee.CheckDone[M, M] { def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k)) } &> k(Input.Empty)
-                        }
-                    }
-                }
+                case in @ (Input.El(_) | Input.Empty) => new Enumeratee.CheckDone[M, M] { def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k)) } &> k(in)
+                case Input.EOF =>
+                    // We have reached an EOF, increment and check if we have reached the designated count
+                    if (count.incrementAndGet == EOFCount)
+                        // We are done, sent out EOF for real
+                        Done(Cont(k), Input.EOF)
+                    else
+                        // We are not done yet, send Empty
+                        new Enumeratee.CheckDone[M, M] { def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k)) } &> k(Input.Empty)
             }
 
             def continue[A](k: Input[M] => Iteratee[M, A]) = Cont(step(k))
@@ -309,9 +298,9 @@ abstract class BaseGenerator(resultName: String, processors: List[Enumeratee[Dat
     def _receive: PartialFunction[Any, Unit] = PartialFunction.empty
 
     def receive = _receive orElse {
-        case ip: InitPacket              => setup
-        case sp: StopPacket              => cleanup
-        case a                           => play.api.Logger.warn(this.getClass.toString + " received an unhandled packet of type " + a.getClass.toString + ":\n" + a.toString)
+        case ip: InitPacket => setup
+        case sp: StopPacket => cleanup
+        case a              => play.api.Logger.warn(this.getClass.toString + " received an unhandled packet of type " + a.getClass.toString + ":\n" + a.toString)
     }
 }
 
