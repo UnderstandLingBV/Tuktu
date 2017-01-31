@@ -320,7 +320,6 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
  */
 class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-    val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
 
     /**
@@ -334,17 +333,15 @@ class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) exte
             dp
         })
 
-        def runProcessor() = Enumerator(dp).andThen(Enumerator.eof) |>> (processor compose sendBackEnum compose utils.logEnumeratee("")) &>> sinkIteratee
+        def runProcessor() = Enumerator(dp) |>> (processor compose sendBackEnum compose utils.logEnumeratee("")) &>> sinkIteratee
     }
 
     def receive() = {
         case sp: StopPacket => {
+            Enumerator.eof |>> processor &>> sinkIteratee
             self ! PoisonPill
         }
         case dp: DataPacket => {
-            // Push to all async processors
-            channel.push(dp)
-
             // Send through our enumeratee
             val p = new senderReturningProcessor(sender, dp)
             p.runProcessor()
@@ -411,7 +408,7 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
         }
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map(data => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Send data to actors
         val futs = for (actor <- actors) yield (actor ? {
             if (sendOriginal) data else DataPacket(List())
@@ -425,7 +422,9 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
             merger.invoke(mergerClass, data :: results).asInstanceOf[DataPacket]
         else
             merger.invoke(mergerClass, results).asInstanceOf[DataPacket]
-    })
+    }) compose Enumeratee.onEOF {() =>
+        actors.foreach {actor => actor ! new StopPacket }
+    }
 
 }
 
@@ -512,7 +511,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
                 )
                 Enumerator({
                     if (sendOriginal) data else DataPacket(List())
-                }).through(inclMonitor).run(Iteratee.getChunks)
+                }).andThen(Enumerator.eof).through(inclMonitor).run(Iteratee.getChunks)
             }
         } flatMap (t => Future.sequence(t))) // Flatten Future[List[Future[T]]] => Future[List[T]]
 

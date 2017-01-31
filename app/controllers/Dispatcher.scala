@@ -30,6 +30,8 @@ import mailbox.DeadLetterWatcher
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
 import java.nio.file.Paths
+import play.api.Logger
+import java.lang.reflect.Method
 
 case class treeNode(
         name: String,
@@ -37,13 +39,30 @@ case class treeNode(
         children: List[Class[_]]
 )
 
+class EOFMonitor(name: String) extends Actor with ActorLogging {
+    var cancellable = Akka.system.scheduler.scheduleOnce(60 seconds) {
+        self ! "noeof"
+    }
+    def receive = {
+        case "proc" => {
+            val e: Enumeratee[DataPacket, DataPacket] = Enumeratee.onEOF { () =>
+                cancellable.cancel
+                self ! PoisonPill
+            }
+            sender ! e
+        }
+        case "noeof" => {
+            Logger.error("Processor " + name + " never got an EOF")
+        }
+    }
+}
+
 object Dispatcher {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     /**
      * Flow monitoring enumeratee
      */
     def monitorEnumeratee(uuid: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
-        implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-
         Enumeratee.mapM((data: DataPacket) => Future {
             Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, uuid, branch, data.size)
             data
@@ -54,8 +73,6 @@ object Dispatcher {
      * Processor monitoring enumeratee
      */
     def processorMonitor(uuid: String, processor_id: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
-        implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
-
         Enumeratee.mapM((data: DataPacket) => Future {
             Akka.system.actorSelection("user/TuktuMonitor") ! new ProcessorMonitorPacket(mpType, uuid, processor_id, data)
             data
@@ -86,6 +103,7 @@ object Dispatcher {
         val subflows = collection.mutable.ListBuffer.empty[ActorRef]
         // Keep track of instantiated processors
         val instantiatedProcessors = collection.mutable.Map[String, Any]()
+        val instantiatedMethods = collection.mutable.Map[String, Method]()
 
         // Count how often a processor is a successor of the generator or a processor
         // and ignore all but the last EOF for each processor that has more than one predecessor
@@ -94,6 +112,7 @@ object Dispatcher {
             .map { case (id, predecessors) =>
                 id -> BranchMergeProcessor.ignoreEOFs[DataPacket](predecessors)
             }
+            println(referenceCounts)
 
         /**
          * Builds a chain of processors recursively
@@ -216,15 +235,27 @@ object Dispatcher {
                 }
 
                 // Add method to all our entries so far
-                val method = procClazz.getMethods.find(m => m.getName == "processor").get
-                val procEnum =
+                val method = {
+                    if (instantiatedMethods.contains(procName)) instantiatedMethods(procName)
+                    else {
+                        val m = procClazz.getMethods.find(m => m.getName == "processor").get
+                        instantiatedMethods += procName -> m
+                        m
+                    }
+                }
+                val procEnum = {
+                    val a = Akka.system.actorOf(Props(classOf[EOFMonitor], pd.id))
+                    Await.result(a ? "proc", 5 seconds).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                } compose 
+                {
                     // Check if this processor is one that is referenced by multiple subflows
                     if (referenceCounts.contains(pd.id)) {
                         // Prepend the Enumeratee which will ignore all EOFs but the last
                         referenceCounts(pd.id) compose
                             method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
                     } else method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
-
+                }
+                
                 if (logLevel == "all") {
                     accum compose
                         processorMonitor(idString, pd.id, BeginType) compose
@@ -255,15 +286,25 @@ object Dispatcher {
                 }
 
                 // Get Enumeratee
-                val method = procClazz.getMethods.find(m => m.getName == "processor").get
-                val procEnum =
+                val method = {
+                    if (instantiatedMethods.contains(procName)) instantiatedMethods(procName)
+                    else {
+                        val m = procClazz.getMethods.find(m => m.getName == "processor").get
+                        instantiatedMethods += procName -> m
+                        m
+                    }
+                }
+                val procEnum = {
+                    val a = Akka.system.actorOf(Props(classOf[EOFMonitor], pd.id))
+                    Await.result(a ? "proc", 5 seconds).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
+                } compose {
                     // Check if this processor is one that is referenced by multiple subflows
                     if (referenceCounts.contains(pd.id)) {
                         // Prepend the Enumeratee which will ignore all EOFs but the last
                         referenceCounts(pd.id) compose
                             method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
                     } else method.invoke(iClazz).asInstanceOf[Enumeratee[DataPacket, DataPacket]]
-
+                }
                 val composition = if (logLevel == "all") {
                     accum compose
                         processorMonitor(idString, pd.id, BeginType) compose

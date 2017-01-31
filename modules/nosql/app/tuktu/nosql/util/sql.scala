@@ -21,6 +21,7 @@ import anorm.SqlParser
 import anorm.SqlStringInterpolation
 import anorm.sqlToSimple
 import play.api.libs.iteratee.Enumerator
+import akka.actor.Actor
 
 /**
  * Keeps track of connections
@@ -31,7 +32,7 @@ object sql {
         user: String,
         password: String,
         driver: String)
-    
+        
     val pools = TrieMap[ConnectionDefinition, collection.mutable.ListBuffer[BoneCP]]()
     
     // BoneCP is poo-slow, so use a mutex here
@@ -86,6 +87,7 @@ object sql {
                         // Close Remove it from out set
                         set -= cp
                         cp.close
+                        cp.shutdown
                     }
                 }
                 if (set.isEmpty)

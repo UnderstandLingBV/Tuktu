@@ -39,7 +39,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
         distinct = (config \ "distinct").asOpt[Boolean].getOrElse(false)
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         val query_results = collection.mutable.Map.empty[(String, String, String, String, String), List[Map[String, Any]]]
 
         val results = for (datum <- data.data) yield {
