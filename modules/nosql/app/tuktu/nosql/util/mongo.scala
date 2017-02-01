@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import com.typesafe.config.Config
 import akka.actor.Actor
 import akka.actor.ActorRef
+import akka.actor.Cancellable
 import akka.actor.Props
 import akka.pattern.ask
 import akka.pattern.pipe
@@ -28,93 +29,103 @@ import reactivemongo.api.FailoverStrategy
 object MongoPool {
     case class getConn(nodes: List[String], mongoOptions: MongoConnectionOptions, auth: Option[Authenticate])
     case class releaseConn(nodes: List[String], connection: MongoConnection)
+    case class graceKill(nodes: List[String], connection: MongoConnection)
+    case class MongoConnectionObject(var leases: Int = 1, var graceKill: Option[Cancellable] = None)
 
     class MongoPoolActor extends Actor {
-        case class graceKill(nodes: List[String], connection: MongoConnection)
-
         // Driver should be created only once since it's an entire actor system
         def typesafeConfig: com.typesafe.config.Config = play.api.libs.concurrent.Akka.system.settings.config
         val driver = new MongoDriver(Some(typesafeConfig))
 
         // Keep track of connections per replica set/cluster
-        val nodesPerConnection = collection.concurrent.TrieMap.empty[List[String], collection.concurrent.TrieMap[MongoConnection, Int]]
+        val nodesPerConnection = collection.concurrent.TrieMap.empty[List[String], collection.concurrent.TrieMap[MongoConnection, MongoConnectionObject]]
         val maxLeases = 10
 
         def receive = {
-            case c: getConn     => getConnection(c.nodes, c.mongoOptions, c.auth) pipeTo sender
-            case c: releaseConn => releaseConnection(c.nodes, c.connection)
-            case c: graceKill => {
-                val sNodes = c.nodes
-                val connection = c.connection
+            case getConn(nodes, opts, auth)     => getConnection(nodes, opts, auth) pipeTo sender
+            case releaseConn(nodes, connection) => releaseConnection(nodes, connection)
+            case graceKill(sNodes, connection) =>
                 if (nodesPerConnection.contains(sNodes))
                     if (nodesPerConnection(sNodes).contains(connection))
-                        if (nodesPerConnection(sNodes)(connection) < 1) {
+                        if (nodesPerConnection(sNodes)(connection).leases < 1) {
                             // We are the last one, clean up
                             nodesPerConnection(sNodes) -= connection
                             if (nodesPerConnection(sNodes).isEmpty) nodesPerConnection -= sNodes
-        
+
                             connection.close
                         }
-            }
         }
 
         def getConnection(nodes: List[String], mongoOptions: MongoConnectionOptions, auth: Option[Authenticate]): Future[MongoConnection] = {
             val sNodes = nodes.sorted
-            
+
             def createConnection: Future[MongoConnection] = {
-                // Create a new connection with a new lease
+                // Create a new connection with a new lease and add it to our map
                 val connection = driver.connection(nodes, mongoOptions)
                 // Update nodes per connection
-                nodesPerConnection(sNodes) += connection -> 1
+                nodesPerConnection(sNodes) += connection -> new MongoConnectionObject
 
                 // Authenticate if required and return the connection
                 auth match {
-                    case Some(a) => {
+                    case Some(a) =>
                         val fut = connection.authenticate(a.db, a.user, a.password)
                         // Wait for auth to succeed
                         fut.map { _ => connection }
-                    }
+
                     case None => Future { connection }
                 }
             }
 
             // Check if we already have a lease for this one
             if (nodesPerConnection.contains(sNodes)) {
-                // Get a new lease on an existing connection if we can still manage to; or create new connection
-                nodesPerConnection(sNodes).find { case (_, leases) => leases < maxLeases } match {
-                    case None => createConnection
-                    case Some((connection, leases)) => {
+                // Get a new lease on an existing connection if we can still manage to (prefer already leased connections); or create new connection
+                nodesPerConnection(sNodes).find { case (_, MongoConnectionObject(leases, _)) => leases < maxLeases && leases > 0 } match {
+                    case None =>
+                        // No free already leased connections; check if there's empty connections
+                        nodesPerConnection(sNodes).find { case (_, MongoConnectionObject(leases, _)) => leases == 0 } match {
+                            // Nothing is available: create new connection
+                            case None => createConnection
+                            case Some((connection, mco: MongoConnectionObject)) =>
+                                // Update lease counter
+                                mco.leases += 1
+                                // Connection is in use: cancel graceKill
+                                mco.graceKill.foreach { _.cancel }
+                                mco.graceKill = None
+                                Future { connection }
+                        }
+                    case Some((connection, mco: MongoConnectionObject)) =>
                         // Update lease counter
-                        nodesPerConnection(sNodes) += connection -> (leases + 1)
+                        mco.leases += 1
+                        // Connection is in use: cancel graceKill
+                        mco.graceKill.foreach { _.cancel }
+                        mco.graceKill = None
                         Future { connection }
-                    }
                 }
             } else {
                 // Initialize mapping and create connection
-                nodesPerConnection += sNodes -> collection.concurrent.TrieMap.empty[MongoConnection, Int]
+                nodesPerConnection += sNodes -> collection.concurrent.TrieMap.empty[MongoConnection, MongoConnectionObject]
                 createConnection
             }
         }
 
         def releaseConnection(nodes: List[String], connection: MongoConnection) {
             val sNodes = nodes.sorted
+            val mco = nodesPerConnection(sNodes)(connection)
 
-            // Get the lease
-            
-                val leaseCount = nodesPerConnection(sNodes)(connection) - 1
-                nodesPerConnection(sNodes) += connection -> (leaseCount)
-
-                if (leaseCount < 1) {
-                    Akka.system.scheduler.scheduleOnce(timeout.duration) {
-                        self ! graceKill(sNodes, connection)
-                    }
-                }
-            
+            // Update lease count
+            mco.leases -= 1
+            // Kill connection gracefully if required
+            if (mco.leases < 1) {
+                mco.graceKill.foreach { _.cancel }
+                mco.graceKill = Some(Akka.system.scheduler.scheduleOnce(timeout.duration) {
+                    self ! graceKill(sNodes, connection)
+                })
+            }
         }
     }
 
     lazy val mongoPoolActor = Akka.system.actorOf(Props[MongoPoolActor])
-    implicit val timeout = Timeout(30.seconds)
+    implicit val timeout = Timeout(30 seconds)
 
     /**
      * Gets a MongoConnection for a specific replica set, reusing existing ones
@@ -138,9 +149,7 @@ object MongoPool {
             case None => MongoConnectionOptions(
                 failoverStrategy = FailoverStrategy(
                     retries = 8,
-                    delayFactor = n => n * 1.2
-                )
-            )
+                    delayFactor = n => n * 1.2))
             case Some(o) => MongoConnectionOptions(
                 connectTimeoutMS = (o \ "connectTimeoutMS").asOpt[Int] match {
                     case None    => 0
@@ -190,8 +199,7 @@ object MongoPool {
                 },
                 failoverStrategy = FailoverStrategy(
                     retries = 50,
-                    delayFactor = n => n * 1.1
-                ))
+                    delayFactor = n => n * 1.1))
         }
     }
 
