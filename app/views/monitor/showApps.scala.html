@@ -69,7 +69,7 @@
                 <tr@if(appProps.errors.nonEmpty){ class="danger"}>
                     <td style="margin-right: 25px;">
                         @if(appProps.actors.isEmpty){@appName}else{@appProps.actors.head.path.toStringWithoutAddress}
-                        @if(subflows.contains(appName)) {
+                        @if(appProps.actors.exists(a => subflows.contains(a.path.toStringWithoutAddress))) {
                             <i>(Subflow)</i>
                         }
                     </td>
@@ -170,7 +170,7 @@
                 <tr@if(appProps.errors.nonEmpty){ class="danger"}>
                     <td style="margin-right: 25px;">
                         @if(appProps.actors.isEmpty){@appName}else{@appProps.actors.head.path.toStringWithoutAddress}
-                        @if(subflows.contains(appName)) {
+                        @if(appProps.actors.exists(a => subflows.contains(a.path.toStringWithoutAddress))) {
                             <i>(Subflow)</i>
                         }
                     </td>
