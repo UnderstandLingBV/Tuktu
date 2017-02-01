@@ -20,7 +20,7 @@ class DataMonitor extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
     // Monitoring maps, uuid -> AppMonitorObject
-    var appMonitor = Map.empty[String, AppMonitorObject]
+    val appMonitor = collection.mutable.Map.empty[String, AppMonitorObject]
 
     // Keep track of ActorRef addresses -> uuid
     val uuidMap = collection.mutable.Map.empty[String, String]
@@ -30,6 +30,18 @@ class DataMonitor extends Actor with ActorLogging {
 
     // Keep track of a list of actors we need to notify on push base about events happening
     val eventListeners = collection.mutable.Set.empty[ActorRef]
+
+    // Remove expired monitor objects from appMonitor
+    def removeFromMonitor(removed: TraversableOnce[AppMonitorObject]) {
+        // Remove from appMonitor
+        appMonitor --= removed.map { _.uuid }
+
+        // Remove expired ActorRefs from uuidMap and subflowMap
+        val expiredUUIDs = removed.map { _.uuid }.toSet
+        val expiredActorRefs = uuidMap.filter { case (_, uuid) => expiredUUIDs.contains(uuid) }.keys
+        uuidMap --= expiredActorRefs
+        subflowMap --= expiredActorRefs
+    }
 
     def receive = {
         case any => {
@@ -42,15 +54,12 @@ class DataMonitor extends Actor with ActorLogging {
         case "init" => {
             // Initialize monitor
         }
-        case "clearFinished" => {
-            appMonitor = appMonitor.filterNot(app => app._2.errors.isEmpty && app._2.endTime != None)
-        }
-        case "clearErrors" => {
-            appMonitor = appMonitor.filterNot(app => app._2.errors.nonEmpty && app._2.endTime != None)
-        }
-        case cfp: ClearFlowPacket => {
-            appMonitor = appMonitor - cfp.uuid
-        }
+        case "clearFinished" =>
+            removeFromMonitor(appMonitor.filter { app => app._2.errors.isEmpty && app._2.endTime != None }.values)
+        case "clearErrors" =>
+            removeFromMonitor(appMonitor.filter { app => app._2.errors.nonEmpty && app._2.endTime != None }.values)
+        case cfp: ClearFlowPacket =>
+            removeFromMonitor(List(appMonitor.get(cfp.uuid)).flatten)
         case fmp: SubflowMapPacket => {
             // Add to our map
             for (subflow <- fmp.subflows)
@@ -64,14 +73,15 @@ class DataMonitor extends Actor with ActorLogging {
             }
         }
         case aip: AppInitPacket => {
-            if (!appMonitor.contains(aip.uuid))
-                appMonitor = appMonitor.filterNot(_._2.is_expired) + (aip.uuid -> new AppMonitorObject(
-                        aip.uuid,
-                        aip.configName,
-                        aip.instanceCount,
-                        aip.timestamp,
-                        aip.stopOnError
-                ))
+            if (!appMonitor.contains(aip.uuid)) {
+                removeFromMonitor(appMonitor.filter(_._2.is_expired).values)
+                appMonitor += (aip.uuid -> new AppMonitorObject(
+                    aip.uuid,
+                    aip.configName,
+                    aip.instanceCount,
+                    aip.timestamp,
+                    aip.stopOnError))
+            }
             aip.mailbox.collect {
                 case mailbox => {
                     appMonitor(aip.uuid).actors += mailbox
@@ -181,12 +191,11 @@ class DataMonitor extends Actor with ActorLogging {
             }
         }
         case mop: MonitorOverviewRequest => {
-            appMonitor = appMonitor.filterNot(_._2.is_expired)
-            val partitions = appMonitor.groupBy(_._2.endTime == None)
-            sender ! new MonitorOverviewResult(
-                partitions.getOrElse(true, Map.empty),
-                partitions.getOrElse(false, Map.empty),
-                subflowMap toMap)
+            // Remove expired objects from monitor
+            removeFromMonitor(appMonitor.filter(_._2.is_expired).values)
+            // Partition remaining objects whether they are finished or not
+            val (running, finished) = appMonitor.partition(_._2.endTime == None)
+            sender ! new MonitorOverviewResult(running toMap, finished toMap, subflowMap toMap)
         }
         case mldp: MonitorLastDataPacketRequest => {
             val result = appMonitor.get(mldp.flow_name) match {
