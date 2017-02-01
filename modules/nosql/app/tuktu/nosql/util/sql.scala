@@ -22,6 +22,10 @@ import anorm.SqlStringInterpolation
 import anorm.sqlToSimple
 import play.api.libs.iteratee.Enumerator
 import akka.actor.Actor
+import scala.util.Random
+import play.api.Play
+import com.zaxxer.hikari.HikariDataSource
+import com.zaxxer.hikari.HikariConfig
 
 /**
  * Keeps track of connections
@@ -33,70 +37,32 @@ object sql {
         password: String,
         driver: String)
         
-    val pools = TrieMap[ConnectionDefinition, collection.mutable.ListBuffer[BoneCP]]()
-    
-    // BoneCP is poo-slow, so use a mutex here
-    val semaphore = new Semaphore(1, true)
-
+    val pools = collection.mutable.Map[ConnectionDefinition, HikariDataSource]()
     // Gets a single connection
-    def getConnection(conn: ConnectionDefinition, minSize: Int = 5, maxSize: Int = 10): Connection = try {
-        semaphore.acquire(1)
-        
+    def getConnection(conn: ConnectionDefinition,
+            maxSize: Int = Play.current.configuration.getInt("tuktu.nosql.sql.pools.min_size").getOrElse(50)
+    ): Connection = {
         def newConnection() = {
             // Create new source
             Class.forName(conn.driver)
-            val config = new BoneCPConfig()
-            //config.setPoolName(UUID.randomUUID.toString)
+            val config = new HikariConfig
             config.setJdbcUrl(conn.url)
             config.setUsername(conn.user)
             config.setPassword(conn.password)
-            config.setMinConnectionsPerPartition(minSize)
-            config.setMaxConnectionsPerPartition(maxSize)
-            config.setPartitionCount(3)
-            config.setCloseConnectionWatch(true)
-            val c = new BoneCP(config)
-            pools.getOrElseUpdate(conn, collection.mutable.ListBuffer.empty[BoneCP]) += c
-            c.getConnection
+            config.addDataSourceProperty("maximumPoolSize", maxSize)
+            val ds = new HikariDataSource(config)
+            pools += conn -> ds
+            ds.getConnection
         }
         
-        // Check if a pool exists which still has open slots
-        pools.get(conn) match {
-            case Some(map) => {
-                // Find empty one, if any
-                map.find { cp => cp.getTotalFree > 0 } match {
-                    case Some(c) => c.getConnection
-                    case None => newConnection
-                }
-            }
-            case None => newConnection
-        }
-    } finally {
-        semaphore.release(1)
+        // Check if a pool exists
+        if (pools.contains(conn)) pools(conn).getConnection
+        else
+             // Create the pool and return one
+            newConnection
     }
-
     // Releases a connection, and closes its BasicDataSource if it has no more active connections
-    def releaseConnection(connDef: ConnectionDefinition, conn: Connection) = try {
-        semaphore.acquire(1)
-        if (!conn.isClosed) conn.close
-        
-        // Need to clean up our pool?
-        pools.get(connDef).collect {
-            case set =>
-                set.foreach { cp =>
-                    // Check if BasicDataSource has no active connections
-                    if (cp.getTotalLeased == 0) {
-                        // Close Remove it from out set
-                        set -= cp
-                        cp.close
-                        cp.shutdown
-                    }
-                }
-                if (set.isEmpty)
-                    pools -= connDef
-        }
-    } finally {
-        semaphore.release(1)
-    }
+    def releaseConnection(connDef: ConnectionDefinition, conn: Connection) = conn.close
 
     /**
      * Turns an SQL row into a Map[String, Any]

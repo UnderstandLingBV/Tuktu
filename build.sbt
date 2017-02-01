@@ -90,7 +90,7 @@ lazy val nosqlDependencies = Seq(
     "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.4",
     "org.elasticsearch" % "elasticsearch" % "1.4.4",
     "org.apache.hadoop" % "hadoop-client" % "2.6.0",
-    "com.jolbox" % "bonecp" % "0.8.0.RELEASE"
+    "com.zaxxer" % "HikariCP" % "2.6.0"
 )
 
 lazy val mlDependencies = Seq(

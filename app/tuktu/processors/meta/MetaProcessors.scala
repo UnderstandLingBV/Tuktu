@@ -189,7 +189,6 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     var replacements: Map[String, String] = _
     var keepAlive: Boolean = _
     var remoteGenerator: ActorRef = null
-    var remoteGeneratorFut: Future[ActorRef] = _
     val remaining = new AtomicInteger(0)
     val done = new AtomicBoolean(false)
 
@@ -222,29 +221,6 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
 
         // Should we keep the async flow alive or create a new one each DP?
         keepAlive = (config \ "keep_alive").asOpt[Boolean].getOrElse(false)
-        if (keepAlive) {
-            // Set up the remote generator, just once
-            val processors = {
-                val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
-                    "/" + flowField + ".json", "utf-8")
-                val cfg = Json.parse(configFile.mkString).as[JsObject]
-                configFile.close
-                (cfg \ "processors").as[List[JsObject]]
-            }
-            // Manipulate config and set up the remote actor
-            val customConfig = Json.obj(
-                "generators" -> List((Json.obj(
-                    "name" -> "tuktu.generators.AsyncStreamGenerator",
-                    "result" -> "",
-                    "config" -> Json.obj(),
-                    "next" -> next) ++ nodes)),
-                "processors" -> processors)
-
-            // Send a message to our Dispatcher to create the (remote) actor and return us the ActorRef
-            remoteGeneratorFut = {
-                Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(name, Some(customConfig), false, true, false, None)
-            }.asInstanceOf[Future[ActorRef]]
-        }
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -254,9 +230,30 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
                     forwardData(List(datum))
             } else forwardData(data.data)
         } else {
-            // Initialize the remote generator
-            if (remoteGenerator == null)
-                remoteGenerator = Await.result(remoteGeneratorFut, timeout.duration)
+            if (remoteGenerator == null) {
+                // Set up the remote generator, just once
+                val processors = {
+                    val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
+                        "/" + utils.evaluateTuktuString(flowField, data.data.head) + ".json", "utf-8")
+                    val cfg = Json.parse(configFile.mkString).as[JsObject]
+                    configFile.close
+                    (cfg \ "processors").as[List[JsObject]]
+                }
+                // Manipulate config and set up the remote actor
+                val customConfig = Json.obj(
+                    "generators" -> List((Json.obj(
+                        "name" -> "tuktu.generators.AsyncStreamGenerator",
+                        "result" -> "",
+                        "config" -> Json.obj(),
+                        "next" -> next) ++ nodes)),
+                    "processors" -> processors)
+    
+                // Send a message to our Dispatcher to create the (remote) actor and return us the ActorRef
+                remoteGenerator = Await.result(
+                    (Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(name, Some(customConfig), false, true, false, None)).asInstanceOf[Future[ActorRef]],
+                    timeout.duration
+                )
+            }
 
             // Callback order on Futures is not guaranteed, so we need to keep track of number of remaining packages to be sent to actorRef
             // Increment count, and once the data has been sent, decrement the count; if it's 0 and we have reached EOF, broadcast Stop
@@ -269,14 +266,10 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
         data
     }) compose Enumeratee.onEOF(() => {
         if (keepAlive) {
-            // Initialize the remote generator
-            if (remoteGenerator == null)
-                remoteGenerator = Await.result(remoteGeneratorFut, timeout.duration)
-
             // We have reached EOF, we are done; if no packages are remaining to be sent, broadcast Stop right away,
             // otherwise it will be done right after the last package has been sent
             done.set(true)
-            if (remaining.get == 0)
+            if (remaining.get == 0 && remoteGenerator != null)
                 remoteGenerator ! Broadcast(new StopPacket)
         }
     })
