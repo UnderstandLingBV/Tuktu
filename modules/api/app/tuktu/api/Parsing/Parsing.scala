@@ -163,7 +163,7 @@ object PredicateParser {
         .map { case (left, op, right) => ArithmeticLeaf(left, op, right) }
 
     // Evaluate string expressions
-    val strings: P[String] = P(
+    val strings: P[String] = ArithmeticParser.parameter | P(
         CharIn(('a' to 'z') ++ ('A' to 'Z') ++ "_-+.,:;/\"'" ++ ('0' to '9')).rep.!)
     val stringExpr: P[BooleanLeaf] = P(strings ~ ("==" | "!=").! ~ strings)
         .map {
