@@ -18,6 +18,12 @@
 			"type": "object",
 			"required": true,
 			"parameters": [
+                {
+                    "name": "name",
+                    "description": "Name of these parallelly executed flows to identify in Monitor.",
+                    "type": "string",
+                    "required": false
+                },
 				{
 					"name": "merger",
 					"description": "The merger class to be used to merge the results of the processors.",

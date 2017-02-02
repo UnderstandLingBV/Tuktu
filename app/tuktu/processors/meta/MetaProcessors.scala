@@ -13,8 +13,7 @@ import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee._
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
+import play.api.libs.json.{ Json, JsObject, JsString }
 import tuktu.api._
 import akka.routing.Broadcast
 import java.nio.file.{ Files, Paths }
@@ -94,9 +93,9 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
 
     val forwarder = Akka.system.actorOf(Props[SyncStreamForwarder], name = "SyncStreamForwarder_" + java.util.UUID.randomUUID.toString)
 
-    var processorConfig: JsObject = new JsObject(Seq())
+    var processorConfig: JsObject = _
 
-    var sync: Boolean = false
+    var sync: Boolean = _
 
     override def initialize(config: JsObject) {
         processorConfig = config
@@ -111,7 +110,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
         val config = utils.evaluateTuktuJsObject(processorConfig, datum, '#')
 
         // Get the name of the config file
-        val nextName = (config \ "name").as[String]
+        val nextName = utils.evaluateTuktuString((config \ "name").as[String], datum)
         // Node to execute on
         val nodes = (config \ "node").asOpt[String]
         // Get the processors to send data into
@@ -232,13 +231,13 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
         } else {
             if (remoteGenerator == null) {
                 // Set up the remote generator, just once
-                val processors = {
-                    val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
-                        "/" + utils.evaluateTuktuString(flowField, data.data.head) + ".json", "utf-8")
-                    val cfg = Json.parse(configFile.mkString).as[JsObject]
-                    configFile.close
-                    (cfg \ "processors").as[List[JsObject]]
-                }
+                val datum = data.data.headOption.getOrElse(Map())
+                val path = utils.evaluateTuktuString(flowField, datum)
+                val processors = utils.evaluateTuktuJsValue(
+                    utils.loadConfig(path).get \ "processors",
+                    replacements.map { case (key, value) => utils.evaluateTuktuString(key, datum) -> utils.evaluateTuktuString(value, datum) },
+                    '#')
+
                 // Manipulate config and set up the remote actor
                 val customConfig = Json.obj(
                     "generators" -> List((Json.obj(
@@ -247,12 +246,11 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
                         "config" -> Json.obj(),
                         "next" -> next) ++ nodes)),
                     "processors" -> processors)
-    
+
                 // Send a message to our Dispatcher to create the (remote) actor and return us the ActorRef
                 remoteGenerator = Await.result(
-                    (Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(name, Some(customConfig), false, true, false, None)).asInstanceOf[Future[ActorRef]],
-                    timeout.duration
-                )
+                    (Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(utils.evaluateTuktuString(name, datum), Some(customConfig), false, true, false, None)).asInstanceOf[Future[ActorRef]],
+                    timeout.duration)
             }
 
             // Callback order on Futures is not guaranteed, so we need to keep track of number of remaining packages to be sent to actorRef
@@ -277,14 +275,11 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     def forwardData(data: List[Map[String, Any]]) {
         val datum = data.headOption.getOrElse(Map())
         val path = utils.evaluateTuktuString(flowField, datum)
-        val processors = {
-            val configFile = scala.io.Source.fromFile(Cache.getAs[String]("configRepo").getOrElse("configs") +
-                "/" + path + ".json", "utf-8")
-            val cfg = utils.evaluateTuktuJsObject(Json.parse(configFile.mkString).as[JsObject],
-                replacements.map(kv => utils.evaluateTuktuString(kv._1, datum) -> utils.evaluateTuktuString(kv._2, datum)), '#')
-            configFile.close
-            (cfg \ "processors").as[List[JsObject]]
-        }
+        val processors = utils.evaluateTuktuJsValue(
+            utils.loadConfig(path).get \ "processors",
+            replacements.map { case (key, value) => utils.evaluateTuktuString(key, datum) -> utils.evaluateTuktuString(value, datum) },
+            '#')
+
         // Manipulate config and set up the remote actor
         val customConfig = Json.obj(
             "generators" -> List((Json.obj(
@@ -348,9 +343,9 @@ class ParallelProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) exte
 class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
-    var actors: List[ActorRef] = null
-    var merger: Method = null
-    var mergerClass: Any = null
+    var actors: List[ActorRef] = _
+    var merger: Method = _
+    var mergerClass: Any = _
     var includeOriginal: Boolean = _
     var sendOriginal: Boolean = _
 
@@ -368,8 +363,9 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
         merger = mergerProcClazz.getMethods.filter(m => m.getName == "merge").head
 
         // For each pipeline, build the enumeratee
-        actors = for (pipeline <- pipelines) yield {
+        actors = for ((pipeline, index) <- pipelines.zipWithIndex) yield {
             val start = (pipeline \ "start").as[String]
+            val name = (config \ "name").asOpt[String].getOrElse("Parallel Processor Flow") + " - Pipeline " + index + " - Start " + JsString(start)
             val procs = (pipeline \ "pipeline").as[List[JsObject]]
             val processorMap = (for (processor <- procs) yield {
                 // Get all fields
@@ -393,9 +389,9 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
 
             // Build the processor pipeline for this generator
             val processor = {
-                val (idString, enumeratees, subflows) = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Parallel Processor - Unknown", true)
+                val (idString, enumeratees, subflows) = controllers.Dispatcher.buildEnums(List(start), processorMap, None, name, true)
                 Enumeratee.mapM((data: DataPacket) => Future {
-                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, "Parallel Config Processor - Unknown", 1, true)
+                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, name, 1, true)
                     data
                 }) compose enumeratees.head compose Enumeratee.onEOF { () =>
                     Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(idString, "done")
@@ -423,7 +419,6 @@ class ParallelProcessor(resultName: String) extends BaseProcessor(resultName) {
     }) compose Enumeratee.onEOF { () =>
         actors.foreach { actor => actor ! new StopPacket }
     }
-
 }
 
 /**
@@ -438,6 +433,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
     var send_whole: Boolean = _
     var replacements: Map[String, String] = _
     var sendOriginal: Boolean = _
+    var name: Option[String] = _
 
     override def initialize(config: JsObject) {
         // Set up the merger
@@ -463,6 +459,9 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
 
         // Get meta replacements
         replacements = (config \ "replacements").asOpt[List[Map[String, String]]].getOrElse(Nil).map(map => map("source") -> map("target")).toMap
+
+        // Get name to be it identifiable in Monitor
+        name = (config \ "name").asOpt[String]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -480,9 +479,10 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
     def processData(data: DataPacket): DataPacket = {
         // Get first datum to populate configs
         val datum = data.data.headOption.getOrElse(Map.empty)
+        val evaluatedName = name.map { utils.evaluateTuktuString(_, datum) }.getOrElse("Parallel Config Processor Flow")
 
         // For each pipeline and starting processor, build the Enumeratee and run our data through it
-        val futs = (for (pipeline <- pipelines) yield Future {
+        val futs = (for ((pipeline, pipeIndex) <- pipelines.zipWithIndex) yield Future {
             // Get and evaluate config file
             val path = utils.evaluateTuktuString((pipeline \ "config_path").as[String], datum)
             val localReplacements = (pipeline \ "replacements").asOpt[List[Map[String, String]]].getOrElse(Nil).map(map => map("source") -> map("target")).toMap
@@ -497,12 +497,12 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
             val start = (pipeline \ "start").as[List[String]]
 
             // Build the processor pipeline for this generator
-            val (idString, enumeratees, subflows) = controllers.Dispatcher.buildEnums(start, processorMap, None, "Parallel Config Processor - Unknown", true)
+            val (idString, enumeratees, subflows) = controllers.Dispatcher.buildEnums(start, processorMap, None, evaluatedName + " - Pipeline " + pipeIndex, true)
 
             // Run our data through each Enumeratee and return the result chunk
-            for (enumeratee <- enumeratees) yield {
+            for ((enumeratee, enumIndex) <- enumeratees.zipWithIndex) yield {
                 val inclMonitor = Enumeratee.mapM((data: DataPacket) => Future {
-                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, "Parallel Config Processor - Unknown", 1, true)
+                    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(idString, evaluatedName + " - Pipeline " + pipeIndex + " - Enumeratee " + enumIndex, 1, true)
                     data
                 }) compose enumeratee compose Enumeratee.onEOF { () =>
                     Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(idString, "done")
