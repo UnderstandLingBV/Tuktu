@@ -26,8 +26,8 @@ import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import tuktu.api._
-import scala.collection.mutable.Queue
 import scala.concurrent.Await
+import org.nustaq.serialization.FSTObjectOutput
 
 // helper case class to get Overview from each node separately
 case class InternalOverview(
@@ -46,7 +46,7 @@ case class IntiateDaemonUpdate()
 /**
  * Daemon for Tuktu's DB operations
  */
-class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor with ActorLogging {    
+class DBDaemon(tuktudb: TrieMap[String, collection.mutable.ListBuffer[Map[String, Any]]]) extends Actor with ActorLogging {    
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Get this local node
@@ -111,7 +111,7 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
             // Add the data packet to our in-memory store
             rr.elements.foreach(elem => {
                 if (!tuktudb.contains(elem.key))
-                    tuktudb += elem.key -> Queue[Map[String, Any]]()
+                    tuktudb += elem.key -> collection.mutable.ListBuffer[Map[String, Any]]()
                 tuktudb(elem.key) += elem.value
             })
             
@@ -180,9 +180,9 @@ class DBDaemon(tuktudb: TrieMap[String, Queue[Map[String, Any]]]) extends Actor 
         }
         case pp: PersistRequest => Future {
             // Persist to disk
-            val oos = new ObjectOutputStream(new FileOutputStream(dataDir + File.separator + "db.data"))
-            oos.writeObject(tuktudb.map(l => l._1 -> l._2.toList).asInstanceOf[TrieMap[String, List[Map[String, Any]]]])
-            oos.close
+            val foo = new FSTObjectOutput(new FileOutputStream(dataDir + File.separator + "db.data"))
+            foo.writeObject(tuktudb, classOf[TrieMap[String, collection.mutable.ListBuffer[Map[String, Any]]]])
+            foo.close
         }
         case or: OverviewRequest => {
             // We need to store original sender

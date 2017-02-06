@@ -23,6 +23,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.FileInputStream
 import java.io.ObjectInputStream
 import java.io.File
+import org.nustaq.serialization.FSTObjectInput
 
 /**
  * Starts up the DB Daemon
@@ -37,7 +38,7 @@ class DBGlobal() extends TuktuGlobal() {
         Cache.set("tuktu.db.replication", Play.current.configuration.getInt("tuktu.db.replication").getOrElse(2))
 
         // Create our in-memory DB
-        val tuktudb = new TrieMap[String, Queue[Map[String, Any]]]
+        val tuktudb = new TrieMap[String, collection.mutable.ListBuffer[Map[String, Any]]]
         // Set up the DB daemon
         val dbActor = Akka.system.actorOf(
             SmallestMailboxPool(Play.current.configuration.getInt("tuktu.db.daemons").getOrElse(10))
@@ -51,10 +52,10 @@ class DBGlobal() extends TuktuGlobal() {
         val filename = dataDir + File.separator + "db.data"
         if (new File(filename).exists) {
             // Get the persisted data
-            val ois = new ObjectInputStream(new FileInputStream(dataDir + File.separator + "db.data"))
-            tuktudb ++= ois.readObject.asInstanceOf[TrieMap[String, List[Map[String, Any]]]]
-                .map(l => l._1 -> (Queue.empty[Map[String, Any]] ++ l._2))
-            ois.close
+            val foi = new FSTObjectInput(new FileInputStream(dataDir + File.separator + "db.data"))
+            tuktudb ++= foi.readObject(classOf[TrieMap[String, collection.mutable.ListBuffer[Map[String, Any]]]])
+                .asInstanceOf[TrieMap[String, collection.mutable.ListBuffer[Map[String, Any]]]]
+            foi.close
         }
 
         // Set up persistence if its based on time
