@@ -42,67 +42,35 @@ class SkipProcessor(resultName: String) extends BaseProcessor(resultName) {
 /**
  * Adds a delay between two data packets
  */
-class DelayActor(delay: Long, remote: ActorRef) extends Actor with ActorLogging {
-    val buffer = collection.mutable.ListBuffer.empty[DataPacket]
-    var cancellable: Cancellable = null
-    var mustStop: Boolean = false
-    
-    def cleanup() = {
-        remote ! Broadcast(new StopPacket)
-        self ! PoisonPill
-    }
-    
-    def receive() = {
-        case "release" => {
-            // Cancel the cancellable
-            cancellable.cancel
-            
-            // Forward data
-            remote ! buffer.head
-            buffer.remove(0)
-            
-            // Check if we are done
-            if (!buffer.isEmpty) {
-                // Schedule next one
-                cancellable = Akka.system.scheduler.scheduleOnce(
-                        delay milliseconds,
-                        self,
-                        "release"
-                )
-            }
-            else if (mustStop) cleanup
-        }
-        case data: DataPacket => {
-            buffer += data
-            if (cancellable == null || cancellable.isCancelled) {
-                cancellable = Akka.system.scheduler.scheduleOnce(
-                        0 milliseconds,
-                        self,
-                        "release"
-                )
-            }
-        }
-        case sp: StopPacket => {
-            if (!cancellable.isCancelled)
-                mustStop = true
-            else cleanup
-        }
+class DelayActor(delay: Long) extends Actor with ActorLogging {
+    var lastMessage: Long = 0
+
+    def receive = {
+        case "" =>
+            val now: Long = System.currentTimeMillis
+            // Calculate timestamp of next message
+            lastMessage = math.max(lastMessage + delay, now)
+            Akka.system.scheduler.scheduleOnce(
+                (lastMessage - now) milliseconds,
+                sender,
+                "")
+        case sp: StopPacket =>
+            self ! PoisonPill
     }
 }
-class DelayProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
-    var isFirst = true
-    var delay: Long = _
+class DelayProcessor(resultName: String) extends BaseProcessor(resultName) {
+    implicit val timeout = akka.util.Timeout(100 days)
     var actor: ActorRef = _
 
     override def initialize(config: JsObject) {
-        delay = (config \ "delay").as[Long]
-        actor = Akka.system.actorOf(Props(classOf[DelayActor], delay, genActor))
+        val delay = (config \ "delay").as[Long]
+        actor = Akka.system.actorOf(Props(classOf[DelayActor], delay))
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        actor ! data
+        Await.ready(actor ? "", timeout.duration)
         data
-    }) compose Enumeratee.onEOF{() => actor ! new StopPacket}
+    }) compose Enumeratee.onEOF { () => actor ! new StopPacket }
 }
 
 /**
