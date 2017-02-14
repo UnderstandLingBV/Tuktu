@@ -11,7 +11,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import com.jolbox.bonecp.BoneCP
 import com.jolbox.bonecp.BoneCPConfig
 
-import anorm.Iteratees
 import anorm.NamedParameter
 import anorm.ParameterValue.toParameterValue
 import anorm.Row
@@ -71,12 +70,6 @@ object sql {
         case e: Option[_] => elem._1 -> e.getOrElse("NULL")
         case e: Any       => elem
     })
-
-    /**
-     * Query functions
-     */
-    def streamResult(query: String)(implicit conn: Connection): Enumerator[Row] =
-        Iteratees.from(SQL(query))
 
     val parser: RowParser[Map[String, Any]] =
         SqlParser.folder(Map.empty[String, Any]) { (map, value, meta) =>

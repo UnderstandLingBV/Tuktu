@@ -14,9 +14,9 @@ import scala.concurrent.Future
 
 class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
     var connDef: ConnectionDefinition = _
-    var connection: Connection = _
+    var conn: Connection = _
     
-    override def _receive = {
+    override def receive() = {
         case config: JsValue => {
             // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
             val url = (config \ "url").as[String]
@@ -24,34 +24,27 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             val password = (config \ "password").as[String]
             val query = (config \ "query").as[String]
             val driver = (config \ "driver").as[String]
-
+            
             // Do we need to flatten or not?
             val flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
 
             // Load the driver, set up the client
             connDef = ConnectionDefinition(url, user, password, driver)
-            connection = sql.getConnection(connDef)
+            conn = sql.getConnection(connDef)
 
-            // Build the enumerator to query SQL
-            val rowEnumerator = sql.streamResult(query)(connection).andThen(Enumerator.eof)
-            // Stop packet upon termination
-            val onEOF = Enumeratee.onEOF[Row](() => {
-                self ! new StopPacket
-            })
-            // Enumeratee to turn the Row into a DP
-            val rowToDP: Enumeratee[Row, DataPacket] = Enumeratee.mapM(row => Future { flatten match {
-                case true => DataPacket(List(sql.rowToMap(row)))
-                case false => DataPacket(List(Map(resultName -> sql.rowToMap(row))))
-            }})
-            
-            // Chain together
-            processors.foreach(processor => {
-                rowEnumerator |>> (onEOF compose rowToDP compose processor) &>> sinkIteratee
-            })
+            // Run the query
+            val rows = sql.queryResult(query)(conn)
+            for (row <- rows) flatten match {
+                case true => channel.push(new DataPacket(List(row)))
+                case false => channel.push(new DataPacket(List(Map(resultName -> row))))
+            }
+
+            // We stop once the query is done
+            self ! new StopPacket
         }
-        case sp: StopPacket => {
-            sql.releaseConnection(connDef, connection)
-            cleanup(false)
+        case sh: StopPacket => {
+            sql.releaseConnection(connDef, conn)
+            cleanup
         }
     }
 }
