@@ -111,7 +111,7 @@ object MongoPool {
                     case Some(a) => a
                 },
                 nbChannelsPerNode = (o \ "nbChannelsPerNode").asOpt[Int] match {
-                    case None    => 10
+                    case None    => Play.current.configuration.getInt("tuktu.nosql.mongo.pools.size").getOrElse(50)
                     case Some(a) => a
                 },
                 writeConcern = (o \ "writeConcern").asOpt[String] match {
