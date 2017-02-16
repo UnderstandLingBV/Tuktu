@@ -17,6 +17,7 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
     var append: Boolean = _
     var separate: Boolean = _
     var distinct: Boolean = _
+    var clearOnEmpty: Boolean = _
 
     var connDef: ConnectionDefinition = null
     var conn: Connection = null
@@ -37,6 +38,9 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
 
         // Only query distinct setups
         distinct = (config \ "distinct").asOpt[Boolean].getOrElse(false)
+        
+        // If we get an empty query, should we ditch the datum?
+        clearOnEmpty = (config \ "clear_on_empty").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -90,7 +94,16 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
         // If we have to append data, zip datums with query results, otherwise return DataPacket untouched
         if (append) {
             if (separate)
-                DataPacket(data.data.zip(results).flatMap(tuple => tuple._2.map(row => tuple._1 + (resultName -> row))))
+                DataPacket(data.data.zip(results).flatMap(tuple => {
+                    // What if the result is empty?
+                    if (tuple._2.isEmpty) 
+                        if (clearOnEmpty) List()
+                        else {
+                            // The result is empty, so return the original DP
+                            List(tuple._1)
+                        }
+                    else tuple._2.map(row => tuple._1 + (resultName -> row))
+                }))
             else DataPacket(data.data.zip(results).map(tuple => tuple._1 + (resultName -> tuple._2)))
         } else data
     }) compose Enumeratee.onEOF(() => if (connDef != null) releaseConnection(connDef, conn))

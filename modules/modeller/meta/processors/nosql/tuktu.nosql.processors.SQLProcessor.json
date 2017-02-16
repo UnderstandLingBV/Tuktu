@@ -67,6 +67,13 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "clear_on_empty",
+					"description": "If append and separate are set to true, and if the result of the query is empty, this flag returns an empty datum (true) or just the original datum (false).",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}
