@@ -260,7 +260,7 @@ object utils {
      * Converts a JsObject to Map[String, Any]
      */
     def JsObjectToMap(json: JsObject): Map[String, Any] =
-        json.value.mapValues(jsValue => JsValueToAny(jsValue)).toMap
+        json.fields.map { case (key, value) => key -> JsValueToAny(value) }.toMap
 
     /**
      * -----------------------------

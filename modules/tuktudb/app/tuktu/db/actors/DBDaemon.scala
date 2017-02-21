@@ -1,10 +1,6 @@
 package tuktu.db.actors
 
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
+import java.nio.file._
 
 import scala.collection.JavaConversions.collectionAsScalaIterable
 import scala.collection.concurrent.TrieMap
@@ -51,7 +47,8 @@ class DBDaemon(tuktudb: TrieMap[String, collection.mutable.ListBuffer[Map[String
     // Get cluster nodes
     val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
 
-    val dataDir = new File(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))
+    val dataDir = Paths.get(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))
+    Files.createDirectories(dataDir)
 
     // Check the persist strategy
     val persistType = Play.current.configuration.getString("tuktu.db.persiststrategy.type").getOrElse("time")
@@ -177,8 +174,9 @@ class DBDaemon(tuktudb: TrieMap[String, collection.mutable.ListBuffer[Map[String
         }
         case pp: PersistRequest => Future {
             // Persist to disk
-            val foo = new FSTObjectOutput(new FileOutputStream(dataDir + File.separator + "db.data"))
+            val foo = new FSTObjectOutput()
             foo.writeObject(tuktudb, classOf[TrieMap[String, collection.mutable.ListBuffer[Map[String, Any]]]])
+            Files.write(dataDir.resolve("db.data"), foo.getBuffer)
             foo.close
         }
         case or: OverviewRequest => {
