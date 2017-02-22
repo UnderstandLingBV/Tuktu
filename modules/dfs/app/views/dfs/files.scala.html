@@ -83,39 +83,45 @@
     </div>
     
     @if(files.nonEmpty || folders.nonEmpty) {
-		<table class="table table-hover">
-	        <tr>
-	           <th>
-	               Filename
-	           </th>
-	           <th width="50px" style="text-align: right;">
-	               Parts
-	           </th>
-	        </tr>
-	        @for(folder <- folders) {
-		        <td colspan="2">
-	                <a href="#" onClick="navigateFolder('@index.mkString("/")@folder')">
-	                    <span aria-hidden="true" class="glyphicon glyphicon-folder-open"></span>
-	                    &nbsp;
-	                    @folder
-	                </a>
-		        </td>
-		    }
-	        @for(file <- files) {
-	            <tr>
-	                <td>
-		                <a href="@controllers.dfs.routes.Browser.serveFile(file._1)">
-		                   <span aria-hidden="true" class="glyphicon glyphicon-download-alt"> </span>
-		                </a>
-		                &nbsp;
-		                @file._1.split("[/\\\\]").takeRight(1)
-	                </td>
-	                <td style="text-align: right;">
-	                     @file._2.size
-	                </td>
-	            </tr>
-	        }
-	    </table>
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>
+                        Filename
+                    </th>
+                    <th width="50px" style="text-align: right;">
+                        Parts
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            @for(folder <- folders) {
+                <tr>
+                    <td colspan="2">
+                        <a href="#" onClick="navigateFolder('@index.mkString("/")@folder')">
+                            <span aria-hidden="true" class="glyphicon glyphicon-folder-open"></span>
+                            &nbsp;
+                            @folder
+                        </a>
+                    </td>
+                </tr>
+            }
+            @for(file <- files) {
+                <tr>
+                    <td>
+                        <a href="@controllers.dfs.routes.Browser.serveFile(file._1)">
+                           <span aria-hidden="true" class="glyphicon glyphicon-download-alt"> </span>
+                        </a>
+                        &nbsp;
+                        @file._1.split("[/\\\\]").takeRight(1)
+                    </td>
+                    <td style="text-align: right;">
+                         @file._2.size
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
     }
     
     <script type="text/javascript">
