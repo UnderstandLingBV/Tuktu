@@ -22,6 +22,11 @@ import scala.concurrent.duration.DurationInt
 import tuktu.api.StopPacket
 import tuktu.dfs.actors.TDFSDeleteRequest
 import scala.concurrent.Future
+import play.api.mvc.BodyParsers
+import play.api.mvc.BodyParsers.parse.Multipart.FileInfo
+import play.api.mvc.MultipartFormData
+import play.api.Play
+
 
 /**
  * DFS file handling from API
@@ -31,32 +36,35 @@ object DFS extends Controller {
     /**
      * Custom body parser for adding a file to DFS
      */
-    def parseDfs(filename: String, binary: Boolean, codec: Option[String] = None): BodyParser[Unit] = BodyParser("dfs") { request =>
-        Iteratee.fold[Array[Byte], ActorRef](
-                // Set up the writer
-                Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteInitiateRequest(
-                    filename, None, binary, codec
-                ), timeout.duration).asInstanceOf[ActorRef]
-        ){(writer, bytes) =>
-            writer ! new TDFSContentPacket(bytes)
-            writer
-        }.map {writer => {
-            writer ! new StopPacket()
-            Right(Unit)
-        }}
-    }
-
-    /**
-     * Adds a file to DFS
-     */
-    def add(name: String, binary: Boolean) = Action(parseDfs(name, binary)) { request =>
-        Ok("")
+    def handleFilePartAsDFSFile(name: String, binary: Boolean, codec: Option[String] = None): BodyParsers.parse.Multipart.PartHandler[MultipartFormData.FilePart[Unit]] = {
+        BodyParsers.parse.Multipart.handleFilePart {
+            case FileInfo(partName, filename, contentType) =>
+                Iteratee.fold[Array[Byte], ActorRef](
+                    // Set up the writer
+                    Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteInitiateRequest(
+                        filename, None, binary, codec), timeout.duration).asInstanceOf[ActorRef]) { (writer, bytes) =>
+                        writer ! new TDFSContentPacket(bytes)
+                        writer
+                    }.map { writer =>
+                        {
+                            writer ! new StopPacket()
+                            Right(Unit)
+                        }
+                    }
+        }
     }
     
     /**
      * Adds a file to DFS
      */
-    def addWithCodec(name: String, codec: String) = Action(parseDfs(name, false, Some(codec))) { request =>
+    def add(name: String, binary: Boolean) = Action(parse.multipartFormData(handleFilePartAsDFSFile(name, binary))) { request =>
+        Ok("")
+    }
+    
+    /**
+     * Uploads a file to TDFS
+     */
+    def addWithCodec(name: String, codec: String) = Action(parse.multipartFormData(handleFilePartAsDFSFile(name, true, Some(codec)))) { request =>
         Ok("")
     }
 
