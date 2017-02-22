@@ -79,19 +79,6 @@ object Cluster extends Controller {
                     val fieldName = value._1
                     val actualVal = value._2.head
 
-                    // Change cluster if homeAddress was changed
-                    if (fieldName == "homeAddress") {
-                        val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
-                        val homeAddress = Cache.getAs[String](fieldName).getOrElse("127.0.0.1")
-                        clusterNodes.get(homeAddress) match {
-                            case Some(old) =>
-                                clusterNodes -= homeAddress
-                                clusterNodes += actualVal -> ClusterNode(actualVal, old.akkaPort, old.UIPort)
-                            case None =>
-                                play.api.Logger.warn("This node is not part of its own cluster. This likely means that the application config is not set up properly.")
-                        }
-                    }
-
                     // Find the accompanying cache name
                     val cacheVar = clusterParamsMapping.filter(_._1 == fieldName).head
                     cacheVar._2._2 match {
@@ -183,11 +170,10 @@ object Cluster extends Controller {
                     
                     Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully added node " + node.host + ":" + node.akkaPort + " to the cluster."))
                 }).recover {
-                    case a: Any => {
+                    case e =>
                         Logger.error("Failed to add node: " + node.host)
                         // Redirect back to overview
                         Redirect(routes.Cluster.overview).flashing("error" -> ("Failed to add node " + node.host + ":" + node.akkaPort + " to the cluster."))
-                    }
                 }
             }
         )
