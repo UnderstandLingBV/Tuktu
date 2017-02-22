@@ -69,17 +69,29 @@ object Cluster extends Controller {
     /**
      * Updates specifics (cached values) for the Tuktu cluster
      */
-    def updateCluster() = Action { implicit request => {
+    def updateCluster = Action { implicit request =>
         // Get the request's values
-        val newValues = request.body.asFormUrlEncoded
-        newValues match {
+        request.body.asFormUrlEncoded match {
             case None => Redirect(routes.Cluster.overview).flashing("error" -> "Some values were found incorrect.")
-            case Some(newVals) => {
-                newVals.foreach(value => {
+            case Some(newVals) =>
+                for (value <- newVals) {
                     // Get the name and the actual value
                     val fieldName = value._1
                     val actualVal = value._2.head
-                    
+
+                    // Change cluster if homeAddress was changed
+                    if (fieldName == "homeAddress") {
+                        val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
+                        val homeAddress = Cache.getAs[String](fieldName).getOrElse("127.0.0.1")
+                        clusterNodes.get(homeAddress) match {
+                            case Some(old) =>
+                                clusterNodes -= homeAddress
+                                clusterNodes += actualVal -> ClusterNode(actualVal, old.akkaPort, old.UIPort)
+                            case None =>
+                                play.api.Logger.warn("This node is not part of its own cluster. This likely means that the application config is not set up properly.")
+                        }
+                    }
+
                     // Find the accompanying cache name
                     val cacheVar = clusterParamsMapping.filter(_._1 == fieldName).head
                     cacheVar._2._2 match {
@@ -88,14 +100,13 @@ object Cluster extends Controller {
                         case "boolean" => Cache.set(cacheVar._2._1, actualVal.toBoolean)
                         case _ => Cache.set(cacheVar._2._1, actualVal)
                     }
-                })
-                
+                }
+
                 // Redirect back to overview
                 Redirect(routes.Cluster.overview).flashing("success" -> ("Successfully updated cluster configuration!"))
-            }
         }
-    }}
-    
+    }
+
     /**
      * Removes a node from the cluster
      */

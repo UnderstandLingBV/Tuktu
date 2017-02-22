@@ -74,6 +74,5 @@ class HealthMonitor() extends Actor with ActorLogging {
             sender ! "ok"
         case DeleteNode(node) =>
             Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map()) -= node
-        case _ => {}
     }
 }
