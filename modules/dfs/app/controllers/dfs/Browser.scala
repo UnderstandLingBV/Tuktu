@@ -129,13 +129,13 @@ object Browser extends Controller {
     /**
      * PartHandler that takes the content of a local file and streams it into TDFS
      */
-    def handleFilePartAsDFSFile(binary: Boolean): BodyParsers.parse.Multipart.PartHandler[MultipartFormData.FilePart[Unit]] = {
+    def handleFilePartAsDFSFile(binary: Boolean, codec: Option[String]): BodyParsers.parse.Multipart.PartHandler[MultipartFormData.FilePart[Unit]] = {
         BodyParsers.parse.Multipart.handleFilePart {
             case FileInfo(partName, filename, contentType) =>
                 Iteratee.fold[Array[Byte], ActorRef](
                     // Set up the writer
                     Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteInitiateRequest(
-                        filename, None, binary, None), timeout.duration).asInstanceOf[ActorRef]) { (writer, bytes) =>
+                        filename, None, binary, codec), timeout.duration).asInstanceOf[ActorRef]) { (writer, bytes) =>
                         writer ! new TDFSContentPacket(bytes)
                         writer
                     }.map { writer =>
@@ -150,8 +150,10 @@ object Browser extends Controller {
     /**
      * Uploads a file to TDFS
      */
-    def uploadFile(binary: Boolean) = Action(parse.multipartFormData(handleFilePartAsDFSFile(binary))) { request =>
-        Redirect(Play.current.configuration.getString("tuktu.url").get +
-                Play.current.configuration.getString("tuktu.dfs.url").get)
+    def uploadBinary() = Action(parse.multipartFormData(handleFilePartAsDFSFile(true, None))) { request =>
+        Redirect("/")
+    }
+    def uploadText(codec: String) = Action(parse.multipartFormData(handleFilePartAsDFSFile(false, Some(codec)))) { request =>
+        Redirect("/")
     }
 }
