@@ -31,11 +31,11 @@ object DFS extends Controller {
     /**
      * Custom body parser for adding a file to DFS
      */
-    def parseDfs(filename: String, binary: Boolean): BodyParser[Unit] = BodyParser("dfs") { request =>
+    def parseDfs(filename: String, binary: Boolean, codec: Option[String] = None): BodyParser[Unit] = BodyParser("dfs") { request =>
         Iteratee.fold[Array[Byte], ActorRef](
                 // Set up the writer
                 Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteInitiateRequest(
-                    filename, None, binary, None
+                    filename, None, binary, codec
                 ), timeout.duration).asInstanceOf[ActorRef]
         ){(writer, bytes) =>
             writer ! new TDFSContentPacket(bytes)
@@ -50,6 +50,13 @@ object DFS extends Controller {
      * Adds a file to DFS
      */
     def add(name: String, binary: Boolean) = Action(parseDfs(name, binary)) { request =>
+        Ok("")
+    }
+    
+    /**
+     * Adds a file to DFS
+     */
+    def addWithCodec(name: String, codec: String) = Action(parseDfs(name, false, Some(codec))) { request =>
         Ok("")
     }
 

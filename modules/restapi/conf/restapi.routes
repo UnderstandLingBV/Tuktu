@@ -19,6 +19,7 @@ POST        /job/terminateByName    controllers.restapi.RESTAPI.terminateByName
 # DFS stuff
 GET         /dfs/get/*name          controllers.restapi.DFS.get(name)
 POST        /dfs/add/:binary/*name  controllers.restapi.DFS.add(name, binary: Boolean)
+POST        /dfs/addWithCodec/:codec/*name  controllers.restapi.DFS.add(name, binary: Boolean)
 GET         /dfs/delete/*name       controllers.restapi.DFS.delete(name)
 
 # Scheduling stuff
