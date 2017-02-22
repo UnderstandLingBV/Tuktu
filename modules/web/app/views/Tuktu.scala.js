@@ -2,7 +2,6 @@
 var tuktuvars;
 if (typeof tuktuvars === 'undefined') {
 	tuktuvars = { "url": document.URL };
-	tuktuvars = { "referrer_url": document.referrer };
 }
 function appendScript(link) {
 	var h = document.getElementsByTagName("head")[0];
