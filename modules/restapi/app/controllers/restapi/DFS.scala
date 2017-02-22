@@ -42,15 +42,16 @@ object DFS extends Controller {
                 Iteratee.fold[Array[Byte], ActorRef](
                     // Set up the writer
                     Await.result(Akka.system.actorSelection("user/tuktu.dfs.Daemon") ? new TDFSWriteInitiateRequest(
-                        filename, None, binary, codec), timeout.duration).asInstanceOf[ActorRef]) { (writer, bytes) =>
+                        filename, None, binary, codec), timeout.duration).asInstanceOf[ActorRef])
+                { (writer, bytes) =>
                         writer ! new TDFSContentPacket(bytes)
                         writer
-                    }.map { writer =>
-                        {
-                            writer ! new StopPacket()
-                            Right(Unit)
-                        }
+                }.map { writer =>
+                    {
+                        writer ! new StopPacket()
+                        Right(Unit)
                     }
+                }
         }
     }
     
