@@ -48,6 +48,11 @@
 			"required": false,
 			"description": "If set to false, Tuktu will not kill the flow on data error.",
 			"default": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true
 		}
 	]
 }
