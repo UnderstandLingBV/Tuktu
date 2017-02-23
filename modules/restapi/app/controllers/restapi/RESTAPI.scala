@@ -356,4 +356,15 @@ object RESTAPI extends Controller {
             ))
         }
     }
+
+    def getJobStart(name: String) = Action.async { request =>
+        val actor = Akka.system.actorSelection("user/TuktuDispatcher") ? new DispatchRequest(name, None, false, true, false, None)
+        actor.map {
+            case ar: ActorRef => {
+                val hostname = Play.current.configuration.getString("akka.remote.netty.tcp.hostname").getOrElse("127.0.0.1")
+                val port = Play.current.configuration.getInt("akka.remote.netty.tcp.port").getOrElse(2552)                
+                Ok("akka.tcp://application@"+hostname+":"+port+ar.path.toStringWithoutAddress)            
+            }
+        }
+    }
 }

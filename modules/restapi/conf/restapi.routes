@@ -11,6 +11,7 @@ GET         /jobs/config/*name      controllers.restapi.RESTAPI.getConfig(name)
 POST        /jobs/config/*name      controllers.restapi.RESTAPI.setConfig(name)
 DELETE      /jobs/config/*name      controllers.restapi.RESTAPI.removeConfig(name)
 POST        /job/start              controllers.restapi.RESTAPI.start
+GET         /job/start/*name        controllers.restapi.RESTAPI.getJobStart(name)
 POST        /job/stop               controllers.restapi.RESTAPI.stop
 POST        /job/stopByName         controllers.restapi.RESTAPI.stopByName
 POST        /job/terminate          controllers.restapi.RESTAPI.terminate

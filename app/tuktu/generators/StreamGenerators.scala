@@ -22,6 +22,8 @@ import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.JsValue
 import tuktu.api._
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsArray
 
 /**
  * Async 'special' generator that just waits for DataPackets to come in and processes them
@@ -30,6 +32,10 @@ class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataP
     override def _receive = {
         case config: JsValue => { }
         case p: DataPacket => channel.push(p)
+        case j: JsObject => channel.push(new DataPacket(List(utils.JsObjectToMap(j))))
+        case m: Map[String, Any] => channel.push(new DataPacket(List(m)))
+        case l: List[Map[String, Any]] => channel.push(new DataPacket(l))
+        case j: JsArray => channel.push(new DataPacket(j.as[List[JsObject]].map { utils.JsObjectToMap }))
     }
 }
 

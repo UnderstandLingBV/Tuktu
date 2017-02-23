@@ -33,7 +33,7 @@ import play.api.mvc.Request
 import scala.concurrent.ExecutionContext
 import java.util.concurrent.atomic.AtomicInteger
 
-case class DataPacket(
+@SerialVersionUID(98763234324876234l) case class DataPacket(
         data: List[Map[String, Any]]) extends java.io.Serializable {
     def isEmpty: Boolean = data.isEmpty
     def nonEmpty: Boolean = data.nonEmpty
@@ -54,7 +54,7 @@ case class DispatchRequest(
     sourceActor: Option[ActorRef])
 
 case class InitPacket()
-case class StopPacket()
+@SerialVersionUID(1276327131345684l) case class StopPacket()
 case class ErrorPacket()
 
 case class BackPressurePacket()
