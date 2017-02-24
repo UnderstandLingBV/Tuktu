@@ -1,29 +1,31 @@
 package globals
 
+import java.io.File
+import java.io.FileInputStream
+import java.io.ObjectInputStream
+
+import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
+
 import akka.actor.Props
 import akka.actor.actorRef2Scala
+import akka.routing.Broadcast
+import akka.routing.SmallestMailboxPool
 import akka.util.Timeout
 import play.api.Application
+import play.api.Play
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import tuktu.api.InitPacket
+import tuktu.api.PersistRequest
 import tuktu.api.TuktuGlobal
 import tuktu.db.actors.DBDaemon
-import tuktu.api.DBObject
-import tuktu.api.StoreRequest
-import play.api.Play
-import akka.routing.SmallestMailboxPool
-import scala.collection.concurrent.TrieMap
-import scala.collection.mutable.Queue
-import akka.routing.Broadcast
-import tuktu.api.PersistRequest
-import scala.concurrent.ExecutionContext.Implicits.global
-import java.io.FileInputStream
-import java.io.ObjectInputStream
-import java.io.File
-import org.nustaq.serialization.FSTObjectInput
+
+import java.nio.file.Files
+import java.nio.file.Paths
 
 /**
  * Starts up the DB Daemon
@@ -46,16 +48,14 @@ class DBGlobal() extends TuktuGlobal() {
         dbActor ! Broadcast(new InitPacket)
         
         // Create data directory
-        val dataDir = new File(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))
-        if (!dataDir.exists)
-            dataDir.mkdirs
+        val dataDir = Paths.get(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))
+        Files.createDirectories(dataDir)
         val filename = dataDir + File.separator + "db.data"
         if (new File(filename).exists) {
             // Get the persisted data
-            val foi = new FSTObjectInput(new FileInputStream(dataDir + File.separator + "db.data"))
-            tuktudb ++= foi.readObject(classOf[TrieMap[String, collection.mutable.ListBuffer[Map[String, Any]]]])
-                .asInstanceOf[TrieMap[String, collection.mutable.ListBuffer[Map[String, Any]]]]
-            foi.close
+            val ois = new ObjectInputStream(new FileInputStream(dataDir.resolve("db.data").toString))
+            tuktudb ++= ois.readObject.asInstanceOf[TrieMap[String, ListBuffer[Map[String, Any]]]]
+            ois.close
         }
 
         // Set up persistence if its based on time

@@ -1,20 +1,16 @@
 package tuktu.db.actors
 
-import java.nio.file._
+import java.io.FileOutputStream
+import java.io.ObjectOutputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 
-import scala.collection.JavaConversions.collectionAsScalaIterable
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import scala.util.Random
 
-import org.apache.commons.collections4.map.PassiveExpiringMap
-
-import akka.actor.Actor
-import akka.actor.ActorLogging
-import akka.actor.ActorRef
+import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.Play
@@ -22,8 +18,6 @@ import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Akka
 import tuktu.api._
-import scala.concurrent.Await
-import org.nustaq.serialization.FSTObjectOutput
 
 // helper case class to get Overview from each node separately
 case class InternalOverview(
@@ -48,7 +42,6 @@ class DBDaemon(tuktudb: TrieMap[String, collection.mutable.ListBuffer[Map[String
     val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
 
     val dataDir = Paths.get(Play.current.configuration.getString("tuktu.db.data").getOrElse("db/data"))
-    Files.createDirectories(dataDir)
 
     // Check the persist strategy
     val persistType = Play.current.configuration.getString("tuktu.db.persiststrategy.type").getOrElse("time")
@@ -174,10 +167,9 @@ class DBDaemon(tuktudb: TrieMap[String, collection.mutable.ListBuffer[Map[String
         }
         case pp: PersistRequest => Future {
             // Persist to disk
-            val foo = new FSTObjectOutput()
-            foo.writeObject(tuktudb, classOf[TrieMap[String, collection.mutable.ListBuffer[Map[String, Any]]]])
-            Files.write(dataDir.resolve("db.data"), foo.getBuffer)
-            foo.close
+            val oos = new ObjectOutputStream(new FileOutputStream(dataDir.resolve("db.data").toString))
+            oos.writeObject(tuktudb)
+            oos.close
         }
         case or: OverviewRequest => {
             // We need to store original sender because we will make more requests (potentially to ourselves) before returning a result

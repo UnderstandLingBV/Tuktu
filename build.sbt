@@ -158,7 +158,6 @@ lazy val coreDependencies = Seq(
 
 lazy val tuktuDBDependencies = Seq(
     cache,
-    "de.ruedigermoeller" % "fst" % "2.47",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 
