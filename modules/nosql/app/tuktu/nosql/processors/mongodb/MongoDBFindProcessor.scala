@@ -31,7 +31,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 
     var db: String = _
     var collection: String = _
-    
+
     var flatten: Boolean = _
 
     var query: JsValue = _
@@ -56,7 +56,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
         // DB and collection
         db = (config \ "db").as[String]
         collection = (config \ "collection").as[String]
-        
+
         // Flatten
         flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
 
@@ -78,7 +78,7 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
 
             // Get collection
             val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
-            fCollection.flatMap(coll => {
+            fCollection.flatMap { coll =>
                 // Evaluate the query and filter strings and convert to JSON
                 val queryJson = utils.evaluateTuktuJsValue(query, datum).as[JsObject]
                 val filterJson = utils.evaluateTuktuJsValue(filter, datum).as[JsObject]
@@ -93,22 +93,24 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
                         .sort(sortJson).cursor[JsObject]().collect[List]()
                 }
 
-                // Get the results in
-                resultData.map { resultList =>
-                    if (resultList.isEmpty)
-                        datum + (resultName -> List.empty[JsObject])
-                    else
-                        datum + (resultName -> resultList)
-                }
-            })
+                // Add resultList to the datum
+                resultData.map { resultList => datum + (resultName -> resultList) }
+            }
         })
 
-        results.map(nd => DataPacket({
-            if (flatten) nd.map(datum => datum(resultName) match {
-                case o: JsObject => utils.JsObjectToMap(o)
-                case _ => Map.empty[String, Any]
-            }) else nd
-        }))
+        // See if we need to flatten the result, ie. replace all datums by the found documents
+        results.map { dp =>
+            DataPacket {
+                if (flatten)
+                    dp.flatMap { datum =>
+                        datum.get(resultName).collect {
+                            case l: List[JsObject] => l.map(utils.JsObjectToMap)
+                        }.getOrElse(Nil)
+                    }
+                else
+                    dp
+            }
+        }
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }
 
