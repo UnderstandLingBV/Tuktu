@@ -1,0 +1,88 @@
+{
+	"name": "Youtube Processor",
+	"description": "Queries the Youtube Data API and returns video, channel and/or play list metadata records.",
+	"class": "tuktu.dlib.processors.YoutubeProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "api",
+					"description": "The Youtube Data API address.",
+					"type": "string",
+					"required": true,
+					"default": "https://www.googleapis.com/youtube/v3/search"
+				},
+				{
+					"name": "apikey",
+					"description": "A Youtube API key.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "part",
+					"description": "One or more part parameters as a comma separated list (e.g., snippet, contentDetails, fileDetails, status).",
+					"type": "string",
+					"required": true,
+					"default": "snippet"
+				},
+				{
+					"name": "channelId",
+					"description": "The identifier of the channel to search.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "maxResults",
+					"description": "The maximum number of items that should be returned in the result set. Acceptable values are 0 to 50, inclusive. The default value is 5.",
+					"type": "int",
+					"required": false
+				},
+				{
+					"name": "order",
+					"description": "The order in which results must be sorted (e.g., date, rating, relevance, title, videoCount, viewCount).",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "query",
+					"description": "the query term to search for.  Your request can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that are associated with one of several search terms.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "topicId",
+					"description": "The topicId parameter indicates that the API response should only contain resources associated with the specified topic. The value identifies a Freebase topic ID.",
+					"type": "string",
+					"required": false
+				},
+				{
+					"name": "type",
+					"description": "restricts a search query to only retrieve a particular type of resource. The value is a comma-separated list of resource types (e.g., video, channel, playlist)",
+					"type": "string",
+					"required": true,
+					"default": "video"
+				},
+				{
+					"name": "license",
+					"description": "Filters search results to only include videos with a particular license (e.g., any, creativeCommon, youtube).",
+					"type": "string",
+					"required": true,
+					"default": "any"
+				}
+			]
+		}
+	]
+}
