@@ -50,37 +50,43 @@
 						},
 						{
 							"name": "months",
-							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"description": "Floor the timestamp to the nearest time frame. Month of Year, so should divide 12 if equally sized time-frames are desired. A value of 5 would mean 1-5, 6-10, 11-12 are the resulting time-frames. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"type": "int",
+							"required": false
+						},
+						{
+							"name": "weeks",
+							"description": "Floor the timestamp to the nearest time frame. Week of Year based on the ISO week year, in which a year can have either 52 or 53 weeks, and the first week of the year can even start in the previous year if the majority of days during that week are still in the current year. Most of the time only a value of 1 makes sense here, which will round down the timestamp to Monday at midnight. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
 							"type": "int",
 							"required": false
 						},
 						{
 							"name": "days",
-							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"description": "Floor the timestamp to the nearest time frame. Day of Year, and since a year usually consists of 365 or 366 days, only a value of 1 will yield equally sized time-frames across years. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
 							"type": "int",
 							"required": false
 						},
 						{
 							"name": "hours",
-							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"description": "Floor the timestamp to the nearest time frame. Hour of Day, which means equally sized time-frames are only guaranteed if this value divides 24. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
 							"type": "int",
 							"required": false
 						},
 						{
 							"name": "minutes",
-							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"description": "Floor the timestamp to the nearest time frame. Minute of Day, which means equally sized time-frames are only guaranteed if this value divides 24*60=1440. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
 							"type": "int",
 							"required": false
 						},
 						{
 							"name": "seconds",
-							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"description": "Floor the timestamp to the nearest time frame. Second of Day, which means equally sized time-frames are only guaranteed if this value divides 24*60*60=86400. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
 							"type": "int",
 							"required": false
 						},
 						{
 							"name": "millis",
-							"description": "Floor the timestamp to the nearest time frame. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
+							"description": "Floor the timestamp to the nearest time frame. Milliseconds of Day, which means equally sized time-frames are only guaranteed if this value divides 24*60*60*1000=86400000. Only takes largest unit into account, so if 10 years and 10 hours is present, only 10 years is used.",
 							"type": "int",
 							"required": false
 						}

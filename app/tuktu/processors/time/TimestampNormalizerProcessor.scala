@@ -24,6 +24,7 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
     var minutes: Int = _
     var hours: Int = _
     var days: Int = _
+    var weeks: Int = _
     var months: Int = _
     var years: Int = _
 
@@ -39,6 +40,7 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
         minutes = (config \ "time" \ "minutes").asOpt[Int].getOrElse(0)
         hours = (config \ "time" \ "hours").asOpt[Int].getOrElse(0)
         days = (config \ "time" \ "days").asOpt[Int].getOrElse(0)
+        weeks = (config \ "time" \ "weeks").asOpt[Int].getOrElse(0)
         months = (config \ "time" \ "months").asOpt[Int].getOrElse(0)
         years = (config \ "time" \ "years").asOpt[Int].getOrElse(0)
 
@@ -76,6 +78,9 @@ class TimestampNormalizerProcessor(resultName: String) extends BaseProcessor(res
                 } else if (months > 0) {
                     val currentMonth = dt.monthOfYear.roundFloorCopy
                     currentMonth.minusMonths(currentMonth.monthOfYear.get % months)
+                } else if (weeks > 0) {
+                    val currentWeek = dt.weekOfWeekyear.roundFloorCopy
+                    currentWeek.minusWeeks(currentWeek.weekOfWeekyear.get % weeks)
                 } else if (days > 0) {
                     val currentDay = dt.dayOfYear.roundFloorCopy
                     currentDay.minusDays(currentDay.dayOfYear.get % days)
