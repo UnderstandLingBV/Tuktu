@@ -96,10 +96,6 @@ object Dispatcher {
             }
             computeReachableGraph(nextIds).toMap
         }
-        println(completeProcessorMap)
-        println
-        println
-        println(processorMap)
 
         // Count how often a processor is a successor of the generator or a processor
         // and ignore all but the last EOF for each processor that has more than one predecessor
