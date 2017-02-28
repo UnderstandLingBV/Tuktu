@@ -28,68 +28,38 @@ class TuktuAWSCredentialProvider(id: String, key: String) extends AWSCredentials
 }
 
 object file {
-    /**
-     * A Generic Reader for multiple sources
-     */
-    def genericReader(uri: URI)(implicit codec: Codec): BufferedReader = {
-        uri.getScheme match {
-            case "file" | "" | null => fileReader(uri)
-            case "hdfs"             => hdfsReader(uri)
-            case _                  => throw new Exception("Unknown file format")
-        }
-    }
 
     /**
      * Wrapper for a string instead of URI
      */
     def genericReader(string: String)(implicit codec: Codec): BufferedReader = {
-        // Get URI
-        val uri = Uri.parse(string).toURI
-        if (uri.getScheme == "s3") s3Reader(string)(codec)
-        else genericReader(uri)(codec)
+        // Check which reader we need
+        if (string.startsWith("s3")) s3Reader(string)(codec)
+        else if (string.startsWith("hdfs")) hdfsReader(Uri.parse(string).toURI)
+        else fileReader(string)(codec)
     }
 
     /**
      * Generically reads a binary file
      */
     def genericBinaryReader(string: String): InputStream = {
-        val uri = Uri.parse(string).toURI
-        // Determine what to do
-        uri.getScheme match {
-            case "s3"               => s3BinaryReader(string)
-            case "file" | "" | null => fileBinaryReader(uri)
-            case "hdfs"             => hdfsBinaryReader(uri)
-            case _                  => throw new Exception("Unknown file format")
-        }
+        // Check which reader we need
+        if (string.startsWith("s3")) s3BinaryReader(string)
+        else if (string.startsWith("hdfs")) hdfsBinaryReader(Uri.parse(string).toURI)
+        else fileBinaryReader(string)
     }
 
     /**
      * Reads from Local disk
      */
-    def fileReader(uri: URI)(implicit codec: Codec): BufferedReader = {
-        if (uri.toString.startsWith("//"))
-            Source.fromFile(uri.getHost + File.separator + uri.getPath)(codec).bufferedReader
-        else {
-            val path = uri.getPath
-
-            val cleanPath = if (path.startsWith("/"))
-                path.substring(1)
-            else
-                path
-
-            Source.fromFile(cleanPath)(codec).bufferedReader
-        }
-    }
+    def fileReader(filename: String)(implicit codec: Codec): BufferedReader =
+        Source.fromFile(filename)(codec).bufferedReader
 
     /**
      * Reads a binary file from local disk
      */
-    def fileBinaryReader(uri: URI): InputStream = {
-        if (uri.toString.startsWith("//"))
-            new FileInputStream(new File(uri.getHost + File.separator + uri.getPath))
-        else
-            new FileInputStream(new File(uri.getPath))
-    }
+    def fileBinaryReader(filename: String): InputStream = 
+        new FileInputStream(new File(filename))
 
     /**
      * Reads from HDFS
