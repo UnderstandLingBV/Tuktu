@@ -62,7 +62,7 @@ object Dispatcher {
     /**
      * Takes a list of Enumeratees and iteratively composes them to form a single Enumeratee
      * @param nextId The names of the processors next to compose
-     * @param processorMap A map cntaining the names of the processors and the processors themselves
+     * @param completeProcessorMap A map containing the names of the processors and the processors themselves
      * @return A 3-tuple containing:
      *   - The idString used to map this flow against (for error recovery)
      *   - A list of all processors, one for each branch
@@ -70,7 +70,7 @@ object Dispatcher {
      */
     def buildEnums (
             nextIds: List[String],
-            processorMap: Map[String, ProcessorDefinition],
+            completeProcessorMap: Map[String, ProcessorDefinition],
             genActor: Option[ActorRef],
             configName: String,
             stopOnError: Boolean
@@ -83,6 +83,23 @@ object Dispatcher {
         val subflows = collection.mutable.ListBuffer.empty[ActorRef]
         // Keep track of instantiated processors
         val instantiatedEnumeratees = collection.mutable.Map[String, Enumeratee[DataPacket, DataPacket]]()
+        
+        // Keep only processors that are used
+        val processorMap = {
+            def computeReachableGraph(next: List[String]): List[(String, ProcessorDefinition)] = next match {
+                case Nil => Nil
+                case procs => {
+                    // Get the processor definition
+                    val newProcs = procs.map(p => p -> completeProcessorMap(p)).toList
+                    newProcs ++ computeReachableGraph(newProcs.flatMap(_._2.next))
+                }
+            }
+            computeReachableGraph(nextIds).toMap
+        }
+        println(completeProcessorMap)
+        println
+        println
+        println(processorMap)
 
         // Count how often a processor is a successor of the generator or a processor
         // and ignore all but the last EOF for each processor that has more than one predecessor
