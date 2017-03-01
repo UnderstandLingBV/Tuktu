@@ -28,29 +28,27 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
         expression = (config \ "expression").as[String]
     }
 
+    private def represent(o: Option[Any]): String = o match {
+        case Some(v: JsString) => v.toString
+        case Some(v: Any)      => JsString(v.toString).toString
+        case None              => "None"
+    }
+
     /**
      * @param data A DataPacket's data
      * @return Cube values (to write to result) and Map(cubeStringRepresentation -> evaluated expression)
      */
-    private def preprocess(data: List[Map[String, Any]]): List[(List[Any], Map[String, Any])] = {
-        (for (
-            datum <- data;
-            options = group map { field => utils.fieldParser(datum, utils.evaluateTuktuString(field, datum)) } if options.forall { _.isDefined }
-        ) yield {
+    private def preprocess(data: List[Map[String, Any]]): List[(List[Option[Any]], Map[String, Any])] = {
+        for (datum <- data) yield {
             // Evaluate expression
             if (evaluatedExpression == None)
                 evaluatedExpression = Some(utils.evaluateTuktuString(expression, datum))
 
             // Get value to use
-            val values = options map { _.get }
-            val jsStrings = values map {
-                _ match {
-                    case v: JsString => v
-                    case v: Any      => new JsString(v.toString)
-                }
-            }
+            val values = group map { field => utils.fieldParser(datum, utils.evaluateTuktuString(field, datum)) }
+            val jsStrings = values.map(represent)
             (values, Map(jsStrings.mkString(",") -> ArithmeticParser(utils.evaluateTuktuString(base, datum))))
-        })
+        }
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -66,12 +64,7 @@ class AggregateByValueProcessor(resultName: String) extends BaseBucketProcessor(
 
             // Compute stuff
             for (values <- allValues) yield {
-                val jsStrings = values map {
-                    _ match {
-                        case v: JsString => v
-                        case v: Any      => new JsString(v.toString)
-                    }
-                }
+                val jsStrings = values.map(represent)
                 // Peplace functions with field value names
                 val newExpression = ArithmeticParser.allowedFunctions.foldLeft(evaluatedExpression.get)((a, b) => {
                     a.replace(b + "()", b + "(" + JsString(jsStrings.mkString(",")).toString + ")")
