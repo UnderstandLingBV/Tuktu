@@ -1,34 +1,20 @@
 package tuktu.processors
 
-import java.io._
-import java.lang.reflect.Method
-
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.DurationLong
+import scala.collection.GenTraversableOnce
 import akka.actor._
 import akka.pattern.ask
-import au.com.bytecode.opencsv.CSVWriter
 import groovy.util.Eval
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Enumeratee
-import play.api.libs.iteratee.Iteratee
 import play.api.libs.json._
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.Logger
 import tuktu.api._
 import tuktu.api.Parsing._
-import java.text.SimpleDateFormat
 import tuktu.api.utils.evaluateTuktuString
-import play.api.Logger
-
-import scala.collection.{GenTraversableOnce, mutable}
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.iteratee.Input
-import akka.routing.Broadcast
-
-import concurrent.duration.DurationLong
 
 /**
  * Doesn't do anything
