@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success }
 import tuktu.api.{ BaseProcessor, DataPacket }
-import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString }
+import tuktu.api.utils.{ MapToJsObject, evaluateTuktuString, evaluateTuktuJsValue, fieldParser, mergeMap }
 import tuktu.nosql.util.MongoPool
 
 /**
@@ -29,7 +29,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
     var db: String = _
     var collection: String = _
 
-    var fields: List[String] = _
+    var fields: JsValue = _
 
     var waitForCompletion: Boolean = _
 
@@ -52,7 +52,7 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
         collection = (config \ "collection").as[String]
 
         // What fields to write?
-        fields = (config \ "fields").as[List[String]]
+        fields = config \ "fields"
 
         // Wait for updates to complete?
         waitForCompletion = (config \ "wait_for_completion").asOpt[Boolean].getOrElse(false)
@@ -67,9 +67,18 @@ class MongoDBInsertProcessor(resultName: String) extends BaseProcessor(resultNam
             (
                 evaluateTuktuString(db, datum),
                 evaluateTuktuString(collection, datum),
-                fields match { // Convert to JSON
+                evaluateTuktuJsValue(fields, datum).as[List[String]] match { // Convert to JSON
                     case Nil => MapToJsObject(datum, true)
-                    case _   => MapToJsObject(datum.filterKeys(key => fields.contains(key)), true)
+                    case fields =>
+                        // Since MongoDB doesn't really support "." in keys, split them up and put them in nested objects (if they aren't already)
+                        MapToJsObject(
+                            fields.foldLeft(Map.empty[String, Any]) {
+                                case (acc, field) =>
+                                    val value = fieldParser(datum, field)
+                                    val split = field.split('.')
+                                    val start: Map[String, Any] = Map(split.last -> value)
+                                    mergeMap(acc, split.init.foldRight(start) { case (key, map) => Map(key -> map) })
+                            }, true)
                 })
         }).toList.groupBy(_._1).map(elem => elem._1 -> elem._2.groupBy(_._2))
 
