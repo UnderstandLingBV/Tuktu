@@ -36,7 +36,11 @@ class AsyncStreamGenerator(resultName: String, processors: List[Enumeratee[DataP
         case m: Map[String, Any] => channel.push(new DataPacket(List(m)))
         case l: List[Map[String, Any]] => channel.push(new DataPacket(l))
         case j: JsArray => channel.push(new DataPacket(j.as[List[JsObject]].map { utils.JsObjectToMap }))
-        case s: String => channel.push(new DataPacket(List(Map(resultName -> s))))
+        case s: String => {
+            // Check if received EOF as string
+            if (s == "\u001a") cleanup(true)
+            else channel.push(new DataPacket(List(Map(resultName -> s))))
+        }
     }
 }
 
