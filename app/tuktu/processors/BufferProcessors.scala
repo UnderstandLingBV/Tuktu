@@ -33,7 +33,7 @@ class BufferActor(remoteGenerator: ActorRef) extends Actor with ActorLogging {
     def receive() = {
         case "release" => {
             // Create datapacket and clear buffer
-            val dp = DataPacket(buffer.toList.asInstanceOf[List[Map[String, Any]]])
+            val dp = DataPacket(buffer.toList)
             buffer.clear
 
             // Push forward to remote generator
@@ -60,26 +60,30 @@ class GroupByProcessor(genActor: ActorRef, resultName: String) extends BufferPro
 
     // Set up the buffering actor
     val bufferActor = Akka.system.actorOf(Props(classOf[BufferActor], genActor))
-    
-    var fields: List[String] = _
+
+    var fields: JsValue = _
 
     override def initialize(config: JsObject) {
         // Get the field to group on
-        fields = (config \ "fields").as[List[String]]
+        fields = config \ "fields"
     }
 
     // Use the iteratee and Enumeratee.grouped
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Group the data
-        val grouped = data.data.groupBy(datum => fields.map(field => datum(field)))
-        
+        val evaluated = utils.evaluateTuktuJsValue(fields, data.data.headOption.getOrElse(Map.empty)).as[List[String]]
+        val grouped = data.data.groupBy { datum =>
+            evaluated.map { field => utils.fieldParser(datum, field) }
+        }
+
         // Send all groups to the buffer actor and release once sent
-        grouped.map(group => {
-            val fut = Future.sequence(group._2.map(datum => bufferActor ? datum))
-            Await.ready(fut, timeout.duration)
-            Await.ready(bufferActor ? "release", timeout.duration)
-        })
-        
+        grouped.map {
+            case (_, group) =>
+                val fut = Future.sequence(group.map { datum => bufferActor ? datum })
+                Await.ready(fut, timeout.duration)
+                Await.ready(bufferActor ? "release", timeout.duration)
+        }
+
         data
     }) compose Enumeratee.onEOF(() => bufferActor ! new StopPacket)
 }
