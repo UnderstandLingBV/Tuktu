@@ -36,13 +36,15 @@ object Scheduler extends Controller {
     // Show an overview of all active schedulers
     def overview() = Action.async { implicit request =>
         // Get the monitor
-        val fut = (scheduler ? new Overview()).asInstanceOf[Future[List[(String, String)]]]
-        fut.map(res =>
+        val fut = (scheduler ? new Overview()).asInstanceOf[Future[Map[String, (String, tuktu.api.scheduler.Schedule)]]]
+        fut.map {res =>
             Ok(views.html.scheduler.overview(
-                    res,
+                    res.toList.sortBy(_._1).map {sch =>
+                        (sch._1, sch._2._1, sch._2._2.description)
+                    },
                     util.flashMessagesToMap(request)
             ))
-        )
+        }
     }
     
     // create a new simple scheduler

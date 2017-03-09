@@ -1,4 +1,4 @@
-@(jobs: List[(String, String)], messages: Map[String, List[String]])
+@(jobs: List[(String, String, String)], messages: Map[String, List[String]])
 
 @index("Scheduler", messages) {
     @schedulerMenu()
@@ -13,6 +13,9 @@
                         Job name
                     </th>
                     <th>
+                        Flow
+                    </th>
+                    <th>
                         Schedule
                     </th>
                     <th>
@@ -21,10 +24,13 @@
                 </tr>
             </thead>
             <tbody>
-                @for((name, schedule) <- jobs) {
+                @for((name, config, schedule) <- jobs) {
                     <tr>
                         <th style="margin-right: 25px;">
                             @name
+                        </th>
+                        <th>
+                            @config
                         </th>
                         <th>
                             @schedule

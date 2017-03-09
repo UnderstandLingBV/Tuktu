@@ -83,7 +83,7 @@ class TuktuScheduler(actor: ActorRef) extends Actor with ActorLogging {
             val uniqueName = schedule.name + "_" + java.util.UUID.randomUUID.toString
             schedulers += uniqueName -> (schedule.dispatchRequest.configName, new CronSchedule(actor, schedule, quartzScheduler, uniqueName))
         }
-        case _: Overview => sender ! schedulers.mapValues(_._2.description).toList.sorted
+        case _: Overview => sender ! schedulers.toMap
         case kr: KillRequest => {
             schedulers.get(kr.name).collect { case (_, schedule) => schedule.cancel }
             schedulers -= kr.name

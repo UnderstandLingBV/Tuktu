@@ -38,16 +38,16 @@ object Scheduling extends Controller {
      */
     def overview() = Action.async { implicit request =>
         // Get the monitor
-        val fut = (scheduler ? new Overview()).asInstanceOf[Future[List[(String, String)]]]
+        val fut = (scheduler ? new Overview()).asInstanceOf[Future[Map[String, (String, tuktu.api.scheduler.Schedule)]]]
         fut.map(res =>
-            Ok(Json.arr(
-                    res.map(job => {
-                        val (name, schedule) = (job._1, job._2)
+            Ok(JsArray(
+                    res.toList.sortBy(_._1).map {sch =>
                         Json.obj(
-                                "name" -> name,
-                                "schedule" -> schedule
+                                "name" -> sch._1,
+                                "config" -> sch._2._1,
+                                "schedule" -> sch._2._2.description
                         )
-                    }).toList
+                    }
             ))
         )
     }
