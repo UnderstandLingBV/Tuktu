@@ -247,7 +247,8 @@ object utils {
         case a: JsBoolean => a.value
         case a: JsObject  => JsObjectToMap(a)
         case a: JsArray   => JsArrayToSeqAny(a)
-        case a            => a.toString
+        case JsNull       => null
+        case _            => json.toString
     }
 
     /**
