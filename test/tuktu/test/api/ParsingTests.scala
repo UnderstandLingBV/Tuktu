@@ -58,13 +58,13 @@ class ParsingTests extends PlaySpec {
         "return correct results for its functions on random data" in {
             val random = for (i <- 0 to Random.nextInt(50)) yield (Random.nextDouble - Random.nextDouble) * (Random.nextInt(100) + 1)
             val dp = random.map { n => Map("a" -> n) }.toList
-            ArithmeticParser("17 + min(a)", dp) should be(17 + random.min)
-            ArithmeticParser("17 + max(a)", dp) should be(17 + random.max)
-            ArithmeticParser("(max(a) - min(a)) / 2", dp) should be((random.max - random.min) / 2)
-            ArithmeticParser("sum(a) * 1.7e1", dp) should be(random.sum * 1.7e1)
-            ArithmeticParser("(avg(a) - 2) * 17", dp) should be((random.sum / random.size - 2) * 17)
-            ArithmeticParser("((count(a)) * 2)", dp) should be(random.size * 2)
-            ArithmeticParser("median(a)", dp) should be {
+            ArithmeticParser("17 + min(\"a\")", dp) should be(17 + random.min)
+            ArithmeticParser("17 + max(\"a\")", dp) should be(17 + random.max)
+            ArithmeticParser("(max(\"a\") - min(\"a\")) / 2", dp) should be((random.max - random.min) / 2)
+            ArithmeticParser("sum(\"a\") * 1.7e1", dp) should be(random.sum * 1.7e1)
+            ArithmeticParser("(avg(\"a\") - 2) * 17", dp) should be((random.sum / random.size - 2) * 17)
+            ArithmeticParser("((count(\"a\")) * 2)", dp) should be(random.size * 2)
+            ArithmeticParser("median(\"a\")", dp) should be {
                 val sorted = random.sorted
                 val n = sorted.size
                 if (n % 2 == 0)
@@ -72,7 +72,7 @@ class ParsingTests extends PlaySpec {
                 else
                     sorted((n - 1) / 2)
             }
-            ArithmeticParser("stdev(a)", dp) should be {
+            ArithmeticParser("stdev(\"a\")", dp) should be {
                 val mean = random.sum / random.size
                 math.sqrt(random.map(n => math.pow(n - mean, 2)).sum / random.size)
             }
@@ -144,9 +144,9 @@ class ParsingTests extends PlaySpec {
         }
 
         "support string comparisons" in {
-            PredicateParser("AbS == AbS", datum) should be(true)
-            PredicateParser("AbS != Abs", datum) should be(true)
-            PredicateParser("!(ABS != abs)", datum) should be(false)
+            PredicateParser("\"AbS\" == \"AbS\"", datum) should be(true)
+            PredicateParser("\"AbS\" != \"Abs\"", datum) should be(true)
+            PredicateParser("!(\"ABS\" != \"abs\")", datum) should be(false)
         }
 
         "support operator priority" in {
@@ -156,62 +156,71 @@ class ParsingTests extends PlaySpec {
         }
 
         "support different comparisons" in {
-            PredicateParser("false || true && 1.7e1 != 17 || ABS == abs", datum) should be(false)
-            PredicateParser("!false && !(true && 1.7e1 != 17) && !(ABS == abs)", datum) should be(true)
+            PredicateParser("false || true && 1.7e1 != 17 || \"ABS\" == \"abs\"", datum) should be(false)
+            PredicateParser("!false && !(true && 1.7e1 != 17) && !(\"ABS\" == \"abs\")", datum) should be(true)
         }
 
         "support nested brackets" in {
-            PredicateParser("((asd == asd) && (false == false) == true)", datum) should be(true)
+            PredicateParser("((\"asd\" == \"asd\") && (false == false) == true)", datum) should be(true)
+        }
+
+        "support arithmetic functions" in {
+            PredicateParser("size(\"null\") > 0", datum) should be(true)
+            PredicateParser("size(\"null\") <= 2", datum) should be(true)
+            PredicateParser("size(\"null\") != 2", datum) should be(false)
+            PredicateParser("size(\"JsObject\") == 1", datum) should be(true)
+            PredicateParser("size(\"JsArray\") == 3", datum) should be(true)
+            PredicateParser("size(\"String\") == 8", datum) should be(true)
         }
 
         "return correct results for its functions" in {
             // isNull
-            PredicateParser("isNull(null.1)", datum) should be(true)
-            PredicateParser("isNull(null.2)", datum) should be(true)
-            PredicateParser("isNull(Int)", datum) should be(false)
-            PredicateParser("isNull(asd)", datum) should be(false)
+            PredicateParser("isNull(\"null.1\")", datum) should be(true)
+            PredicateParser("isNull(\"null.2\")", datum) should be(true)
+            PredicateParser("isNull(\"Int\")", datum) should be(false)
+            PredicateParser("isNull(\"asd\")", datum) should be(false)
 
             // isNumeric
-            PredicateParser("isNumeric(JsNumber)", datum) should be(true)
-            PredicateParser("isNumeric(Double)", datum) should be(true)
-            PredicateParser("isNumeric(Int)", datum) should be(true)
-            PredicateParser("isNumeric(String)", datum) should be(false)
-            PredicateParser("isNumeric(asd)", datum) should be(false)
+            PredicateParser("isNumeric(\"JsNumber\")", datum) should be(true)
+            PredicateParser("isNumeric(\"Double\")", datum) should be(true)
+            PredicateParser("isNumeric(\"Int\")", datum) should be(true)
+            PredicateParser("isNumeric(\"String\")", datum) should be(false)
+            PredicateParser("isNumeric(\"asd\")", datum) should be(false)
 
             // isJSON
-            PredicateParser("isJSON(null.2)", datum) should be(true)
-            PredicateParser("isJSON(JsNumber)", datum) should be(true)
-            PredicateParser("isJSON(JsObject.a.b)", datum) should be(true)
-            PredicateParser("isJSON(JsObject.a.asd)", datum) should be(false)
-            PredicateParser("isJSON(JsArray)", datum) should be(true)
-            PredicateParser("isJSON(empty3)", datum) should be(true)
-            PredicateParser("isJSON(asd)", datum) should be(false)
-            PredicateParser("isJSON(Int)", datum) should be(false)
-            PredicateParser("isJSON(String)", datum) should be(false)
-            PredicateParser("isJSON(null.2,JsObject.a.b)", datum) should be(true)
+            PredicateParser("isJSON(\"null.2\")", datum) should be(true)
+            PredicateParser("isJSON(\"JsNumber\")", datum) should be(true)
+            PredicateParser("isJSON(\"JsObject.a.b\")", datum) should be(true)
+            PredicateParser("isJSON(\"JsObject.a.asd\")", datum) should be(false)
+            PredicateParser("isJSON(\"JsArray\")", datum) should be(true)
+            PredicateParser("isJSON(\"empty3\")", datum) should be(true)
+            PredicateParser("isJSON(\"asd\")", datum) should be(false)
+            PredicateParser("isJSON(\"Int\")", datum) should be(false)
+            PredicateParser("isJSON(\"String\")", datum) should be(false)
+            PredicateParser("isJSON(\"null.2\", \"JsObject.a.b\")", datum) should be(true)
 
             // containsFields
-            PredicateParser("containsFields(null.1,JsObject.a.b,empty6)", datum) should be(true)
-            PredicateParser("containsFields(null.1,asd)", datum) should be(false)
-            PredicateParser("containsFields(" + datum.keys.mkString(",") + ")", datum) should be(true)
-            PredicateParser("containsFields(" + datum.keys.mkString(",") + ",asd)", datum) should be(false)
+            PredicateParser("containsFields(\"null.1\", \"JsObject.a.b\", \"empty6\")", datum) should be(true)
+            PredicateParser("containsFields(\"null.1\" , \"asd\")", datum) should be(false)
+            PredicateParser("containsFields(" + datum.keys.map { JsString(_) }.mkString(", ") + ")", datum) should be(true)
+            PredicateParser("containsFields(" + datum.keys.map { JsString(_) }.mkString(", ") + ", \"asd\")", datum) should be(false)
 
             // containsSubstring
-            PredicateParser("containsSubstring(myString,string)", datum) should be(false)
-            PredicateParser("containsSubstring(myString,String)", datum) should be(true)
-            PredicateParser("containsSubstring(String,myString)", datum) should be(false)
+            PredicateParser("containsSubstring(\"myString\", \"string\")", datum) should be(false)
+            PredicateParser("containsSubstring(\"myString\", \"String\")", datum) should be(true)
+            PredicateParser("containsSubstring(\"String\", \"myString\")", datum) should be(false)
 
             // isEmptyValue
-            PredicateParser("isEmptyValue(empty1)", datum) should be(true)
-            PredicateParser("isEmptyValue(empty2)", datum) should be(true)
-            PredicateParser("isEmptyValue(empty3)", datum) should be(true)
-            PredicateParser("isEmptyValue(empty4)", datum) should be(true)
-            PredicateParser("isEmptyValue(empty5)", datum) should be(true)
-            PredicateParser("isEmptyValue(empty6)", datum) should be(true)
-            PredicateParser("isEmptyValue(asd)", datum) should be(false)
-            PredicateParser("isEmptyValue(JsObject)", datum) should be(false)
-            PredicateParser("isEmptyValue(JsArray)", datum) should be(false)
-            PredicateParser("isEmptyValue(String)", datum) should be(false)
+            PredicateParser("isEmptyValue(\"empty1\")", datum) should be(true)
+            PredicateParser("isEmptyValue(\"empty2\")", datum) should be(true)
+            PredicateParser("isEmptyValue(\"empty3\")", datum) should be(true)
+            PredicateParser("isEmptyValue(\"empty4\")", datum) should be(true)
+            PredicateParser("isEmptyValue(\"empty5\")", datum) should be(true)
+            PredicateParser("isEmptyValue(\"empty6\")", datum) should be(true)
+            PredicateParser("isEmptyValue(\"asd\")", datum) should be(false)
+            PredicateParser("isEmptyValue(\"JsObject\")", datum) should be(false)
+            PredicateParser("isEmptyValue(\"JsArray\")", datum) should be(false)
+            PredicateParser("isEmptyValue(\"String\")", datum) should be(false)
 
             // isEmpty
             PredicateParser("isEmpty()", datum) should be(false)

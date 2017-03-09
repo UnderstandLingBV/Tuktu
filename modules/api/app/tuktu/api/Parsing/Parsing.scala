@@ -42,10 +42,10 @@ object ArithmeticParser {
     // List of allowed functions
     val allowedFunctions = List("count", "avg", "median", "sum", "max", "min", "stdev")
     // Function parameter
-    val parameter: P[String] = P("\"" ~ ("\\\"" | CharPred(_ != '"')).rep ~ "\"").!
+    val string: P[String] = P("\"" ~ ("\\\"" | CharPred(_ != '"')).rep ~ "\"").!
         .map { str => Json.parse(str).as[String] }
     // All Tuktu-defined arithmetic functions
-    val functions: P[FunctionLeaf] = P(StringIn(allowedFunctions: _*).! ~/ "(" ~/ (parameter | CharPred(_ != ')').rep.!) ~ ")")
+    val functions: P[FunctionLeaf] = P(StringIn(allowedFunctions: _*).! ~/ "(" ~/ string ~ ")")
         .map { case (func, param) => FunctionLeaf(func, param) }
 
     // Operations
@@ -140,8 +140,9 @@ object PredicateParser {
     // Tree structure
     abstract class BooleanNode
     case class BooleanLeaf(b: Boolean) extends BooleanNode
-    case class ArithmeticLeaf(left: ArithmeticParser.DoubleNode, op: String, right: ArithmeticParser.DoubleNode) extends BooleanNode
-    case class FunctionLeaf(function: String, parameter: String) extends BooleanNode
+    case class ArithmeticFunctionLeaf(function: String, parameters: Seq[String])
+    case class ArithmeticLeaf(left: Either[ArithmeticParser.DoubleNode, ArithmeticFunctionLeaf], op: String, right: Either[ArithmeticParser.DoubleNode, ArithmeticFunctionLeaf]) extends BooleanNode
+    case class FunctionLeaf(function: String, parameters: Seq[String]) extends BooleanNode
     case class EqualsNode(node1: BooleanNode, operator: String, b2: BooleanNode) extends BooleanNode
     case class AndNode(children: Seq[BooleanNode]) extends BooleanNode
     case class OrNode(children: Seq[BooleanNode]) extends BooleanNode
@@ -159,25 +160,32 @@ object PredicateParser {
         .map { case (neg, pred) => if (neg.size % 2 == 0) BooleanLeaf(pred.toBoolean) else BooleanLeaf(!pred.toBoolean) }
 
     // Evaluate arithmetic expressions on numbers using the ArithmeticParser
-    val arithExpr: P[ArithmeticLeaf] = P(ArithmeticParser.addSub ~ (">=" | "<=" | "==" | "!=" | "<" | ">").! ~ ArithmeticParser.addSub)
+    val allowedArithmeticFunctions: List[String] = List("size")
+    val arithmeticFunctions: P[ArithmeticFunctionLeaf] = P(((StringIn(allowedArithmeticFunctions: _*).! ~ "(" ~/ (ArithmeticParser.string ~/ ("," ~ ArithmeticParser.string).rep) ~/ ")")))
+        .map { case (function, (head, tail)) => ArithmeticFunctionLeaf(function, tail.+:(head)) }
+    val arithNode: P[Either[ArithmeticParser.AddNode, ArithmeticFunctionLeaf]] = P((ArithmeticParser.addSub | arithmeticFunctions)).map {
+        case n: ArithmeticParser.AddNode => Left(n)
+        case n: ArithmeticFunctionLeaf   => Right(n)
+    }
+    val arithExpr: P[ArithmeticLeaf] = P(arithNode ~ (">=" | "<=" | "==" | "!=" | "<" | ">").! ~ arithNode)
         .map { case (left, op, right) => ArithmeticLeaf(left, op, right) }
 
     // Evaluate string expressions
-    val strings: P[String] = ArithmeticParser.parameter | P(
-        CharIn(('a' to 'z') ++ ('A' to 'Z') ++ "_-+.,:;/\"'" ++ ('0' to '9')).rep.!)
-    val stringExpr: P[BooleanLeaf] = P(strings ~ ("==" | "!=").! ~ strings)
+    val stringExpr: P[BooleanLeaf] = P(ArithmeticParser.string ~ ("==" | "!=").! ~ ArithmeticParser.string)
         .map {
             case (left, "==", right) => left == right
             case (left, "!=", right) => left != right
         }.map { BooleanLeaf(_) }
 
     // Functions
-    val allowedFunctions: List[String] = List("containsFields", "isNumeric", "isNull", "isJSON", "containsSubstring", "isEmptyValue", "listSize")
-    val functions: P[FunctionLeaf] = P(((StringIn(allowedFunctions: _*).! ~ "(" ~/ CharPred(_ != ')').rep.! ~/ ")")))
-        .map { case (function, parameter) => FunctionLeaf(function, parameter) }
-    def allowedParameterfreeFunctions: List[String] = List("isEmpty")
+    val allowedFunctions: List[String] = List("containsFields", "isNumeric", "isNull", "isJSON", "containsSubstring", "isEmptyValue")
+    val functions: P[FunctionLeaf] = P(((StringIn(allowedFunctions: _*).! ~ "(" ~/ (ArithmeticParser.string ~/ ("," ~ ArithmeticParser.string).rep) ~/ ")")))
+        .map { case (function, (head, tail)) => FunctionLeaf(function, tail.+:(head)) }
+
+    val allowedParameterfreeFunctions: List[String] = List("isEmpty")
     val parameterfreeFunctions: P[FunctionLeaf] = P(StringIn(allowedParameterfreeFunctions: _*).! ~ "(" ~/ ")")
-        .map { case function => FunctionLeaf(function, "") }
+        .map { case function => FunctionLeaf(function, Nil) }
+
     val allFunctions: P[BooleanNode] = P("!".rep.! ~ (functions | parameterfreeFunctions))
         .map { case (n, f) => if (n.size % 2 == 0) f else NegateNode(f) }
 
@@ -206,30 +214,59 @@ object PredicateParser {
             case OrNode(seq)              => seq.exists { eval(_) }
             case NegateNode(n)            => !eval(n)
             case ArithmeticLeaf(left, op, right) =>
-                val l = ArithmeticParser.eval(left)
-                val r = ArithmeticParser.eval(right)
-                op match {
-                    case "<"  => l < r && !nearlyEqual(l, r)
-                    case ">"  => l > r && !nearlyEqual(l, r)
-                    case "<=" => l < r || nearlyEqual(l, r)
-                    case ">=" => l > r || nearlyEqual(l, r)
-                    case "==" => nearlyEqual(l, r)
-                    case "!=" => !nearlyEqual(l, r)
+                def evaluate(n: ArithmeticFunctionLeaf): Option[Double] = {
+                    n.function match {
+                        case "size" =>
+                            fieldParser(datum, n.parameters.head) match {
+                                case None => None
+                                case Some(value) => value match {
+                                    case a: TraversableOnce[_] => Some(a.size)
+                                    case a: String             => Some(a.size)
+                                    case a: JsArray            => Some(a.value.size)
+                                    case a: JsObject           => Some(a.value.size)
+                                    case a: JsString           => Some(a.value.size)
+                                    case a: Any                => None
+                                }
+                            }
+                    }
                 }
-            case FunctionLeaf(f, param) => f match {
-                case "containsFields" => param.split(',').forall { path =>
+                val l = left match {
+                    case Left(n)  => Some(ArithmeticParser.eval(n))
+                    case Right(n) => evaluate(n)
+                }
+                val r = right match {
+                    case Left(n)  => Some(ArithmeticParser.eval(n))
+                    case Right(n) => evaluate(n)
+                }
+                (l, r) match {
+                    case (Some(l), Some(r)) => op match {
+                        case "<"  => l < r && !nearlyEqual(l, r)
+                        case ">"  => l > r && !nearlyEqual(l, r)
+                        case "<=" => l < r || nearlyEqual(l, r)
+                        case ">=" => l > r || nearlyEqual(l, r)
+                        case "==" => nearlyEqual(l, r)
+                        case "!=" => !nearlyEqual(l, r)
+                    }
+                    case _ => false
+                }
+            case FunctionLeaf(f, params) => f match {
+                case "containsFields" => params.forall { path =>
                     // Get the path and evaluate it against the datum
                     fieldParser(datum, path).isDefined
                 }
-                case "isNumeric" => Try {
-                    StatHelper.anyToDouble(fieldParser(datum, param).get)
-                }.isSuccess
-                case "isNull" => fieldParser(datum, param) match {
-                    case Some(null)   => true
-                    case Some(JsNull) => true
-                    case _            => false
+                case "isNumeric" => params.forall { path =>
+                    Try {
+                        StatHelper.anyToDouble(fieldParser(datum, path).get)
+                    }.isSuccess
                 }
-                case "isJSON" => param.split(',').forall { path =>
+                case "isNull" => params.forall { path =>
+                    fieldParser(datum, path) match {
+                        case Some(null)   => true
+                        case Some(JsNull) => true
+                        case _            => false
+                    }
+                }
+                case "isJSON" => params.forall { path =>
                     // Get the path, evaluate it against the datum, and check if it's JSON
                     fieldParser(datum, path).flatMap { res =>
                         if (res.isInstanceOf[JsValue])
@@ -240,49 +277,22 @@ object PredicateParser {
                 }
                 case "containsSubstring" =>
                     // Get the actual string and the substring
-                    val split = param.split(",")
-                    val string = split(0)
-                    val substring = split(1)
-                    string.contains(substring)
-                case "isEmptyValue" => fieldParser(datum, param) match {
-                    case None => false
-                    case Some(value) => value match {
-                        case a: TraversableOnce[_] => a.isEmpty
-                        case a: String             => a.isEmpty
-                        case a: JsArray            => a.value.isEmpty
-                        case a: JsObject           => a.value.isEmpty
-                        case a: JsString           => a.value.isEmpty
-                        case a: Any                => a.toString.isEmpty
+                    params.tail.forall { substring =>
+                        params.head.contains(substring)
                     }
-                }
-                case "listSize" =>
-                    // Get the operator and the number to check against
-                    val (field, operator, check) = {
-                        val split = param.split(",")
-                        (split(0), split(1), split(2).toInt)
-                    }
-                    // Get the list
-                    fieldParser(datum, field) match {
+                case "isEmptyValue" => params.forall { path =>
+                    fieldParser(datum, path) match {
                         case None => false
                         case Some(value) => value match {
-                            case a: Seq[Any] => {
-                                // Get the size of the list
-                                val size = a.size
-                                // Now match it, use simply matching here to avoid initializing another parser
-                                operator match {
-                                    case "==" => size == check
-                                    case ">=" => size >= check
-                                    case "<=" => size <= check
-                                    case "!=" => size != check
-                                    case "<"  => size < check
-                                    case ">"  => size > check
-                                    case _    => false
-                                }
-                            }
-                            case _ => false
+                            case a: TraversableOnce[_] => a.isEmpty
+                            case a: String             => a.isEmpty
+                            case a: JsArray            => a.value.isEmpty
+                            case a: JsObject           => a.value.isEmpty
+                            case a: JsString           => a.value.isEmpty
+                            case a: Any                => a.toString.isEmpty
                         }
                     }
-                    false
+                }
                 case "isEmpty" => datum.isEmpty
             }
         }
