@@ -379,17 +379,22 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                 try {
                     Eval.me(replacedExpression).asInstanceOf[Boolean]
                 } catch {
-                    case e: Throwable => {
+                    case e: Throwable =>
                         Logger.error("Incorrect groovy expression: " + replacedExpression, e)
-                        true
-                    }
+                        default.getOrElse(true)
                 }
             }
             case _ => {
                 // Replace expression with values
                 val replacedExpression = evaluateTuktuString(expression, datum)
                 // Evaluate
-                val result = PredicateParser(replacedExpression, datum)
+                val result = try {
+                    PredicateParser(replacedExpression, datum)
+                } catch {
+                    case e: Throwable =>
+                        Logger.error("Incorrect Tuktu Predicate expression: " + replacedExpression, e)
+                        default.get
+                }
 
                 // Negate or not?
                 if (expressionType == "negate") !result else result
@@ -398,6 +403,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
     }
 
     var expression: String = _
+    var default: Option[Boolean] = _
     var expressionType: String = _
     var batch: Boolean = _
     var batchMinCount: Int = _
@@ -405,6 +411,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
 
     override def initialize(config: JsObject) {
         expression = (config \ "expression").as[String]
+        default = (config \ "default").asOpt[String].map { _.toLowerCase.replaceAll("[^a-z]", "").toBoolean }
         expressionType = (config \ "type").as[String]
         batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
         batchMinCount = (config \ "batch_min_count").asOpt[Int].getOrElse(1)

@@ -1,6 +1,6 @@
 {
 	"name": "Filter Processor",
-	"description": "Filters data packets satisfying a number of expressions.",
+	"description": "Filters datums satisfying an expression.",
 	"class": "tuktu.processors.PacketFilterProcessor",
 	"parameters": [
 		{
@@ -30,6 +30,12 @@
 					"type": "string",
 					"required": true
 				},
+				{
+                    "name": "default",
+                    "description": "The default to be used if the evaluating the expression results in an error. Leave empty to throw an error and kill the flow, or use true or false.",
+                    "type": "string",
+                    "required": false
+                },
 				{
 					"name": "batch",
 					"type": "boolean",
