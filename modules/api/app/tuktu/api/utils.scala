@@ -216,7 +216,7 @@ object utils {
         case a: GenMap[_, _]       => MapToJsObject(a, mongo)
         case a: TraversableOnce[_] => SeqToJsArray(a.toSeq, mongo)
         case a: Array[_]           => SeqToJsArray(a, mongo)
-        case null                  => "null" // Why not JsNull?
+        case null                  => JsNull
         case _                     => a.toString
     }
 
