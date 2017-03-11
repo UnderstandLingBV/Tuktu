@@ -80,28 +80,26 @@ object utils {
                 }
 
                 // Try to get value at key; does support dot notation
-                fieldParser(vars, key) match {
-                    // No value found at key, return whole Tuktu String unchanged 
-                    case None => specialChar + f.function.getOrElse("") + "{" + key + "}"
-                    case Some(a) => f.function match {
-                        // We found a value, decide what to do with it based on function, None is empty string, ie. ${key}
-                        case None => a match {
-                            case js: JsString => js.value
-                            case _            => a.toString
-                        }
-                        case Some("JSON.stringify") => AnyToJsValue(a).toString
-                        case Some("SQL") =>
-                            def evaluateSQLParameter(any: Any): String = any match {
-                                case el: JsValue => evaluateSQLParameter(JsValueToAny(el))
-                                case el: Boolean => if (el) "1" else "0"
-                                case el: String  => "'" + el.replace("'", "''") + "'"
-                                case _           => any.toString
-                            }
-                            evaluateSQLParameter(a)
-                        case Some(function) =>
-                            play.api.Logger.warn("TuktuString function " + function + " not yet implemented.")
-                            specialChar + function + "{" + key + "}"
+                val value = fieldParser(vars, key)
+                f.function match {
+                    case None => value match {
+                        case None               => "null"
+                        case Some(js: JsString) => js.value
+                        case Some(a)            => a.toString
                     }
+                    case Some("JSON.stringify") => AnyToJsValue(value).toString
+                    case Some("SQL") =>
+                        def evaluateSQLParameter(any: Any): String = any match {
+                            case None | null => "NULL"
+                            case Some(el)    => evaluateSQLParameter(el)
+                            case el: JsValue => evaluateSQLParameter(JsValueToAny(el))
+                            case el: Boolean => if (el) "1" else "0"
+                            case el: String  => "'" + el.replace("'", "''") + "'"
+                            case _           => any.toString
+                        }
+                        evaluateSQLParameter(value)
+                    case Some(function) =>
+                        throw new IllegalArgumentException("TuktuString function " + function + " does not exist.")
                 }
             }
             val root = specialChar match {
