@@ -149,6 +149,11 @@ class ParsingTests extends PlaySpec {
             PredicateParser("!(\"ABS\" != \"abs\")", datum) should be(false)
         }
 
+        "support null" in {
+            PredicateParser("\"ABC\" == null", datum) should be(false)
+            PredicateParser("null != null", datum) should be(false)
+        }
+
         "support operator priority" in {
             PredicateParser("true || false && false", datum) should be(true)
             PredicateParser("(true || false) && false", datum) should be(false)

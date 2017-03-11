@@ -42,8 +42,11 @@ object ArithmeticParser {
     // List of allowed functions
     val allowedFunctions = List("count", "avg", "median", "sum", "max", "min", "stdev")
     // Function parameter
-    val string: P[String] = P("\"" ~ ("\\\"" | CharPred(_ != '"')).rep ~ "\"").!
-        .map { str => Json.parse(str).as[String] }
+    val string: P[String] = P("null" | ("\"" ~ ("\\\"" | CharPred(_ != '"')).rep ~ "\"")).!
+        .map {
+            case "null" => null
+            case str    => Json.parse(str).as[String]
+        }
     // All Tuktu-defined arithmetic functions
     val functions: P[FunctionLeaf] = P(StringIn(allowedFunctions: _*).! ~/ "(" ~/ string ~ ")")
         .map { case (func, param) => FunctionLeaf(func, param) }
