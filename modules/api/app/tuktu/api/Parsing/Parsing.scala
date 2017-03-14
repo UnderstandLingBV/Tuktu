@@ -40,7 +40,7 @@ object ArithmeticParser {
     val factor: P[DoubleNode] = P(parens | number | functions)
 
     // List of allowed functions
-    val allowedFunctions = List("count", "avg", "median", "sum", "max", "min", "stdev")
+    val allowedFunctions = List("count", "distinct", "avg", "median", "sum", "max", "min", "stdev")
     // Function parameter
     val string: P[String] = P("null" | ("\"" ~ ("\\\"" | CharPred(_ != '"')).rep ~ "\"")).!
         .map {
@@ -130,6 +130,8 @@ object ArithmeticParser {
                 vars.map(v => v._1 -> math.sqrt(v._2)).head._2
             case "count" =>
                 data.count { datum => fieldParser(datum, field).isDefined }
+            case "distinct" =>
+                data.map { datum => fieldParser(datum, field) }.filter { _.isDefined }.distinct.size
         }
     }
 

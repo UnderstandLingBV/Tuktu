@@ -76,6 +76,11 @@ class ParsingTests extends PlaySpec {
                 val mean = random.sum / random.size
                 math.sqrt(random.map(n => math.pow(n - mean, 2)).sum / random.size)
             }
+
+            val dp2 = (for (i <- 0 to Random.nextInt(100)) yield Map((if (i % 3 == 0) "b" else "a") -> Random.nextInt(100))).toList
+            ArithmeticParser("distinct(\"a\")", dp2) should be {
+                dp2.filter { _.contains("a") }.map { _.apply("a") }.distinct.size
+            }
         }
     }
 
