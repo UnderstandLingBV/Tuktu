@@ -22,7 +22,7 @@ object ArithmeticParser {
 
     val White = WhitespaceApi.Wrapper {
         import fastparse.all._
-        NoTrace(" ".rep)
+        NoTrace((" " | "\t" | "\n").rep)
     }
     import fastparse.noApi._
     import White._
@@ -153,12 +153,8 @@ object PredicateParser {
     case class OrNode(children: Seq[BooleanNode]) extends BooleanNode
     case class NegateNode(or: BooleanNode) extends BooleanNode
 
-    val White = WhitespaceApi.Wrapper {
-        import fastparse.all._
-        NoTrace(" ".rep)
-    }
     import fastparse.noApi._
-    import White._
+    import ArithmeticParser.White._
 
     // Boolean literals
     val literal: P[BooleanLeaf] = P("!".rep.! ~ ("true" | "false").!)
