@@ -66,7 +66,7 @@ class CountEOFProcessor(resultName: String) extends BaseProcessor(resultName) {
     var dataSeen = 0
     var datumSeen = 0
     var eofCounts = 0
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         datumSeen += data.size
         dataSeen += 1
@@ -274,7 +274,7 @@ class ListJsonFetcherProcessor(resultName: String) extends BaseProcessor(resultN
             // Get the field and paths
             val paths = datum(field).asInstanceOf[Seq[String]]
             // Get the JSON values
-            datum ++ paths.map { path => 
+            datum ++ paths.map { path =>
                 path -> utils.fieldParser(datum, path.split('.').toList).getOrElse(default.get)
             }
         }
@@ -329,14 +329,14 @@ class EvaluateNestedTuktuExpressionsProcessor(resultName: String) extends BasePr
     override def initialize(config: JsObject) {
         expr = (config \ "expression").as[String]
     }
-    
+
     def evalHelper(string: String, datum: Map[String, Any]): String = {
         val newString = utils.evaluateTuktuString(string, datum)
         if (newString != string)
             evalHelper(newString, datum)
         else newString
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             datum + (resultName -> evalHelper(expr, datum))
@@ -349,11 +349,11 @@ class EvaluateNestedTuktuExpressionsProcessor(resultName: String) extends BasePr
  */
 class PredicateProcessor(resultName: String) extends BaseProcessor(resultName) {
     var predicate: String = _
-    
+
     override def initialize(config: JsObject) {
         predicate = (config \ "predicate").as[String]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             // Get the predicate parser
@@ -380,7 +380,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                     Eval.me(replacedExpression).asInstanceOf[Boolean]
                 } catch {
                     case e: Throwable =>
-                        Logger.error("Incorrect groovy expression: " + replacedExpression, e)
+                        Logger.warn("Could not evaluate groovy expression:\n" + replacedExpression + "\n" + "Defaulting to: " + default.getOrElse(true), e)
                         default.getOrElse(true)
                 }
             }
@@ -392,7 +392,7 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                     PredicateParser(replacedExpression, datum)
                 } catch {
                     case e: Throwable =>
-                        Logger.error("Incorrect Tuktu Predicate expression: " + replacedExpression, e)
+                        Logger.warn("Could not evaluate Tuktu Predicate expression:\n" + replacedExpression + "\n" + "Defaulting to: " + default, e)
                         default.get
                 }
 
@@ -540,8 +540,8 @@ class FieldConstantAdderProcessor(resultName: String) extends BaseProcessor(resu
 }
 
 /**
-  * Merges the specified fields into one data packet.
-  */
+ * Merges the specified fields into one data packet.
+ */
 class DataPacketFieldMergerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var value = ""
     var isNumeric = false
@@ -553,7 +553,7 @@ class DataPacketFieldMergerProcessor(resultName: String) extends BaseProcessor(r
         value = (config \ "value").as[String]
         isNumeric = (config \ "is_numeric").asOpt[Boolean].getOrElse(false)
         isDecimal = (config \ "is_decimal").asOpt[Boolean].getOrElse(false)
-        batch  = (config \ "batch").asOpt[Boolean].getOrElse(false)
+        batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
         fieldList = (config \ "fields").as[List[JsObject]]
     }
 
@@ -631,10 +631,10 @@ class StringImploderProcessor(resultName: String) extends BaseProcessor(resultNa
                 val value = {
                     val someVal = utils.fieldParser(datum, fields).get
                     someVal match {
-                        case sl: JsValue => sl.as[Traversable[String]]
+                        case sl: JsValue       => sl.as[Traversable[String]]
                         case sl: Array[String] => sl.toTraversable
-                        case sl: Array[Any] => sl.map(_.toString).toTraversable
-                        case _ => someVal.asInstanceOf[Traversable[String]]
+                        case sl: Array[Any]    => sl.map(_.toString).toTraversable
+                        case _                 => someVal.asInstanceOf[Traversable[String]]
                     }
                 }
                 // Overwrite top-level field
@@ -648,14 +648,14 @@ class StringImploderProcessor(resultName: String) extends BaseProcessor(resultNa
  * Implodes a list of tuples into a string
  */
 class TupleListStringImploder(resultName: String) extends BaseProcessor(resultName) {
-    var fieldList: List[JsObject] =_
+    var fieldList: List[JsObject] = _
     override def initialize(config: JsObject) {
         fieldList = (config \ "fields").as[List[JsObject]]
     }
-    
+
     def doConversion(elem: List[Any], sep: String) = {
         elem.map(el => el match {
-            case b: (Any, Any) => b._1.toString + sep + b._2.toString
+            case b: (Any, Any)      => b._1.toString + sep + b._2.toString
             case b: (Any, Any, Any) => b._1.toString + sep + b._2.toString + sep + b._3.toString
             case b: (Any, Any, Any, Any) => b._1.toString + sep + b._2.toString + sep + b._3.toString +
                 sep + b._4.toString
@@ -677,7 +677,7 @@ class TupleListStringImploder(resultName: String) extends BaseProcessor(resultNa
                 sep + b._8.toString + sep + b._9.toString + sep + b._10.toString
         })
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             // Find out which fields we should extract
@@ -689,11 +689,11 @@ class TupleListStringImploder(resultName: String) extends BaseProcessor(resultNa
                 val value = {
                     val someVal = utils.fieldParser(datum, fields).get
                     someVal match {
-                        case a: (Any, Any) => a._1.toString + sep + a._2.toString
-                        case a: Seq[_] => doConversion(a.toList, sep)
+                        case a: (Any, Any)    => a._1.toString + sep + a._2.toString
+                        case a: Seq[_]        => doConversion(a.toList, sep)
                         case a: Map[Any, Any] => doConversion(a.toList, sep)
-                        case a: Iterable[_] => doConversion(a.toList, sep)
-                        case a: Any => a
+                        case a: Iterable[_]   => doConversion(a.toList, sep)
+                        case a: Any           => a
                     }
                 }
                 // Overwrite top-level field
@@ -909,7 +909,7 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
         for (datum <- data) yield {
             // Get the list field's value
             val listValue = datum(listField) match {
-                case lv: JsArray => lv.value.toList
+                case lv: JsArray   => lv.value.toList
                 case lv: List[Any] => lv
             }
 
@@ -917,7 +917,7 @@ class ListMapFlattenerProcessor(resultName: String) extends BaseProcessor(result
             val newList = listValue.map(listItem => {
                 // Get map field
                 listItem match {
-                    case mf: JsObject => (mf \ mapField)
+                    case mf: JsObject         => (mf \ mapField)
                     case mf: Map[String, Any] => mf(mapField)
                 }
             })
@@ -1012,7 +1012,7 @@ class MapFlattenerProcessor(resultName: String) extends BaseProcessor(resultName
             // Get map
             val map = datum(field) match {
                 case a: Map[String, Any] => a
-                case a: JsObject => utils.JsObjectToMap(a)
+                case a: JsObject         => utils.JsObjectToMap(a)
             }
 
             // Add to total
@@ -1096,11 +1096,11 @@ class UUIDAdderProcessor(resultName: String) extends BaseProcessor(resultName) {
  */
 class FieldsToListProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fields: List[String] = _
-    
+
     override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             datum + (resultName -> fields.map(field => {
@@ -1118,19 +1118,19 @@ class XmlToMapProcessor(resultName: String) extends BaseProcessor(resultName) {
     var trim: Boolean = _
     var nonEmpty: Boolean = _
     var flattened: Boolean = _
-    
+
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         trim = (config \ "trim").asOpt[Boolean].getOrElse(false)
         nonEmpty = (config \ "non_empty").asOpt[Boolean].getOrElse(false)
         flattened = (config \ "flattened").asOpt[Boolean].getOrElse(false)
     }
-    
+
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             if (flattened)
                 datum ++ utils.xmlToMap(datum(field).asInstanceOf[scala.xml.Node], trim, nonEmpty)
-            else    
+            else
                 datum + (resultName -> utils.xmlToMap(datum(field).asInstanceOf[scala.xml.Node], trim, nonEmpty))
         }
     })
@@ -1167,7 +1167,7 @@ class GetListElementProcessor(resultName: String) extends BaseProcessor(resultNa
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        new DataPacket(data.data.map {datum =>
+        new DataPacket(data.data.map { datum =>
             val seq = datum(field).asInstanceOf[Seq[Any]]
             if (seq.size > index)
                 datum + (resultName -> seq(index))
