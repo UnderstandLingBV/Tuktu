@@ -25,6 +25,11 @@ class utilsTests extends PlaySpec {
             val datum: Map[String, Any] = Map("Int" -> 17, "String" -> "Us'er", "Boolean" -> true)
             utils.evaluateTuktuString("INSERT INTO `db`.`table` VALUES($SQL{Int}, $SQL{String}, $SQL{Boolean});", datum, '$') should be("INSERT INTO `db`.`table` VALUES(17, 'Us''er', 1);")
         }
+        
+        "process SplitGet" in {
+            val datum: Map[String, Any] = Map("key" -> "some split string")
+            utils.evaluateTuktuString("$SplitGet{key, ,1}", datum, '$') should be("split")
+        }
     }
 
     "evaluateTuktuJsString" should {
