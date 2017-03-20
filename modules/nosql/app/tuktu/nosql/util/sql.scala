@@ -56,8 +56,15 @@ object sql {
             Right(map + (meta.column.qualified -> value))
         }
 
-    def queryResult(query: String)(implicit conn: Connection) =
-        SQL"#$query".as(parser.*)
+    def queryResult(query: String, attempts: Int = 0)(implicit conn: Connection): List[Map[String, Any]] =
+        try {
+            SQL"#$query".as(parser.*)
+        } catch {
+            case e: java.sql.SQLNonTransientConnectionException => {
+                if (attempts < 3) queryResult(query, attempts + 1)
+                else throw e
+            }
+        }
 
     def query(query: String)(implicit conn: Connection) =
         SQL"#$query".execute
