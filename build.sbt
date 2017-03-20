@@ -80,7 +80,7 @@ lazy val nosqlDependencies = Seq(
     "com.typesafe.play" %% "anorm" % "2.5.2",
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "mysql" % "mysql-connector-java" % "5.1.38",
-    "org.mariadb.jdbc" % "mariadb-java-client" % "1.3.4",
+    "org.mariadb.jdbc" % "mariadb-java-client" % "1.5.9",
     "com.h2database" % "h2" % "1.3.176",
     "org.postgresql" % "postgresql" % "9.3-1102-jdbc41",
     "org.xerial" % "sqlite-jdbc" % "3.8.7",
