@@ -50,7 +50,7 @@ object utils {
         case class TuktuStringString(string: String) extends TuktuStringNode
 
         // Supported functions; empty String not properly supported by StringIn, so we will use Option instead
-        val functionNames: Seq[String] = Seq("JSON.stringify", "SQL", "SplitGet")
+        val functionNames: Seq[String] = Seq("JSON.stringify", "SQL", "SplitGet", "GetOrNull")
 
         // AnyChar and AnyChar but closing curly bracket
         val anyChar: P[TuktuStringString] = P(AnyChar).!.map { TuktuStringString(_) }
@@ -83,7 +83,7 @@ object utils {
                 val value = fieldParser(vars, key)
                 f.function match {
                     case None => value match {
-                        case None               => "null"
+                        case None               => "${" + key + "}"
                         case Some(js: JsString) => js.value
                         case Some(a)            => a.toString
                     }
@@ -114,6 +114,11 @@ object utils {
                                 case Some(rv) => rv.toString.split(splitChar)(splitIndex)
                             }
                         }
+                    }
+                    case Some("GetOrNull") => value match {
+                        case None               => "null"
+                        case Some(js: JsString) => js.value
+                        case Some(a)            => a.toString
                     }
                     case Some(function) =>
                         throw new IllegalArgumentException("TuktuString function " + function + " does not exist.")
