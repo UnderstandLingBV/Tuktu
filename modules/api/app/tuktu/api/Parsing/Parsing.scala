@@ -42,7 +42,7 @@ object ArithmeticParser {
     // List of allowed functions
     val allowedFunctions = List("count", "distinct", "avg", "median", "sum", "max", "min", "stdev")
     // Function parameter
-    val string: P[String] = P("null" | ("\"" ~ ("\\\"" | CharPred(c => c != '"' && c != ',')).rep ~ "\"")).!
+    val string: P[String] = P("null" | ("\"" ~ ("\\\"" | CharPred(c => c != '"')).rep ~ "\"")).!
         .map {
             case "null" => null
             case str    => Json.parse(str).as[String]
