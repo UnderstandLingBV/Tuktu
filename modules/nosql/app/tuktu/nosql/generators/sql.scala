@@ -29,7 +29,9 @@ class SQLGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
             conn = sql.getConnection(connDef)
 
             // Run the query and push the results
-            val rows = sql.queryResult(query)(conn)
+            val tmp = sql.queryResult(query, connDef)(conn)
+            val rows = tmp._1
+            conn = tmp._2
             if (flatten)
                 for (row <- rows) channel.push(DataPacket(List(row)))
             else

@@ -56,13 +56,21 @@ object sql {
             Right(map + (meta.column.qualified -> value))
         }
 
-    def queryResult(query: String, attempts: Int = 0)(implicit conn: Connection): List[Map[String, Any]] =
+    def queryResult(query: String, connDef: ConnectionDefinition, attempts: Int = 0)(implicit conn: Connection): (List[Map[String, Any]], Connection) =
         try {
-            SQL"#$query".as(parser.*)
+            (SQL"#$query".as(parser.*), conn)
         } catch {
             case e: java.sql.SQLNonTransientConnectionException => {
-                if (attempts < 3) queryResult(query, attempts + 1)
+                // Wait timeout passed?
+                if (attempts < 3) queryResult(query, connDef, attempts + 1)
                 else throw e
+            }
+            case e: java.sql.SQLException => {
+                // Connection closed? Attempt to reopen
+                if (conn.isClosed) {
+                    queryResult(query, connDef, attempts)(getConnection(connDef))
+                } else if (attempts < 3) queryResult(query, connDef, attempts + 1)
+                    else throw e
             }
         }
 

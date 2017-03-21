@@ -76,7 +76,9 @@ class SQLProcessor(resultName: String) extends BaseProcessor(resultName) {
 
                 // See if we need to append or not
                 if (append) {
-                    val res = queryResult(evalQuery)(conn)
+                    val tmp = queryResult(evalQuery, connDef)(conn)
+                    val res = tmp._1
+                    conn = tmp._2
                     // Add to query results, only if distinct
                     if (distinct)
                         query_results += (evalQuery, evalUrl, evalUser, evalPassword, evalDriver) -> res
