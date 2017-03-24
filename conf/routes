@@ -63,9 +63,6 @@ GET     /dbw/browser                        controllers.DBWrapper.index
 
 # Web
 ->      /web                                web.Routes
-GET     /Tuktu.js/:id                       controllers.web.Application.TuktuJsGet(id)
-POST    /Tuktu.js/:id                       controllers.web.Application.TuktuJsPost(id)
-GET     /Tuktu.gif/:id                      controllers.web.Application.imgGet(id)
 
 # API
 ->      /api/v1                             restapi.Routes
