@@ -174,6 +174,12 @@ class ParsingTests extends PlaySpec {
             PredicateParser("((\"asd\" == \"asd\") && (false == false) == true)", datum) should be(true)
         }
 
+        "support string functions" in {
+            PredicateParser("toUpperCase(\"abc\") == \"ABC\"", datum) should be(true)
+            PredicateParser("toLowerCase(\"ABC\") == \"abc\"", datum) should be(true)
+            PredicateParser("toLowerCase(toUpperCase(\"AbC\")) == \"abc\"", datum) should be(true)
+        }
+
         "support arithmetic functions" in {
             PredicateParser("size(\"null\") > 0", datum) should be(true)
             PredicateParser("size(\"null\") <= 2", datum) should be(true)
@@ -183,7 +189,7 @@ class ParsingTests extends PlaySpec {
             PredicateParser("size(\"String\") == 8", datum) should be(true)
         }
 
-        "return correct results for its functions" in {
+        "support boolean functions" in {
             // isNull
             PredicateParser("isNull(\"null.1\")", datum) should be(true)
             PredicateParser("isNull(\"null.2\")", datum) should be(true)
@@ -217,6 +223,7 @@ class ParsingTests extends PlaySpec {
 
             // containsSubstring
             PredicateParser("containsSubstring(\"myString\", \"string\")", datum) should be(false)
+            PredicateParser("containsSubstring(toLowerCase(\"myString\"), toLowerCase(\"strinG\"))", datum) should be(true)
             PredicateParser("containsSubstring(\"myString\", \"String\")", datum) should be(true)
             PredicateParser("containsSubstring(\"String\", \"myString\")", datum) should be(false)
 

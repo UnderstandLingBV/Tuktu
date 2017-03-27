@@ -35,30 +35,24 @@ object ArithmeticParser {
             "-".? ~ CharIn('0' to '9').rep(min = 1))
             ~ ("e" ~ "-".? ~ CharIn('0' to '9').rep(min = 1)).?).!
         .map { s => DoubleLeaf(s.toDouble) }
-    val parens: P[DoubleNode] = P("-".!.? ~ "(" ~/ addSub ~ ")")
+    val parens: P[DoubleNode] = P("-".!.? ~ "(" ~ addSub ~ ")")
         .map { case (neg, n) => if (neg.isDefined) NegateNode(n) else n }
     val factor: P[DoubleNode] = P(parens | number | functions)
 
     // List of allowed functions
     val allowedFunctions = List("count", "distinct", "avg", "median", "sum", "max", "min", "stdev")
-    // Function parameter
-    val string: P[String] = P("null" | ("\"" ~ ("\\\"" | CharPred(c => c != '"')).rep ~ "\"")).!
-        .map {
-            case "null" => null
-            case str    => Json.parse(str).as[String]
-        }
     // All Tuktu-defined arithmetic functions
-    val functions: P[FunctionLeaf] = P(StringIn(allowedFunctions: _*).! ~/ "(" ~/ string ~ ")")
-        .map { case (func, param) => FunctionLeaf(func, param) }
+    val functions: P[FunctionLeaf] = P(StringIn(allowedFunctions: _*).! ~ "(" ~ PredicateParser.stringNode ~ ")")
+        .map { case (func, param) => FunctionLeaf(func, PredicateParser.evaluateStringNode(param)) }
 
     // Operations
-    val pow: P[PowNode] = P(factor ~ (CharIn("^") ~/ factor).rep)
+    val pow: P[PowNode] = P(factor ~ (CharIn("^") ~ factor).rep)
         .map { case (base, seq) => PowNode(base +: seq) }
-    val divMul: P[MultNode] = P(pow ~ (CharIn("*/").! ~/ pow).rep)
+    val divMul: P[MultNode] = P(pow ~ (CharIn("*/").! ~ pow).rep)
         .map { case (base, seq) => MultNode(base, seq) }
-    val addSub: P[AddNode] = P(divMul ~ (CharIn("+-").! ~/ divMul).rep)
+    val addSub: P[AddNode] = P(divMul ~ (CharIn("+-").! ~ divMul).rep)
         .map { case (base, seq) => AddNode(base, seq) }
-    val expr: P[DoubleNode] = P(Start ~/ addSub ~ End)
+    val expr: P[DoubleNode] = P(Start ~ addSub ~ End)
 
     // Evaluate the tree
     def eval(d: DoubleNode)(implicit data: List[Map[String, Any]] = Nil): Double = d match {
@@ -143,114 +137,181 @@ object ArithmeticParser {
  */
 object PredicateParser {
     // Tree structure
-    abstract class BooleanNode
+    abstract class ValueNode
+
+    case class NullNode() extends ValueNode
+
+    abstract class StringNode extends ValueNode
+    case class StringFunction(function: String, parameter: StringNode) extends StringNode
+    case class StringLeaf(s: String) extends StringNode
+
+    abstract class NumberNode extends ValueNode
+    case class ArithmeticFunction(function: String, parameters: StringNode) extends NumberNode
+    case class ArithmeticLeaf(node: ArithmeticParser.DoubleNode) extends NumberNode
+
+    abstract class BooleanNode extends ValueNode
     case class BooleanLeaf(b: Boolean) extends BooleanNode
-    case class ArithmeticFunctionLeaf(function: String, parameters: Seq[String])
-    case class ArithmeticLeaf(left: Either[ArithmeticParser.DoubleNode, ArithmeticFunctionLeaf], op: String, right: Either[ArithmeticParser.DoubleNode, ArithmeticFunctionLeaf]) extends BooleanNode
-    case class FunctionLeaf(function: String, parameters: Seq[String]) extends BooleanNode
-    case class EqualsNode(node1: BooleanNode, operator: String, b2: BooleanNode) extends BooleanNode
+    case class BooleanFunction(function: String, parameters: Seq[StringNode]) extends BooleanNode
     case class AndNode(children: Seq[BooleanNode]) extends BooleanNode
     case class OrNode(children: Seq[BooleanNode]) extends BooleanNode
     case class NegateNode(or: BooleanNode) extends BooleanNode
+    case class ComparisonNode(node1: ValueNode, operator: String, node2: ValueNode) extends BooleanNode
 
     import fastparse.noApi._
     import ArithmeticParser.White._
 
-    // Boolean literals
-    val literal: P[BooleanLeaf] = P("!".rep.! ~ ("true" | "false").!)
-        .map { case (neg, pred) => if (neg.size % 2 == 0) BooleanLeaf(pred.toBoolean) else BooleanLeaf(!pred.toBoolean) }
+    /**
+     *  Null Nodes
+     */
+    val nullLiteral: P[NullNode] = P("null").map { _ => NullNode() }
 
-    // Evaluate arithmetic expressions on numbers using the ArithmeticParser
-    val allowedArithmeticFunctions: List[String] = List("size")
-    val arithmeticFunctions: P[ArithmeticFunctionLeaf] = P(((StringIn(allowedArithmeticFunctions: _*).! ~ "(" ~/ (ArithmeticParser.string ~/ ("," ~ ArithmeticParser.string).rep) ~/ ")")))
-        .map { case (function, (head, tail)) => ArithmeticFunctionLeaf(function, tail.+:(head)) }
-    val arithNode: P[Either[ArithmeticParser.AddNode, ArithmeticFunctionLeaf]] = P((ArithmeticParser.addSub | arithmeticFunctions)).map {
-        case n: ArithmeticParser.AddNode => Left(n)
-        case n: ArithmeticFunctionLeaf   => Right(n)
+    /**
+     * String Nodes
+     */
+    // Function parameter
+    val stringLeaf: P[StringLeaf] = P("\"" ~ ("\\\"" | CharPred(_ != '"')).rep ~ "\"").!
+        .map { str => StringLeaf(Json.parse(str).as[String]) }
+    val nonFunctionParameter: P[StringLeaf] = {
+        val nullString: P[StringLeaf] = P("null").map { _ => StringLeaf(null) }
+        P(nullString | stringLeaf)
     }
-    val arithExpr: P[ArithmeticLeaf] = P(arithNode ~ (">=" | "<=" | "==" | "!=" | "<" | ">").! ~ arithNode)
-        .map { case (left, op, right) => ArithmeticLeaf(left, op, right) }
+    val allowedStringFunctions: List[String] = List("toLowerCase", "toUpperCase")
+    val stringFunctions: P[StringFunction] = {
+        val nonFunctionStringFunctions: P[StringFunction] = P(StringIn(allowedStringFunctions: _*).! ~ "(" ~ nonFunctionParameter ~ ")")
+            .map { case (function, parameter) => StringFunction(function, parameter) }
+        P(StringIn(allowedStringFunctions: _*).! ~ "(" ~ (nonFunctionParameter | nonFunctionStringFunctions) ~ ")")
+            .map { case (function, parameter) => StringFunction(function, parameter) }
+    }
+    val stringNode: P[StringNode] = {
+        val stringNode: P[StringNode] = P(stringFunctions | stringLeaf)
+        P(stringNode | ("(" ~ stringNode ~ ")"))
+    }
 
-    // Evaluate string expressions
-    val stringExpr: P[BooleanLeaf] = P(ArithmeticParser.string ~ ("==" | "!=").! ~ ArithmeticParser.string)
-        .map {
-            case (left, "==", right) => left == right
-            case (left, "!=", right) => left != right
-        }.map { BooleanLeaf(_) }
+    /**
+     * Number Nodes
+     */
+    // Evaluate arithmetic expressions on numbers using the ArithmeticParser
+    val arithNode: P[NumberNode] = {
+        val arithLeaf: P[ArithmeticLeaf] = ArithmeticParser.addSub.map { node => ArithmeticLeaf(node) }
+        val allowedArithmeticFunctions: List[String] = List("size")
+        val arithmeticFunctions: P[ArithmeticFunction] = P(StringIn(allowedArithmeticFunctions: _*).! ~ "(" ~ stringNode ~ ")")
+            .map { case (function, parameter) => ArithmeticFunction(function, parameter) }
+        val arithNode: P[NumberNode] = P(arithmeticFunctions | arithLeaf)
+        P(arithNode | ("(" ~ arithNode ~ ")"))
+    }
+
+    /**
+     * Boolean Nodes
+     */
+    val booleanLiteral: P[BooleanLeaf] = P("!".rep.! ~ ("true" | "false").!)
+        .map { case (neg, pred) => if (neg.size % 2 == 0) BooleanLeaf(pred.toBoolean) else BooleanLeaf(!pred.toBoolean) }
 
     // Functions
     val allowedFunctions: List[String] = List("containsFields", "isNumeric", "isNull", "isJSON", "containsSubstring", "isEmptyValue")
-    val functions: P[FunctionLeaf] = P(((StringIn(allowedFunctions: _*).! ~ "(" ~/ (ArithmeticParser.string ~/ ("," ~ ArithmeticParser.string).rep) ~/ ")")))
-        .map { case (function, (head, tail)) => FunctionLeaf(function, tail.+:(head)) }
+    val functions: P[BooleanFunction] = P(((StringIn(allowedFunctions: _*).! ~ "(" ~ (stringNode ~ ("," ~ stringNode).rep) ~ ")")))
+        .map { case (function, (head, tail)) => BooleanFunction(function, head +: tail) }
 
     val allowedParameterfreeFunctions: List[String] = List("isEmpty")
-    val parameterfreeFunctions: P[FunctionLeaf] = P(StringIn(allowedParameterfreeFunctions: _*).! ~ "(" ~/ ")")
-        .map { case function => FunctionLeaf(function, Nil) }
+    val parameterfreeFunctions: P[BooleanFunction] = P(StringIn(allowedParameterfreeFunctions: _*).! ~ "(" ~ ")")
+        .map { case function => BooleanFunction(function, Nil) }
 
     val allFunctions: P[BooleanNode] = P("!".rep.! ~ (functions | parameterfreeFunctions))
-        .map { case (n, f) => if (n.size % 2 == 0) f else NegateNode(f) }
+        .map { case (neg, node) => if (neg.size % 2 == 0) node else NegateNode(node) }
 
     // Bringing everything together
-    val basePredicate: P[BooleanNode] = (allFunctions | literal | arithExpr | stringExpr)
+    val valueNode: P[ValueNode] = P(nullLiteral | stringNode | parens | booleanLiteral | allFunctions | arithNode)
+    val comparison: P[ComparisonNode] = P(valueNode ~ StringIn("<", ">", "<=", ">=", "==", "!=").! ~ valueNode)
+        .map { case (node1, op, node2) => ComparisonNode(node1, op, node2) }
 
-    val equals: P[BooleanNode] = P(factor ~ (("==" | "!=").! ~ factor).rep(max = 1))
-        .map { case (head, tail) => if (tail.isEmpty) head else EqualsNode(head, tail.head._1, tail.head._2) }
-    val and: P[AndNode] = P(equals ~ ("&&" ~/ equals).rep)
-        .map { case (head, tail) => AndNode(head +: tail) }
-    val or: P[OrNode] = P(and ~ ("||" ~/ and).rep)
-        .map { case (head, tail) => OrNode(head +: tail) }
+    val and: P[BooleanNode] = P(factor ~ ("&&" ~ factor).rep).map {
+        case (head, Nil)  => head
+        case (head, tail) => AndNode(head +: tail)
+    }
+    val or: P[BooleanNode] = P(and ~ ("||" ~ and).rep).map {
+        case (head, Nil)  => head
+        case (head, tail) => OrNode(head +: tail)
+    }
 
     val parens: P[BooleanNode] = P("!".rep.! ~ "(" ~ or ~ ")")
         .map { case (n, or) => if (n.size % 2 == 0) or else NegateNode(or) }
-    val factor: P[BooleanNode] = P(parens | basePredicate)
+    val factor: P[BooleanNode] = P(comparison | parens | allFunctions | booleanLiteral)
 
-    val expr: P[BooleanNode] = P(Start ~/ or ~ End)
+    val expr: P[BooleanNode] = P(Start ~ or ~ End)
 
-    def apply(str: String, datum: Map[String, Any] = Map.empty): Boolean = {
-        def eval(b: BooleanNode): Boolean = b match {
-            case BooleanLeaf(b: Boolean)  => b
-            case EqualsNode(n1, "==", n2) => eval(n1) == eval(n2)
-            case EqualsNode(n1, "!=", n2) => eval(n1) != eval(n2)
-            case AndNode(seq)             => seq.forall { eval(_) }
-            case OrNode(seq)              => seq.exists { eval(_) }
-            case NegateNode(n)            => !eval(n)
-            case ArithmeticLeaf(left, op, right) =>
-                def evaluate(n: ArithmeticFunctionLeaf): Option[Double] = {
-                    n.function match {
-                        case "size" =>
-                            fieldParser(datum, n.parameters.head) match {
-                                case None => None
-                                case Some(value) => value match {
-                                    case a: TraversableOnce[_] => Some(a.size)
-                                    case a: String             => Some(a.size)
-                                    case a: JsArray            => Some(a.value.size)
-                                    case a: JsObject           => Some(a.value.size)
-                                    case a: JsString           => Some(a.value.size)
-                                    case a: Any                => None
-                                }
-                            }
-                    }
+    def evaluateStringNode(s: StringNode): String = s match {
+        case StringLeaf(s)                       => s
+        case StringFunction("toLowerCase", node) => evaluateStringNode(node).toLowerCase
+        case StringFunction("toUpperCase", node) => evaluateStringNode(node).toUpperCase
+    }
+    def evaluateNumberNode(n: NumberNode)(implicit datum: Map[String, Any]): Option[Double] = n match {
+        case ArithmeticLeaf(n) => Some(ArithmeticParser.eval(n))
+        case ArithmeticFunction("size", field) =>
+            fieldParser(datum, evaluateStringNode(field)) map {
+                _ match {
+                    case a: TraversableOnce[_] => a.size
+                    case a: String             => a.size
+                    case a: JsArray            => a.value.size
+                    case a: JsObject           => a.fields.size
+                    case a: JsString           => a.value.size
                 }
-                val l = left match {
-                    case Left(n)  => Some(ArithmeticParser.eval(n))
-                    case Right(n) => evaluate(n)
+            }
+    }
+    def evaluateBooleanNode(b: BooleanNode)(implicit datum: Map[String, Any]): Boolean = b match {
+        case BooleanLeaf(b: Boolean) => b
+        case AndNode(seq)            => seq.forall { evaluateBooleanNode(_) }
+        case OrNode(seq)             => seq.exists { evaluateBooleanNode(_) }
+        case NegateNode(n)           => !evaluateBooleanNode(n)
+        case ComparisonNode(NullNode(), op, NullNode()) =>
+            op match {
+                case "==" => true
+                case "!=" => false
+                case "<=" => true
+                case ">=" => true
+                case "<"  => false
+                case ">"  => false
+            }
+        case ComparisonNode(b1: BooleanNode, op, b2: BooleanNode) =>
+            val left: Boolean = evaluateBooleanNode(b1)
+            val right: Boolean = evaluateBooleanNode(b2)
+            op match {
+                case "==" => left == right
+                case "!=" => left != right
+                case "<=" => left <= right
+                case ">=" => left >= right
+                case "<"  => left < right
+                case ">"  => left > right
+            }
+        case ComparisonNode(n1: NumberNode, op, n2: NumberNode) =>
+            (evaluateNumberNode(n1), evaluateNumberNode(n2)) match {
+                case (Some(left), Some(right)) => op match {
+                    case "<"  => left < right && !nearlyEqual(left, right)
+                    case ">"  => left > right && !nearlyEqual(left, right)
+                    case "<=" => left < right || nearlyEqual(left, right)
+                    case ">=" => left > right || nearlyEqual(left, right)
+                    case "==" => nearlyEqual(left, right)
+                    case "!=" => !nearlyEqual(left, right)
                 }
-                val r = right match {
-                    case Left(n)  => Some(ArithmeticParser.eval(n))
-                    case Right(n) => evaluate(n)
-                }
-                (l, r) match {
-                    case (Some(l), Some(r)) => op match {
-                        case "<"  => l < r && !nearlyEqual(l, r)
-                        case ">"  => l > r && !nearlyEqual(l, r)
-                        case "<=" => l < r || nearlyEqual(l, r)
-                        case ">=" => l > r || nearlyEqual(l, r)
-                        case "==" => nearlyEqual(l, r)
-                        case "!=" => !nearlyEqual(l, r)
-                    }
-                    case _ => false
-                }
-            case FunctionLeaf(f, params) => f match {
+            }
+        case ComparisonNode(s1: StringNode, op, s2: StringNode) =>
+            def evaluate(n: StringNode): String = n match {
+                case StringLeaf(s)                       => s
+                case StringFunction("toLowerCase", node) => evaluate(node).toLowerCase
+                case StringFunction("toUpperCase", node) => evaluate(node).toUpperCase
+            }
+
+            op match {
+                case "<"  => evaluate(s1) < evaluate(s2)
+                case ">"  => evaluate(s1) > evaluate(s2)
+                case "<=" => evaluate(s1) <= evaluate(s2)
+                case ">=" => evaluate(s1) >= evaluate(s2)
+                case "==" => evaluate(s1) == evaluate(s2)
+                case "!=" => evaluate(s1) != evaluate(s2)
+            }
+        case ComparisonNode(_, "!=", _) => true
+        case ComparisonNode(_, _, _)    => false
+        case BooleanFunction(function, nodes) =>
+            val params = nodes.map { evaluateStringNode(_) }
+            function match {
                 case "containsFields" => params.forall { path =>
                     // Get the path and evaluate it against the datum
                     fieldParser(datum, path).isDefined
@@ -296,7 +357,8 @@ object PredicateParser {
                 }
                 case "isEmpty" => datum.isEmpty
             }
-        }
-        eval(expr.parse(str).get.value)
     }
+
+    def apply(str: String, datum: Map[String, Any]): Boolean =
+        evaluateBooleanNode(expr.parse(str).get.value)(datum)
 }
