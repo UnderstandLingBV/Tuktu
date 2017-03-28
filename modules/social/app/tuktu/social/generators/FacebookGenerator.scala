@@ -65,7 +65,7 @@ case class CommentProcessing()
 /**
  * Gets all posts from a facebook page
  */
-class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, updateTime: Long, fields: String, getComments: Boolean, runOnce: Boolean, flushInterval: Int, commentInterval: Int) extends Actor with ActorLogging {
+class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookClient, updateTime: Long, fields: String, getComments: Boolean, runOnce: Boolean, flushInterval: Int, commentInterval: Int, commentFrequency: Int) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Set up the author fetching actor
@@ -106,10 +106,22 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
             }
             
             // Forward them
-            commentsActor.get ! new FBCommentDataRequest(eligiblePosts toMap)
+            commentsActor.get ! new FBCommentDataRequest(eligiblePosts map {p =>
+                p._1 -> (p._2 - "tuktu_fetch_count")
+            } toMap)
             
-            // Remove them all
-            processedPosts --= eligiblePosts.keys
+            // Update posts to repeat fetching comments
+            eligiblePosts.foreach {post =>
+                // Check if this one contains our counter
+                val newPost = (post._2 \ "tuktu_fetch_count").asOpt[Int] match {
+                    case None => post._2 ++ Json.obj("tuktu_fetch_count" -> 1)
+                    case Some(fc) => post._2 ++ Json.obj("tuktu_fetch_count" -> (fc + 1))
+                }
+                // Check if it's within the boundary
+                if ((newPost \ "tuktu_fetch_count").as[Int] >= commentFrequency)
+                    processedPosts -= post._1
+                else processedPosts += post._1 -> newPost
+            }
         }
         case fa: FlushAuthors => {
             // Check if there is even data
@@ -392,6 +404,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             // Get flush and comment intervals
             val flushInterval = (config \ "flush_interval").asOpt[Int].getOrElse(60)
             val commentInterval = (config \ "comment_interval").asOpt[Int].getOrElse(3600)
+            val commentFrequency = (config \ "comment_frequency").asOpt[Int].getOrElse(5)
             
             // Set up RestFB
             val fbClient = new DefaultFacebookClient(aToken, Version.VERSION_2_8)
@@ -423,7 +436,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             if (startTime == None && endTime == None) startTime = Some(now)
 
             // Merge URLs and send to periodic actor
-            pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime, fields, getComments, runOnce, flushInterval, commentInterval))
+            pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime, fields, getComments, runOnce, flushInterval, commentInterval, commentFrequency))
             pollerActor ! new FBDataRequest(users.toList, startTime, endTime)
         }
         case data: ResponsePacket => channel.push(DataPacket(List(Map(resultName -> data.json))))

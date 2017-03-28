@@ -157,6 +157,13 @@
 					"type": "int",
 					"required": false,
 					"default": 3600
+				},
+				{
+					"name": "comment_frequency",
+					"description": "This is the amount of times to wait comment interval seconds for before fetching more comments. If comment interval is set to 3600 and comment frequency is 3, then for 3 hours long, every hour comments will be fetched.",
+					"type": "int",
+					"required": false,
+					"default": 5
 				}
 			]
 		}
