@@ -42,7 +42,7 @@ object ArithmeticParser {
     // List of allowed functions
     val allowedFunctions = List("count", "distinct", "avg", "median", "sum", "max", "min", "stdev")
     // All Tuktu-defined arithmetic functions
-    val functions: P[FunctionLeaf] = P(StringIn(allowedFunctions: _*).! ~ "(" ~ PredicateParser.stringNode ~ ")")
+    val functions: P[FunctionLeaf] = P(StringIn(allowedFunctions: _*).! ~ "(" ~ PredicateParser.parameter ~ ")")
         .map { case (func, param) => FunctionLeaf(func, PredicateParser.evaluateStringNode(param)) }
 
     // Operations
@@ -176,15 +176,16 @@ object PredicateParser {
         P(nullString | stringLeaf)
     }
     val allowedStringFunctions: List[String] = List("toLowerCase", "toUpperCase")
-    val stringFunctions: P[StringFunction] = {
-        val nonFunctionStringFunctions: P[StringFunction] = P(StringIn(allowedStringFunctions: _*).! ~ "(" ~ nonFunctionParameter ~ ")")
-            .map { case (function, parameter) => StringFunction(function, parameter) }
-        P(StringIn(allowedStringFunctions: _*).! ~ "(" ~ (nonFunctionParameter | nonFunctionStringFunctions) ~ ")")
-            .map { case (function, parameter) => StringFunction(function, parameter) }
-    }
+    val stringFunctions: P[StringFunction] = P((StringIn(allowedStringFunctions: _*).! ~ "(" ~ stringFunctions ~ ")") | (StringIn(allowedStringFunctions: _*).! ~ "(" ~ nonFunctionParameter ~ ")"))
+        .map { case (function, parameter) => StringFunction(function, parameter) }
+
     val stringNode: P[StringNode] = {
         val stringNode: P[StringNode] = P(stringFunctions | stringLeaf)
         P(stringNode | ("(" ~ stringNode ~ ")"))
+    }
+    val parameter: P[StringNode] = {
+        val noBrackets: P[StringNode] = P(stringFunctions | nonFunctionParameter)
+        P(noBrackets | ("(" ~ noBrackets ~ ")"))
     }
 
     /**
@@ -194,7 +195,7 @@ object PredicateParser {
     val arithNode: P[NumberNode] = {
         val arithLeaf: P[ArithmeticLeaf] = ArithmeticParser.addSub.map { node => ArithmeticLeaf(node) }
         val allowedArithmeticFunctions: List[String] = List("size")
-        val arithmeticFunctions: P[ArithmeticFunction] = P(StringIn(allowedArithmeticFunctions: _*).! ~ "(" ~ stringNode ~ ")")
+        val arithmeticFunctions: P[ArithmeticFunction] = P(StringIn(allowedArithmeticFunctions: _*).! ~ "(" ~ parameter ~ ")")
             .map { case (function, parameter) => ArithmeticFunction(function, parameter) }
         val arithNode: P[NumberNode] = P(arithmeticFunctions | arithLeaf)
         P(arithNode | ("(" ~ arithNode ~ ")"))
@@ -208,7 +209,7 @@ object PredicateParser {
 
     // Functions
     val allowedFunctions: List[String] = List("containsFields", "isNumeric", "isNull", "isJSON", "containsSubstring", "isEmptyValue")
-    val functions: P[BooleanFunction] = P(((StringIn(allowedFunctions: _*).! ~ "(" ~ (stringNode ~ ("," ~ stringNode).rep) ~ ")")))
+    val functions: P[BooleanFunction] = P(((StringIn(allowedFunctions: _*).! ~ "(" ~ (parameter ~ ("," ~ parameter).rep) ~ ")")))
         .map { case (function, (head, tail)) => BooleanFunction(function, head +: tail) }
 
     val allowedParameterfreeFunctions: List[String] = List("isEmpty")
@@ -293,19 +294,15 @@ object PredicateParser {
                 }
             }
         case ComparisonNode(s1: StringNode, op, s2: StringNode) =>
-            def evaluate(n: StringNode): String = n match {
-                case StringLeaf(s)                       => s
-                case StringFunction("toLowerCase", node) => evaluate(node).toLowerCase
-                case StringFunction("toUpperCase", node) => evaluate(node).toUpperCase
-            }
-
+            val left = evaluateStringNode(s1)
+            val right = evaluateStringNode(s2)
             op match {
-                case "<"  => evaluate(s1) < evaluate(s2)
-                case ">"  => evaluate(s1) > evaluate(s2)
-                case "<=" => evaluate(s1) <= evaluate(s2)
-                case ">=" => evaluate(s1) >= evaluate(s2)
-                case "==" => evaluate(s1) == evaluate(s2)
-                case "!=" => evaluate(s1) != evaluate(s2)
+                case "<"  => left < right
+                case ">"  => left > right
+                case "<=" => left <= right
+                case ">=" => left >= right
+                case "==" => left == right
+                case "!=" => left != right
             }
         case ComparisonNode(_, "!=", _) => true
         case ComparisonNode(_, _, _)    => false

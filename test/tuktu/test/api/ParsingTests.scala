@@ -2,7 +2,7 @@ package tuktu.test.api
 
 import play.api.libs.json._
 import tuktu.api.Parsing._
-import scala.util.Random
+import scala.util.{ Random, Try }
 import org.scalatest._
 import org.scalatestplus.play.PlaySpec
 import Matchers._
@@ -157,6 +157,9 @@ class ParsingTests extends PlaySpec {
         "support null" in {
             PredicateParser("\"ABC\" == null", datum) should be(false)
             PredicateParser("null != null", datum) should be(false)
+            Try { PredicateParser.expr.parse("containsSubstring(null, null, null)") }.isSuccess should be(true)
+            Try { PredicateParser.expr.parse("size(null) == 17") }.isSuccess should be(true)
+            Try { PredicateParser.expr.parse("isNull(toLowerCase(null))") }.isSuccess should be(true)
         }
 
         "support operator priority" in {
@@ -177,7 +180,7 @@ class ParsingTests extends PlaySpec {
         "support string functions" in {
             PredicateParser("toUpperCase(\"abc\") == \"ABC\"", datum) should be(true)
             PredicateParser("toLowerCase(\"ABC\") == \"abc\"", datum) should be(true)
-            PredicateParser("toLowerCase(toUpperCase(\"AbC\")) == \"abc\"", datum) should be(true)
+            PredicateParser("toLowerCase(toLowerCase(toUpperCase(\"AbC\"))) == \"abc\"", datum) should be(true)
         }
 
         "support arithmetic functions" in {
