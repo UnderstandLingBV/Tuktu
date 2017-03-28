@@ -1,27 +1,21 @@
 package controllers
 
-import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.{ Files, Paths }
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{ Duration, FiniteDuration }
 
-import akka.actor.ActorSelection.toScala
+import play.api.cache.Cache
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
-import tuktu.api.DispatchRequest
+import play.api.libs.json.{ Json, JsObject }
 
+import tuktu.api.DispatchRequest
 import tuktu.api.scheduler._
-import play.api.libs.json.JsObject
-import play.api.cache.Cache
 
 /**
  * Load flows from an autostart file and either immediately start running them or
  * schedule them based on the cron settings.
- *
  */
 object AutoStart {
     // name of the config file
@@ -29,7 +23,7 @@ object AutoStart {
 
     if (Files.isRegularFile(path)) {
         val cfg = Json.parse(Files.readAllBytes(path))
-        
+
         // Cache
         Cache.set("tuktu.scheduler.autostart", (cfg \ "autostart").as[List[JsObject]])
 
@@ -41,18 +35,16 @@ object AutoStart {
             val delay = (job \ "delay").asOpt[String]
 
             delay match {
-                case Some(d) => {
+                case Some(d) =>
                     // A delayed start is defined
                     Akka.system.actorSelection("user/TuktuScheduler") ! new DelayedScheduler(id, Duration(d).asInstanceOf[FiniteDuration], dispatchRequest)
-                }
-                case None => {
+                case None =>
                     cron match {
                         // A cron schedule is defined, start cron job
                         case Some(c) => Akka.system.actorSelection("user/TuktuScheduler") ! new CronScheduler(id, c, dispatchRequest)
                         // Neither delayed nor cron schedule is defined, start immediately
                         case None    => Akka.system.actorSelection("user/TuktuDispatcher") ! dispatchRequest
                     }
-                }
             }
         }
     }

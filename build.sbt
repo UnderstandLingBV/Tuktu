@@ -42,7 +42,7 @@ lazy val apiDependencies = Seq(
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "org.apache.hadoop" % "hadoop-client" % "2.7.3" excludeAll(ExclusionRule(organization = "org.slf4j")),
     "com.netaporter" %% "scala-uri" % "0.4.7",
-    "com.enragedginger" %% "akka-quartz-scheduler" % "1.3.0-akka-2.3.x",
+    "com.enragedginger" %% "akka-quartz-scheduler" % "1.4.0-akka-2.3.x",
     "org.apache.commons" % "commons-collections4" % "4.1",
     "com.lihaoyi" %% "fastparse" % "0.4.1"
 )
