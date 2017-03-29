@@ -413,31 +413,35 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val filters = Common.getFilters(config)
             val users = filters("userids")
                 .asInstanceOf[Array[String]].map(_ + "/feed")
-
-            // Check period, if given
-            val interval = (config \ "interval").asOpt[JsObject]
-            var (startTime: Option[Long], endTime: Option[Long]) = interval match {
-                case Some(intvl) => {
-                    ((intvl \ "start").asOpt[Long],
-                        (intvl \ "end").asOpt[Long])
+                
+            // Stop if there are no users
+            if (users.size == 0) self ! new StopPacket
+            else {
+                // Check period, if given
+                val interval = (config \ "interval").asOpt[JsObject]
+                var (startTime: Option[Long], endTime: Option[Long]) = interval match {
+                    case Some(intvl) => {
+                        ((intvl \ "start").asOpt[Long],
+                            (intvl \ "end").asOpt[Long])
+                    }
+                    case None => (None, None)
                 }
-                case None => (None, None)
+    
+                /**
+                 * See what we need to do.
+                 * - If only a start-time is given, we need to perpetually fetch from that time on.
+                 * - If only an end-time is given, we need to fetch everything until that time and then stop. If the end-time
+                 *       is in the future, we need to continue to watch FB until the end-time passes.
+                 * - If both are given we need to fetch until the end-time but not go back beyond the start-time.
+                 * - If none are given, we start to perpetually fetch from now on.
+                 */
+                val now = System.currentTimeMillis / 1000
+                if (startTime == None && endTime == None) startTime = Some(now)
+    
+                // Merge URLs and send to periodic actor
+                pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime, fields, getComments, runOnce, flushInterval, commentInterval, commentFrequency))
+                pollerActor ! new FBDataRequest(users.toList, startTime, endTime)
             }
-
-            /**
-             * See what we need to do.
-             * - If only a start-time is given, we need to perpetually fetch from that time on.
-             * - If only an end-time is given, we need to fetch everything until that time and then stop. If the end-time
-             *       is in the future, we need to continue to watch FB until the end-time passes.
-             * - If both are given we need to fetch until the end-time but not go back beyond the start-time.
-             * - If none are given, we start to perpetually fetch from now on.
-             */
-            val now = System.currentTimeMillis / 1000
-            if (startTime == None && endTime == None) startTime = Some(now)
-
-            // Merge URLs and send to periodic actor
-            pollerActor = Akka.system.actorOf(Props(classOf[AsyncFacebookCollector], self, fbClient, updateTime, fields, getComments, runOnce, flushInterval, commentInterval, commentFrequency))
-            pollerActor ! new FBDataRequest(users.toList, startTime, endTime)
         }
         case data: ResponsePacket => channel.push(DataPacket(List(Map(resultName -> data.json))))
     }
