@@ -411,7 +411,11 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
 
     override def initialize(config: JsObject) {
         expression = (config \ "expression").as[String]
-        default = (config \ "default").asOpt[String].map { _.toLowerCase.replaceAll("[^a-z]", "").toBoolean }
+        default = (config \ "default") match {
+            case b: JsBoolean => (config \ "default").asOpt[Boolean]
+            case s: JsString => (config \ "default").asOpt[String].map { _.toLowerCase.replaceAll("[^a-z]", "").toBoolean }
+            case _ => None
+        }
         expressionType = (config \ "type").as[String]
         batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
         batchMinCount = (config \ "batch_min_count").asOpt[Int].getOrElse(1)
