@@ -1,0 +1,61 @@
+package tuktu.nlp.models
+
+import tuktu.ml.models.BaseModel
+import java.io.IOException
+import tuktu.api.file
+import java.io.File
+import fasttext.FastText
+import scala.collection.JavaConversions._
+import java.io.FileOutputStream
+import java.io.BufferedOutputStream
+import fasttext.Args
+
+class FastTextWrapper(lr: Double, lrUpdateRate: Int, dim: Int, ws: Int, epoch: Int, minCount: Int, minCountLabel: Int,
+        neg: Int, wordNgrams: Int, lossName: String, modelName: String, bucket: Int, minn: Int, maxn: Int, thread: Int, t: Double,
+        label: String, pretrainedVectors: String) extends BaseModel {
+    // Set up fastText instance to use throughout this class
+    val fasttext = new FastText()
+    // Set up arguments
+    val args = new Args
+	args.lr = lr
+	args.lrUpdateRate = lrUpdateRate
+	args.dim = dim
+	args.ws = ws
+	args.epoch = epoch
+	args.minCount = minCount
+	args.minCountLabel = minCountLabel
+	args.neg = neg
+	args.wordNgrams = wordNgrams
+	args.loss = lossName match {
+        case "hs" => Args.loss_name.hs
+        case "softmax" => Args.loss_name.softmax
+        case _ => Args.loss_name.ns
+    }
+    args.model = modelName match {
+        case "sup" => Args.model_name.sup
+        case "cbow" => Args.model_name.cbow
+        case _ => Args.model_name.sg
+    }
+	args.bucket = bucket
+	args.minn = minn
+	args.maxn = maxn
+	args.thread = thread
+	args.t = t
+	args.label = label
+	args.verbose = 0
+    args.pretrainedVectors = pretrainedVectors
+    
+    def predict(tokens: Seq[String]) =
+		fasttext.predict(tokens.toArray, 1).toList.map {p =>
+		    (p.getValue, p.getKey)
+		}.head
+		
+	override def serialize(filename: String) = {
+		val saveArgs = fasttext.getArgs
+		saveArgs.output = filename
+		fasttext.setArgs(saveArgs)
+        fasttext.saveModel
+    }
+		
+    override def deserialize(filename: String) = fasttext.loadModel(filename)
+}

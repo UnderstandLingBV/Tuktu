@@ -1,0 +1,162 @@
+{
+	"name": "FastText Processor",
+	"description": "Loads pre-trained fastText models and uses them to predict the class of a (tokenized) sentence.",
+	"class": "tuktu.nlp.processors.FastTextProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name_field",
+					"description": "The datapacket field containing the name of the model",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tokens_field",
+					"description": "The field containing the tokens that form the sentence to be classified (can be String or Seq[String])",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "learn_rate",
+					"description": "The learning rate",
+					"type": "double",
+					"required": false,
+					"default": 0.05
+				},
+				{
+					"name": "learn_rate_update_rate",
+					"description": "Updates for the learning rate ",
+					"type": "int",
+					"required": false,
+					"default": 100
+				},
+				{
+					"name": "vector_size",
+					"description": "Size of the word vectors",
+					"type": "int",
+					"required": false,
+					"default": 100
+				},
+				{
+					"name": "window_size",
+					"description": "Size of the context window",
+					"type": "int",
+					"required": false,
+					"default": 5
+				},
+				{
+					"name": "epochs",
+					"description": "The number of epochs",
+					"type": "int",
+					"required": false,
+					"default": 5
+				},
+				{
+					"name": "min_count",
+					"description": "The minimum occurrence count of a word",
+					"type": "int",
+					"required": false,
+					"default": 5
+				},
+				{
+					"name": "min_count_label",
+					"description": "The minimum occurrence count of a label",
+					"type": "int",
+					"required": false,
+					"default": 0
+				},
+				{
+					"name": "negative",
+					"description": "Number of negatives sampled",
+					"type": "int",
+					"required": false,
+					"default": 5
+				},
+				{
+					"name": "word_n_grams",
+					"description": "Max length of the word N-grams",
+					"type": "int",
+					"required": false,
+					"default": 1
+				},
+				{
+					"name": "loss_name",
+					"description": "Loss function name (ns, hs, softmax)",
+					"type": "string",
+					"required": false,
+					"default": "ns"
+				},
+				{
+					"name": "model_name",
+					"description": "Name of the model to use (cbow, sg, sup)",
+					"type": "string",
+					"required": false,
+					"default": "sg"
+				},
+				{
+					"name": "buckets",
+					"description": "Number of buckets to use",
+					"type": "int",
+					"required": false,
+					"default": 2000000
+				},
+				{
+					"name": "min_n_gram",
+					"description": "Minimum length of the character N-grams",
+					"type": "int",
+					"required": false,
+					"default": 3
+				},
+				{
+					"name": "max_n_gram",
+					"description": "Maximum length of the character N-grams",
+					"type": "int",
+					"required": false,
+					"default": 6
+				},
+				{
+					"name": "threads",
+					"description": "The number of threads to use",
+					"type": "int",
+					"required": false,
+					"default": 1
+				},
+				{
+					"name": "sampling_threshold",
+					"description": "The sampling threshold",
+					"type": "double",
+					"required": false,
+					"default": 1e-4
+				},
+				{
+					"name": "label_prefix",
+					"description": "The prefix used for labels",
+					"type": "string",
+					"required": false,
+					"default": "__label__"
+				},
+				{
+					"name": "pretrained_vectors_file",
+					"description": "The filename that contains the pretrained word vectors, if any. Leave blank for none",
+					"type": "string",
+					"required": false,
+					"default": ""
+				}
+			]
+		}
+	]
+}
