@@ -53,8 +53,8 @@ lazy val nlpDependencies = Seq(
     "com.optimaize.languagedetector" % "language-detector" % "0.6",
     "org.apache.opennlp" % "opennlp-tools" % "1.5.3",
     "com.github.rholder" % "snowball-stemmer" % "1.3.0.581.1",
-    "com.vdurmont" % "emoji-java" % "3.1.3",
-    "fasttext" % "fasttext" % "0.0.1-SNAPSHOT" // Run mvn install from https://github.com/ivanhk/fastText_java
+    "com.vdurmont" % "emoji-java" % "3.1.3"
+    //"fasttext" % "fasttext" % "0.0.1-SNAPSHOT" // Run mvn install from https://github.com/ivanhk/fastText_java
 )
 
 lazy val csvDependencies = Seq(
