@@ -31,6 +31,13 @@
 					"required": true
 				},
 				{
+					"name": "event_value",
+					"description": "The value that should be assigned to the event (ie. 'true').",
+					"type": "string",
+					"required": false,
+					"default": "true"
+				},
+				{
 					"name": "flow_name",
 					"description": "The name of the flow where the data triggered by this event should be sent to.",
 					"type": "string",

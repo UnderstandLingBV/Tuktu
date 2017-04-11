@@ -15,11 +15,13 @@ class EventCollectorProcessor(resultName: String) extends BaseJsProcessor(result
     var selector: String = _
     var eventName: String = _
     var flowName: String = _
+    var eventValue: String = _
 
     override def initialize(config: JsObject) {
         selector = (config \ "selector").as[String]
         eventName = (config \ "event_name").as[String]
         flowName = (config \ "flow_name").as[String]
+        eventValue = (config \ "event_value").asOpt[String].getOrElse("true")
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -28,7 +30,8 @@ class EventCollectorProcessor(resultName: String) extends BaseJsProcessor(result
             utils.evaluateTuktuString(eventName, datum),
             {
                 val flow = utils.evaluateTuktuString(flowName, datum)
-                "function(){tuktuvars." + resultName + "=true;tuktuFlow('" + flow + "');}"
+                val value = utils.evaluateTuktuString(eventValue, datum)
+                "function(){tuktuvars." + resultName + "="+value+";tuktuFlow('" + flow + "');}"
             }
         ))
     })
