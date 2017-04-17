@@ -19,8 +19,8 @@
 			"required": true,
 			"parameters": [
 				{
-					"name": "model_name_field",
-					"description": "The datapacket field containing the name of the model",
+					"name": "model_name",
+					"description": "The name of the model to load from disk",
 					"type": "string",
 					"required": true
 				},
@@ -101,8 +101,8 @@
 					"default": "ns"
 				},
 				{
-					"name": "model_name",
-					"description": "Name of the model to use (cbow, sg, sup)",
+					"name": "ft_model_name",
+					"description": "Name of the fastText model to use (cbow, sg, sup)",
 					"type": "string",
 					"required": false,
 					"default": "sg"

@@ -9,6 +9,12 @@ import scala.collection.JavaConversions._
 import java.io.FileOutputStream
 import java.io.BufferedOutputStream
 import fasttext.Args
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.LoadingCache
+import com.google.common.cache.CacheLoader
+import play.api.Play
+import java.util.concurrent.TimeUnit
+
 
 class FastTextWrapper(lr: Double, lrUpdateRate: Int, dim: Int, ws: Int, epoch: Int, minCount: Int, minCountLabel: Int,
         neg: Int, wordNgrams: Int, lossName: String, modelName: String, bucket: Int, minn: Int, maxn: Int, thread: Int, t: Double,
@@ -58,4 +64,22 @@ class FastTextWrapper(lr: Double, lrUpdateRate: Int, dim: Int, ws: Int, epoch: I
     }
 		
     override def deserialize(filename: String) = fasttext.loadModel(filename)
+}
+
+object FastTextCache {
+    // Keep an eviction cache of models to make sure we don't load too many into memory at once
+    val models: LoadingCache[String, FastTextWrapper] = CacheBuilder.newBuilder()
+        .maximumSize(Play.current.configuration.getLong("tuktu.nlp.fasttext.max_cache_size").getOrElse(4L))
+        .expireAfterAccess(Play.current.configuration.getLong("tuktu.nlp.fasttext.expiration_duration").getOrElse(10L), TimeUnit.MINUTES)
+        .build(
+            new CacheLoader[String, FastTextWrapper]() {
+                def load(modelName: String) = {
+                    val model = new FastTextWrapper(0.05, 100 , 100, 5, 5, 5, 0, 5, 1, "ns", "sg", 2000000, 3, 6 , 1, 1e-4, "__label__", "")
+                    model.deserialize(modelName)
+                    model
+                }
+            }
+        )
+        
+    def getModel(modelName: String) = models.get(modelName)
 }
