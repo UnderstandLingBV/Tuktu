@@ -154,16 +154,20 @@ class CSVWriterProcessor(resultName: String) extends BaseProcessor(resultName) {
                 writers(evaluated_fileName).writeNext(headers(evaluated_fileName))
             }
 
-            val values = headers(evaluated_fileName).map(header =>
-                // JsStrings are a bit annoying here, because toString includes surrounding quotes "" for them
-                if (datum(header).isInstanceOf[JsString])
-                    datum(header).asInstanceOf[JsString].value
-                else
-                    datum(header).toString)
-
+            val values = headers(evaluated_fileName).map(header => {
+                datum.get(header) match {
+                    case None => ""
+                    case Some(any) => {
+                        // JsStrings are a bit annoying here, because toString includes surrounding quotes "" for them
+                        if (any.isInstanceOf[JsString])
+                            any.asInstanceOf[JsString].value
+                        else
+                            any.toString
+                    }
+                }
+            })
             writers(evaluated_fileName).writeNext(values)
         }
-
         Future { data }
     }) compose Enumeratee.onEOF(() => {
         for (writer <- writers) {
