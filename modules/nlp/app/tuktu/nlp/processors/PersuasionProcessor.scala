@@ -42,7 +42,16 @@ class PersuasionProcessor(resultName: String) extends BaseProcessor(resultName) 
                 case t: Any => t.toString.split(" ")
             }
             // We also require emotions
-            val emotionValues = datum(emotions).asInstanceOf[Map[String, Double]]
+            val emotionValues = datum(emotions) match {
+                case em: Map[String, Double] => em // RBEM
+                 // FastText
+                case s: String if s == "happiness" => Map("joySadness" -> 1.0, "trustDisgust" -> 0.0, "fearAnger" -> 0.0, "surpriseAnticipation" -> 0.0)
+                case s: String if s == "sadness" => Map("joySadness" -> -1.0, "trustDisgust" -> 0.0, "fearAnger" -> 0.0, "surpriseAnticipation" -> 0.0)
+                case s: String if s == "fear" => Map("joySadness" -> 0.0, "trustDisgust" -> 0.0, "fearAnger" -> 1.0, "surpriseAnticipation" -> 0.0)
+                case s: String if s == "anger" => Map("joySadness" -> 0.0, "trustDisgust" -> 0.0, "fearAnger" -> -1.0, "surpriseAnticipation" -> 0.0)
+                case s: String if s == "disgust" => Map("joySadness" -> 0.0, "trustDisgust" -> -1.0, "fearAnger" -> 0.0, "surpriseAnticipation" -> 0.0)
+                case s: String if s == "surprise" => Map("joySadness" -> 0.0, "trustDisgust" -> 0.0, "fearAnger" -> 0.0, "surpriseAnticipation" -> 1.0)
+            }
             
             // Run the persuasion algorithm
             datum + (resultName -> Rhetorics.messagePersuasionScore(language, tkns.toList, posTags.toList,
