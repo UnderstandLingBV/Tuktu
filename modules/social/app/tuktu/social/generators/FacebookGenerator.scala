@@ -385,7 +385,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
     
     override def _receive = {
         case sp: StopPacket => {
-            pollerActor ! new StopPacket
+            if (pollerActor != null) pollerActor ! new StopPacket
             cleanup
         }
         case config: JsValue => {
