@@ -218,7 +218,7 @@ class BaseProcessorTestSuite extends PlaySpec {
 
             //Expected output
             val output = List(DataPacket(List(
-                Map("key1" -> "val2", "key2" -> "val2"))))
+                Map("key1" -> "val1", "key2" -> "val2", "result" -> "val2"))))
 
             new BaseProcessorTest()(proc, config, input, output)
         }

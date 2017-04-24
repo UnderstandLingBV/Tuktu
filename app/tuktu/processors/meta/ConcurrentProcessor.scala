@@ -26,14 +26,22 @@ import akka.routing.RoundRobinPool
 import akka.actor.Address
 import akka.routing.Broadcast
 import scala.util.hashing.MurmurHash3
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Actor that deals with parallel processing
  */
-class ConcurrentProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) extends Actor with ActorLogging {
+class ConcurrentProcessorActor(start: String, processorMap: Map[String, ProcessorDefinition]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
+    
+    // Build the processor
+    val (idString, processor) = {
+            val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Concurrent Processor - Unknown", true)
+            (pipeline._1, pipeline._2.head)
+    }
 
     /**
      * We must somehow keep track of the sending actor of each data packet. This state is kept within this helper class that
@@ -67,23 +75,47 @@ class ConcurrentProcessorActor(processor: Enumeratee[DataPacket, DataPacket]) ex
 /**
  * Actor that is always alive and truly async
  */
-class IntermediateActor(genActor: ActorRef, node: ClusterNode, instanceCount: Int, processor: Enumeratee[DataPacket, DataPacket]) extends Actor with ActorLogging {
+class IntermediateActor(genActor: ActorRef, node: ClusterNode, instanceCount: Int,
+        start: String, processorMap: Map[String, ProcessorDefinition]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     
     // Set up #instanceCount actors across the nodes to use
     val router = Akka.system.actorOf(RemoteRouterConfig(RoundRobinPool(instanceCount),
             Seq(Address("akka.tcp", "application", node.host, node.akkaPort))
-        ).props(Props(classOf[ConcurrentProcessorActor], processor)))
+        ).props(Props(classOf[ConcurrentProcessorActor], start, processorMap)))
+    
+    // Keep track of sent DPs
+    var sentDPs = new AtomicInteger(0)
+    var gotStopPacket = new AtomicBoolean(false)
             
     def receive() = { 
         case dp: DataPacket => {
-            (router ? dp).map {
-                case resultDp: DataPacket => genActor ! resultDp
+            sentDPs.incrementAndGet()
+            println("Forwarding dp: " + sentDPs.get)
+            val fut = (router ? dp)
+            fut.onSuccess {
+                case resultDp: DataPacket => {
+                    genActor ! resultDp
+                    sentDPs.decrementAndGet()
+                    println("Successfully forwarded: " + sentDPs.get)
+                    if (sentDPs.get == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
+                }
+            }
+            fut.onFailure {
+                case _ => {
+                    println("Failed forwarded: " + sentDPs.get)
+                    sentDPs.decrementAndGet()
+                    if (sentDPs.get == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
+                }
             }
         }
         case sp: StopPacket => {
-            router ! Broadcast(sp)
-            genActor ! new StopPacket
+            if (sentDPs.get > 0) gotStopPacket.set(true)
+            else {
+                println("Got a stop packet from " + sender + " -- " + self)
+                router ! Broadcast(sp)
+                genActor ! new StopPacket
+            }
         }
     }
 }
@@ -137,16 +169,10 @@ class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends Buffer
             // Return map
             processorId -> procDef
         }).toMap
-
-        // Build the processor pipeline for this generator
-        val (idString, processor) = {
-            val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Concurrent Processor - Unknown", true)
-            (pipeline._1, pipeline._2.head)
-        }
         
         // Make all the actors
         intermediateActors = for (node <- nodes) yield
-            Akka.system.actorOf(Props(classOf[IntermediateActor], genActor, node._2, instanceCount, processor))
+            Akka.system.actorOf(Props(classOf[IntermediateActor], genActor, node._2, instanceCount, start, processorMap))
     }
     
     /**
