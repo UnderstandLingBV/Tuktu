@@ -219,7 +219,7 @@ class ReplaceProcessor(resultName: String) extends BaseProcessor(resultName) {
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        for (datum <- data) yield datum + (field -> replaceHelper(datum(field).toString, 0))
+        for (datum <- data) yield datum + (resultName -> replaceHelper(datum(field).toString, 0))
     })
 }
 
