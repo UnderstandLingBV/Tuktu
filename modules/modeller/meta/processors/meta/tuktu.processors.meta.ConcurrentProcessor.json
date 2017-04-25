@@ -26,9 +26,9 @@
 				},
 				{
 					"name": "nodes",
-					"description": "The nodes to use.",
+					"description": "The nodes to use. If left empty, all nodes are used.",
 					"type": "array",
-					"required": true,
+					"required": false,
 					"parameters": [
 						{
 							"name": "",
@@ -37,6 +37,13 @@
 							"required": true
 						}
 					]
+				},
+				{
+					"name": "ignore_results",
+					"description": "If set to true, the concurrent processor should be the last processor in its branch. Results will not be fetched back from remote nodes, thus saving latency. Always leave to false unless this processor is the last.",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				},
 				{
 					"name": "start",
@@ -53,6 +60,20 @@
 						{
 							"name": "",
 							"description": "A field to anchor on.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "anchor_domain",
+					"description": "If you are anchoring on a single field, you can specify the (ALL) values that will occur. The processor will then forward round-robin based on the value occurrence rather than on a hashing function to ensure better fairness.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"description": "A value that the single anchor field can take.",
 							"type": "string",
 							"required": true
 						}

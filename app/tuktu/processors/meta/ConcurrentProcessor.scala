@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Actor that deals with parallel processing
  */
-class ConcurrentProcessorActor(start: String, processorMap: Map[String, ProcessorDefinition]) extends Actor with ActorLogging {
+class ConcurrentProcessorActor(start: String, processorMap: Map[String, ProcessorDefinition], ignoreResults: Boolean) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
@@ -56,18 +56,21 @@ class ConcurrentProcessorActor(start: String, processorMap: Map[String, Processo
 
         def runProcessor() = Enumerator(dp) |>> (processor compose sendBackEnum compose utils.logEnumeratee("")) &>> sinkIteratee
     }
+    
+    // If we don't need to send back, just forward
+    if (ignoreResults) enumerator |>> processor &>> sinkIteratee
 
     def receive() = {
         case sp: StopPacket => {
             self ! PoisonPill
         }
         case dp: DataPacket => {
-            // Push to all async processors
-            channel.push(dp)
-
             // Send through our enumeratee
-            val p = new senderReturningProcessor(sender, dp)
-            p.runProcessor()
+            if (ignoreResults) channel.push(dp)
+            else {
+                val p = new senderReturningProcessor(sender, dp)
+                p.runProcessor()
+            }
         }
     }
 }
@@ -76,7 +79,8 @@ class ConcurrentProcessorActor(start: String, processorMap: Map[String, Processo
  * Actor that is always alive and truly async
  */
 class IntermediateActor(genActor: ActorRef, nodes: List[(String, ClusterNode)], instanceCount: Int,
-        start: String, processorMap: Map[String, ProcessorDefinition], anchorFields: Option[List[String]]) extends Actor with ActorLogging {
+        start: String, processorMap: Map[String, ProcessorDefinition], anchorFields: Option[List[String]],
+        anchorDomain: List[String], ignoreResults: Boolean) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     var actorOffset = 0
     
@@ -84,7 +88,7 @@ class IntermediateActor(genActor: ActorRef, nodes: List[(String, ClusterNode)], 
     val routers = nodes.map { node =>
         Akka.system.actorOf(RemoteRouterConfig(RoundRobinPool(instanceCount),
             Seq(Address("akka.tcp", "application", node._2.host, node._2.akkaPort))
-        ).props(Props(classOf[ConcurrentProcessorActor], start, processorMap)))
+        ).props(Props(classOf[ConcurrentProcessorActor], start, processorMap, ignoreResults)))
     }
     
     /**
@@ -101,36 +105,63 @@ class IntermediateActor(genActor: ActorRef, nodes: List[(String, ClusterNode)], 
             
     def receive() = { 
         case datum: Map[String, Any] => {
-            sentDPs.incrementAndGet
-            // Determine where to send it to
-            val fut = anchorFields match {
-                case Some(aFields) => {
-                    val offset = anchorToActorHasher(datum, aFields, routers.size)
-                    routers(offset) ? DataPacket(List(datum))
+            if (ignoreResults) {
+                // Just forward, we don't care about the response
+                anchorFields match {
+                    case Some(aFields) => {
+                        // Check if we have anchor domain
+                        val offset = if (anchorDomain.isEmpty) anchorToActorHasher(datum, aFields, routers.size)
+                            else {
+                                // See if we can find this anchor in our domain
+                                val indexOf = anchorDomain.indexOf(datum(aFields.head))
+                                if (indexOf != -1) indexOf % routers.size
+                                else anchorToActorHasher(datum, aFields, routers.size)
+                            }
+                        routers(offset) ! DataPacket(List(datum))
+                    }
+                    case None => {
+                        routers(actorOffset) ! DataPacket(List(datum))
+                        actorOffset = (actorOffset + 1) % routers.size
+                    }
                 }
-                case None => {
-                    val f = routers(actorOffset) ? DataPacket(List(datum))
-                    actorOffset = (actorOffset + 1) % routers.size
-                    f
+            } else {
+                sentDPs.incrementAndGet
+                // Determine where to send it to
+                val fut = anchorFields match {
+                    case Some(aFields) => {
+                        val offset = if (anchorDomain.isEmpty) anchorToActorHasher(datum, aFields, routers.size)
+                            else {
+                                // See if we can find this anchor in our domain
+                                val indexOf = anchorDomain.indexOf(datum(aFields.head))
+                                if (indexOf != -1) indexOf % routers.size
+                                else anchorToActorHasher(datum, aFields, routers.size)
+                            }
+                        routers(offset) ? DataPacket(List(datum))
+                    }
+                    case None => {
+                        val f = routers(actorOffset) ? DataPacket(List(datum))
+                        actorOffset = (actorOffset + 1) % routers.size
+                        f
+                    }
                 }
-            }
-            
-            fut.onSuccess {
-                case resultDp: DataPacket => {
-                    genActor ! resultDp
-                    val amount = sentDPs.decrementAndGet
-                    if (amount == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
+                
+                fut.onSuccess {
+                    case resultDp: DataPacket => {
+                        genActor ! resultDp
+                        val amount = sentDPs.decrementAndGet
+                        if (amount == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
+                    }
                 }
-            }
-            fut.onFailure {
-                case _ => {
-                    val amount = sentDPs.decrementAndGet
-                    if (amount == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
+                fut.onFailure {
+                    case _ => {
+                        val amount = sentDPs.decrementAndGet
+                        if (amount == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
+                    }
                 }
             }
         }
         case sp: StopPacket => {
-            if (sentDPs.get > 0) gotStopPacket.set(true)
+            if (sentDPs.get > 0 && !ignoreResults) gotStopPacket.set(true)
             else {
                 routers.foreach(_ ! Broadcast(sp))
                 genActor ! new StopPacket
@@ -153,6 +184,8 @@ class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends Buffer
         val start = (config \ "start").as[String]
         val procs = (config \ "pipeline").as[List[JsObject]]
         val anchorFields = (config \ "anchor_fields").asOpt[List[String]]
+        val ignoreResults = (config \ "ignore_results").asOpt[Boolean].getOrElse(false)
+        val anchorDomain = (config \ "anchor_domain").asOpt[List[String]].getOrElse(List())
         
         // Get the number concurrent instances
         val instanceCount = (config \ "instances").as[Int]
@@ -190,7 +223,8 @@ class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends Buffer
         }).toMap
         
         // Make all the actors
-        intermediateActor = Akka.system.actorOf(Props(classOf[IntermediateActor], genActor, nodes, instanceCount, start, processorMap, anchorFields))
+        intermediateActor = Akka.system.actorOf(Props(classOf[IntermediateActor], genActor, nodes, instanceCount, start,
+                processorMap, anchorFields, anchorDomain, ignoreResults))
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
