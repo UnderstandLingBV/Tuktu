@@ -738,7 +738,7 @@ class KeyImploderProcessor(resultName: String) extends BaseProcessor(resultName)
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         DataPacket(List((for (field <- fields) yield {
             field -> {
-                for (datum <- data.data) yield datum(field)
+                for (datum <- data.data) yield utils.fieldParser(datum, field).get
             }
         }).toMap))
     })
