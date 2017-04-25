@@ -858,6 +858,26 @@ class SequenceExploderProcessor(resultName: String) extends BaseProcessor(result
 }
 
 /**
+ * Takes a sequence and returns a sequence of distinct values
+ */
+class DistinctSequenceProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field: evaluateTuktuString.TuktuStringRoot = _
+
+    override def initialize(config: JsObject) {
+        field = evaluateTuktuString.prepare((config \ "field").as[String])
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        for (datum <- data) yield {
+            // Get the field and explode it
+            val values = utils.fieldParser(datum, field.evaluate(datum)).get.asInstanceOf[Seq[_]]
+
+            datum + (resultName -> values.distinct)
+        }
+    })
+}
+
+/**
  * Wraps either the whole list of Datums of a DataPacket under a new result name as a whole, or each datum under a new result name separately
  */
 class DataPacketWrapperProcessor(resultName: String) extends BaseProcessor(resultName) {
