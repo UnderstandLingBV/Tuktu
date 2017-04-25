@@ -246,5 +246,13 @@ class ParsingTests extends PlaySpec {
             PredicateParser("isEmpty()", datum) should be(false)
             PredicateParser("isEmpty()", Map()) should be(true)
         }
+
+        "support Tuktu Strings" in {
+            PredicateParser("${null.1} == ((null)) && (${null.2}) == null", datum) should be(true)
+            PredicateParser("${JsNumber} == -17.3e-1 && ((${Double}) == ((1.723e3))) && ${Int} == -182", datum) should be(true)
+            PredicateParser("toLowerCase(${Substring1}) == toLowerCase(${Substring2})", datum) should be(true)
+            PredicateParser("${empty3} == ${empty4}", datum) should be(true)
+            PredicateParser("containsSubstring(toLowerCase((${String})), toLowerCase(${Substring1}), toLowerCase(${Substring2}))", datum) should be(true)
+        }
     }
 }

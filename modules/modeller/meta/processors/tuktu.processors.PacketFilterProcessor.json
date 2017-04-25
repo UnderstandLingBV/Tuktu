@@ -31,6 +31,20 @@
 					"required": true
 				},
 				{
+					"name": "evaluate",
+					"description": "Evaluate the expression first. This is required when the (whole) expression (or parts of it) comes from the datum, e.g. when the expression is '${expression}' with expression -> ${field} == \"Value\" in the datum. This is not required when only basic values from the datum are used, e.g. ${field} == \"Value\" with field -> \"Value\" in the datum.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "constant",
+					"description": "Only relevant if evaluate above is true, otherwise the expression is obviously constant across all Datums and DataPackets. If evaluate above is true, this option expresses whether the expression is the same across all DataPackets and all Datums (enter 'global'), is the same for all Datums within each separate DataPacket (enter 'local'), or can differ even within DataPackets (enter 'no').",
+					"type": "string",
+					"required": false,
+					"default": "no"
+				},
+				{
                     "name": "default",
                     "description": "The default to be used if the evaluating the expression results in an error. Leave empty to throw an error and kill the flow, or use true or false.",
                     "type": "string",

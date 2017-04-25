@@ -4,6 +4,7 @@ import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationLong
 import scala.collection.GenTraversableOnce
+import scala.util.Try
 import akka.actor._
 import akka.pattern.ask
 import groovy.util.Eval
@@ -29,17 +30,25 @@ class SkipProcessor(resultName: String) extends BaseProcessor(resultName) {
  * Adds a delay between two data packets
  */
 class DelayActor(delay: Long) extends Actor with ActorLogging {
-    var lastMessage: Long = 0
+    // Timestamp of when the next message can be sent
+    var nextMessage: Long = System.currentTimeMillis
 
     def receive = {
         case "" =>
             val now: Long = System.currentTimeMillis
-            // Calculate timestamp of next message
-            lastMessage = math.max(lastMessage + delay, now)
-            Akka.system.scheduler.scheduleOnce(
-                (lastMessage - now) milliseconds,
-                sender,
-                "")
+            if (now >= nextMessage) {
+                // If timestamp of next message to be sent is before now, send immediately
+                sender ! ""
+                nextMessage = now + delay
+            } else {
+                // Otherwise schedule to send response as soon as next message can be sent
+                Akka.system.scheduler.scheduleOnce(
+                    (nextMessage - now) milliseconds,
+                    sender,
+                    "")
+                nextMessage = nextMessage + delay
+            }
+
         case sp: StopPacket =>
             self ! PoisonPill
     }
@@ -105,21 +114,19 @@ class HeadOfListProcessor(resultName: String) extends BaseProcessor(resultName) 
  * Filters specific fields from the data tuple
  */
 class FieldFilterProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fieldList = List[JsObject]()
+    var conf: utils.PreparedJsObject = _
 
     override def initialize(config: JsObject) {
-        // Find out which fields we should extract
-        fieldList = (config \ "fields").as[List[JsObject]]
+        conf = utils.prepareTuktuJsObject(config)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             (for {
-                fieldItem <- fieldList
+                fieldItem <- (conf.evaluate(datum) \ "fields").as[JsArray].value
                 default = (fieldItem \ "default").asOpt[JsValue]
                 fields = (fieldItem \ "path").as[List[String]]
-                fieldName = evaluateTuktuString((fieldItem \ "result").as[String], datum)
-                field = fields.head
+                fieldName = (fieldItem \ "result").as[String]
             } yield {
                 fieldName -> utils.fieldParser(datum, fields).getOrElse(default.get)
             }).toMap
@@ -285,10 +292,10 @@ class ListJsonFetcherProcessor(resultName: String) extends BaseProcessor(resultN
  * Renames a single field
  */
 class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var fieldList = List[JsObject]()
+    var conf: utils.PreparedJsObject = _
 
     override def initialize(config: JsObject) {
-        fieldList = (config \ "fields").as[List[JsObject]]
+        conf = utils.prepareTuktuJsObject(config)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -301,7 +308,7 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
             val dontCleanUp = collection.mutable.Set[String]()
 
             for {
-                field <- fieldList
+                field <- (conf.evaluate(datum) \ "fields").as[JsArray].value
 
                 fields = (field \ "path").as[List[String]]
                 result = (field \ "result").as[String]
@@ -325,9 +332,9 @@ class FieldRenameProcessor(resultName: String) extends BaseProcessor(resultName)
  * Evaluates nested Tuktu expressions in a string until no more exist
  */
 class EvaluateNestedTuktuExpressionsProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var expr: String = _
+    var expr: evaluateTuktuString.TuktuStringRoot = _
     override def initialize(config: JsObject) {
-        expr = (config \ "expression").as[String]
+        expr = evaluateTuktuString.prepare((config \ "expression").as[String])
     }
 
     def evalHelper(string: String, datum: Map[String, Any]): String = {
@@ -339,7 +346,7 @@ class EvaluateNestedTuktuExpressionsProcessor(resultName: String) extends BasePr
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
-            datum + (resultName -> evalHelper(expr, datum))
+            datum + (resultName -> evalHelper(expr.evaluate(datum), datum))
         }
     })
 }
@@ -348,16 +355,16 @@ class EvaluateNestedTuktuExpressionsProcessor(resultName: String) extends BasePr
  * Parses a predicate and adds its evaluation (true/false) to the DP
  */
 class PredicateProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var predicate: String = _
+    var predicate: evaluateTuktuString.TuktuStringRoot = _
 
     override def initialize(config: JsObject) {
-        predicate = (config \ "predicate").as[String]
+        predicate = evaluateTuktuString.prepare((config \ "predicate").as[String])
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             // Get the predicate parser
-            val p = PredicateParser(utils.evaluateTuktuString(predicate, datum), datum)
+            val p = PredicateParser(predicate.evaluate(datum), datum)
             datum + (resultName -> p)
         }
     })
@@ -370,60 +377,95 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
     /**
      * Evaluates an expression
      */
-    def evaluateExpression(datum: Map[String, Any], expression: String, expressionType: String): Boolean = {
+    def evaluateExpression(datum: Map[String, Any]): Boolean = {
         expressionType match {
-            case "groovy" => {
-                // Replace expression with values
-                val replacedExpression = evaluateTuktuString(expression, datum)
-
+            case "groovy" =>
                 try {
-                    Eval.me(replacedExpression).asInstanceOf[Boolean]
+                    Eval.me(expression.evaluate(datum)).asInstanceOf[Boolean]
                 } catch {
                     case e: Throwable =>
-                        Logger.warn("Could not evaluate groovy expression:\n" + replacedExpression + "\n" + "Defaulting to: " + default.getOrElse(true), e)
+                        warningsSinceLast += 1
+                        // Only show at most one warning per 0.1s
+                        if (System.currentTimeMillis - 100 > lastWarning) {
+                            Logger.warn("Could not evaluate " + warningsSinceLast + " groovy expressions since last warning of this type in this processor.\nThe last expression that failed was:\n" + expression + "\n" + "Defaulting to: " + default.getOrElse(true), e)
+                            lastWarning = System.currentTimeMillis
+                            warningsSinceLast = 0
+                        }
                         default.getOrElse(true)
                 }
-            }
-            case _ => {
-                // Replace expression with values
-                val replacedExpression = evaluateTuktuString(expression, datum)
-                // Evaluate
-                val result = try {
-                    PredicateParser(replacedExpression, datum)
+
+            case _ =>
+                val result: Boolean = try {
+                    if (constant.isDefined)
+                        evaluatedAndParsedExpression.get.get.evaluate(datum)
+                    else
+                        PredicateParser(expression.evaluate(datum), datum)
                 } catch {
                     case e: Throwable =>
-                        Logger.warn("Could not evaluate Tuktu Predicate expression:\n" + replacedExpression + "\n" + "Defaulting to: " + default, e)
+                        warningsSinceLast += 1
+                        // Only show at most one warning per 0.1s
+                        if (System.currentTimeMillis - 100 > lastWarning) {
+                            Logger.warn("Could not evaluate " + warningsSinceLast + " Tuktu Predicate expressions since last warning of this type in this processor.\nThe last expression that failed was:\n" + expression + "\n" + "Defaulting to: " + default, e)
+                            lastWarning = System.currentTimeMillis
+                            warningsSinceLast = 0
+                        }
                         default.get
                 }
 
                 // Negate or not?
                 if (expressionType == "negate") !result else result
-            }
         }
     }
 
-    var expression: String = _
-    var default: Option[Boolean] = _
+    var lastWarning: Long = 0
+    var warningsSinceLast: Int = 0
+
     var expressionType: String = _
+    var expression: evaluateTuktuString.TuktuStringRoot = _
+    var evaluatedAndParsedExpression: Option[Try[PredicateParser.BooleanNode]] = None
+    var evaluate: Boolean = _
+    var constant: Option[String] = _
+    var default: Option[Boolean] = _
     var batch: Boolean = _
     var batchMinCount: Int = _
     var filterEmpty: Boolean = _
 
     override def initialize(config: JsObject) {
-        expression = (config \ "expression").as[String]
+        expressionType = (config \ "type").as[String]
+        evaluate = (config \ "evaluate").asOpt[Boolean].getOrElse(true)
+        constant = (config \ "constant").asOpt[String].flatMap {
+            case _ if evaluate == false               => Some("global")
+            case "global" | "'global'" | "\"global\"" => Some("global")
+            case "local" | "'local'" | "\"local\""    => Some("local")
+            case _                                    => None
+        }
+        expression = expressionType match {
+            case "groovy"      => evaluateTuktuString.prepare((config \ "expression").as[String])
+            case _ if evaluate => evaluateTuktuString.prepare((config \ "expression").as[String])
+            case _ if !evaluate =>
+                val expr = (config \ "expression").as[String]
+                // If we don't need to evaluate it, we can prepare the predicate expression already
+                evaluatedAndParsedExpression = Some(Try(PredicateParser.prepare(expr)))
+                evaluateTuktuString.TuktuStringRoot(Seq(evaluateTuktuString.TuktuStringString(expr)))
+        }
+
         default = (config \ "default") match {
             case b: JsBoolean => Some(b.value)
             case s: JsString  => Some(s.value.toLowerCase.replaceAll("[^a-z]", "").toBoolean)
             case _            => None
         }
-        expressionType = (config \ "type").as[String]
         batch = (config \ "batch").asOpt[Boolean].getOrElse(false)
         batchMinCount = (config \ "batch_min_count").asOpt[Int].getOrElse(1)
         filterEmpty = (config \ "filter_empty").asOpt[Boolean].getOrElse(true)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        DataPacket(
+        // If we need to evaluate a non-groovy expression, which isn't already prepared (because it's global or static), and is some form of constant, and the DP is not empty,
+        // then use the first datum to prepare the predicate expression
+        if (evaluate == true && expressionType != "groovy" && evaluatedAndParsedExpression.isEmpty && constant.isDefined && data.nonEmpty)
+            evaluatedAndParsedExpression = Some(Try(PredicateParser.prepare(expression.evaluate(data.data.head))))
+
+        val result = DataPacket(
             // Check if we need to do batch or individual
             if (batch) {
                 // Helper function to check if at least batchMinCount datums fulfill the expressions
@@ -432,10 +474,11 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                     else if (matches + remaining < batchMinCount) false
                     else datums match {
                         case Nil => false
-                        case datum :: tail => {
-                            if (evaluateExpression(datum, expression, expressionType)) helper(tail, remaining - 1, matches + 1)
-                            else helper(tail, remaining - 1, matches)
-                        }
+                        case datum :: tail =>
+                            if (evaluateExpression(datum))
+                                helper(tail, remaining - 1, matches + 1)
+                            else
+                                helper(tail, remaining - 1, matches)
                     }
                 }
                 // Check if we need to keep this DP in its entirety or not
@@ -443,8 +486,14 @@ class PacketFilterProcessor(resultName: String) extends BaseProcessor(resultName
                 else List()
             } else {
                 // Filter data
-                data.data.filter(datum => evaluateExpression(datum, expression, expressionType))
+                data.data.filter(datum => evaluateExpression(datum))
             })
+
+        // If it's only locally constant, reset it to None so that it will be set by the next DP anew
+        if (constant == Some("local"))
+            evaluatedAndParsedExpression = None
+
+        result
     })
 }
 

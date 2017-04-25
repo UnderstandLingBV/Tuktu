@@ -45,43 +45,31 @@ object utils {
     object evaluateTuktuString {
         // Tree structure
         abstract class TuktuStringNode
-        case class TuktuStringRoot(children: Seq[TuktuStringNode])
-        case class TuktuStringFunction(function: Option[String], children: Seq[TuktuStringNode]) extends TuktuStringNode
-        case class TuktuStringString(string: String) extends TuktuStringNode
-
-        // Supported functions; empty String not properly supported by StringIn, so we will use Option instead
-        val functionNames: Seq[String] = Seq("JSON.stringify", "SQL", "SplitGet", "GetOrNull")
-
-        // AnyChar and AnyChar but closing curly bracket
-        val anyChar: P[TuktuStringString] = P(AnyChar).!.map { TuktuStringString(_) }
-        val string: P[TuktuStringString] = P(CharPred(_ != '}')).!.map { TuktuStringString(_) }
-
-        // Tuktu strings
-        val tuktuKey: P[Seq[TuktuStringNode]] = P(tuktuString | string).rep
-        val tuktuString: P[TuktuStringFunction] = P("$" ~ StringIn(functionNames: _*).!.? ~ "{" ~ tuktuKey ~ "}").map {
-            case (optFunction, key) => TuktuStringFunction(optFunction, key)
+        case class TuktuStringRoot(children: Seq[TuktuStringNode]) {
+            lazy val containsFunction: Boolean = children.exists { _.isInstanceOf[TuktuStringFunction] }
+            lazy val asString: String = children match {
+                case Nil                       => ""
+                case Seq(TuktuStringString(s)) => s
+                // Else throw exception
+            }
+            def evaluate(vars: Map[String, Any]): String = evaluateTuktuString(this, vars)
+            override def toString: String = children.mkString
         }
-        val tuktuTotal: P[TuktuStringRoot] = P(Start ~ (tuktuString | anyChar).rep ~ End).map { TuktuStringRoot(_) }
-
-        // Config strings
-        val configKey: P[Seq[TuktuStringNode]] = P(configString | string).rep
-        val configString: P[TuktuStringFunction] = P("#" ~ StringIn(functionNames: _*).!.? ~ "{" ~ configKey ~ "}").map {
-            case (optFunction, key) => TuktuStringFunction(optFunction, key)
+        case class TuktuStringString(string: String) extends TuktuStringNode {
+            override def toString: String = string
         }
-        val configTotal: P[TuktuStringRoot] = P(Start ~ (configString | anyChar).rep ~ End).map { TuktuStringRoot(_) }
-
-        // Evaluate
-        def apply(str: String, vars: Map[String, Any], specialChar: Char = '$'): String = {
-            def evalFunc(f: TuktuStringFunction): String = {
+        case class TuktuStringFunction(function: Option[String], children: Seq[TuktuStringNode]) extends TuktuStringNode {
+            def evaluateKey(vars: Map[String, Any]): String = children.foldLeft("") {
+                case (acc, TuktuStringString(s))   => acc + s
+                case (acc, a: TuktuStringFunction) => acc + a.evaluate(vars)
+            }
+            def evaluate(vars: Map[String, Any]): String = {
                 // Get the key first
-                val key = f.children.foldLeft("") {
-                    case (acc, TuktuStringString(s))   => acc + s
-                    case (acc, a: TuktuStringFunction) => acc + evalFunc(a)
-                }
+                val key: String = evaluateKey(vars)
 
                 // Try to get value at key; does support dot notation
                 val value = fieldParser(vars, key)
-                f.function match {
+                function match {
                     case None => value match {
                         case None               => "${" + key + "}"
                         case Some(js: JsString) => js.value
@@ -108,10 +96,10 @@ object utils {
                             val splitIndex = split(2).toInt
                             val realValue = fieldParser(vars, split(0))
                             realValue match {
-                                case None => "null"
+                                case None               => "null"
                                 case Some(rv: JsString) => rv.value.split(splitChar)(splitIndex)
-                                case Some(rv: String) => rv.split(splitChar)(splitIndex)
-                                case Some(rv) => rv.toString.split(splitChar)(splitIndex)
+                                case Some(rv: String)   => rv.split(splitChar)(splitIndex)
+                                case Some(rv)           => rv.toString.split(splitChar)(splitIndex)
                             }
                         }
                     }
@@ -124,55 +112,199 @@ object utils {
                         throw new IllegalArgumentException("TuktuString function " + function + " does not exist.")
                 }
             }
-            val root = specialChar match {
-                case '$' => tuktuTotal.parse(str).get.value
-                case '#' => configTotal.parse(str).get.value
+            override def toString: String = "$" + function.getOrElse("") + "{" + children.mkString + "}"
+        }
+
+        // Supported functions; empty String not properly supported by StringIn, so we will use Option instead
+        val functionNames: Seq[String] = Seq("JSON.stringify", "SQL", "SplitGet", "GetOrNull")
+
+        // AnyChar and AnyChar but closing curly bracket
+        val anyChar: P[TuktuStringString] = P(AnyChar).!.map { TuktuStringString(_) }
+        val string: P[TuktuStringString] = P(CharPred(_ != '}')).!.map { TuktuStringString(_) }
+
+        // Tuktu strings
+        val tuktuKey: P[Seq[TuktuStringNode]] = P(tuktuString | string).rep
+        val tuktuString: P[TuktuStringFunction] = P("$" ~ StringIn(functionNames: _*).!.? ~ "{" ~ tuktuKey ~ "}").map {
+            case (optFunction, key) => TuktuStringFunction(optFunction, key)
+        }
+        val tuktuTotal: P[TuktuStringRoot] = P(Start ~ (tuktuString | anyChar).rep ~ End).map { TuktuStringRoot(_) }
+
+        // Config strings
+        val configKey: P[Seq[TuktuStringNode]] = P(configString | string).rep
+        val configString: P[TuktuStringFunction] = P("#" ~ StringIn(functionNames: _*).!.? ~ "{" ~ configKey ~ "}").map {
+            case (optFunction, key) => TuktuStringFunction(optFunction, key)
+        }
+        val configTotal: P[TuktuStringRoot] = P(Start ~ (configString | anyChar).rep ~ End).map { TuktuStringRoot(_) }
+
+        // Minify Tree by combining neighboring TuktuStringStrings
+        def minify(root: TuktuStringRoot): TuktuStringRoot = {
+            def helper(rest: Seq[TuktuStringNode]): Seq[TuktuStringNode] = rest match {
+                case Nil => Nil
+                case TuktuStringString(s1) +: TuktuStringString(s2) +: tail => helper(TuktuStringString(s1 + s2) +: tail)
+                case (s: TuktuStringString) +: tail => s +: helper(tail)
+                case TuktuStringFunction(f, c) +: tail => TuktuStringFunction(f, helper(c)) +: helper(tail)
             }
+            TuktuStringRoot(helper(root.children))
+        }
+        // Prepare string into a minified parsed tree
+        def prepare(str: String): TuktuStringRoot = prepare(str, '$')
+        def prepare(str: String, specialChar: Char): TuktuStringRoot =
+            minify(
+                specialChar match {
+                    case '$' => tuktuTotal.parse(str).get.value
+                    case '#' => configTotal.parse(str).get.value
+                })
+        // Evaluate Tuktu String given a map of variables
+        def apply(root: TuktuStringRoot, vars: Map[String, Any]): String =
             root.children.foldLeft("") {
                 case (acc, TuktuStringString(s))   => acc + s
-                case (acc, a: TuktuStringFunction) => acc + evalFunc(a)
+                case (acc, a: TuktuStringFunction) => acc + a.evaluate(vars)
             }
-        }
+        def apply(str: String, vars: Map[String, Any], specialChar: Char = '$'): String =
+            apply(prepare(str, specialChar), vars)
     }
 
     /**
      * Recursively evaluates a Tuktu config to resolve variables in it
      */
-    def evaluateTuktuJsValue(json: JsValue, vars: Map[String, Any], specialChar: Char = '$'): JsValue = json match {
-        case obj: JsObject  => evaluateTuktuJsObject(obj, vars, specialChar)
-        case arr: JsArray   => evaluateTuktuJsArray(arr, vars, specialChar)
-        case str: JsString  => evaluateTuktuJsString(str, vars, specialChar)
-        case value: JsValue => value // Nothing to do for any other JsTypes
+    trait IsMinified {
+        val isMinified: Boolean = true
+    }
+    trait NotMinified {
+        val isMinified: Boolean = false
+    }
+    abstract class PreparedJsNode {
+        def evaluate(vars: Map[String, Any]): JsValue
+        def evaluate: JsValue
+        val isMinified: Boolean
+        def minify: PreparedJsNode
     }
 
-    def evaluateTuktuJsObject(obj: JsObject, vars: Map[String, Any], specialChar: Char = '$'): JsObject = {
-        new JsObject(obj.value.map { case (key, value) => evaluateTuktuString(key, vars, specialChar) -> evaluateTuktuJsValue(value, vars, specialChar) }.toSeq)
+    case class PreparedJsValue(js: JsValue) extends PreparedJsNode with IsMinified {
+        def evaluate(vars: Map[String, Any]): JsValue = js
+        def evaluate: JsValue = js
+        def minify: PreparedJsNode = this
+    }
+    abstract class PreparedJsObject extends PreparedJsNode {
+        def evaluate(vars: Map[String, Any]): JsObject
+        def evaluate: JsObject
+        def minify: PreparedJsObject
+    }
+    case class PreparedDefaultJsObject(js: JsObject) extends PreparedJsObject with IsMinified {
+        def evaluate(vars: Map[String, Any]): JsObject = js
+        def evaluate: JsObject = js
+        def minify: PreparedJsObject = this
+    }
+    case class PreparedExtendedJsObject(seq: Seq[(Either[String, evaluateTuktuString.TuktuStringRoot], PreparedJsNode)]) extends PreparedJsObject with NotMinified {
+        def evaluate(vars: Map[String, Any]): JsObject = JsObject(
+            seq.map {
+                case (Left(s), n)  => s -> n.evaluate(vars)
+                case (Right(r), n) => r.evaluate(vars) -> n.evaluate(vars)
+            })
+        def evaluate: JsObject = throw new NoSuchMethodException("Cannot evaluate extended JsObject that contains Tuktu Strings.")
+        def minify: PreparedJsObject = {
+            val minifiedValues = seq.map { case (key, value) => key -> value.minify }
+            if (minifiedValues.forall { case (key, value) => key.isLeft && value.isMinified })
+                PreparedDefaultJsObject(JsObject(minifiedValues.map { case (key, value) => key.left.get -> value.evaluate }))
+            else
+                PreparedExtendedJsObject(minifiedValues)
+        }
+    }
+    abstract class PreparedJsArray extends PreparedJsNode {
+        def evaluate(vars: Map[String, Any]): JsArray
+        def evaluate: JsArray
+        def minify: PreparedJsArray
+    }
+    case class PreparedDefaultJsArray(js: JsArray) extends PreparedJsArray with IsMinified {
+        def evaluate(vars: Map[String, Any]): JsArray = js
+        def evaluate: JsArray = js
+        def minify: PreparedJsArray = this
+    }
+    case class PreparedExtendedJsArray(seq: Seq[PreparedJsNode]) extends PreparedJsArray with NotMinified {
+        def evaluate(vars: Map[String, Any]): JsArray =
+            JsArray(seq.map { _.evaluate(vars) })
+        def evaluate: JsArray = throw new NoSuchMethodException("Cannot evaluate extended JsArray that contains Tuktu strings.")
+        def minify: PreparedJsArray = {
+            val minifiedValues = seq.map { _.minify }
+            if (minifiedValues.forall { _.isMinified })
+                PreparedDefaultJsArray(JsArray(minifiedValues.map { _.evaluate }))
+            else
+                PreparedExtendedJsArray(minifiedValues)
+        }
+    }
+    case class PreparedJsString(str: evaluateTuktuString.TuktuStringRoot, toParse: Boolean) extends PreparedJsNode with NotMinified {
+        def evaluate(vars: Map[String, Any]): JsValue = {
+            val evaluated: String = str.evaluate(vars)
+            if (toParse)
+                try
+                    Json.parse(evaluated)
+                catch {
+                    // If we can not parse it, treat it as JsString
+                    case e: com.fasterxml.jackson.core.JsonParseException =>
+                        play.api.Logger.warn("evaluateTuktuJsString: Couldn't parse to JSON:\n" + evaluated)
+                        JsString(evaluated)
+                }
+            else
+                JsString(evaluated)
+        }
+        def evaluate: JsValue = throw new NoSuchMethodException("Cannot evaluate extended JsObject.")
+        def minify: PreparedJsNode = this
     }
 
-    def evaluateTuktuJsArray(arr: JsArray, vars: Map[String, Any], specialChar: Char = '$'): JsArray = {
-        new JsArray(arr.value.map(value => evaluateTuktuJsValue(value, vars, specialChar)))
+    def prepareTuktuJsValue(json: JsValue, specialChar: Char = '$'): PreparedJsNode = json match {
+        case obj: JsObject  => prepareTuktuJsObject(obj, specialChar)
+        case arr: JsArray   => prepareTuktuJsArray(arr, specialChar)
+        case str: JsString  => prepareTuktuJsString(str, specialChar)
+        case value: JsValue => PreparedJsValue(value) // Nothing to do for any other JsTypes
     }
+    def evaluateTuktuJsValue(json: JsValue, vars: Map[String, Any], specialChar: Char = '$'): JsValue =
+        prepareTuktuJsValue(json, specialChar).evaluate(vars)
 
-    def evaluateTuktuJsString(str: JsString, vars: Map[String, Any], specialChar: Char = '$'): JsValue = {
+    def prepareTuktuJsObject(obj: JsObject, specialChar: Char = '$'): PreparedJsObject = PreparedExtendedJsObject(
+        obj.fields.map {
+            case (key, value) =>
+                val preparedKey = evaluateTuktuString.prepare(key, specialChar)
+                val preparedValue = prepareTuktuJsValue(value, specialChar)
+                if (preparedKey.containsFunction)
+                    Right(preparedKey) -> preparedValue
+                else
+                    Left(preparedKey.asString) -> preparedValue
+        }).minify
+    def evaluateTuktuJsObject(obj: JsObject, vars: Map[String, Any], specialChar: Char = '$'): JsObject =
+        prepareTuktuJsObject(obj, specialChar).evaluate(vars)
+
+    def prepareTuktuJsArray(arr: JsArray, specialChar: Char = '$'): PreparedJsArray =
+        PreparedExtendedJsArray(arr.value.map { value => prepareTuktuJsValue(value, specialChar) }).minify
+    def evaluateTuktuJsArray(arr: JsArray, vars: Map[String, Any], specialChar: Char = '$'): JsArray =
+        prepareTuktuJsArray(arr, specialChar).evaluate(vars)
+
+    def prepareTuktuJsString(str: JsString, specialChar: Char = '$'): PreparedJsNode = {
         // Check if it has to be parsed
         val toBeParsed = str.value.startsWith(specialChar + "JSON.parse{") && str.value.endsWith("}")
         val cleaned = if (toBeParsed) str.value.drop((specialChar + "JSON.parse{").length).dropRight("}".length) else str.value
 
         // Evaluate Tuktu Strings in cleaned string
-        val evaluated = evaluateTuktuString(cleaned, vars, specialChar)
+        val evaluated = evaluateTuktuString.prepare(cleaned, specialChar)
 
         if (toBeParsed)
-            try
-                Json.parse(evaluated)
-            catch {
-                // If we can not parse it, treat it as JsString
-                case e: com.fasterxml.jackson.core.JsonParseException =>
-                    play.api.Logger.warn("evaluateTuktuJsString: Couldn't parse to JSON:\n" + evaluated)
-                    JsString(evaluated)
-            }
+            if (evaluated.containsFunction)
+                PreparedJsString(evaluated, true)
+            else
+                PreparedJsValue(try
+                    Json.parse(evaluated.asString)
+                catch {
+                    // If we can not parse it, treat it as JsString
+                    case e: com.fasterxml.jackson.core.JsonParseException =>
+                        play.api.Logger.warn("evaluateTuktuJsString: Couldn't parse to JSON:\n" + evaluated)
+                        JsString(evaluated.asString)
+                })
+        else if (evaluated.containsFunction)
+            PreparedJsString(evaluated, false)
         else
-            JsString(evaluated)
+            PreparedJsValue(JsString(evaluated.asString))
     }
+    def evaluateTuktuJsString(str: JsString, vars: Map[String, Any], specialChar: Char = '$'): JsValue =
+        prepareTuktuJsString(str, specialChar).evaluate(vars)
 
     /**
      * Recursively traverses a path of keys until it finds its value
