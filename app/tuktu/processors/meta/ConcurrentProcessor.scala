@@ -75,46 +75,66 @@ class ConcurrentProcessorActor(start: String, processorMap: Map[String, Processo
 /**
  * Actor that is always alive and truly async
  */
-class IntermediateActor(genActor: ActorRef, node: ClusterNode, instanceCount: Int,
-        start: String, processorMap: Map[String, ProcessorDefinition]) extends Actor with ActorLogging {
+class IntermediateActor(genActor: ActorRef, nodes: List[(String, ClusterNode)], instanceCount: Int,
+        start: String, processorMap: Map[String, ProcessorDefinition], anchorFields: Option[List[String]]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    var actorOffset = 0
     
-    // Set up #instanceCount actors across the nodes to use
-    val router = Akka.system.actorOf(RemoteRouterConfig(RoundRobinPool(instanceCount),
-            Seq(Address("akka.tcp", "application", node.host, node.akkaPort))
+    // Set up remove actors across the nodes
+    val routers = nodes.map { node =>
+        Akka.system.actorOf(RemoteRouterConfig(RoundRobinPool(instanceCount),
+            Seq(Address("akka.tcp", "application", node._2.host, node._2.akkaPort))
         ).props(Props(classOf[ConcurrentProcessorActor], start, processorMap)))
+    }
+    
+    /**
+     * Hashes anchored data to an actor
+     */
+    def anchorToActorHasher(packet: Map[String, Any], keys: List[String], maxSize: Int) = {
+        val keyString = (for (key <- keys) yield packet(key).toString).mkString
+        Math.abs(MurmurHash3.stringHash(keyString) % maxSize)
+    }
     
     // Keep track of sent DPs
     var sentDPs = new AtomicInteger(0)
     var gotStopPacket = new AtomicBoolean(false)
             
     def receive() = { 
-        case dp: DataPacket => {
-            sentDPs.incrementAndGet()
-            println("Forwarding dp: " + sentDPs.get)
-            val fut = (router ? dp)
+        case datum: Map[String, Any] => {
+            sentDPs.incrementAndGet
+            // Determine where to send it to
+            val fut = anchorFields match {
+                case Some(aFields) => {
+                    val offset = anchorToActorHasher(datum, aFields, routers.size)
+                    routers(offset) ? DataPacket(List(datum))
+                }
+                case None => {
+                    val f = routers(actorOffset) ? DataPacket(List(datum))
+                    actorOffset = (actorOffset + 1) % routers.size
+                    f
+                }
+            }
+            
             fut.onSuccess {
                 case resultDp: DataPacket => {
                     genActor ! resultDp
-                    sentDPs.decrementAndGet()
-                    println("Successfully forwarded: " + sentDPs.get)
-                    if (sentDPs.get == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
+                    val amount = sentDPs.decrementAndGet
+                    if (amount == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
                 }
             }
             fut.onFailure {
                 case _ => {
-                    println("Failed forwarded: " + sentDPs.get)
-                    sentDPs.decrementAndGet()
-                    if (sentDPs.get == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
+                    val amount = sentDPs.decrementAndGet
+                    if (amount == 0 && gotStopPacket.getAndSet(false)) self ! new StopPacket
                 }
             }
         }
         case sp: StopPacket => {
             if (sentDPs.get > 0) gotStopPacket.set(true)
             else {
-                println("Got a stop packet from " + sender + " -- " + self)
-                router ! Broadcast(sp)
+                routers.foreach(_ ! Broadcast(sp))
                 genActor ! new StopPacket
+                self ! PoisonPill
             }
         }
     }
@@ -125,15 +145,14 @@ class IntermediateActor(genActor: ActorRef, node: ClusterNode, instanceCount: In
  * allowing concurrent processing by multiple instances
  */
 class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends BufferProcessor(genActor, resultName) {
-    var intermediateActors = List.empty[ActorRef]
-    var actorOffset = 0
-    var anchorFields: Option[List[String]] = _
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    var intermediateActor: ActorRef = _
 
     override def initialize(config: JsObject) {
         // Process config
         val start = (config \ "start").as[String]
         val procs = (config \ "pipeline").as[List[JsObject]]
-        anchorFields = (config \ "anchor_fields").asOpt[List[String]]
+        val anchorFields = (config \ "anchor_fields").asOpt[List[String]]
         
         // Get the number concurrent instances
         val instanceCount = (config \ "instances").as[Int]
@@ -171,37 +190,15 @@ class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends Buffer
         }).toMap
         
         // Make all the actors
-        intermediateActors = for (node <- nodes) yield
-            Akka.system.actorOf(Props(classOf[IntermediateActor], genActor, node._2, instanceCount, start, processorMap))
-    }
-    
-    /**
-     * Hashes anchored data to an actor
-     */
-    def anchorToActorHasher(packet: Map[String, Any], keys: List[String], maxSize: Int) = {
-        val keyString = (for (key <- keys) yield packet(key).toString).mkString
-        Math.abs(MurmurHash3.stringHash(keyString) % maxSize)
+        intermediateActor = Akka.system.actorOf(Props(classOf[IntermediateActor], genActor, nodes, instanceCount, start, processorMap, anchorFields))
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        // If anchor fields are set, we always need to stream the data to the same actor
-        anchorFields match {
-            case Some(aFields) => {
-                // Hash anchor fields to node/actor
-                data.data.foreach(datum => {
-                    val offset = anchorToActorHasher(datum, aFields, intermediateActors.size)
-                    intermediateActors(offset) ! DataPacket(List(datum))
-                })
-            }
-            case None => {
-                // Send data to our actor
-                intermediateActors(actorOffset) ! data
-                actorOffset = (actorOffset + 1) % intermediateActors.size
-            }
-        }
+        // Forward
+        data.data.foreach(datum => intermediateActor ! datum)
         
         data
     }) compose Enumeratee.onEOF(() => {
-        intermediateActors.foreach(_ ! new StopPacket)
+        intermediateActor ! new StopPacket
     })
 }
