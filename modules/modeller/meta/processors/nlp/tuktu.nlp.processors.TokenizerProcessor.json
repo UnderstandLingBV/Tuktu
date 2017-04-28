@@ -30,6 +30,12 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "language",
+					"description": "If given, a language-specific tokenizer may be applied if available. Will fall back to default if this field is not given or if the language-specific tokenizer is unavailable.",
+					"type": "string",
+					"required": false
 				}
 			]
 		}
