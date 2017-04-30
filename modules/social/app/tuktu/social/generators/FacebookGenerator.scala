@@ -94,34 +94,22 @@ class AsyncFacebookCollector(parentActor: ActorRef, fbClient: DefaultFacebookCli
     def receive() = {
         case cp: CommentProcessing => {
             val tooOldTime = System.currentTimeMillis - commentInterval * 1000
-            // Process all the comments that are 'old' -> find everything that is older than commentInterval
+            // Find all posts that we need to fetch the comments of
             val eligiblePosts = processedPosts.filter { post =>
                 val id = post._1
                 val json = post._2
                 // Get the timestamp
                 val time = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.ENGLISH)
                     .parse((json \ "created_time").as[String]).getTime
+                  
                 // See if it is too old
                 time < tooOldTime
             }
             
             // Forward them
-            commentsActor.get ! new FBCommentDataRequest(eligiblePosts map {p =>
-                p._1 -> (p._2 - "tuktu_fetch_count")
-            } toMap)
+            commentsActor.get ! new FBCommentDataRequest(eligiblePosts toMap)
             
-            // Update posts to repeat fetching comments
-            eligiblePosts.foreach {post =>
-                // Check if this one contains our counter
-                val newPost = (post._2 \ "tuktu_fetch_count").asOpt[Int] match {
-                    case None => post._2 ++ Json.obj("tuktu_fetch_count" -> 1)
-                    case Some(fc) => post._2 ++ Json.obj("tuktu_fetch_count" -> (fc + 1))
-                }
-                // Check if it's within the boundary
-                if ((newPost \ "tuktu_fetch_count").as[Int] >= commentFrequency)
-                    processedPosts -= post._1
-                else processedPosts += post._1 -> newPost
-            }
+            processedPosts --= eligiblePosts.map(_._1)
         }
         case fa: FlushAuthors => {
             // Check if there is even data
