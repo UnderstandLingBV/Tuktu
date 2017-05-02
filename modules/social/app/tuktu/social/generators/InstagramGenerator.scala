@@ -31,7 +31,7 @@ class InstagramGenerator(resultName: String, processors: List[Enumeratee[DataPac
      * service.getAuthorizationUrl
      * // Get the token from the redirect and put in the URL
      * val code = ""
-     * val application = new DefaultApplication(new File("."), Thread.currentThread().getContextClassLoader(), None, Mode.Dev)
+     * implicit val application = new DefaultApplication(new File("."), Thread.currentThread().getContextClassLoader(), None, Mode.Dev)
      * import scala.concurrent.ExecutionContext.Implicits.global
      * WS.url("https://api.instagram.com/oauth/access_token").post(Map("client_id" -> Seq(key), "client_secret" -> Seq(secret), "grant_type" -> Seq("authorization_code"), "redirect_url" -> Seq(url), "code" -> Seq(code))) map { response => println(response.body) }
      */
