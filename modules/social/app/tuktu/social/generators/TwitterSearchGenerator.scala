@@ -21,10 +21,7 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import tuktu.api.BaseGenerator
-import tuktu.api.DataPacket
-import tuktu.api.InitPacket
-import tuktu.api.StopPacket
+import tuktu.api._
 
 case class SearchPacket(
         keywords: List[String],
@@ -38,7 +35,7 @@ class SearchProcessor(actorId: Int, client: OAuth10aService, aToken: OAuth1Acces
     def receive() = {
         case sp: SearchPacket => {
             // Make the request
-            val request = new OAuthRequest(Verb.GET, "https://api.twitter.com/1.1/search/tweets.json", client)
+            val request = new OAuthRequest(Verb.GET, "https://api.twitter.com/1.1/search/tweets.json")
             request.addQuerystringParameter("q", sp.keywords.map(keyword => {
                 if (keyword.contains(" ")) "(" + keyword.replaceAll(" ", " AND ") + ")"
                 else keyword
@@ -49,7 +46,7 @@ class SearchProcessor(actorId: Int, client: OAuth10aService, aToken: OAuth1Acces
                 case Some(id) => request.addQuerystringParameter("max_id", id.toString)
             }
             client.signRequest(aToken, request)
-            val response = request.send
+            val response = client.execute(request)
             
             // Check for success
             if (response.isSuccessful) {

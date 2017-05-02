@@ -45,9 +45,9 @@ class LinkedinGenerator(resultName: String, processors: List[Enumeratee[DataPack
             }
             
             // Make the request
-            val request = new OAuthRequest(httpMethod, url, service)
+            val request = new OAuthRequest(httpMethod, url)
             service.signRequest(token, request)
-            val response = request.send
+            val response = service.execute(request)
             
             if (response.isSuccessful) {
                 // See what fields we are after

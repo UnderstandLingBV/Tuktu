@@ -224,9 +224,9 @@ class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName
             }).mkString("")
 
             // Make the actual request
-            val request = new OAuthRequest(httpMethod, replacedUrl, fbClient)
+            val request = new OAuthRequest(httpMethod, replacedUrl)
             fbClient.signRequest(accessToken, request)
-            val response = request.send
+            val response = fbClient.execute(request)
             // Get result
             val jsonResult = Json.parse(response.getBody)
 
