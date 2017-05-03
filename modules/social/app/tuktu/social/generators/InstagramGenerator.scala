@@ -43,7 +43,6 @@ class InstagramGenerator(resultName: String, processors: List[Enumeratee[DataPac
             val secret = (config \ "secret").as[String]
             // Same for token
             val aToken = (config \ "token").as[String]
-            
             // Get keyword
             val keyword = (config \ "keyword").as[String]
             
