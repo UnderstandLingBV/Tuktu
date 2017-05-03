@@ -27,6 +27,8 @@ object VGG16 {
         else null
     }
     
+    def load() = vgg16 != null
+    
     def classifyFile(filename: String, n: Int) = {
         if (vgg16 == null) List("unknown" -> 0.0f)
         else {
