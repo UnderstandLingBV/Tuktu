@@ -50,7 +50,7 @@ class PinterestGenerator(resultName: String, processors: List[Enumeratee[DataPac
             val token = new OAuth2AccessToken(aToken, "")
                 
             // Search board
-            val request = new OAuthRequest(Verb.GET, "https://api.pinterest.com/v1/boards/" + board + "/pins?access_token=" + token.getAccessToken)
+            val request = new OAuthRequest(Verb.GET, "https://api.pinterest.com/v1/boards/" + board + "/pins?fields=id,link,url,creator,created_at,note,color,counts,media,attribution,image,metadata&access_token=" + token.getAccessToken)
             service.signRequest(token, request)
             val response = service.execute(request)
             if (response.getCode == 200) {
