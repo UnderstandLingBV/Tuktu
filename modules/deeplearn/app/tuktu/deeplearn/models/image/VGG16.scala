@@ -11,6 +11,7 @@ import org.nd4j.linalg.api.ndarray.INDArray
 import org.deeplearning4j.nn.modelimport.keras.trainedmodels.Utils.ImageNetLabels
 import org.nd4j.linalg.factory.Nd4j
 import java.net.URL
+import javax.net.ssl.SSLHandshakeException
 
 object VGG16 {
     // Get the files from
@@ -56,20 +57,24 @@ object VGG16 {
         else {
             // Convert file to INDArray
             val loader = new NativeImageLoader(224, 224, 3)
-            val image = loader.asMatrix(url.openStream)
-            
-            // Mean subtraction pre-processing step for VGG
-            val scaler = new VGG16ImagePreProcessor()
-            scaler.transform(image)
-            
-            //Inference returns array of INDArray, index[0] has the predictions
-            val output = vgg16.output(false, image)
-            
-            // Convert 1000 length numeric index of probabilities per label
-            // to sorted return top 5 convert to string using helper function VGG16.decodePredictions
-            // "predictions" is string of our results
-            //TrainedModels.VGG16.decodePredictions(output(0))
-            getLabels(output(0), n)
+            try {
+                val image = loader.asMatrix(url.openStream)
+                
+                // Mean subtraction pre-processing step for VGG
+                val scaler = new VGG16ImagePreProcessor()
+                scaler.transform(image)
+                
+                //Inference returns array of INDArray, index[0] has the predictions
+                val output = vgg16.output(false, image)
+                
+                // Convert 1000 length numeric index of probabilities per label
+                // to sorted return top 5 convert to string using helper function VGG16.decodePredictions
+                // "predictions" is string of our results
+                //TrainedModels.VGG16.decodePredictions(output(0))
+                getLabels(output(0), n)
+            } catch {
+                case e: SSLHandshakeException => List(("Unknown", 1.0))
+            }
         }
     }
     
