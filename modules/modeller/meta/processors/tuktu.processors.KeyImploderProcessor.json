@@ -30,6 +30,13 @@
 							"required": true
 						}
 					]
+				},
+				{
+					"name": "merge",
+					"description": "If the imploded fields should be merged into the first datum of the DP, or if everything else should be discarded.",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}

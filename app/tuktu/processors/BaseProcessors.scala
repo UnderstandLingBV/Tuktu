@@ -780,16 +780,23 @@ class ImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
  */
 class KeyImploderProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fields: List[String] = _
+    var merge: Boolean = _
     override def initialize(config: JsObject) {
         fields = (config \ "fields").as[List[String]]
+        merge = (config \ "merge").asOpt[Boolean].getOrElse(false)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        DataPacket(List((for (field <- fields) yield {
-            field -> {
-                for (datum <- data.data) yield utils.fieldParser(datum, field).get
-            }
-        }).toMap))
+        if (data.isEmpty)
+            data
+        else
+            DataPacket(List(
+                (if (merge) data.data.head else Map.empty[String, Any]) ++
+                    (for (field <- fields) yield {
+                        field -> {
+                            for (datum <- data.data) yield utils.fieldParser(datum, field).get
+                        }
+                    }).toMap))
     })
 }
 
@@ -903,6 +910,26 @@ class SequenceExploderProcessor(resultName: String) extends BaseProcessor(result
 
             for (value <- values) yield datum + (field -> value)
         })
+    })
+}
+
+/**
+ * Takes a sequence of sequence objects and flattens it
+ */
+class SequenceFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field: String = _
+
+    override def initialize(config: JsObject) {
+        field = (config \ "field").as[String]
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        data.map { datum =>
+            // Get the field and explode it
+            val values: Seq[Any] = utils.fieldParser(datum, field).get.asInstanceOf[Seq[Seq[Any]]].flatten
+
+            datum + (resultName -> values)
+        }
     })
 }
 

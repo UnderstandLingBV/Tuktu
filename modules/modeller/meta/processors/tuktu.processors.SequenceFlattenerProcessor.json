@@ -1,0 +1,30 @@
+{
+	"name": "Sequence Flattener Processor",
+	"description": "Takes a sequence of sequence objects and flattens it.",
+	"class": "tuktu.processors.SequenceFlattenerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing a sequence of sequence objects.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
