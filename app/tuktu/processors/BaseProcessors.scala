@@ -787,16 +787,13 @@ class KeyImploderProcessor(resultName: String) extends BaseProcessor(resultName)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        if (data.isEmpty)
-            data
-        else
-            DataPacket(List(
-                (if (merge) data.data.head else Map.empty[String, Any]) ++
-                    (for (field <- fields) yield {
-                        field -> {
-                            for (datum <- data.data) yield utils.fieldParser(datum, field).get
-                        }
-                    }).toMap))
+        DataPacket(List(
+            (if (merge) data.data.headOption.getOrElse(Map.empty) else Map.empty[String, Any]) ++
+                (for (field <- fields) yield {
+                    field -> {
+                        for (datum <- data.data) yield utils.fieldParser(datum, field).get
+                    }
+                }).toMap))
     })
 }
 
