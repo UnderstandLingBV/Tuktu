@@ -35,12 +35,12 @@ class VGG16Classifier(resultName: String) extends BaseProcessor(resultName) {
     
     def getImageLabels(uri: String) = {
         val labels = VGG16.classifyFile(uri, if (flatten) 1 else n)
-        if (flatten) labels.head else labels
+        if (flatten) labels.head._1 else labels
     }
     
     def getImageLabels(uri: URL) = {
         val labels = VGG16.classifyFile(uri, if (flatten) 1 else n)
-        if (flatten) labels.head else labels
+        if (flatten) labels.head._1 else labels
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
