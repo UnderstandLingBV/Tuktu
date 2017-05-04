@@ -28,23 +28,36 @@ class VGG16Classifier(resultName: String) extends BaseProcessor(resultName) {
         imageName = (config \ "image_name").as[String]
         n = (config \ "top_n").asOpt[Int].getOrElse(3)
         flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
+        
+        // Load model
+        VGG16.load
+    }
+    
+    def getImageLabels(uri: String) = {
+        val labels = VGG16.classifyFile(uri, if (flatten) 1 else n)
+        if (flatten) labels.head else labels
+    }
+    
+    def getImageLabels(uri: URL) = {
+        val labels = VGG16.classifyFile(uri, if (flatten) 1 else n)
+        if (flatten) labels.head else labels
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         data.map{datum =>
-            // Get image
-            val imageUri = utils.evaluateTuktuString(imageName, datum)
-            
             datum + (resultName -> {
-                if (localRemote == "remote") {
-                    // Get URL and classify
-                    val url = new URL(imageUri)
-                    val labels = VGG16.classifyFile(url, if (flatten) 1 else n)
-                    if (flatten) labels.head else labels
-                } else {
-                    // Local file
-                    val labels = VGG16.classifyFile(imageUri, if (flatten) 1 else n)
-                    if (flatten) labels.head else labels
+                // Get image, check if it's a list of URLs or a hard coded URL
+                datum.get(imageName) match {
+                    case Some(value: Seq[String]) => {
+                        // Get class for each image in the list
+                        value.map{uri =>
+                            if (localRemote == "remote") getImageLabels(new URL(uri)) else getImageLabels(uri)
+                        }
+                    }
+                    case _ => {
+                        val uri = utils.evaluateTuktuString(imageName, datum)
+                        if (localRemote == "remote") getImageLabels(new URL(uri)) else getImageLabels(uri)
+                    }
                 }
             })
         }
