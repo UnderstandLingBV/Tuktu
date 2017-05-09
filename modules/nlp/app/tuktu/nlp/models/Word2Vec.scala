@@ -48,16 +48,7 @@ class Word2Vec() extends BaseModel {
                 tfidf match {
                     case Some(t) => {
                         // Apply weighting
-                        try {
-                            wordMap(word).mul(t(word))
-                        } catch {
-                            case e: java.util.NoSuchElementException => {
-                                println(t.keys.toList)
-                                println(inputWords)
-                                sys.exit
-                                null
-                            }
-                        }
+                        wordMap(word).mul(t(word)).norm2(1)
                     }
                     case None => allWords.putRow(index, wordMap(word))
                 }
