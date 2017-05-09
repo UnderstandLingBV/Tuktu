@@ -207,26 +207,20 @@ class RunningCountProcessor(resultName: String) extends BaseProcessor(resultName
  * Replaces one string for another (could be regex)
  */
 class ReplaceProcessor(resultName: String) extends BaseProcessor(resultName) {
-    var field = ""
-    var sources = List[String]()
-    var targets = List[String]()
-
-    def replaceHelper(accum: String, offset: Int): String = {
-        if (offset >= sources.size) accum
-        else {
-            // Replace in the accumulator and advance
-            replaceHelper(accum.replaceAll(sources(offset), targets(offset)), offset + 1)
-        }
-    }
+    var field: String = _
+    var replacements: Seq[(String, String)] = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
-        sources = (config \ "sources").as[List[String]]
-        targets = (config \ "targets").as[List[String]]
+        replacements = (config \ "sources").as[Seq[String]].zip((config \ "targets").as[Seq[String]])
     }
 
-    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
-        for (datum <- data) yield datum + (resultName -> replaceHelper(datum(field).toString, 0))
+    override def processor: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
+        for (datum <- data) yield datum +
+            (resultName -> replacements.foldLeft(utils.fieldParser(datum, field).get match {
+                case js: JsString => js.value
+                case a            => a.toString
+            }) { case (accum, (source, target)) => accum.replaceAll(source, target) })
     })
 }
 
