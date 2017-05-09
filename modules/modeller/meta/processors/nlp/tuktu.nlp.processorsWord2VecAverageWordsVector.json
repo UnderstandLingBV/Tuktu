@@ -36,6 +36,12 @@
 					"type": "string",
 					"required": true,
 					"description": "The field the data resides in. Data can be textual (String) or Seq[String]."
+				},
+				{
+					"name": "tfidf_field",
+					"type": "string",
+					"required": false,
+					"description": "An optional field containing TF-IDF scores that weight the word vectors."
 				}
 			]
 		}
