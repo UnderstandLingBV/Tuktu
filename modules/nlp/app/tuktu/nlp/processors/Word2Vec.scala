@@ -58,20 +58,27 @@ class Word2VecNearestWordsProcessor(resultName: String) extends BaseMLApplyProce
  */
 class Word2VecAverageWordsVector(resultName: String) extends BaseMLApplyProcessor[Word2Vec](resultName) {
     var field: String = _
+    var tfIdfField: Option[String] = _
 
     override def initialize(config: JsObject) {
         field = (config \ "data_field").as[String]
+        tfIdfField = (config \ "tfidf_field").asOpt[String]
         super.initialize(config)
     }
 
     override def applyModel(resultName: String, data: List[Map[String, Any]], model: Word2Vec): List[Map[String, Any]] = {
         for (datum <- data) yield {
             datum + (resultName -> {
+                // Get TF-IDF if required
+                val tfidf = tfIdfField match {
+                    case Some(t) => Some(datum(t).asInstanceOf[Map[String, Double]])
+                    case None => None
+                }
                 // Check field type
                 val docVector = datum(field) match {
-                    case dtm: Seq[String] => model.getAverageDocVector(dtm)
-                    case dtm: String      => model.getAverageDocVector(dtm.split(" "))
-                    case dtm              => model.getAverageDocVector(dtm.toString.split(" "))
+                    case dtm: Seq[String] => model.getAverageDocVector(dtm, tfidf)
+                    case dtm: String      => model.getAverageDocVector(dtm.split(" "), tfidf)
+                    case dtm              => model.getAverageDocVector(dtm.toString.split(" "), tfidf)
                 }
                 
                 // Convert to something usable

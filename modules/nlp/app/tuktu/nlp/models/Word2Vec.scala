@@ -38,14 +38,29 @@ class Word2Vec() extends BaseModel {
     /**
      * Gets a document vector by simply taking the mean of word vectors
      */
-    def getAverageDocVector(inputWords: Seq[String]) = {
+    def getAverageDocVector(inputWords: Seq[String], tfidf: Option[Map[String, Double]]) = {
         val containedWords = inputWords.filter(wordMap.contains(_))
         if (containedWords.size != 0) {
             val allWords = Nd4j.create(containedWords.size, layerSize)
     
             containedWords.zipWithIndex.foreach{wi =>
                 val (word, index) = (wi._1, wi._2)
-                allWords.putRow(index, wordMap(word))
+                tfidf match {
+                    case Some(t) => {
+                        // Apply weighting
+                        try {
+                            wordMap(word).mul(t(word))
+                        } catch {
+                            case e: java.util.NoSuchElementException => {
+                                println(t.keys.toList)
+                                println(inputWords)
+                                sys.exit
+                                null
+                            }
+                        }
+                    }
+                    case None => allWords.putRow(index, wordMap(word))
+                }
             }
     
             allWords.mean(0)
