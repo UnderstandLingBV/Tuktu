@@ -84,13 +84,15 @@ object VGG16 {
         (0 to predictions.size(0) - 1).flatMap{batch =>
             val currentBatch = predictions.getRow(batch).dup
             
-            for (i <- (0 to n - 1)) yield {
+            val res = for (i <- (0 to n - 1)) yield {
                 val pos = Nd4j.argMax(currentBatch, 1).getInt(0, 0)
                 val prob = currentBatch.getFloat(batch, pos)
                 currentBatch.putScalar(0, pos, 0)
                 val label = labels.get(pos)
                 (label, prob)
             }
+            currentBatch.cleanup
+            res
         } toList
     }
 }
