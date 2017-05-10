@@ -111,6 +111,7 @@ lazy val dlDependencies = Seq(
     "org.deeplearning4j" % "deeplearning4j-modelimport" % "0.8.0",
     "org.nd4j" % "nd4j-native-platform" % "0.8.0",
     "org.nd4j" % "nd4j-native" % "0.8.0",
+    //"org.nd4j" % "nd4j-native" % "0.8.0" classifier "linux-x86_64",
     "org.nd4j" % "nd4j-native" % "0.8.0" classifier "windows-x86_64",
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )

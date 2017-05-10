@@ -178,6 +178,8 @@ class MLSerializeProcessor[BM <: BaseModel](resultName: String) extends BaseProc
  */
 abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    
+    val loadedModels = collection.mutable.ArrayBuffer.empty[String]
 
     var modelName = ""
     var fileName = ""
@@ -198,7 +200,7 @@ abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) e
             val newModelName = utils.evaluateTuktuString(modelName, data.data.head)
 
             // Check if we need to deserialize this model
-            val toDeserialize = !onlyOnce || {
+            val toDeserialize = !onlyOnce || !loadedModels.contains(modelName) || {
                 // Check if model is already deserialized
                 val isDeserialized = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new ExistsModel(newModelName)
                 !Await.result(isDeserialized, timeout.duration).asInstanceOf[Boolean]
@@ -210,7 +212,7 @@ abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) e
 
                 // Deserialize the model
                 val model = deserializeModel(newFileName)
-
+                
                 // Send it to the repository
                 if (waitForLoad) {
                     val fut = Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ? new UpsertModel(newModelName, model, true)
@@ -218,6 +220,9 @@ abstract class BaseMLDeserializeProcessor[BM <: BaseModel](resultName: String) e
                     Await.result(fut, timeout.duration)
                 } else
                     Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(newModelName, model, false)
+                
+                // Add loaded model name
+                if (onlyOnce) loadedModels += modelName
             }
         }
 
