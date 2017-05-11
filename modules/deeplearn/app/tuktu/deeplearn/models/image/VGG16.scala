@@ -75,7 +75,7 @@ object VGG16 {
                 //TrainedModels.VGG16.decodePredictions(output(0))
                 getLabels(output(0), n)
             } catch {
-                case e: SSLHandshakeException => List(("Unknown", 1.0))
+                case e: Exception => List(("Unknown", 1.0))
             }
         }
     }

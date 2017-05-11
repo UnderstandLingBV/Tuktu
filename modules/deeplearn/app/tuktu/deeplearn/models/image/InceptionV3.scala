@@ -43,7 +43,7 @@ object InceptionV3 {
                     stream.close
                     getLabels(imgData, n)
                 } catch {
-                    case e: SSLHandshakeException => List(("Unknown", 1.0))
+                    case e: Exception => List(("Unknown", 1.0))
                 }
             }
         }
