@@ -73,10 +73,18 @@
 					"required": true
 				},
 				{
-					"name": "board",
-					"description": "The name of the board. Should be <username>/<board>.",
-					"type": "string",
-					"required": true
+					"name": "boards",
+					"description": "The name of the boards. Should be <username>/<board>.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"description": "Board location, should be <username>/<board>.",
+							"type": "string",
+							"required": true
+						}
+					]
 				}
 			]
 		}
