@@ -578,7 +578,7 @@ object utils {
     }
     def loadConfig(name: String): Try[JsObject] = Try {
         Paths.get(
-            Cache.getAs[String]("configRepo").getOrElse("configs"),
+            Cache.getAs[String]("configRepo").getOrElse(Play.current.configuration.getString("tuktu.configrepo").getOrElse("configs")),
             name + { if (name.endsWith(".json")) "" else ".json" })
     }.flatMap(loadConfig)
 }

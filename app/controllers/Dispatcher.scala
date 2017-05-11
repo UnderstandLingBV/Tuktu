@@ -470,7 +470,8 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                                 // For backwards compatibility, directory.filename(instead of /) will also work (both POST)
                                 // Main GET path are the directories which contain Tuktu.json
                                 val option: Option[String] = {
-                                    val analytics = Paths.get(current.configuration.getString("tuktu.configrepo").getOrElse("configs"))
+                                    val analytics = Paths.get(Cache.getAs[String]("configRepo").getOrElse(
+                                            current.configuration.getString("tuktu.configrepo").getOrElse("configs")))
                                         .relativize(Paths.get(current.configuration.getString("tuktu.webrepo").getOrElse("configs/analytics")))
                                     val path = analytics.relativize(Paths.get(dr.configName))
 
