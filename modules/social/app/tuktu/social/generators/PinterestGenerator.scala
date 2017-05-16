@@ -22,28 +22,77 @@ import play.api.libs.json.Json
 import tuktu.api._
 import tuktu.api.BaseGenerator
 import akka.routing.Broadcast
+import org.joda.time.format.DateTimeFormat
 
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class PinterestRequest(
         board: String,
-        cursor: String
+        cursor: String,
+        attempt: Int,
+        afterTime: Long
 )
 case class PinterestObjects(
         data: List[JsObject]
 )
+case class PinterestDone()
 
-class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth2AccessToken, start: Option[Long], end: Option[Long]) extends Actor with ActorLogging {
+class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth2AccessToken, start: Long, end: Option[Long], maxAttempts: Int, updateTime: Int) extends Actor with ActorLogging {
+    val timeformat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss")
+    
     def receive() = {
         case pr: PinterestRequest => {
             // Search board
-            val request = new OAuthRequest(Verb.GET, "https://api.pinterest.com/v1/boards/" + pr.board + "/pins?limit=100&fields=id,link,url,creator,created_at,note,color,counts,media,attribution,image,metadata&access_token=" + token.getAccessToken)
+            val request = new OAuthRequest(Verb.GET, "https://api.pinterest.com/v1/boards/" + pr.board + "/pins?" + {
+                if (pr.cursor != null) "cursor=" + pr.cursor + "&" else ""
+            } + "limit=100&fields=id,link,url,creator,created_at,note,color,counts,media,attribution,image,metadata&access_token=" + token.getAccessToken)
             client.signRequest(token, request)
             val response = client.execute(request)
             if (response.getCode == 200) {
-                val json = (Json.parse(response.getBody) \ "data").as[List[JsObject]]
-                // Send back to our parent
-                parent ! new PinterestObjects(json)
-            }
+                val json = Json.parse(response.getBody)
+                val data = (json \ "data").as[List[JsObject]]
+                
+                // Send the data back to our parent
+                parent ! new PinterestObjects(data.filter{pin =>
+                    timeformat.parseDateTime((pin \ "created_at").as[String]).getMillis > pr.afterTime
+                })
+                
+                // Find the oldest and newest pin in this request
+                val oldest = timeformat.parseDateTime((data.minBy{pin =>
+                    timeformat.parseDateTime((pin \ "created_at").as[String]).getMillis
+                } \ "created_at").as[String]).getMillis / 1000L
+                val newest = timeformat.parseDateTime((data.maxBy{pin =>
+                    timeformat.parseDateTime((pin \ "created_at").as[String]).getMillis
+                } \ "created_at").as[String]).getMillis / 1000L
+                
+                //  Get the cursor
+                val cursor = (json \ "page" \ "cursor").as[String]
+                
+                // Check if we still need to collect more
+                if (data.size == 100 && oldest > start)
+                    // Start the back tracking of older pins
+                    self ! new PinterestRequest(pr.board, cursor, 0, pr.afterTime)
+                else {
+                    // We do not need to fetch older ones, see if we need to schedule fetching new ones via polling
+                    val poll = end match {
+                        case None => true
+                        case Some(e) if newest < e => true
+                        case _ => false
+                    }
+                    if (poll)
+                        // Schedule next request
+                        Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
+                            new PinterestRequest(pr.board, null, 0, newest))
+                    else
+                        parent ! new PinterestDone
+                }
+            } else if (pr.attempt == maxAttempts - 1)
+                // We have an error and retried too much
+                parent ! new PinterestDone
+            else
+                // We can go again
+                self ! new PinterestRequest(pr.board, pr.cursor, pr.attempt + 1, pr.afterTime)
         }
     }
 }
@@ -65,11 +114,19 @@ class PinterestGenerator(resultName: String, processors: List[Enumeratee[DataPac
      * val accessToken = service.getAccessToken(code)
      */
     var pollerActor: ActorRef = _
+    var totalDone = 0
+    var actorCount = 0
     
     override def _receive = {
         case sp: StopPacket => {
             if (pollerActor != null) pollerActor ! Broadcast(StopPacket)
             cleanup
+        }
+        case pd: PinterestDone => {
+            totalDone += 1
+            if (totalDone == actorCount)
+                // All children are done, terminate
+                self ! new StopPacket
         }
         case config: JsValue => {
             // Get key and secret
@@ -79,6 +136,11 @@ class PinterestGenerator(resultName: String, processors: List[Enumeratee[DataPac
             val aToken = (config \ "token").as[String]
             // Get board to track
             val boards = (config \ "boards").as[List[String]]
+            actorCount = boards.size
+            // Max retries on error
+            val maxAttempts = (config \ "max_attempts").asOpt[Int].getOrElse(3)
+            // Get update time
+            val updateTime = (config \ "update_time").asOpt[Int].getOrElse(5)
             
             // Set up client
             val service = new ServiceBuilder()
@@ -101,10 +163,10 @@ class PinterestGenerator(resultName: String, processors: List[Enumeratee[DataPac
             
             // Set up actors
             pollerActor = Akka.system.actorOf(RoundRobinPool(boards.size)
-                .props(Props(classOf[AsyncPinterestActor], self, service, token, startTime, endTime))
+                .props(Props(classOf[AsyncPinterestActor], self, service, token, startTime, endTime, maxAttempts, updateTime))
             )
             boards.foreach{board =>
-                pollerActor ! new PinterestRequest(board, null)
+                pollerActor ! new PinterestRequest(board, null, 0, startTime)
             }
         }
         case po: PinterestObjects => po.data.foreach(datum => channel.push(new DataPacket(List(Map(resultName -> datum)))))
