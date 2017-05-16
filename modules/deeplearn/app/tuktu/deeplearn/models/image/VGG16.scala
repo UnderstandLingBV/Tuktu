@@ -34,7 +34,7 @@ object VGG16 {
     
     def load() = vgg16 != null
     
-    def classifyFile(filename: String, n: Int) = {
+    def classifyFile(filename: String, n: Int, useCategories: Boolean) = {
         if (vgg16 == null) List("unknown" -> 0.0)
         else {
             // Convert file to INDArray
@@ -50,11 +50,11 @@ object VGG16 {
             // to sorted return top 5 convert to string using helper function VGG16.decodePredictions
             // "predictions" is string of our results
             //TrainedModels.VGG16.decodePredictions(output(0))
-            getLabels(output(0), n)
+            getLabels(output(0), n, useCategories)
         }
     }
     
-    def classifyFile(url: URL, n: Int) = {
+    def classifyFile(url: URL, n: Int, useCategories: Boolean) = {
         if (vgg16 == null) List("unknown" -> 0.0)
         else {
             // Convert file to INDArray
@@ -73,15 +73,15 @@ object VGG16 {
                 // to sorted return top 5 convert to string using helper function VGG16.decodePredictions
                 // "predictions" is string of our results
                 //TrainedModels.VGG16.decodePredictions(output(0))
-                getLabels(output(0), n)
+                getLabels(output(0), n, useCategories)
             } catch {
                 case e: Exception => List(("Unknown", 1.0))
             }
         }
     }
     
-    def getLabels(predictions: INDArray, n: Int) = {
-        (0 to predictions.size(0) - 1).flatMap{batch =>
+    def getLabels(predictions: INDArray, n: Int, useCategories: Boolean) = {
+        val lbls = (0 to predictions.size(0) - 1).flatMap{batch =>
             val currentBatch = predictions.getRow(batch).dup
             
             val res = for (i <- (0 to n - 1)) yield {
@@ -94,5 +94,9 @@ object VGG16 {
             currentBatch.cleanup
             res
         } toList
+        
+        if (useCategories) lbls.map{lbl =>
+            util.categoryMap(lbl._1) -> lbl._2
+        } else lbls
     }
 }

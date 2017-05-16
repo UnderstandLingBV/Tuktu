@@ -15,6 +15,7 @@ class InceptionClassifier(resultName: String) extends BaseProcessor(resultName) 
     var imageName: String = _
     var n: Int = _
     var flatten: Boolean = false
+    var useCategories: Boolean = _
     
     override def initialize(config: JsObject) {
         (config \ "local_remote").asOpt[String] match {
@@ -24,18 +25,19 @@ class InceptionClassifier(resultName: String) extends BaseProcessor(resultName) 
         imageName = (config \ "image_name").as[String]
         n = (config \ "top_n").asOpt[Int].getOrElse(3)
         flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
+        useCategories = (config \ "use_categories").asOpt[Boolean].getOrElse(false)
         
         // Load model
         InceptionV3.load
     }
     
     def getImageLabels(uri: String) = {
-        val labels = InceptionV3.classifyFile(uri, if (flatten) 1 else n)
+        val labels = InceptionV3.classifyFile(uri, if (flatten) 1 else n, useCategories)
         if (flatten) labels.head._1 else labels
     }
     
     def getImageLabels(uri: URL) = {
-        val labels = InceptionV3.classifyFile(uri, if (flatten) 1 else n)
+        val labels = InceptionV3.classifyFile(uri, if (flatten) 1 else n, useCategories)
         if (flatten) labels.head._1 else labels
     }
     

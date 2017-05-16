@@ -39,6 +39,13 @@
 					"default": false
 				},
 				{
+					"name": "use_categories",
+					"description": "If set to true, 26 higher-level categories are used instead of the original 1k ImageNet categories.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
 					"name": "local_remote",
 					"description": "Whether the images are locally stored on disk ('local') or remotely on some URL ('remote'. Remote can also represent local files.",
 					"type": "string",
