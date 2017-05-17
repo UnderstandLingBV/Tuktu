@@ -31,7 +31,8 @@ case class PinterestRequest(
         board: String,
         cursor: String,
         attempt: Int,
-        afterTime: Long
+        afterTime: Long,
+        afterBackTrack: Long
 )
 case class PinterestObjects(
         data: List[JsObject]
@@ -53,26 +54,33 @@ class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth
                 val json = Json.parse(response.getBody)
                 val data = (json \ "data").as[List[JsObject]]
                 
-                // Send the data back to our parent
-                parent ! new PinterestObjects(data.filter{pin =>
-                    timeformat.parseDateTime((pin \ "created_at").as[String]).getMillis > pr.afterTime
-                })
-                
-                // Find the oldest and newest pin in this request
-                val oldest = timeformat.parseDateTime((data.minBy{pin =>
-                    timeformat.parseDateTime((pin \ "created_at").as[String]).getMillis
-                } \ "created_at").as[String]).getMillis / 1000L
-                val newest = timeformat.parseDateTime((data.maxBy{pin =>
-                    timeformat.parseDateTime((pin \ "created_at").as[String]).getMillis
-                } \ "created_at").as[String]).getMillis / 1000L
-                
+                val (sentData, oldest, newest, afterBackTrack) = if (data.size > 0) {
+                    // Send the data back to our parent
+                    val sd = data.filter{pin =>
+                        val t = timeformat.parseDateTime((pin \ "created_at").as[String]).getMillis / 1000L
+                        t > pr.afterTime && {
+                            if (pr.cursor == null) t > pr.afterBackTrack else true
+                        }
+                    }
+                    parent ! new PinterestObjects(sd)
+                    
+                    // Find the oldest and newest pin in this request
+                    val o = timeformat.parseDateTime((data.minBy{pin =>
+                        timeformat.parseDateTime((pin \ "created_at").as[String]).getMillis
+                    } \ "created_at").as[String]).getMillis / 1000L
+                    val n = timeformat.parseDateTime((data.maxBy{pin =>
+                        timeformat.parseDateTime((pin \ "created_at").as[String]).getMillis
+                    } \ "created_at").as[String]).getMillis / 1000L
+                            
+                    (sd, o, n, if (pr.cursor == null) n else pr.afterBackTrack)
+                } else (Nil, 0L, pr.afterTime, pr.afterBackTrack)
                 //  Get the cursor
                 val cursor = (json \ "page" \ "cursor").as[String]
                 
                 // Check if we still need to collect more
-                if (data.size == 100 && oldest > start)
+                if (sentData.size > 0 && oldest > start)
                     // Start the back tracking of older pins
-                    self ! new PinterestRequest(pr.board, cursor, 0, pr.afterTime)
+                    self ! new PinterestRequest(pr.board, cursor, 0, pr.afterTime, afterBackTrack)
                 else {
                     // We do not need to fetch older ones, see if we need to schedule fetching new ones via polling
                     val poll = end match {
@@ -83,7 +91,7 @@ class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth
                     if (poll)
                         // Schedule next request
                         Akka.system.scheduler.scheduleOnce(updateTime seconds, self,
-                            new PinterestRequest(pr.board, null, 0, newest))
+                            new PinterestRequest(pr.board, null, 0, newest, pr.afterBackTrack))
                     else
                         parent ! new PinterestDone
                 }
@@ -92,7 +100,7 @@ class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth
                 parent ! new PinterestDone
             else
                 // We can go again
-                self ! new PinterestRequest(pr.board, pr.cursor, pr.attempt + 1, pr.afterTime)
+                self ! new PinterestRequest(pr.board, pr.cursor, pr.attempt + 1, pr.afterTime, pr.afterBackTrack)
         }
     }
 }
@@ -140,7 +148,11 @@ class PinterestGenerator(resultName: String, processors: List[Enumeratee[DataPac
             // Max retries on error
             val maxAttempts = (config \ "max_attempts").asOpt[Int].getOrElse(3)
             // Get update time
-            val updateTime = (config \ "update_time").asOpt[Int].getOrElse(5)
+            val updateTime = {
+                val ut = (config \ "update_time").asOpt[Int].getOrElse(5)
+                // Check if our update time is going to hit rate limits (1k calls per hour) - we can only do this for the realtime setting
+                if (3600 / ut * boards.size > 1000) Math.ceil(3.6 * boards.size) else ut
+            }
             
             // Set up client
             val service = new ServiceBuilder()
@@ -166,7 +178,7 @@ class PinterestGenerator(resultName: String, processors: List[Enumeratee[DataPac
                 .props(Props(classOf[AsyncPinterestActor], self, service, token, startTime, endTime, maxAttempts, updateTime))
             )
             boards.foreach{board =>
-                pollerActor ! new PinterestRequest(board, null, 0, startTime)
+                pollerActor ! new PinterestRequest(board, null, 0, startTime, 0L)
             }
         }
         case po: PinterestObjects => po.data.foreach(datum => channel.push(new DataPacket(List(Map(resultName -> datum)))))
