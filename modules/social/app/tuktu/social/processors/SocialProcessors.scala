@@ -109,7 +109,7 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
  * Does the tagging for a Facebook-originated object
  */
 class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
-    // Get name of the field in which the Twitter object is
+    // Get name of the field in which the Facebook object is
     var objField: String = _
     // Get the actual tags
     var users: Option[List[String]] = _
@@ -118,7 +118,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
     var combine: Boolean = _
 
     override def initialize(config: JsObject) {
-        // Get name of the field in which the Twitter object is
+        // Get name of the field in which the Facebook object is
         objField = (config \ "object_field").as[String]
 
         // Get the actual tags
@@ -232,5 +232,42 @@ class FacebookRESTProcessor(resultName: String) extends BaseProcessor(resultName
 
             datum + (resultName -> jsonResult)
         }
+    })
+}
+
+/**
+ * Does the tagging for a Pinterest-originated object
+ */
+class PinterestTaggerProcessor(resultName: String) extends BaseProcessor(resultName) {
+    // Get name of the field in which the Pinterest object is
+    var objField: String = _
+    // Get the actual tags
+    var boards: List[String] = _
+    var excludeOnNone: Boolean = _
+
+    override def initialize(config: JsObject) {
+        // Get name of the field in which the Pinterest object is
+        objField = (config \ "object_field").as[String]
+        // Get the actual boards
+        boards = (config \ "tags" \ "boards").as[List[String]]
+        excludeOnNone = (config \ "exclude_on_none").as[Boolean]
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        DataPacket(for {
+            datum <- data.data
+
+            // Get the creator field
+            b = (datum(objField).asInstanceOf[JsObject] \ "board" \ "url").as[String]
+            // See if one of the boards is there
+            matches = boards.filter {board =>
+                b.contains(board)
+            }
+            
+            // See if we need to exclude
+            if (!excludeOnNone || !matches.isEmpty)
+        } yield {
+            datum + (resultName -> matches)
+        })
     })
 }

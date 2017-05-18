@@ -1,0 +1,57 @@
+{
+	"name": "Pinterest Tagger Processor",
+	"description": "Gets the board that a pin was made on.",
+	"class": "tuktu.social.processors.PinterestTaggerProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "object_field",
+					"description": "The name of the field in which the Pinterest object is.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tags",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "boards",
+							"description": "The boards to tag for, must be following the structure of <username>/<boardname>.",
+							"type": "array",
+							"required": false,
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "exclude_on_none",
+					"description": "Exclude pins which do not match any of the boards.",
+					"type": "boolean",
+					"required": true,
+					"default": false
+				}
+			]
+		}
+	]
+}
