@@ -26,6 +26,7 @@ import org.joda.time.format.DateTimeFormat
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.PoisonPill
 
 case class PinterestRequest(
         board: String,
@@ -38,16 +39,23 @@ case class PinterestObjects(
         data: List[JsObject]
 )
 case class PinterestDone()
+case class AuthorPins(
+        pins: List[JsObject]
+)
 
-class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth2AccessToken, start: Long, end: Option[Long], maxAttempts: Int, updateTime: Int) extends Actor with ActorLogging {
+class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth2AccessToken, start: Long, end: Option[Long], maxAttempts: Int, updateTime: Int, getExtendedAuthor: Boolean) extends Actor with ActorLogging {
     val timeformat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss")
+    // If we need to get extended author, set up actor
+    val authorActor = if (getExtendedAuthor)
+            Some(Akka.system.actorOf(Props(classOf[AuthorFetcherActor], self, client, token)))
+        else None
     
     def receive() = {
         case pr: PinterestRequest => {
             // Search board
             val request = new OAuthRequest(Verb.GET, "https://api.pinterest.com/v1/boards/" + pr.board + "/pins?" + {
                 if (pr.cursor != null) "cursor=" + pr.cursor + "&" else ""
-            } + "limit=100&fields=id,link,url,creator,created_at,note,color,counts,media,attribution,image,metadata&access_token=" + token.getAccessToken)
+            } + "limit=100&fields=id,link,url,creator,created_at,note,color,counts,media,attribution,image,metadata,board,original_link&access_token=" + token.getAccessToken)
             client.signRequest(token, request)
             val response = client.execute(request)
             if (response.getCode == 200) {
@@ -62,7 +70,12 @@ class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth
                             if (pr.cursor == null) t > pr.afterBackTrack else true
                         }
                     }
-                    parent ! new PinterestObjects(sd)
+                    
+                    // See if we need to get extended author profiles or not
+                    authorActor match {
+                        case Some(a) => a ! new PinterestObjects(sd)
+                        case None => parent ! new PinterestObjects(sd)
+                    }
                     
                     // Find the oldest and newest pin in this request
                     val o = timeformat.parseDateTime((data.minBy{pin =>
@@ -95,13 +108,47 @@ class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth
                     else
                         parent ! new PinterestDone
                 }
-            } else if (pr.attempt == maxAttempts - 1)
+            } else if (pr.attempt == maxAttempts - 1) {
                 // We have an error and retried too much
                 parent ! new PinterestDone
+                authorActor match {
+                    case Some(a) => a ! new StopPacket
+                    case None => self ! PoisonPill
+                }
+            }
             else
                 // We can go again
                 self ! new PinterestRequest(pr.board, pr.cursor, pr.attempt + 1, pr.afterTime, pr.afterBackTrack)
         }
+    }
+}
+
+class AuthorFetcherActor(parent: ActorRef, client: OAuth20Service, token: OAuth2AccessToken) extends Actor with ActorLogging {
+    def receive() = {
+        case ap: AuthorPins => {
+            val newPins = ap.pins.map {pin =>
+                // Get the ID of the author
+                val authorId = (pin \ "creator" \ "id").as[String]
+                // Get the extended author profile of this pin
+                val request = new OAuthRequest(Verb.GET, "https://api.pinterest.com/v1/users/" + authorId + "/?fields=first_name,id,last_name,url,account_type,bio,counts,created_at,image,username&access_token=" + token.getAccessToken)
+                client.signRequest(token, request)
+                val response = client.execute(request)
+                if (response.getCode == 200) {
+                    val json = Json.parse(response.getBody)
+                    val data = (json \ "data").as[JsObject]
+                    // Merge back in the original pin
+                    pin.deepMerge(Json.obj(
+                            "data" -> Json.obj(
+                                    "creator" -> data
+                             )
+                    ))
+                } else null
+            } filter( _ != null)
+            
+            // Send to the parent
+            parent ! new PinterestObjects(newPins)
+        }
+        case sp: StopPacket => sender ! PoisonPill
     }
 }
 
@@ -147,11 +194,17 @@ class PinterestGenerator(resultName: String, processors: List[Enumeratee[DataPac
             actorCount = boards.size
             // Max retries on error
             val maxAttempts = (config \ "max_attempts").asOpt[Int].getOrElse(3)
+            // If we need to get extended user information
+            val getExtendedAuthor = (config \ "get_extended_user").asOpt[Boolean].getOrElse(false)
             // Get update time
             val updateTime = {
                 val ut = (config \ "update_time").asOpt[Int].getOrElse(5)
                 // Check if our update time is going to hit rate limits (1k calls per hour) - we can only do this for the realtime setting
-                if (3600 / ut * boards.size > 1000) Math.ceil(3.6 * boards.size) else ut
+                if (3600 / ut * boards.size > 1000)
+                    Math.ceil(3.6 * boards.size * {
+                        if (getExtendedAuthor) 2 else 1
+                    })
+                else ut
             }
             
             // Set up client
@@ -175,7 +228,7 @@ class PinterestGenerator(resultName: String, processors: List[Enumeratee[DataPac
             
             // Set up actors
             pollerActor = Akka.system.actorOf(RoundRobinPool(boards.size)
-                .props(Props(classOf[AsyncPinterestActor], self, service, token, startTime, endTime, maxAttempts, updateTime))
+                .props(Props(classOf[AsyncPinterestActor], self, service, token, startTime, endTime, maxAttempts, updateTime, getExtendedAuthor))
             )
             boards.foreach{board =>
                 pollerActor ! new PinterestRequest(board, null, 0, startTime, 0L)

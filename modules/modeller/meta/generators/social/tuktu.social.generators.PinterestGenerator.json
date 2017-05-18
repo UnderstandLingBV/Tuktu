@@ -120,6 +120,13 @@
 					"type": "int",
 					"required": false,
 					"default": 5
+				},
+				{
+					"name": "get_extended_user",
+					"description": "Whether or not to get extended author profiles. Fetches a bit more fields on the author of a pin, but costs another request for every pin",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}
