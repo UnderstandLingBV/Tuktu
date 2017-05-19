@@ -260,14 +260,14 @@ class PinterestTaggerProcessor(resultName: String) extends BaseProcessor(resultN
             // Get the creator field
             b = (datum(objField).asInstanceOf[JsObject] \ "board" \ "url").as[String]
             // See if one of the boards is there
-            matches = boards.filter {board =>
+            matches = boards.exists {board =>
                 b.contains(board)
             }
             
             // See if we need to exclude
-            if (!excludeOnNone || !matches.isEmpty)
+            if (!excludeOnNone || matches)
         } yield {
-            datum + (resultName -> matches)
+            datum + (resultName -> (datum(objField).asInstanceOf[JsObject] \ "creator" \ "username").as[String])
         })
     })
 }
