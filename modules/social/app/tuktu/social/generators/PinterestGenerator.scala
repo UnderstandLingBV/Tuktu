@@ -1,3 +1,4 @@
+
 package tuktu.social.generators
 
 import com.github.scribejava.apis.PinterestApi
@@ -27,6 +28,7 @@ import org.joda.time.format.DateTimeFormat
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.PoisonPill
+import play.api.Logger
 
 case class PinterestRequest(
         board: String,
@@ -116,9 +118,12 @@ class AsyncPinterestActor(parent: ActorRef, client: OAuth20Service, token: OAuth
                     case None => self ! PoisonPill
                 }
             }
-            else
+            else {
+                Logger.warn("Pinterest generator got a non-OK response for board " + pr.board + " - "
+                        + response.getCode + "\r\n" + response.getBody)
                 // We can go again
                 self ! new PinterestRequest(pr.board, pr.cursor, pr.attempt + 1, pr.afterTime, pr.afterBackTrack)
+            }
         }
     }
 }
