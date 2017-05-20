@@ -1,0 +1,86 @@
+{
+	"name": "NEWS API Generator",
+	"description": "Gets news from the News API.",
+	"class": "tuktu.web.generators.NewsAPIGenerator",
+	"parameters": [
+		{
+			"name": "nodes",
+			"type": "array",
+			"required": false,
+			"description": "Optionally specify on which nodes to run and how many instances you want on each node.",
+			"parameters": [
+				{
+					"name": "",
+					"type": "object",
+					"required": true,
+					"parameters": [
+						{
+							"name": "type",
+							"type": "string",
+							"required": true,
+							"description": "The type of node handler, one of SingleNode, SomeNodes, AllNodes (leave empty for local execution)"
+						},
+						{
+							"name": "nodes",
+							"type": "string",
+							"required": true,
+							"description": "The nodes to use for this node handler type"
+						},
+						{
+							"name": "instances",
+							"type": "int",
+							"required": false,
+							"default": 1,
+							"description": "The amount of instances per node of this handler type"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "stop_on_error",
+			"type": "boolean",
+			"required": false,
+			"description": "If set to false, Tuktu will not kill the flow on data error.",
+			"default": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "token",
+					"description": "The access key/token given by News API.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "sources",
+					"description": "The news sources to keep track of. Tracks all sources if none are given",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "update_time",
+					"description": "How long to wait between each poll in seconds.",
+					"type": "int",
+					"required": false,
+					"default": 3600
+				}				
+			]
+		}
+	]
+}
