@@ -267,7 +267,14 @@ class PinterestTaggerProcessor(resultName: String) extends BaseProcessor(resultN
             // See if we need to exclude
             if (!excludeOnNone || matches)
         } yield {
-            datum + (resultName -> (datum(objField).asInstanceOf[JsObject] \ "creator" \ "username").as[String])
+            datum + (resultName -> {
+                (datum(objField).asInstanceOf[JsObject] \ "creator" \ "username").asOpt[String] match {
+                    case Some(name) => name
+                    case None => (datum(objField).asInstanceOf[JsObject] \ "creator" \ "first_name").as[String] + " " +
+                        (datum(objField).asInstanceOf[JsObject] \ "creator" \ "last_name").as[String]
+                }
+                
+            })
         })
     })
 }
