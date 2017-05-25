@@ -20,6 +20,7 @@ class VGG16Classifier(resultName: String) extends BaseProcessor(resultName) {
     var n: Int = _
     var flatten: Boolean = false
     var useCategories: Boolean = _
+    var counter = 0
     
     override def initialize(config: JsObject) {
         (config \ "local_remote").asOpt[String] match {
@@ -60,6 +61,11 @@ class VGG16Classifier(resultName: String) extends BaseProcessor(resultName) {
                         val uri = utils.evaluateTuktuString(imageName, datum)
                         if (localRemote == "remote") getImageLabels(new URL(uri)) else getImageLabels(uri)
                     }
+                }
+                counter += 1
+                if (counter % 25 == 0) {
+                    System.gc
+                    counter = 0
                 }
             })
         }
