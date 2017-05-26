@@ -37,8 +37,30 @@
 							"parameters": [
 								{
 									"name": "",
-									"type": "string",
-									"required": true
+									"type": "object",
+									"required": true,
+									"parameters": [
+										{
+											"name": "keyword",
+											"description": "The keyword to search for in a tweet.",
+											"type": "string",
+											"required": true
+										},
+										{
+											"name": "exact",
+											"description": "If this keyword contains multiple words (space-separated), a non-exact match will look for all words to be present, but it any given order.",
+											"type": "boolean",
+											"required": false,
+											"default": false
+										},
+										{
+											"name": "case_sensitive",
+											"description": "Whether or not the matching should be case sensitive.",
+											"type": "boolean",
+											"required": false,
+											"default": false
+										}
+									]
 								}
 							]
 						},

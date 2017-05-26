@@ -17,6 +17,12 @@ import tuktu.api.DataPacket
 
 import scala.util.Try
 
+case class KeywordDefinition(
+        keyword: String,
+        caseSensitive: Boolean,
+        exact: Boolean
+)
+
 /**
  * When a tweet is being searched for on the stream using a combination of filters, this processors will append to the data
  * those filters that actually caused a hit for this tweet
@@ -25,7 +31,7 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
     // Get name of the field in which the Twitter object is
     var objField: String = _
     // Get the actual tags
-    var keywords: Option[List[String]] = _
+    var keywords: Option[List[KeywordDefinition]] = _
     var users: Option[List[String]] = _
     var geos: Option[List[String]] = _
     var userTagField: Option[String] = _
@@ -37,7 +43,21 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
         objField = (config \ "object_field").as[String]
         // Get the actual tags
         val tags = (config \ "tags").as[JsObject]
-        keywords = (tags \ "keywords").asOpt[List[String]]
+        keywords = {
+            (tags \ "keywords").asOpt[List[JsObject]] match {
+                case None => None
+                case Some(kws) => {
+                    // Get the keyword definitions
+                    Some(kws.map{kw =>
+                        new KeywordDefinition(
+                            (kw \ "keyword").as[String],
+                            (kw \ "case_sensitive").asOpt[Boolean].getOrElse(false),
+                            (kw \ "exact").asOpt[Boolean].getOrElse(false)
+                        )
+                    })
+                }
+            }
+        }
         users = (tags \ "users").asOpt[List[String]]
         geos = (tags \ "geos").asOpt[List[String]]
 
@@ -54,8 +74,21 @@ class TwitterTaggerProcessor(resultName: String) extends BaseProcessor(resultNam
             tweet = datum(objField).asInstanceOf[JsObject]
 
             k = keywords.map { list =>
-                val tw: String = (tweet \ "text").as[String].toLowerCase
-                list.filter { tw.contains(_) }.distinct
+                // Check for the keywords
+                val tw = (tweet \ "text").as[String]
+                val twLower = tw.toLowerCase
+                list.filter {kw =>
+                    // See if this is a composite keyword (space-separated)
+                    if (kw.keyword.contains(" ") && !kw.exact)
+                        // All terms should be present
+                        kw.keyword.split(" ").forall {term =>
+                            // Check case sensitivity
+                            if (kw.caseSensitive) tw.contains(term) else twLower.contains(term.toLowerCase)
+                        }
+                    else if (kw.caseSensitive)
+                        tw.contains(kw.keyword)
+                    else twLower.contains(kw.keyword.toLowerCase)
+                }.distinct.map(_.keyword)
             }.getOrElse(Nil)
 
             u = users match {
