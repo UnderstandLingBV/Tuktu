@@ -49,6 +49,12 @@ class VGG16Classifier(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         data.map{datum =>
             datum + (resultName -> {
+                counter += 1
+                if (counter % 25 == 0) {
+                    System.gc
+                    counter = 0
+                }
+                
                 // Get image, check if it's a list of URLs or a hard coded URL
                 datum.get(imageName) match {
                     case Some(value: Seq[String]) => {
@@ -61,11 +67,6 @@ class VGG16Classifier(resultName: String) extends BaseProcessor(resultName) {
                         val uri = utils.evaluateTuktuString(imageName, datum)
                         if (localRemote == "remote") getImageLabels(new URL(uri)) else getImageLabels(uri)
                     }
-                }
-                counter += 1
-                if (counter % 25 == 0) {
-                    System.gc
-                    counter = 0
                 }
             })
         }

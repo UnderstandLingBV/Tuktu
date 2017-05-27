@@ -39,12 +39,19 @@ class InceptionClassifier(resultName: String) extends BaseProcessor(resultName) 
     
     def getImageLabels(uri: URL) = {
         val labels = InceptionV3.classifyFile(uri, if (flatten) 1 else n, useCategories)
+        println(labels)
         if (flatten) labels.head._1 else labels
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         data.map{datum =>
             datum + (resultName -> {
+                counter += 1
+                if (counter % 25 == 0) {
+                    System.gc
+                    counter = 0
+                }
+                
                 // Get image, check if it's a list of URLs or a hard coded URL
                 datum.get(imageName) match {
                     case Some(value: Seq[String]) => {
@@ -57,11 +64,6 @@ class InceptionClassifier(resultName: String) extends BaseProcessor(resultName) 
                         val uri = utils.evaluateTuktuString(imageName, datum)
                         if (localRemote == "remote") getImageLabels(new URL(uri)) else getImageLabels(uri)
                     }
-                }
-                counter += 1
-                if (counter % 25 == 0) {
-                    System.gc
-                    counter = 0
                 }
             })
         }
