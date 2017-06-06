@@ -39,7 +39,6 @@ class InceptionClassifier(resultName: String) extends BaseProcessor(resultName) 
     
     def getImageLabels(uri: URL) = {
         val labels = InceptionV3.classifyFile(uri, if (flatten) 1 else n, useCategories)
-        println(labels)
         if (flatten) labels.head._1 else labels
     }
     
