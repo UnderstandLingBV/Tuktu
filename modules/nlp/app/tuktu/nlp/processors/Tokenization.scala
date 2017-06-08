@@ -21,6 +21,10 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldName: String = _
     var asString: Boolean = _
     var language: Option[String] = _
+    
+    // Arabic
+    val tf = ArabicTokenizer.factory
+    tf.setOptions("untokenizable=noneKeep")
 
     override def initialize(config: JsObject) {
         // Get fields
@@ -55,8 +59,6 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
                 case Some(lang) => utils.evaluateTuktuString(lang, datum) match {
                     case l: String if l == "ar" => {
                         // Apply Arabic tokenization
-                        val tf = ArabicTokenizer.factory
-                        tf.setOptions("untokenizable=noneKeep")
                         val tokenizer = tf.getTokenizer(new StringReader(fieldValue))
                         var arTokens = collection.mutable.ListBuffer.empty[String]
                         while (tokenizer.hasNext) arTokens += tokenizer.next.word
