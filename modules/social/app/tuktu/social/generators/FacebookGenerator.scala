@@ -128,6 +128,7 @@ class PostCollector(fbClient: DefaultFacebookClient, commentCollector: ActorRef,
 
 class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRef, commentFrequency: Int) extends Actor with ActorLogging {
     val posts = collection.mutable.Map.empty[JsObject, (Long, Int)]
+    var isRequesting = false
     
     def receive() = {
         case sp: StopPacket => {
@@ -138,52 +139,59 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
             posts += post -> (0L, 0)
         }
         case ic: IterateComments => {
-            val usePosts = posts.toList
-            // Set up all urls
-            val urls = usePosts.map {post =>
-                (post._1 \ "id").as[String] + "/comments"
-            }
-            
-            val now = System.currentTimeMillis / 1000L
-            // Get the URLs in batched fashion
-            val rs = (for ((url, offset) <- urls.zipWithIndex) yield {
-                // Build the start and end parameters
-                val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("since", usePosts(offset)._2._1), Parameter.`with`("until", now),
-                        Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes,likes.limit(0).summary(true),comments.limit(0).summary(true),shares"))
-                    
-                // Add the batched request
-                new BatchRequestBuilder(url)
-                        .parameters(parameters: _*)
-                        .build()
-            }).grouped(50)
-            
-            rs.zipWithIndex.foreach {ri =>
-                val requests = ri._1
-                val offset = ri._2
-                // Make the requests
-                val responses = fbClient.executeBatch(requests.asJava)
+            if (!isRequesting) {
+                isRequesting = true
+                val usePosts = posts.toList
+                // Set up all urls
+                val urls = usePosts.map {post =>
+                    (post._1 \ "id").as[String] + "/comments"
+                }
                 
-                authorCollector ! new PostList(responses.flatMap(response => {
-                    // Use try since sometimes comments are removed before we see them
-                    try {
-                        val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
-                        objectList.flatMap(objects => {
-                            objects.map(obj => {
-                                val json = Json.parse(obj.toString).asInstanceOf[JsObject]
-                                // Merge the original post into the comment
-                                json ++ Json.obj("post" -> usePosts(offset)._1)
+                val now = System.currentTimeMillis / 1000L
+                // Get the URLs in batched fashion
+                val rs = (for ((url, offset) <- urls.zipWithIndex) yield {
+                    // Build the start and end parameters
+                    val parameters = Array(Parameter.`with`("limit", 50), Parameter.`with`("since", usePosts(offset)._2._1), Parameter.`with`("until", now),
+                            Parameter.`with`("fields", "id,attachment,comment_count,created_time,from,like_count,message,message_tags,object,parent,user_likes,likes.limit(0).summary(true),comments.limit(0).summary(true),shares"))
+                        
+                    // Add the batched request
+                    new BatchRequestBuilder(url)
+                            .parameters(parameters: _*)
+                            .build()
+                }).grouped(50)
+                
+                rs.zipWithIndex.foreach {ri =>
+                    val requests = ri._1
+                    val offset = ri._2
+                    // Make the requests
+                    val responses = fbClient.executeBatch(requests.asJava)
+                    
+                    val list = new PostList(responses.zipWithIndex.flatMap(res => {
+                        val response = res._1
+                        val index = res._2
+                        // Use try since sometimes comments are removed before we see them
+                        try {
+                            val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
+                            objectList.flatMap(objects => {
+                                objects.map(obj => {
+                                    val json = Json.parse(obj.toString).asInstanceOf[JsObject]
+                                    // Merge the original post into the comment
+                                    json ++ Json.obj("post" -> usePosts(offset * 50 + index)._1)
+                                })
                             })
-                        })
-                    } catch {
-                        case e: com.restfb.json.JsonException => null
-                    }
-                }).toList.filter(_ != null), true)
-            }
-            
-            // Update the counts and kick out the ones we don't need anymore
-            usePosts.foreach {post =>
-                posts(post._1) = (now, post._2._2 + 1)
-                if (posts(post._1)._2 >= commentFrequency) posts -= post._1
+                        } catch {
+                            case e: com.restfb.json.JsonException => null
+                        }
+                    }).toList.filter(_ != null), true)
+                    authorCollector ! list
+                }
+                
+                // Update the counts and kick out the ones we don't need anymore
+                usePosts.foreach {post =>
+                    posts(post._1) = (now, post._2._2 + 1)
+                    if (posts(post._1)._2 >= commentFrequency) posts -= post._1
+                }
+                isRequesting = false
             }
         }
     }
@@ -207,16 +215,19 @@ class AuthorCollector(fbClient: DefaultFacebookClient, channel: Concurrent.Chann
         }
         case a: ActorRef => commentCollector = a
         case pr: PostList => {
+            val usePosts = pr.posts.toList
             // We don't know the type, so are constrained to using metadata to figure it out
-            val requestList = pr.posts.map {post =>
+            val requestLists = (pr.posts.map {post =>
                 // Add the batched request for from
                 new BatchRequestBuilder((post \ "from" \ "id").as[String])
                         .parameters(Parameter.`with`("metadata", 1))
                         .build()
-            }
+            }).grouped(50)
             
             // Make the requests, per 50
-            requestList.grouped(50).foreach(requests => {
+            requestLists.zipWithIndex.foreach(rs => {
+                val requests = rs._1
+                val offset = rs._2
                 val responses = fbClient.executeBatch(requests.asJava)
             
                 // Using the metadata, make subsequent requests for the specific page types
@@ -244,23 +255,21 @@ class AuthorCollector(fbClient: DefaultFacebookClient, channel: Concurrent.Chann
                 val profileResponses = fbClient.executeBatch(profileRequests.map(_._2).asJava)
             
                 // Check what we need to do with this list of profiles
-                val resultList = profileResponses.zipWithIndex.zip(pr.posts).map(el => el match {
-                    case (r, obj) => r match {
-                        case (response, index) => {
-                            // Get the type
-                            val nodeType = profileRequests(index)._1
-                            
-                            // Fill in the blanks
-                            val json = Json.parse(response.getBody).as[JsObject]
-                            val newObject = (obj ++ Json.obj("is_comment" -> pr.is_comment)).deepMerge(
-                                    Json.obj("from" -> (json ++ Json.obj("type" -> nodeType)))
-                            )
-                            
-                            // Push into the channel
-                            channel.push(new DataPacket(List(Map(resultName -> newObject))))
-                            
-                            newObject
-                        }
+                val resultList = profileResponses.zipWithIndex.map(el => el match {
+                    case (response, index) => {
+                        // Get the type
+                        val nodeType = profileRequests(index)._1
+                        
+                        // Fill in the blanks
+                        val json = Json.parse(response.getBody).as[JsObject]
+                        val newObject = (usePosts(offset * 50 + index) ++ Json.obj("is_comment" -> pr.is_comment)).deepMerge(
+                                Json.obj("from" -> (json ++ Json.obj("type" -> nodeType)))
+                        )
+                        
+                        // Push into the channel
+                        channel.push(new DataPacket(List(Map(resultName -> newObject))))
+                        
+                        newObject
                     }
                 }).toList
                 
