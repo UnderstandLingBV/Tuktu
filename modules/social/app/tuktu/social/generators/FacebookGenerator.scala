@@ -188,7 +188,7 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
                 
                 // Update the counts and kick out the ones we don't need anymore
                 usePosts.foreach {post =>
-                    posts(post._1) = (now, post._2._2 + 1)
+                    posts(post._1) = (now + 1, post._2._2 + 1)
                     if (posts(post._1)._2 >= commentFrequency) posts -= post._1
                 }
                 isRequesting = false
