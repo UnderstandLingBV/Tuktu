@@ -45,6 +45,7 @@ case class PostList(
 )
 case class IteratePosts()
 case class IterateComments()
+case class FlushAuthors()
 
 class PostCollector(fbClient: DefaultFacebookClient, commentCollector: ActorRef, authorCollector: ActorRef, flushInterval: Int) extends Actor with ActorLogging {
     val fields = List(
