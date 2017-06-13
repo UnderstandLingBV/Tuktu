@@ -57,6 +57,19 @@ class Word2Vec() extends BaseModel {
             allWords.mean(0)
         } else Nd4j.create((0 to layerSize - 1).map(_ => 0.0).toArray)
     }
+    
+    /**
+     * Classifies a set of input words to candidate word lists based on cosine similarity to find the closest candidate.
+     * Every element of the candidateWordClasses is a Seq[String] and is a set of words that together shape the class.
+     */
+    def simpleNearestWordsClassifier(inputWords: List[String], candidateWordClasses: List[List[String]]) = {
+        val inputAverage = getAverageDocVector(inputWords, None)
+        val scores = candidateWordClasses.zipWithIndex.map {wordClass =>
+            val candidateAverage = getAverageDocVector(wordClass._1, None)
+            (wordClass._2, Transforms.cosineSim(inputAverage, candidateAverage))
+        }
+        scores.sortWith((a,b) => a._2 > b._2)
+    }
 
     /**
      * Calculate top nearest words to the given list of words.

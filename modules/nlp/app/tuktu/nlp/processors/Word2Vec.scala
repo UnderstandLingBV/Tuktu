@@ -26,6 +26,38 @@ class ReadGoogleWord2VecProcessor(resultName: String) extends BaseMLDeserializeP
     }
 }
 
+class Word2VecSimpleClassifierProcessor(resultName: String) extends BaseMLApplyProcessor[Word2Vec](resultName) {
+    var field: String = _
+    var candidates: List[List[String]] = _
+    var top: Int = _
+    var flatten: Boolean = _
+
+    override def initialize(config: JsObject) {
+        field = (config \ "data_field").as[String]
+        candidates = (config \ "candidates").as[List[List[String]]]
+        top = (config \ "top").asOpt[Int].getOrElse(1)
+        flatten = (config \ "flatten").asOpt[Boolean].getOrElse(true)
+        
+        super.initialize(config)
+    }
+
+    override def applyModel(resultName: String, data: List[Map[String, Any]], model: Word2Vec): List[Map[String, Any]] = {
+        for (datum <- data) yield {
+            datum + (resultName -> {
+                // Check field type
+                val scores = datum(field) match {
+                    case dtm: Seq[String] => model.simpleNearestWordsClassifier(dtm.toList, candidates)
+                    case dtm: String      => model.simpleNearestWordsClassifier(dtm.split(" ").toList, candidates)
+                    case dtm              => model.simpleNearestWordsClassifier(dtm.toString.split(" ").toList, candidates)
+                }
+                
+                // Flatten if we have to
+                if (flatten) scores.head._1 else scores
+            })
+        }
+    }
+}
+
 /**
  * Applies Word2Vec computation to a document
  */
