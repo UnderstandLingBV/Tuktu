@@ -166,24 +166,43 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
                     // Make the requests
                     val responses = fbClient.executeBatch(requests.asJava)
                     
-                    val list = new PostList(responses.zipWithIndex.flatMap(res => {
+                    // Keep track of a the comments and send them intermediately
+                    val buffer = collection.mutable.ListBuffer.empty[JsObject]
+                    responses.zipWithIndex.foreach(res => {
                         val response = res._1
                         val index = res._2
                         // Use try since sometimes comments are removed before we see them
-                        try {
-                            val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
-                            objectList.flatMap(objects => {
-                                objects.map(obj => {
-                                    val json = Json.parse(obj.toString).asInstanceOf[JsObject]
-                                    // Merge the original post into the comment
-                                    json ++ Json.obj("post" -> usePosts(offset * 50 + index)._1)
-                                })
-                            })
+                        
+                        val objectList = try {
+                            new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
                         } catch {
                             case e: com.restfb.json.JsonException => null
                         }
-                    }).toList.filter(_ != null), true)
-                    authorCollector ! list
+                        if (objectList != null) {
+                            objectList.foreach(objects => {
+                                objects.foreach(obj => {
+                                    try {
+                                        val json = Json.parse(obj.toString).asInstanceOf[JsObject]
+                                        // Merge the original post into the comment
+                                        val newObj = json ++ Json.obj("post" -> usePosts(offset * 50 + index)._1)
+                                        // Add to our buffer
+                                        buffer += newObj
+                                        // Send if we have reached 10 pages
+                                        if (buffer.size == 500) {
+                                            authorCollector ! new PostList(buffer.toList, true)
+                                            buffer.clear
+                                        }
+                                    } catch {
+                                        case e: com.restfb.json.JsonException => {}
+                                    }
+                                })
+                            })
+                        }
+                    })
+                    
+                    // Send residue if any
+                    if (buffer.size > 0)
+                        authorCollector ! new PostList(buffer.toList, true)
                 }
                 
                 // Update the counts and kick out the ones we don't need anymore
@@ -243,12 +262,11 @@ class AuthorCollector(fbClient: DefaultFacebookClient, channel: Concurrent.Chann
                         }
                     }
                     // Get all the eligible fields
-                    val fields = if (nodeType != "Unknown") eligibleFields(nodeType) else Nil
-                    
-                    // Make new request with all the fields we can get
-                    (nodeType, new BatchRequestBuilder((json \ "id").as[String])
-                        .parameters(Parameter.`with`("fields", fields.mkString(",")))
-                        .build())
+                    if (nodeType != "Unknown")
+                        (nodeType, new BatchRequestBuilder((json \ "id").as[String])
+                            .parameters(Parameter.`with`("fields", eligibleFields(nodeType).mkString(",")))
+                            .build())
+                    else ("Unknown", null)
                 }).filter(_._1 != "Unknown")
                 
                 // Get all the real profile data
