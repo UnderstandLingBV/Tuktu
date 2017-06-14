@@ -88,3 +88,33 @@ class FastTextProcessor(resultName: String) extends BaseProcessor(resultName) {
         })
     })
 }
+
+class FastTextVectorProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var modelName: String = _
+    var tokensField: String = _
+    
+    override def initialize(config: JsObject) {
+        modelName = (config \ "model_name").as[String]
+        tokensField = (config \ "tokens_field").as[String]
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(data.data.map {datum =>
+            // See if we need to load a new model
+            val newModelName = utils.evaluateTuktuString(modelName, datum)
+            
+            // Get our model from cache
+            val model = FastTextCache.getModel(newModelName)
+            
+            // Predict
+            val prediction = model.getSentenceVector(datum(tokensField) match {
+                case a: String => a.split(" ")
+                case a: Seq[String] => a
+                case a: Any => a.toString.split(" ")
+            })
+            
+            // Append
+            datum + (resultName -> prediction.toSeq)
+        })
+    })
+}

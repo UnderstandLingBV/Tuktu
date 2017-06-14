@@ -50,11 +50,15 @@ class FastTextWrapper(lr: Double, lrUpdateRate: Int, dim: Int, ws: Int, epoch: I
 	args.label = label
 	args.verbose = 0
     args.pretrainedVectors = pretrainedVectors
+    fasttext.setArgs(args)
     
     def predict(tokens: Seq[String]) =
 		fasttext.predict(tokens.toArray, 1).toList.map {p =>
 		    (p.getValue, p.getKey)
 		}.head
+		
+	def getSentenceVector(tokens: Seq[String]) =
+	    fasttext.sentenceVectors(tokens.toArray).data_.map(_.toDouble)
 		
 	override def serialize(filename: String) = {
 		val saveArgs = fasttext.getArgs
