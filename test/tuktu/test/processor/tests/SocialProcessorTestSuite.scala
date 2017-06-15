@@ -18,7 +18,7 @@ import play.api.Play
 @DoNotDiscover
 class SocialProcessorTestSuite extends PlaySpec {
 
-    "TwitterTaggerProcessor" must {
+    /*"TwitterTaggerProcessor" must {
 
         val twitter1 = Json.parse("""
             {
@@ -509,5 +509,5 @@ class SocialProcessorTestSuite extends PlaySpec {
 
             new BaseProcessorTest()(proc, config, input, output)
         }
-    }
+    }*/
 }
