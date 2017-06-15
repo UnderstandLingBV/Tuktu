@@ -9,6 +9,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import tuktu.nlp.models.FastTextWrapper
 import tuktu.api.utils
 import tuktu.nlp.models.FastTextCache
+import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.ops.transforms.Transforms
 
 class FastTextProcessor(resultName: String) extends BaseProcessor(resultName) {
     //val models = collection.mutable.Map.empty[String, FastTextWrapper]
@@ -115,6 +118,64 @@ class FastTextVectorProcessor(resultName: String) extends BaseProcessor(resultNa
             
             // Append
             datum + (resultName -> prediction.toSeq)
+        })
+    })
+}
+
+class SimpleFastTextClassifierProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var tokensField: String = _
+    val candidateVectors = collection.mutable.ListBuffer.empty[INDArray]
+    var model: FastTextWrapper = _
+    var top: Int = _
+    var flatten: Boolean = _
+    var cutoff: Option[Double] = _
+    
+    override def initialize(config: JsObject) {
+        tokensField = (config \ "tokens_field").as[String]
+        model = FastTextCache.getModel((config \ "model_name").as[String])
+        top = (config \ "top").asOpt[Int].getOrElse(1)
+        flatten = (config \ "flatten").asOpt[Boolean].getOrElse(true)
+        cutoff = (config \ "cutoff").asOpt[Double]
+        
+        (config \ "candidates").as[List[List[String]]].foreach {candidateSet =>
+            // Compute the vectors for each candidate
+            val matrix = Nd4j.create(candidateSet.size, model.getArgs.dim)
+            candidateSet.zipWithIndex.foreach {candidate =>
+                matrix.putRow(candidate._2, Nd4j.create(model.getWordVector(candidate._1)))
+            }
+            // Average them to a single vector
+            candidateVectors += matrix.mean(0)
+        }
+    }
+    
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(data.data.map {datum =>
+            // Apply the sentence vector induction
+            val sentenceVector = model.getSentenceVector(datum(tokensField) match {
+                case a: String => a.split(" ")
+                case a: Seq[String] => a
+                case a: Any => a.toString.split(" ")
+            })
+            
+            // Compute cosine similarity to all the candidate vectors and sort by best scoring
+            val scores = (candidateVectors.zipWithIndex.map {candidateVector =>
+                (candidateVector._2, Transforms.cosineSim(Nd4j.create(sentenceVector), candidateVector._1))
+            }).sortWith((a,b) => a._2 > b._2)
+            
+            // Cutoff
+            val cutoffScores = (cutoff match {
+                case Some(c) => {
+                    // Get only those labels that have a score higher or equal to the cutoff
+                    scores.filter(_._2 >= c)
+                }
+                case None => scores
+            }) toList
+            
+            // Append
+            datum + (resultName -> {
+                // Flatten if we have to
+                if (flatten) scores.head._1 else scores
+            })
         })
     })
 }

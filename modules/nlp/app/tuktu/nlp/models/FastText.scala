@@ -1,19 +1,18 @@
 package tuktu.nlp.models
 
-import tuktu.ml.models.BaseModel
-import java.io.IOException
-import tuktu.api.file
-import java.io.File
-import fasttext.FastText
-import scala.collection.JavaConversions._
-import java.io.FileOutputStream
-import java.io.BufferedOutputStream
-import fasttext.Args
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.LoadingCache
-import com.google.common.cache.CacheLoader
-import play.api.Play
 import java.util.concurrent.TimeUnit
+
+import scala.collection.JavaConversions._
+
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.CacheLoader
+import com.google.common.cache.LoadingCache
+
+import fasttext.Args
+import fasttext.FastText
+import fasttext.Vector
+import play.api.Play
+import tuktu.ml.models.BaseModel
 
 
 class FastTextWrapper(lr: Double, lrUpdateRate: Int, dim: Int, ws: Int, epoch: Int, minCount: Int, minCountLabel: Int,
@@ -52,6 +51,8 @@ class FastTextWrapper(lr: Double, lrUpdateRate: Int, dim: Int, ws: Int, epoch: I
     args.pretrainedVectors = pretrainedVectors
     fasttext.setArgs(args)
     
+    def getArgs() = fasttext.getArgs
+    
     def predict(tokens: Seq[String]) =
 		fasttext.predict(tokens.toArray, 1).toList.map {p =>
 		    (p.getValue, p.getKey)
@@ -59,6 +60,12 @@ class FastTextWrapper(lr: Double, lrUpdateRate: Int, dim: Int, ws: Int, epoch: I
 		
 	def getSentenceVector(tokens: Seq[String]) =
 	    fasttext.sentenceVectors(tokens.toArray).data_.map(_.toDouble)
+	    
+	def getWordVector(word: String) = {
+		var v = new Vector(fasttext.getArgs.dim)
+	    fasttext.getVector(v, word)
+	    v.data_.map(_.toDouble)
+    }
 		
 	override def serialize(filename: String) = {
 		val saveArgs = fasttext.getArgs
