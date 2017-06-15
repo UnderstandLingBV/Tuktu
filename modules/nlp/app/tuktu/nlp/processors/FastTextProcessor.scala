@@ -174,7 +174,7 @@ class SimpleFastTextClassifierProcessor(resultName: String) extends BaseProcesso
             // Append
             datum + (resultName -> {
                 // Flatten if we have to
-                if (flatten) scores.head._1 else scores
+                if (flatten) scores.head._1 else scores.take(top)
             })
         })
     })

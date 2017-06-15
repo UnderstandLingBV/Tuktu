@@ -66,7 +66,7 @@ class Word2VecSimpleClassifierProcessor(resultName: String) extends BaseMLApplyP
                 }
                 
                 // Flatten if we have to
-                if (flatten) scores.head._1 else scores
+                if (flatten) scores.head._1 else scores.take(top)
             })
         }
     }
