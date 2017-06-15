@@ -606,7 +606,7 @@ $('a[href="#SaveConfig"]').on('click', (e) ->
 	e.preventDefault()
 	config = getConfig()
 	jsRoutes.controllers.modeller.Application.saveConfig(file).ajax(
-		contentType: "text/plain",
+		contentType: "application/json; charset=utf-8",
 		data: JSON.stringify(config, null, '    '),
 		success: ->
 			resultSymbol = document.createElement('span')

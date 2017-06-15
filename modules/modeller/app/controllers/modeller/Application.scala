@@ -38,12 +38,12 @@ object Application extends Controller {
         val path = Paths.get(configsRepo, file).toAbsolutePath.normalize
         // Check if it starts with the configs folder (symlinks and hardlinks are not handled)
         if (path.startsWith(Paths.get(configsRepo).toAbsolutePath.normalize)) {
-            request.body.asText match {
+            request.body.asJson match {
                 case None =>
                     BadRequest
-                case Some(str) => {
+                case Some(json) => {
                     try {
-                        Files.write(path, str.getBytes("utf-8"), StandardOpenOption.TRUNCATE_EXISTING)
+                        Files.write(path, json.toString.getBytes("utf-8"), StandardOpenOption.TRUNCATE_EXISTING)
                         Ok
                     } catch {
                         case e: Throwable => {

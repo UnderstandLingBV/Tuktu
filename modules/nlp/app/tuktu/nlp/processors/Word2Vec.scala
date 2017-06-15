@@ -31,12 +31,14 @@ class Word2VecSimpleClassifierProcessor(resultName: String) extends BaseMLApplyP
     var candidates: List[List[String]] = _
     var top: Int = _
     var flatten: Boolean = _
+    var cutoff: Option[Double] = _
 
     override def initialize(config: JsObject) {
         field = (config \ "data_field").as[String]
         candidates = (config \ "candidates").as[List[List[String]]]
         top = (config \ "top").asOpt[Int].getOrElse(1)
         flatten = (config \ "flatten").asOpt[Boolean].getOrElse(true)
+        cutoff = (config \ "cutoff").asOpt[Double]
         
         super.initialize(config)
     }
@@ -45,10 +47,22 @@ class Word2VecSimpleClassifierProcessor(resultName: String) extends BaseMLApplyP
         for (datum <- data) yield {
             datum + (resultName -> {
                 // Check field type
-                val scores = datum(field) match {
-                    case dtm: Seq[String] => model.simpleNearestWordsClassifier(dtm.toList, candidates)
-                    case dtm: String      => model.simpleNearestWordsClassifier(dtm.split(" ").toList, candidates)
-                    case dtm              => model.simpleNearestWordsClassifier(dtm.toString.split(" ").toList, candidates)
+                val scores = {
+                    val s = datum(field) match {
+                        case dtm: Seq[String] => model.simpleNearestWordsClassifier(dtm.toList, candidates)
+                        case dtm: String      => model.simpleNearestWordsClassifier(dtm.split(" ").toList, candidates)
+                        case dtm              => model.simpleNearestWordsClassifier(dtm.toString.split(" ").toList, candidates)
+                    }
+                
+                    // Cutoff
+                    cutoff match {
+                        case Some(c) => {
+                            // Get only those labels that have a score higher or equal to the cutoff
+                            val f = s.filter(_._2 >= c)
+                            if (f.isEmpty) List((-1, 0.0)) else f
+                        }
+                        case None => s
+                    }
                 }
                 
                 // Flatten if we have to

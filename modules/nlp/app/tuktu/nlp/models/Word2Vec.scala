@@ -157,7 +157,7 @@ class Word2Vec() extends BaseModel {
                         new GZIPInputStream(new FileInputStream(modelFile))
                     else
                         new FileInputStream(modelFile)
-                }))
+                }, "utf8"))
 
             Stream.continually(br.readLine()).takeWhile(_ != null).foreach { line =>
                 {

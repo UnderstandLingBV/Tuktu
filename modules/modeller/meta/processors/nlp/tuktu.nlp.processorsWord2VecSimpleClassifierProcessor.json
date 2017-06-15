@@ -72,6 +72,12 @@
 					"required": false,
 					"description": "If set, returns just the best scoring class.",
 					"default": true
+				},
+				{
+					"name": "cutoff",
+					"type": "double",
+					"required": false,
+					"description": "If set, only returns labels with a score higher than or equal to the cutoff. If no scores succeed, will return label -1 with score 0.0."
 				}
 			]
 		}
