@@ -55,6 +55,27 @@
 					"type": "int",
 					"required": true,
 					"description": "The number of trees."
+				},
+				{
+					"name": "max_nodes",
+					"type": "int",
+					"required": false,
+					"description": "The maximum number of leave nodes. More nodes means higher model complexity, implying longer training times but generally stronger models. Values between 4 and 8 typically work well.",
+					"default": 6
+				},
+				{
+					"name": "shrinkage",
+					"type": "double",
+					"required": false,
+					"description": "Shrinkage is a regularization parameter that helps prevent overfitting (learning rate). Typically low values under 0.1 yield great benefits compared to no shrinkage (a value of 1). The lower this value, the longer it takes to train the model.",
+					"default": 0.005
+				},
+				{
+					"name": "sampling_rate",
+					"type": "double",
+					"required": false,
+					"description": "Setting the sampling rate will train a subtree only on a portion of the data instead of the entire dataset, usually increasing generalization.",
+					"default": 0.7
 				}
 			]
 		}

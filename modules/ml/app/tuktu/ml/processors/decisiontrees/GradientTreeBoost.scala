@@ -13,11 +13,17 @@ class GradientTreeBoostTrainProcessor(resultName: String) extends BaseMLTrainPro
     var dataField = ""
     var labelField = ""
     var numTrees: Int = _
+    var maxNodes: Int = _
+    var shrinkage: Double = _
+    var samplingRate: Double =_
     
     override def initialize(config: JsObject) {
         dataField = (config \ "data_field").as[String]
         labelField = (config \ "label_field").as[String]
         numTrees = (config \ "num_trees").as[Int]
+        maxNodes = (config \ "max_nodes").asOpt[Int].getOrElse(6)
+        shrinkage = (config \ "shrinkage").asOpt[Double].getOrElse(0.005)
+        samplingRate = (config \ "sampling_rate").asOpt[Double].getOrElse(0.7)
         
         super.initialize(config)
     }
@@ -43,7 +49,7 @@ class GradientTreeBoostTrainProcessor(resultName: String) extends BaseMLTrainPro
         // Train the regression model
         val trainData = records.map(_._1).toArray
         val labels = records.map(_._2).toArray
-        model.train(trainData, labels, numTrees)
+        model.train(trainData, labels, numTrees, maxNodes, shrinkage, samplingRate)
 
         model
     }
