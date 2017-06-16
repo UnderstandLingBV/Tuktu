@@ -70,6 +70,28 @@ class Word2Vec() extends BaseModel {
         }
         scores.sortWith((a,b) => a._2 > b._2)
     }
+    
+    /**
+     * This classifier is similar to the one above but instead of looking at averaged word vectors, it looks at vectors word-by-word
+     * and sees if there is a close-enough overlap between one or more candidate set words and the sentence's words.
+     */
+    def simpleWordOverlapClassifier(inputWords: List[String], candidateWordsClasses: List[List[INDArray]], cutoff: Double = 0.7) = {
+        // Conver input words
+        val vectors = inputWords.filter(wordMap.contains(_)).map(wordMap(_))
+        // Go over the candidate sets and match
+        candidateWordsClasses.zipWithIndex.map {wordClass =>
+            // Average of all the word similarities
+            val similarities = for {
+                vector <- vectors
+                word <- wordClass._1
+                similarity = Transforms.cosineSim(vector, word)
+                if (similarity >= cutoff)
+            } yield similarity
+            
+            // See if we found any
+            if (similarities.isEmpty) (wordClass._2, 0.0) else (wordClass._2, similarities.sum / similarities.size.toDouble)
+        } sortWith((a,b) => a._2 > b._2)
+    }
 
     /**
      * Calculate top nearest words to the given list of words.

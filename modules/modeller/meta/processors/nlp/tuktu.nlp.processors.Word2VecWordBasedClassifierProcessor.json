@@ -1,0 +1,85 @@
+{
+	"name": "Word2Vec Word-Based Classifier Processor",
+	"description": "This classifier is similar to the one above but instead of looking at averaged word vectors, it looks at vectors word-by-word and sees if there is a close-enough overlap between one or more candidate set words and the sentence's words.",
+	"class": "tuktu.nlp.processors.Word2VecWordBasedClassifierProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be applied. If a model with this name cannot be found, the data will go through unchanged.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "data_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the data resides in. Data can be textual (String) or Seq[String]."
+				},
+				{
+					"name": "candidates",
+					"type": "array",
+					"required": true,
+					"description": "The candidate list.",
+					"parameters": [
+						{
+							"name": "",
+							"type": "array",
+							"required": true,
+							"description": "Candidate words.",
+							"parameters": [
+								{
+									"name": "",
+									"type": "string",
+									"required": true,
+									"description": "The candidate word (partially) defining this class."
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "top",
+					"type": "int",
+					"required": false,
+					"description": "How many of the top classes to return.",
+					"default": 1
+				},
+				{
+					"name": "flatten",
+					"type": "boolean",
+					"required": false,
+					"description": "If set, returns just the best scoring class.",
+					"default": true
+				},
+				{
+					"name": "cutoff",
+					"type": "double",
+					"required": false,
+					"description": "If set, only returns labels with a score higher than or equal to the cutoff. If no scores succeed, will return label -1 with score 0.0."
+				}
+			]
+		}
+	]
+}

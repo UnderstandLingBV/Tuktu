@@ -43,7 +43,7 @@ object Application extends Controller {
                     BadRequest
                 case Some(json) => {
                     try {
-                        Files.write(path, json.toString.getBytes("utf-8"), StandardOpenOption.TRUNCATE_EXISTING)
+                        Files.write(path, Json.prettyPrint(json).getBytes("utf-8"), StandardOpenOption.TRUNCATE_EXISTING)
                         Ok
                     } catch {
                         case e: Throwable => {

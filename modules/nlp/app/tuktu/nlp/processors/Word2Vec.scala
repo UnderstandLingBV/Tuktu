@@ -4,6 +4,8 @@ import tuktu.ml.processors.BaseMLDeserializeProcessor
 import tuktu.nlp.models.Word2Vec
 import play.api.libs.json.JsObject
 import tuktu.ml.processors.BaseMLApplyProcessor
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j
 
 /**
  * Deserializes a Google Word2Vec Trained Set
@@ -26,6 +28,9 @@ class ReadGoogleWord2VecProcessor(resultName: String) extends BaseMLDeserializeP
     }
 }
 
+/**
+ * Classifies a document by taking it's averaged word vectors and matching it against averaged word vectors for sets of candidate words 
+ */
 class Word2VecSimpleClassifierProcessor(resultName: String) extends BaseMLApplyProcessor[Word2Vec](resultName) {
     var field: String = _
     var candidates: List[List[String]] = _
@@ -63,6 +68,57 @@ class Word2VecSimpleClassifierProcessor(resultName: String) extends BaseMLApplyP
                         }
                         case None => s
                     }
+                }
+                
+                // Flatten if we have to
+                if (flatten) scores.head._1 else scores.take(top)
+            })
+        }
+    }
+}
+
+/**
+ * This classifier is similar to the one above but instead of looking at averaged word vectors, it looks at vectors word-by-word
+ * and sees if there is a close-enough overlap between one or more candidate set words and the sentence's words.
+ */
+class Word2VecWordBasedClassifierProcessor(resultName: String) extends BaseMLApplyProcessor[Word2Vec](resultName) {
+    var field: String = _
+    val candidateVectors = collection.mutable.ListBuffer.empty[List[INDArray]]
+    var model: Word2Vec = null
+    var top: Int = _
+    var flatten: Boolean = _
+    var cutoff: Double = _
+    var candidates: List[List[String]] = _
+
+    override def initialize(config: JsObject) {
+        field = (config \ "data_field").as[String]
+        candidates = (config \ "candidates").as[List[List[String]]]
+        top = (config \ "top").asOpt[Int].getOrElse(1)
+        flatten = (config \ "flatten").asOpt[Boolean].getOrElse(true)
+        cutoff = (config \ "cutoff").asOpt[Double].getOrElse(0.7)
+        
+        super.initialize(config)
+    }
+
+    override def applyModel(resultName: String, data: List[Map[String, Any]], model: Word2Vec): List[Map[String, Any]] = {
+        // Initialize model and candidate vectors
+        if (this.model == null) {
+            this.model = model
+            candidates.foreach {candidateSet =>
+                // Compute the vectors for each candidate
+                candidateVectors += candidateSet.filter(model.wordMap.contains(_)).map(model.wordMap(_))
+            }
+        }
+        
+        for (datum <- data) yield {
+            datum + (resultName -> {
+                // Check field type
+                val scores = (datum(field) match {
+                    case dtm: Seq[String] => model.simpleWordOverlapClassifier(dtm.toList, candidateVectors.toList, cutoff)
+                    case dtm: String      => model.simpleWordOverlapClassifier(dtm.split(" ").toList, candidateVectors.toList, cutoff)
+                    case dtm              => model.simpleWordOverlapClassifier(dtm.toString.split(" ").toList, candidateVectors.toList, cutoff)
+                }) map {score =>
+                    if (score._2 < cutoff) (-1, 0.0) else score
                 }
                 
                 // Flatten if we have to
