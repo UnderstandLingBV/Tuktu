@@ -41,17 +41,15 @@ object Application extends Controller {
             request.body.asJson match {
                 case None =>
                     BadRequest
-                case Some(json) => {
+                case Some(json) =>
                     try {
                         Files.write(path, Json.prettyPrint(json).getBytes("utf-8"), StandardOpenOption.TRUNCATE_EXISTING)
                         Ok
                     } catch {
-                        case e: Throwable => {
-                            Logger.error("Can't write to config",e)                            
+                        case e: Throwable =>
+                            Logger.error("Can't write to config", e)
                             InternalServerError
-                        }
                     }
-                }
             }
         } else {
             BadRequest
@@ -59,7 +57,7 @@ object Application extends Controller {
     }
 
     /**
-     * End point for web socket event listener 
+     * End point for web socket event listener
      */
     def webSocket = WebSocket.acceptWithActor[JsValue, JsValue] { request => out =>
         models.modeller.ModellerEventListener.props(out)

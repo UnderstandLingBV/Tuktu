@@ -525,12 +525,14 @@ getConfig = ->
 	# Cycle through all nodes and add the array of successors to its config
 	gen = for g in allNodes.generators
 		conf = g.config
+		conf.modeller = { 'x': Number(g.rect.attr('x')), 'y': Number(g.rect.attr('y')) }
 		conf.next = []
 		for id, succ of g.successors
 			conf.next.push(succ.node.config.id)
 		conf
 	pro = for p in allNodes.processors
 		conf = p.config
+		conf.modeller = { 'x': Number(p.rect.attr('x')), 'y': Number(p.rect.attr('y')) }
 		conf.next = []
 		for id, succ of p.successors
 			conf.next.push(succ.node.config.id)
@@ -570,7 +572,11 @@ importConfig = (object) ->
 				console.log("Processor with id #{id} was not found.")
 				return
 			if not _.has(ids, id)
-				ids[id] = new Processor(processorIds[id], false, paperx + grid + (pros % (nodesPerRow - 1) + 1) * grid * Math.ceil(200 / grid), papery + grid + Math.floor(pros / (nodesPerRow - 1)) * 100)
+				ids[id] = new Processor(
+					processorIds[id],
+					false,
+					if processorIds[id].modeller? and processorIds[id].modeller.x? then processorIds[id].modeller.x else paperx + grid + (pros % (nodesPerRow - 1) + 1) * grid * Math.ceil(200 / grid),
+					if processorIds[id].modeller? and processorIds[id].modeller.y? then processorIds[id].modeller.y else papery + grid + Math.floor(pros / (nodesPerRow - 1)) * 100)
 				pros += 1
 				for succ in processorIds[id].next
 					importProcessor(succ)
@@ -607,7 +613,7 @@ $('a[href="#SaveConfig"]').on('click', (e) ->
 	config = getConfig()
 	jsRoutes.controllers.modeller.Application.saveConfig(file).ajax(
 		contentType: "application/json; charset=utf-8",
-		data: JSON.stringify(config, null, '    '),
+		data: JSON.stringify(config),
 		success: ->
 			resultSymbol = document.createElement('span')
 			resultSymbol.className = "glyphicon glyphicon-ok-circle"
