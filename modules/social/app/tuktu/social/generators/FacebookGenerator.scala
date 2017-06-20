@@ -361,7 +361,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
                         ((intvl \ "start").asOpt[Long].getOrElse(now),
                             (intvl \ "end").asOpt[Long])
                     }
-                    case None => (None, None)
+                    case None => (now, None)
                 }
                 postIteratorStart = now
                 postIteratorEnd = endTime
