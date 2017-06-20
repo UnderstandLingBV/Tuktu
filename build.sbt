@@ -15,6 +15,7 @@ mappings in Universal ++=
 
 lazy val appResolvers = Seq(
     "JCenter" at "http://jcenter.bintray.com/",
+    "lightshed-maven" at "http://dl.bintray.com/content/lightshed/maven",
     "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository"
 )
 
@@ -157,7 +158,8 @@ lazy val coreDependencies = Seq(
     "org.apache.commons" % "commons-math3" % "3.5",
     "org.reflections" % "reflections" % "0.9.10",
     "com.github.lucarosellini.rJava" % "JRIEngine" % "0.9-7",
-    "com.github.lucarosellini.rJava" % "JRI" % "0.9-7"
+    "com.github.lucarosellini.rJava" % "JRI" % "0.9-7",
+    "ch.lightshed" %% "courier" % "0.1.4"
 )
 
 lazy val tuktuDBDependencies = Seq(

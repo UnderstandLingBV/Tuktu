@@ -1,0 +1,105 @@
+{
+	"name": "SMTP Processor",
+	"description": "Sends an e-mail using SMTP for each datum in the DataPacket.",
+	"class": "tuktu.processors.SMTPProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "server_name",
+					"description": "The SMTP server name",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "port",
+					"description": "The port number to use",
+					"type": "int",
+					"required": true
+				},
+				{
+					"name": "username",
+					"description": "The username to authenticate with",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "password",
+					"description": "The password to authenticate with",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tls",
+					"description": "Whether or not to use tls",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "from",
+					"description": "The from e-mail address",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "to",
+					"description": "The to e-mail address to use, split on comma for multiple",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "cc",
+					"description": "The CC e-mail address to use, split on comma for multiple",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "bcc",
+					"description": "The BCC e-mail address to use, split on comma for multiple",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "subject",
+					"description": "The subject to use",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "body",
+					"description": "The e-mail body",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "content_type",
+					"description": "The e-mail content type, use 'text' for plain text and anything else for rich (HTML) content",
+					"type": "string",
+					"required": false,
+					"default": "html"
+				},
+				{
+					"name": "wait_for_sent",
+					"description": "Wait for the e-mails to be sent before going on",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				}
+			]
+		}
+	]
+}
