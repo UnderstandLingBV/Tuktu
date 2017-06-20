@@ -72,17 +72,20 @@ class NewsAPIGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             // Update time, default to once every hour
             val updateTime = (config \ "update_time").asOpt[Int].getOrElse(3600)
             
-            // Set up actors
-            pollerActors = sources.map {source =>
-                Akka.system.actorOf(Props(classOf[PollerActor], self, token, source))
-            }
-            
-            // Set up scheduling
-            Akka.system.scheduler.schedule(
-                0 seconds,
-                updateTime seconds,
-                self,
+            if (sources.isEmpty) self ! new StopPacket
+            else {
+                // Set up actors
+                pollerActors = sources.map {source =>
+                    Akka.system.actorOf(Props(classOf[PollerActor], self, token, source))
+                }
+                
+                // Set up scheduling
+                Akka.system.scheduler.schedule(
+                    0 seconds,
+                    updateTime seconds,
+                    self,
                 new PollRound)
+            }
         }
         case pr: PollRound => {
             // Send through the sources to the actor pool
