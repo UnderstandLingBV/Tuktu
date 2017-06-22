@@ -72,7 +72,7 @@ class NewsAPIGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             // Update time, default to once every hour
             val updateTime = (config \ "update_time").asOpt[Int].getOrElse(3600)
             
-            if (sources.isEmpty) self ! new StopPacket
+            if (sources.isEmpty || token.isEmpty) self ! new StopPacket
             else {
                 // Set up actors
                 pollerActors = sources.map {source =>
