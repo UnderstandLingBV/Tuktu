@@ -92,7 +92,8 @@ class NewsAPIGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             pollerActors.foreach(_ ! pr)
         }
         case sp: StopPacket => {
-            pollerActors.foreach(_ ! sp)
+            if (pollerActors != null)
+                pollerActors.foreach(_ ! sp)
             cleanup
         }
         case pr: PollReply => pr.articles.foreach {article =>
