@@ -26,7 +26,7 @@
                 },
 				{
 					"name": "merger",
-					"description": "The merger class to be used to merge the results of the processors.",
+					"description": "The merger class to be used to merge the results of the processors. For example:\n\ntuktu.processors.merge.SimpleMerger\ntuktu.processors.merge.JSMerger\ntuktu.processors.merge.PaddingMerger\ntuktu.processors.merge.SerialMerger",
 					"type": "string",
 					"required": true
 				},
