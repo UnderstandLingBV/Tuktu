@@ -211,30 +211,43 @@ class PinterestGenerator(resultName: String, processors: List[Enumeratee[DataPac
             }
             
             // Set up client
-            val service = new ServiceBuilder()
-                .apiKey(key)
-                .apiSecret(secret)
-                .scope("read_public")
-                .build(PinterestApi.instance)
-            // Token
-            val token = new OAuth2AccessToken(aToken, "")
-            
-            // Get start and end time
-            val interval = (config \ "interval").asOpt[JsObject]
-            val (startTime: Long, endTime: Option[Long]) = interval match {
-                case Some(intvl) => {
-                    ((intvl \ "start").asOpt[Long].getOrElse(System.currentTimeMillis / 1000L),
-                        (intvl \ "end").asOpt[Long])
+            val (service, token) = try {
+                (
+                    new ServiceBuilder()
+                        .apiKey(key)
+                        .apiSecret(secret)
+                        .scope("read_public")
+                        .build(PinterestApi.instance),
+                    // Token
+                    new OAuth2AccessToken(aToken, "")
+                )
+            } catch {
+                case e: java.lang.IllegalArgumentException => {
+                    totalDone = 0
+                    actorCount = 0
+                    self ! new StopPacket
+                    (null, null)
                 }
-                case None => (System.currentTimeMillis / 1000L, None)
             }
             
-            // Set up actors
-            pollerActor = Akka.system.actorOf(RoundRobinPool(boards.size)
-                .props(Props(classOf[AsyncPinterestActor], self, service, token, startTime, endTime, maxAttempts, updateTime, getExtendedAuthor))
-            )
-            boards.foreach{board =>
-                pollerActor ! new PinterestRequest(board, null, 0, startTime, 0L)
+            if (service != null) {
+                // Get start and end time
+                val interval = (config \ "interval").asOpt[JsObject]
+                val (startTime: Long, endTime: Option[Long]) = interval match {
+                    case Some(intvl) => {
+                        ((intvl \ "start").asOpt[Long].getOrElse(System.currentTimeMillis / 1000L),
+                            (intvl \ "end").asOpt[Long])
+                    }
+                    case None => (System.currentTimeMillis / 1000L, None)
+                }
+                
+                // Set up actors
+                pollerActor = Akka.system.actorOf(RoundRobinPool(boards.size)
+                    .props(Props(classOf[AsyncPinterestActor], self, service, token, startTime, endTime, maxAttempts, updateTime, getExtendedAuthor))
+                )
+                boards.foreach{board =>
+                    pollerActor ! new PinterestRequest(board, null, 0, startTime, 0L)
+                }
             }
         }
         case po: PinterestObjects => po.data.foreach(datum => channel.push(new DataPacket(List(Map(resultName -> datum)))))

@@ -15,6 +15,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
 import scala.xml.XML
 import play.api.libs.json.JsObject
+import play.api.Logger
 
 /**
  * Actor that reads file immutably and non-blocking
@@ -117,7 +118,12 @@ class LineGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
                         if (startLine <= 0) endEnumeratee
                         else Enumeratee.drop[String](startLine) compose endEnumeratee
                         
-                    fileStream |>> (startEnumeratee compose Enumeratee.mapM(line => Future {
+                    fileStream |>> (startEnumeratee compose Enumeratee.recover[String] {
+                        case (e, input) => {
+                            self ! new StopPacket
+                            Logger.error("Line generator got an error: " + input, e)
+                        }
+                    } compose Enumeratee.mapM[String](line => Future {
                         DataPacket(List(Map(resultName -> line)))
                     }) compose processor) &>> sinkIteratee
                 })
