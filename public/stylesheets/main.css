@@ -23,30 +23,6 @@ body {
 a:hover, a:focus, img, img:hover, img:focus {
 	border: 0;
 }
-/*
-.navbar-fixed-top {
-	padding-left: 100px;
-	padding-right: 100px;
-}
-
-@media screen and (max-width: 768px) {
-	body {
-		font-size: 12px;
-	}
-	.navbar-fixed-top {
-		padding-left: 50px;
-		padding-right: 50px;
-	}
-}
-
-@media screen and (max-width: 1024px) {
-	.navbar-fixed-top {
-		padding-left: 80px;
-		padding-right: 80px;
-	}
-}
-
-*/
 
 @media (max-width: 993px) {
 	.pull-right {
@@ -114,4 +90,13 @@ a:hover, a:focus, img, img:hover, img:focus {
 
 .w3-bar-item.w3-button {
 	text-decoration: none;
+}
+
+.w3-sidebar {
+	background: #eee;
+}
+
+#page-content-wrapper {
+	margin-left: 10px;
+	margin-top: 10px;
 }
