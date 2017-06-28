@@ -23,7 +23,7 @@ body {
 a:hover, a:focus, img, img:hover, img:focus {
 	border: 0;
 }
-
+/*
 .navbar-fixed-top {
 	padding-left: 100px;
 	padding-right: 100px;
@@ -46,6 +46,20 @@ a:hover, a:focus, img, img:hover, img:focus {
 	}
 }
 
+*/
+
+@media (max-width: 993px) {
+	.pull-right {
+		display: none;
+	}
+}
+
+@media (max-width: 768px) {
+	#sidebar-wrapper {
+		display: none;
+	}
+}
+
 .navbar {
 	color: #333;
 	background: #eee;
@@ -61,6 +75,14 @@ a:hover, a:focus, img, img:hover, img:focus {
 	padding-bottom: 0;
 	padding-left: 0;
 	padding-right: 0;
+}
+
+.navbar-brand-2 {
+    float: left;
+    height: 50px;
+    padding: 15px 15px;
+    font-size: 18px;
+    line-height: 20px;
 }
 
 .navbar-default .navbar-nav > li > a {
@@ -84,20 +106,12 @@ a:hover, a:focus, img, img:hover, img:focus {
 	text-decoration: underline;
 }
 
-#sidebar-wrapper {
-	width: 250px;
-	color: #333;
-	background: #eee;
-	box-shadow: 0 -2px 4px rgba(33, 33, 33, 0.6);
-}
-
-.sidebar-nav li a:hover {
-	color: #ddd;
-	background: #777;
-}
-
 .sidebar-brand {
 	margin-top: 30px;
 	margin-left: 45px;
 	margin-bottom: 20px;
+}
+
+.w3-bar-item.w3-button {
+	text-decoration: none;
 }

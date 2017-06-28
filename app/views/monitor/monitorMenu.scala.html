@@ -1,11 +1,7 @@
 @()
-<li>
-    <a href="@routes.Monitor.fetchLocalInfo(1, 1)">
-        Running Jobs
-    </a>
-</li>
-<li>
-    <a href="@routes.Monitor.browseConfigs">
-        Browse Configs
-    </a>
-</li>
+<a href="@routes.Monitor.fetchLocalInfo(1, 1)" class="w3-bar-item w3-button">
+    Running Jobs
+</a>
+<a href="@routes.Monitor.browseConfigs" class="w3-bar-item w3-button">
+    Browse Configs
+</a>
