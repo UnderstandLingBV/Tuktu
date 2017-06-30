@@ -18,13 +18,14 @@ import play.api.libs.ws.WS
 import play.api.libs.json.JsObject
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.json.JsString
+import play.api.libs.json.Json
 
 case class PollRound()
 case class PollReply(
         articles: List[JsObject]
 )
 
-class PollerActor(parent: ActorRef, token: String, source: String) extends Actor with ActorLogging {
+class PollerActor(parent: ActorRef, token: String, source: String, tags: List[String]) extends Actor with ActorLogging {
     var latestTimeSeen: Long = 0L
     val timeFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ssZ")
     
@@ -43,7 +44,11 @@ class PollerActor(parent: ActorRef, token: String, source: String) extends Actor
                     
                     // Forward the articles to parent actor
                     parent ! new PollReply(articles.map {article =>
-                        article + ("source" -> JsString(source))
+                        article + ("source" -> JsString(source)) + ("tags" -> Json.toJson(tags.filter {tag =>
+                                val title = (article \ "title").as[String].toLowerCase
+                                val description = (article \ "description").as[String].toLowerCase
+                                title.toLowerCase.contains(tag) || description.toLowerCase.contains(tag)
+                            }))
                     })
                     
                     // Update latestTimeSeen
@@ -63,8 +68,10 @@ class NewsAPIGenerator(resultName: String, processors: List[Enumeratee[DataPacke
     
     override def _receive = {
         case config: JsValue => {
-           // Get token
+            // Get token
             val token = (config \ "token").as[String]
+            // Get tags
+            val tags = (config \ "tags").as[List[String]]
             // Get sources
             val sources = (config \ "sources").asOpt[List[String]].getOrElse(
                     List("al-jazeera-english","ars-technica","bild","breitbart-news","business-insider","business-insider-uk","buzzfeed","daily-mail","der-tagesspiegel","die-zeit","engadget","espn-cric-info","financial-times","football-italia","fortune","four-four-two","fox-sports","gruenderszene","hacker-news","handelsblatt","ign","mashable","metro","mirror","mtv-news","newsweek","new-york-magazine","nfl-news","reddit-r-all","reuters","talksport","techcrunch","techradar","the-economist","the-guardian-uk","the-hindu","the-lad-bible","the-next-web","the-sport-bible","the-telegraph","the-times-of-india","the-verge","time","usa-today","wired-de","wirtschafts-woche")
@@ -76,7 +83,7 @@ class NewsAPIGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             else {
                 // Set up actors
                 pollerActors = sources.map {source =>
-                    Akka.system.actorOf(Props(classOf[PollerActor], self, token, source))
+                    Akka.system.actorOf(Props(classOf[PollerActor], self, token, source, tags))
                 }
                 
                 // Set up scheduling

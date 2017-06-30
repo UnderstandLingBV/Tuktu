@@ -61,6 +61,19 @@
 					"required": true
 				},
 				{
+					"name": "tags",
+					"description": "Keywords to look for in the title and/or description of the news articles.",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
 					"name": "sources",
 					"description": "The news sources to keep track of. Tracks all sources if none are given",
 					"type": "array",
