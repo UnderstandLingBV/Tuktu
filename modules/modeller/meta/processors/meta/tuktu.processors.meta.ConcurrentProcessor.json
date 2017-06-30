@@ -39,6 +39,12 @@
 					]
 				},
 				{
+					"name": "concurrent_name",
+					"description": "The name of the concurrent processor. Only one unique concurrent processor with this name will exist on the cluster.",
+					"type": "string",
+					"required": true
+				},
+				{
 					"name": "ignore_results",
 					"description": "If set to true, the concurrent processor should be the last processor in its branch. Results will not be fetched back from remote nodes, thus saving latency. Always leave to false unless this processor is the last.",
 					"type": "boolean",
@@ -51,6 +57,7 @@
 					"type": "string",
 					"required": true
 				},
+
 				{
 					"name": "anchor_fields",
 					"description": "If you want to anchor datums, specify the fields to anchor on. Note that once anchoring is enable, DataPackets with multiple datums will inevitably be chopped up into DataPackets for each single datum of the original.",
