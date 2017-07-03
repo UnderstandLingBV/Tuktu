@@ -114,7 +114,8 @@ lazy val dlDependencies = Seq(
     "org.nd4j" % "nd4j-native" % "0.8.0",
     //"org.nd4j" % "nd4j-native" % "0.8.0" classifier "linux-x86_64",
     "org.nd4j" % "nd4j-native" % "0.8.0" classifier "windows-x86_64",
-    "org.scalatestplus" %% "play" % "1.2.0" % "test"
+    "org.scalatestplus" %% "play" % "1.2.0" % "test",
+    "org.tensorflow" % "tensorflow" % "1.2.0"
 )
 
 lazy val dlibDependencies = Seq(

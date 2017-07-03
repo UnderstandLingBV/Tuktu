@@ -1,0 +1,58 @@
+{
+	"name": "Tensor Image Recognition InceptionV3",
+	"description": "Recognizes what is being represented on an image using the InceptionV3 model, consisting of 1000 ImageNet labels.",
+	"class": "tuktu.deeplearn.processors.image.InceptionTensorClassifier",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "image_name",
+					"description": "The image name or URL. Can contain Tuktu strings",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "top_n",
+					"description": "How many of the top-n predictions should be returned.",
+					"type": "int",
+					"required": false,
+					"default": 3
+				},
+				{
+					"name": "flatten",
+					"description": "If set to true, only the best label is returned as string. Otherwise, the N best labels are returned as a list of (string, float) pairs, being the labels and their predictive scores.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "use_categories",
+					"description": "If set to true, 26 higher-level categories are used instead of the original 1k ImageNet categories.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "local_remote",
+					"description": "Whether the images are locally stored on disk ('local') or remotely on some URL ('remote'. Remote can also represent local files.",
+					"type": "string",
+					"required": false,
+					"default": "remote"
+				}
+			]
+		}
+	]
+}
