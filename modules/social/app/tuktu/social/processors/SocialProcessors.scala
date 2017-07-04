@@ -149,6 +149,7 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
     var userTagField: Option[String] = _
     var excludeOnNone: Boolean = _
     var combine: Boolean = _
+    var userReplacements: Map[String, String] = _
 
     override def initialize(config: JsObject) {
         // Get name of the field in which the Facebook object is
@@ -159,6 +160,9 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
         users = (tags \ "users").asOpt[List[String]]
 
         userTagField = (config \ "user_tag_field").asOpt[String]
+        userReplacements = (config \ "user_replacements").asOpt[List[JsObject]].getOrElse(Nil).map {repl =>
+            (repl \ "source").as[String] -> (repl \ "target").as[String]
+        } toMap
 
         excludeOnNone = (config \ "exclude_on_none").as[Boolean]
         combine = (config \ "combined").asOpt[Boolean].getOrElse(false)
@@ -185,9 +189,14 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
                         // If the user can be found, identify him by tagField if it is defined;
                         // or whatever he is defined by in the parameters
                         usrs.find(u => values.contains(u)).flatMap { s =>
-                            userTagField match {
+                            (userTagField match {
                                 case Some(field) => (obj \ field).asOpt[String]
                                 case None        => Some(s)
+                            }) match {
+                                case None => None
+                                case Some(tag) => userReplacements.find(_._1 == tag).flatMap { r =>
+                                    Some(r._2)
+                                }
                             }
                         }
                     }

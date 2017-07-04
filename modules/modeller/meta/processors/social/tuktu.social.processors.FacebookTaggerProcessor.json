@@ -64,6 +64,33 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "user_replacements",
+					"type": "array",
+					"required": false,
+					"description": "You can replace tags (which are best set as Facebook IDs) with other values (like a pre-known user name).",
+					"parameters": [
+						{
+							"name": "replacement",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "source",
+									"type": "string",
+									"required": true,
+									"description": "The source value for a replacement (most likely the Facebook ID)."
+								},
+								{
+									"name": "target",
+									"type": "string",
+									"required": true,
+									"description": "The target value for a replacement (most likely a human readable name/username)."
+								}
+							]
+						}
+					]
 				}
 			]
 		}
