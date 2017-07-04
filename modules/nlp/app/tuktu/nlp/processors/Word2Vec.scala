@@ -40,7 +40,7 @@ class Word2VecSimpleClassifierProcessor(resultName: String) extends BaseMLApplyP
 
     override def initialize(config: JsObject) {
         field = (config \ "data_field").as[String]
-        candidates = (config \ "candidates").as[List[List[String]]]
+        candidates = (config \ "candidates").as[List[List[String]]].map(_.map(_.toLowerCase))
         top = (config \ "top").asOpt[Int].getOrElse(1)
         flatten = (config \ "flatten").asOpt[Boolean].getOrElse(true)
         cutoff = (config \ "cutoff").asOpt[Double]
@@ -92,7 +92,7 @@ class Word2VecWordBasedClassifierProcessor(resultName: String) extends BaseMLApp
 
     override def initialize(config: JsObject) {
         field = (config \ "data_field").as[String]
-        candidates = (config \ "candidates").as[List[List[String]]]
+        candidates = (config \ "candidates").as[List[List[String]]].map(_.map(_.toLowerCase))
         top = (config \ "top").asOpt[Int].getOrElse(1)
         flatten = (config \ "flatten").asOpt[Boolean].getOrElse(true)
         cutoff = (config \ "cutoff").asOpt[Double].getOrElse(0.7)

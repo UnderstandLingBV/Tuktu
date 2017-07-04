@@ -43,6 +43,13 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "binary",
+					"description": "If set to true, load a binary word2vec file.",
+					"type": "boolean",
+					"required": false,
+					"default": false
 				}
 			]
 		}
