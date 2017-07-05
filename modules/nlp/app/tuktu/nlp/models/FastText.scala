@@ -78,7 +78,7 @@ class FastTextWrapper(lr: Double, lrUpdateRate: Int, dim: Int, ws: Int, epoch: I
      * This classifier is similar to the one above but instead of looking at averaged word vectors, it looks at vectors word-by-word
      * and sees if there is a close-enough overlap between one or more candidate set words and the sentence's words.
      */
-    def simpleWordOverlapClassifier(inputWords: List[String], candidateWordsClasses: List[List[Array[Double]]], cutoff: Double = 0.225) = {
+    def simpleWordOverlapClassifier(inputWords: List[String], candidateWordsClasses: Seq[Seq[Array[Double]]], cutoff: Double = 0.225) = {
         // Conver input words
         val vectors = inputWords.map(getWordVector)
         // Go over the candidate sets and match
