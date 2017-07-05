@@ -17,7 +17,7 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.JsObject
 import tuktu.api.BaseProcessor
 import tuktu.api.DataPacket
-import tuktu.api.utils
+import tuktu.api.utils.evaluateTuktuString
 import play.api.Logger
 
 case class MailerDef(
@@ -29,39 +29,39 @@ case class MailerDef(
 class SMTPProcessor(resultName: String) extends BaseProcessor(resultName) {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
 
-    var serverName: String = _
+    var serverName: evaluateTuktuString.TuktuStringRoot = _
     var port: Int = _
-    var username: String = _
-    var password: String = _
+    var username: evaluateTuktuString.TuktuStringRoot = _
+    var password: evaluateTuktuString.TuktuStringRoot = _
     var tls: Boolean = _
 
-    var from: String = _
-    var to: String = _
-    var cc: String = _
-    var bcc: String = _
-    var subject: String = _
-    var body: String = _
+    var from: evaluateTuktuString.TuktuStringRoot = _
+    var to: evaluateTuktuString.TuktuStringRoot = _
+    var cc: evaluateTuktuString.TuktuStringRoot = _
+    var bcc: evaluateTuktuString.TuktuStringRoot = _
+    var subject: evaluateTuktuString.TuktuStringRoot = _
+    var body: evaluateTuktuString.TuktuStringRoot = _
 
-    var contentType: String = _
+    var contentType: evaluateTuktuString.TuktuStringRoot = _
     var waitForSent: Boolean = _
 
     val mailers = collection.mutable.Map.empty[MailerDef, Mailer]
 
     override def initialize(config: JsObject) {
-        serverName = (config \ "server_name").as[String]
+        serverName = evaluateTuktuString.prepare((config \ "server_name").as[String])
         port = (config \ "port").as[Int]
-        username = (config \ "username").as[String]
-        password = (config \ "password").as[String]
+        username = evaluateTuktuString.prepare((config \ "username").as[String])
+        password = evaluateTuktuString.prepare((config \ "password").as[String])
         tls = (config \ "tls").asOpt[Boolean].getOrElse(true)
 
-        from = (config \ "from").as[String]
-        to = (config \ "to").as[String]
-        cc = (config \ "cc").as[String]
-        bcc = (config \ "bcc").as[String]
-        subject = (config \ "subject").as[String]
-        body = (config \ "body").as[String]
+        from = evaluateTuktuString.prepare((config \ "from").as[String])
+        to = evaluateTuktuString.prepare((config \ "to").as[String])
+        cc = evaluateTuktuString.prepare((config \ "cc").as[String])
+        bcc = evaluateTuktuString.prepare((config \ "bcc").as[String])
+        subject = evaluateTuktuString.prepare((config \ "subject").as[String])
+        body = evaluateTuktuString.prepare((config \ "body").as[String])
 
-        contentType = (config \ "content_type").asOpt[String].getOrElse("html")
+        contentType = evaluateTuktuString.prepare((config \ "content_type").asOpt[String].getOrElse("html"))
         waitForSent = (config \ "wait_for_sent").asOpt[Boolean].getOrElse(false)
     }
 
@@ -69,11 +69,11 @@ class SMTPProcessor(resultName: String) extends BaseProcessor(resultName) {
         val futs = Future.sequence(data.data.map { datum =>
             // Evaluate all fields
             val md = new MailerDef(
-                utils.evaluateTuktuString(serverName, datum),
-                utils.evaluateTuktuString(port.toString, datum).toInt,
-                utils.evaluateTuktuString(username, datum),
-                utils.evaluateTuktuString(password, datum),
-                utils.evaluateTuktuString(tls.toString, datum).toBoolean)
+                serverName.evaluate(datum),
+                port,
+                username.evaluate(datum),
+                password.evaluate(datum),
+                tls)
             // Get mailer if set
             val mailer = if (mailers.contains(md)) mailers(md) else {
                 val m = Mailer(md.serverName, md.port).auth(true).as(md.username, md.password).startTtls(md.tls)()
@@ -83,25 +83,25 @@ class SMTPProcessor(resultName: String) extends BaseProcessor(resultName) {
 
             // Set up actual e-mail
             val toList = {
-                val e = utils.evaluateTuktuString(to, datum)
-                if (e.isEmpty) Array[InternetAddress]() else e.split(",").map(e => new InternetAddress(e))
+                val e = to.evaluate(datum)
+                if (e.isEmpty) Array[InternetAddress]() else e.trim.split("\\s*,\\s*").map(e => new InternetAddress(e))
             }
             val ccList = {
-                val e = utils.evaluateTuktuString(cc, datum)
-                if (e.isEmpty) Array[InternetAddress]() else e.split(",").map(e => new InternetAddress(e))
+                val e = cc.evaluate(datum)
+                if (e.isEmpty) Array[InternetAddress]() else e.trim.split("\\s*,\\s*").map(e => new InternetAddress(e))
             }
             val bccList = {
-                val e = utils.evaluateTuktuString(bcc, datum)
-                if (e.isEmpty) Array[InternetAddress]() else e.split(",").map(e => new InternetAddress(e))
+                val e = bcc.evaluate(datum)
+                if (e.isEmpty) Array[InternetAddress]() else e.trim.split("\\s*,\\s*").map(e => new InternetAddress(e))
             }
-            val mail = Envelope.from(new InternetAddress(utils.evaluateTuktuString(from, datum)))
+            val mail = Envelope.from(new InternetAddress(from.evaluate(datum)))
                 .to(toList: _*)
                 .cc(ccList: _*)
                 .bcc(bccList: _*)
-                .subject(utils.evaluateTuktuString(subject, datum))
-                .content(contentType match {
-                    case "text" => Text(utils.evaluateTuktuString(body, datum))
-                    case _      => Multipart().html(utils.evaluateTuktuString(body, datum))
+                .subject(subject.evaluate(datum))
+                .content(contentType.evaluate(datum) match {
+                    case "text" => Text(body.evaluate(datum))
+                    case _      => Multipart().html(body.evaluate(datum))
                 })
 
             // Send it
