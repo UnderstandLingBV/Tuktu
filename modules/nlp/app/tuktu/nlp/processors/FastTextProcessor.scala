@@ -194,7 +194,7 @@ class FastTextWordBasedClassifierProcessor(resultName: String) extends BaseProce
     var model: FastTextWrapper = _
     var top: Int = _
     var flatten: Boolean = _
-    var cutoff: Double = _
+    var cutoff: String = _
     var candidates: List[List[String]] = _
     var candidateField: Option[String] = _
 
@@ -203,7 +203,7 @@ class FastTextWordBasedClassifierProcessor(resultName: String) extends BaseProce
         candidates = (config \ "candidates").as[List[List[String]]].map(_.map(_.toLowerCase))
         top = (config \ "top").asOpt[Int].getOrElse(1)
         flatten = (config \ "flatten").asOpt[Boolean].getOrElse(true)
-        cutoff = (config \ "cutoff").asOpt[Double].getOrElse(0.7)
+        cutoff = (config \ "cutoff").asOpt[String].getOrElse("0.7")
         
         // Initialize model and candidate vectors
         model = FastTextCache.getModel((config \ "model_name").as[String])
@@ -229,7 +229,7 @@ class FastTextWordBasedClassifierProcessor(resultName: String) extends BaseProce
         new DataPacket(data.data.map {datum =>
             datum + (resultName -> {
                 // Get cutoff
-                val newCutoff = utils.evaluateTuktuString(cutoff.toString, datum).toDouble
+                val newCutoff = utils.evaluateTuktuString(cutoff, datum).toDouble
                 // Get candidate vectors
                 val newCandidates = candidateField match {
                     case Some(field) => datum(field) match {

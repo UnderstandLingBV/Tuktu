@@ -46,7 +46,7 @@
 				},
 				{
 					"name": "cutoff",
-					"type": "double",
+					"type": "string",
 					"required": false,
 					"description": "If set, only returns labels with a score higher than or equal to the cutoff. If no scores succeed, will return label -1 with score 0.0."
 				},
