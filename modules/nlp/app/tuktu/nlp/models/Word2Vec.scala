@@ -75,7 +75,7 @@ class Word2Vec() extends BaseModel {
      * This classifier is similar to the one above but instead of looking at averaged word vectors, it looks at vectors word-by-word
      * and sees if there is a close-enough overlap between one or more candidate set words and the sentence's words.
      */
-    def simpleWordOverlapClassifier(inputWords: List[String], candidateWordsClasses: List[List[INDArray]], cutoff: Double = 0.7) = {
+    def simpleWordOverlapClassifier(inputWords: List[String], candidateWordsClasses: List[List[INDArray]], cutoff: Double = 0.225) = {
         // Conver input words
         val vectors = inputWords.filter(x=>wordMap.contains(x.toLowerCase)).map(x=>wordMap(x.toLowerCase))
         // Go over the candidate sets and match

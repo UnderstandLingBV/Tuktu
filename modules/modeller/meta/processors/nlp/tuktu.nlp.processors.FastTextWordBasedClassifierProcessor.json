@@ -1,7 +1,7 @@
 {
-	"name": "Word2Vec Word-Based Classifier Processor",
+	"name": "FastText Word-Based Classifier Processor",
 	"description": "This classifier looks at vectors word-by-word and sees if there is a close-enough overlap between one or more candidate set words and the sentence's words.",
-	"class": "tuktu.nlp.processors.Word2VecWordBasedClassifierProcessor",
+	"class": "tuktu.nlp.processors.FastTextWordBasedClassifierProcessor",
 	"parameters": [
 		{
 			"name": "id",
@@ -23,13 +23,6 @@
 					"description": "Name of the model to be applied. If a model with this name cannot be found, the data will go through unchanged.",
 					"type": "string",
 					"required": true
-				},
-				{
-					"name": "destroy_on_eof",
-					"description": "Will this model be cleaned up once EOF is reached.",
-					"type": "boolean",
-					"required": false,
-					"default": true
 				},
 				{
 					"name": "data_field",
