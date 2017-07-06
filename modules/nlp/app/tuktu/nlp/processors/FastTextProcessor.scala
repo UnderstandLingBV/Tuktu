@@ -191,7 +191,7 @@ class SimpleFastTextClassifierProcessor(resultName: String) extends BaseProcesso
 class FastTextWordBasedClassifierProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
     val candidateVectors = collection.mutable.ListBuffer.empty[List[Array[Double]]]
-    var model: FastTextWrapper = _
+    var modelName: String = _
     var top: Int = _
     var flatten: Boolean = _
     var cutoff: String = _
@@ -204,13 +204,8 @@ class FastTextWordBasedClassifierProcessor(resultName: String) extends BaseProce
         top = (config \ "top").asOpt[Int].getOrElse(1)
         flatten = (config \ "flatten").asOpt[Boolean].getOrElse(true)
         cutoff = (config \ "cutoff").asOpt[String].getOrElse("0.7")
+        modelName = (config \ "model_name").as[String]
         
-        // Initialize model and candidate vectors
-        model = FastTextCache.getModel((config \ "model_name").as[String])
-        candidates.foreach {candidateSet =>
-            // Compute the vectors for each candidate
-            candidateVectors += candidateSet.map(model.getWordVector)
-        }
         // Overwrites candidate vectors at runtime if given
         candidateField = (config \ "candidate_field").asOpt[String]
         
@@ -228,6 +223,14 @@ class FastTextWordBasedClassifierProcessor(resultName: String) extends BaseProce
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         new DataPacket(data.data.map {datum =>
             datum + (resultName -> {
+                // Initialize model and candidate vectors
+                val model = FastTextCache.getModel(utils.evaluateTuktuString(modelName, datum))
+                if (candidateVectors.isEmpty) {
+                    candidates.foreach {candidateSet =>
+                        // Compute the vectors for each candidate
+                        candidateVectors += candidateSet.map(model.getWordVector)
+                    }
+                }
                 // Get cutoff
                 val newCutoff = utils.evaluateTuktuString(cutoff, datum).toDouble
                 // Get candidate vectors
