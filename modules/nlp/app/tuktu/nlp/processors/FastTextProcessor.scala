@@ -212,7 +212,7 @@ class FastTextWordBasedClassifierProcessor(resultName: String) extends BaseProce
         super.initialize(config)
     }
     
-    def generateCandidates(wordGroups: Seq[Seq[String]]) = {
+    def generateCandidates(wordGroups: Seq[Seq[String]], model: FastTextWrapper) = {
         wordGroups.map {words =>
             words.map {word =>
                 model.getWordVector(word)
@@ -236,12 +236,12 @@ class FastTextWordBasedClassifierProcessor(resultName: String) extends BaseProce
                 // Get candidate vectors
                 val newCandidates = candidateField match {
                     case Some(field) => datum(field) match {
-                        case f: Array[Array[String]] => generateCandidates(f.toSeq.map(_.toSeq))
-                        case f: Seq[Seq[String]] => generateCandidates(f)
-                        case f: JsArray => generateCandidates(f.as[Seq[Seq[String]]])
+                        case f: Array[Array[String]] => generateCandidates(f.toSeq.map(_.toSeq), model)
+                        case f: Seq[Seq[String]] => generateCandidates(f, model)
+                        case f: JsArray => generateCandidates(f.as[Seq[Seq[String]]], model)
                         case f: String =>
                             // By default we assume JSON
-                            generateCandidates(Json.parse(f).as[Seq[Seq[String]]])
+                            generateCandidates(Json.parse(f).as[Seq[Seq[String]]], model)
                         case _ => Nil // Can't continue
                     }
                     case None => candidateVectors.toList
