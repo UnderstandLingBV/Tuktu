@@ -6,6 +6,7 @@ import tuktu.api.BaseProcessor
 import scala.concurrent.Future
 import tuktu.api.DataPacket
 import scala.concurrent.ExecutionContext.Implicits.global
+import tuktu.nlp.models.NGrams
 
 /**
  * Creates N-grams from text
@@ -26,38 +27,17 @@ class NgramProcessor(resultName: String) extends BaseProcessor(resultName) {
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
             datum + (resultName -> {
-                datum(field) match {
-                    case d: Seq[String] => getNgrams(d)
-                    case d: String => if (chars) getNgramsChar(d.toList)
-                        else getNgrams(d.split(" "))
-                    case d: Any => if (chars) getNgramsChar(d.toString.toList)
-                        else getNgrams(d.toString.split(" "))
+                val ngs = datum(field) match {
+                    case d: Seq[String] => NGrams.getNgrams(d, n)
+                    case d: String => if (chars) NGrams.getNgramsChar(d.toList, n)
+                        else NGrams.getNgrams(d.split(" "), n)
+                    case d: Any => if (chars) NGrams.getNgramsChar(d.toString.toList, n)
+                        else NGrams.getNgrams(d.toString.split(" "), n)
                 }
+                // Flatten?
+                if (flatten) ngs.map(elem => elem.mkString("")).mkString(" ")
+                else ngs
             })
         }
     })
-    
-    def getNgramsChar(input: Seq[Char]) = {
-        // Get N-grams as seq
-        val res = (for (i <- n to input.size - 1) yield {
-            input.drop(i - n).take(n)
-        }) toList
-        
-        // Flatten?
-        if (flatten)
-            res.map(elem => elem.mkString(""))
-        else res
-    }
-    
-    def getNgrams(input: Seq[String]) = {
-        // Get N-grams as seq
-        val res = (for (i <- n to input.size) yield {
-            input.drop(i - n).take(n)
-        }) toList
-        
-        // Flatten?
-        if (flatten)
-            res.map(elem => elem.mkString("")).mkString(" ")
-        else res
-    }
 }

@@ -101,6 +101,7 @@ lazy val mlDependencies = Seq(
     "com.thoughtworks.xstream" % "xstream" % "1.4.8",
     "com.github.haifengl" % "smile-core" % "1.3.1",
     "org.scalanlp" %% "breeze" % "0.10",
+	"de.bwaldvogel" % "liblinear" % "2.11" withSources() withJavadoc(),
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
 

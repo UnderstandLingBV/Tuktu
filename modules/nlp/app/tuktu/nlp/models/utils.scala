@@ -35,3 +35,19 @@ object CosineSimilarity {
     }
 
 }
+
+object NGrams {
+    def getNgramsChar(input: Seq[Char], n: Int) = {
+        // Get N-grams as seq
+        (for (i <- n to input.size - 1) yield {
+            input.drop(i - n).take(n)
+        }) toList
+    }
+    
+    def getNgrams(input: Seq[String], n: Int) = {
+        // Get N-grams as seq
+        (for (i <- n to input.size) yield {
+            input.drop(i - n).take(n)
+        }) toList
+    }
+}

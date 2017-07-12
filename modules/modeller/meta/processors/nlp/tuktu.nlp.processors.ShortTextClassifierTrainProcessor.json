@@ -1,0 +1,80 @@
+{
+	"name": "Short Text Classifier Train Processor",
+	"description": "Trains a short text classification model.",
+	"class": "tuktu.nlp.processors.ShortTextClassifierTrainProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be trained. If a model with that name is already available, that model will be used for additional training. Otherwise a new model with this name will be instantiated.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "wait_for_store",
+					"description": "Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "data_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the data resides in. Data must be a string of words."
+				},
+				{
+					"name": "label_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the label is in. Value must be a double."
+				},
+				{
+					"name": "min_count",
+					"type": "int",
+					"required": true,
+					"description": "The minimum amount of times a feature should be present."
+				},
+				{
+					"name": "n",
+					"type": "int",
+					"required": true,
+					"description": "The N-grams to use (1 for unigrams)."
+				},
+				{
+					"name": "C",
+					"type": "double",
+					"required": true,
+					"description": "The cost of exceeding the penalty (1 - 100)."
+				},
+				{
+					"name": "epsilon",
+					"type": "double",
+					"required": true,
+					"description": "Regularization parameter."
+				}
+			]
+		}
+	]
+}
