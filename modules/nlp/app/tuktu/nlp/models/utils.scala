@@ -1,5 +1,8 @@
 package tuktu.nlp.models
 
+import java.text.BreakIterator
+import java.util.Locale
+
 /* 
  * Object in scala for calculating cosine similarity
  * Reuben Sutton - 2012
@@ -36,7 +39,7 @@ object CosineSimilarity {
 
 }
 
-object NGrams {
+object NLP {
     def getNgramsChar(input: Seq[Char], n: Int) = {
         // Get N-grams as seq
         (for (i <- n to input.size - 1) yield {
@@ -49,5 +52,28 @@ object NGrams {
         (for (i <- n to input.size) yield {
             input.drop(i - n).take(n)
         }) toList
+    }
+    
+    def getSentences(line: List[String], language: String): List[String] = getSentences(line.mkString(" "), language)
+    
+    def getSentences(line: String, language: String): List[String] = {
+        val bi = BreakIterator.getSentenceInstance(language match {
+            case "ar" => new Locale("ar")
+            case "jp" => Locale.JAPANESE
+            case "zh" => Locale.CHINESE
+            case "de" => Locale.GERMAN
+            case _ => Locale.ENGLISH
+        })
+        bi.setText(line)
+        
+        def process(start: Int, end: Int, next: Int): List[String] = {
+            if (next == BreakIterator.DONE) Nil
+            else {
+                val n = bi.next
+                line.substring(start, end)::process(end, n, n)
+            }
+        }
+        val n = bi.next
+        process(0, n, n)
     }
 }

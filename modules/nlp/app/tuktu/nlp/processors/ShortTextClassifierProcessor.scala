@@ -10,6 +10,7 @@ import tuktu.ml.processors.BaseMLTrainProcessor
 import tuktu.nlp.models.ShortTextClassifier
 import tuktu.ml.processors.BaseMLApplyProcessor
 import tuktu.ml.processors.BaseMLDeserializeProcessor
+import tuktu.api.utils
 
 class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainProcessor[ShortTextClassifier](resultName) {
     var tokensField: String = _
@@ -18,6 +19,7 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
     var n: Int = _
     var C: Double = _
     var eps: Double = _
+    var lang: String = _
     
     override def initialize(config: JsObject) {
         tokensField = (config \ "data_field").as[String]
@@ -26,6 +28,7 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
         n = (config \ "n").as[Int]
         C = (config \ "C").as[Double]
         eps = (config \ "epsilon").as[Double]
+        lang = (config \ "language").asOpt[String].getOrElse("en")
         
         super.initialize(config)
     }
@@ -48,7 +51,7 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
         }
         
         // Train
-        model.trainClassifier(x.toList, y.toList, C, eps)
+        model.trainClassifier(x.toList, y.toList, C, eps, utils.evaluateTuktuString(lang, data.head))
         
         model
     }
@@ -56,9 +59,11 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
 
 class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyProcessor[ShortTextClassifier](resultName) {
     var dataField = ""
+    var lang: String = _
     
     override def initialize(config: JsObject) {
         dataField = (config \ "data_field").as[String]
+        lang = (config \ "language").asOpt[String].getOrElse("en")
         
         super.initialize(config)
     }
@@ -72,7 +77,7 @@ class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyP
                     case s: List[String] => s
                     case s: String => s.split(" ").toList
                     case _ => datum(dataField).toString.split(" ").toList
-                })
+                }, utils.evaluateTuktuString(lang, data.head))
             }) 
         }
     }

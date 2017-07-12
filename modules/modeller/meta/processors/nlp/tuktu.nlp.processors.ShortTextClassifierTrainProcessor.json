@@ -73,6 +73,13 @@
 					"type": "double",
 					"required": true,
 					"description": "Regularization parameter."
+				},
+				{
+					"name": "language",
+					"type": "string",
+					"required": false,
+					"description": "The language of all the data inside the DP. Used for finding sentence boundaries.",
+					"default": "en"
 				}
 			]
 		}

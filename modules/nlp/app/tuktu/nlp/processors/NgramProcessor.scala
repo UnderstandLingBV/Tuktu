@@ -6,7 +6,7 @@ import tuktu.api.BaseProcessor
 import scala.concurrent.Future
 import tuktu.api.DataPacket
 import scala.concurrent.ExecutionContext.Implicits.global
-import tuktu.nlp.models.NGrams
+import tuktu.nlp.models.NLP
 
 /**
  * Creates N-grams from text
@@ -28,11 +28,11 @@ class NgramProcessor(resultName: String) extends BaseProcessor(resultName) {
         for (datum <- data) yield {
             datum + (resultName -> {
                 val ngs = datum(field) match {
-                    case d: Seq[String] => NGrams.getNgrams(d, n)
-                    case d: String => if (chars) NGrams.getNgramsChar(d.toList, n)
-                        else NGrams.getNgrams(d.split(" "), n)
-                    case d: Any => if (chars) NGrams.getNgramsChar(d.toString.toList, n)
-                        else NGrams.getNgrams(d.toString.split(" "), n)
+                    case d: Seq[String] => NLP.getNgrams(d, n)
+                    case d: String => if (chars) NLP.getNgramsChar(d.toList, n)
+                        else NLP.getNgrams(d.split(" "), n)
+                    case d: Any => if (chars) NLP.getNgramsChar(d.toString.toList, n)
+                        else NLP.getNgrams(d.toString.split(" "), n)
                 }
                 // Flatten?
                 if (flatten) ngs.map(elem => elem.mkString("")).mkString(" ")

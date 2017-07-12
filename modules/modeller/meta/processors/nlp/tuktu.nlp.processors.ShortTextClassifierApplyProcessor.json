@@ -36,6 +36,13 @@
 					"type": "string",
 					"required": true,
 					"description": "The field the data resides in. Data must be of type Seq[Double]."
+				},
+				{
+					"name": "language",
+					"type": "string",
+					"required": false,
+					"description": "The language of all the data inside the DP. Used for finding sentence boundaries.",
+					"default": "en"
 				}
 			]
 		}

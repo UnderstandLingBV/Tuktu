@@ -21,7 +21,7 @@ class ShortTextClassifier(n: Int, minCount: Int) extends BaseModel {
     def addDocument(tokens: List[String]) = {
         // Construct the N-grams
         val ngrams = (1 to _n).toList.foldLeft(List.empty[Seq[String]])((a,b) => {
-            a ++ NGrams.getNgrams(tokens, b)
+            a ++ NLP.getNgrams(tokens, b)
         })
         // Add to the map
         ngrams.foreach {ngram =>
@@ -36,7 +36,7 @@ class ShortTextClassifier(n: Int, minCount: Int) extends BaseModel {
     
     def tokensToVector(tokens: List[String]): Array[Feature] = {
         val ngrams = (1 to _n).toList.foldLeft(List.empty[Seq[String]])((a,b) => {
-            a ++ NGrams.getNgrams(tokens, b)
+            a ++ NLP.getNgrams(tokens, b)
         }).groupBy(a => a).map(a => a._1.mkString -> a._2.size)
             
         (ngrams.filter(w => featureMap.contains(w._1)).map {token =>
@@ -46,9 +46,11 @@ class ShortTextClassifier(n: Int, minCount: Int) extends BaseModel {
         } toArray
     }
         
-    def trainClassifier(data: List[List[String]], labels: List[Double], C: Double, eps: Double) = {
+    def trainClassifier(data: List[List[String]], labels: List[Double], C: Double, eps: Double, language: String) = {
+        // Get all sentences
+        val sentences = data.flatMap(d => NLP.getSentences(d, language)).map(_.split(" ").toList)
         // Add all data
-        data.foreach(addDocument)
+        sentences.foreach(addDocument)
         // Remove all words occurring too infrequently
         featureMap.retain((k,v) => v._2 >= minCount)
         // Renumber them all
@@ -62,7 +64,7 @@ class ShortTextClassifier(n: Int, minCount: Int) extends BaseModel {
         val p = new Problem
         p.n = featureMap.size
         // Construct the liblinear vectors now
-        p.x = data.map {datum =>
+        p.x = sentences.map {datum =>
             tokensToVector(datum)
         } filter {
             !_.isEmpty
@@ -76,9 +78,16 @@ class ShortTextClassifier(n: Int, minCount: Int) extends BaseModel {
         model = Linear.train(p, param)
     }
     
-    def predict(tokens: List[String]) = {
-        val vector = tokensToVector(tokens)
-        if (vector.isEmpty) -1.0 else Linear.predict(model, vector)
+    def predict(tokens: List[String], language: String) = {
+        // Get sentences
+        val sentences = NLP.getSentences(tokens, language)
+        if (sentences.isEmpty) -1.0 else
+            (sentences.map {sentence =>
+                val vector = tokensToVector(sentence.split(" ").toList)
+                if (vector.isEmpty) -1.0 else Linear.predict(model, vector)
+            }).groupBy(a => a).map(pred => {
+                pred._1 -> pred._2.size
+            }).toList.sortBy(_._2)(Ordering[Int].reverse).head._1
     }
     
     override def serialize(filename: String): Unit = {
