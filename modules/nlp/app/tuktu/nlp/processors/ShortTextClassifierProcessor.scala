@@ -15,7 +15,7 @@ import tuktu.api.utils
 class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainProcessor[ShortTextClassifier](resultName) {
     var tokensField: String = _
     var labelField: String = _
-    var minCount: Int = _
+    var minCount: Double = _
     var n: Int = _
     var C: Double = _
     var eps: Double = _
@@ -24,7 +24,7 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
     override def initialize(config: JsObject) {
         tokensField = (config \ "data_field").as[String]
         labelField = (config \ "label_field").as[String]
-        minCount = (config \ "min_count").as[Int]
+        minCount = (config \ "min_count").as[Double]
         n = (config \ "n").as[Int]
         C = (config \ "C").as[Double]
         eps = (config \ "epsilon").as[Double]
@@ -84,11 +84,11 @@ class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyP
 }
 
 class ShortTextClassifierDeserializeProcessor(resultName: String) extends BaseMLDeserializeProcessor[ShortTextClassifier](resultName) {
-    var minCount: Int = _
+    var minCount: Double = _
     var n: Int = _
     
     override def initialize(config: JsObject) {
-        minCount = (config \ "min_count").as[Int]
+        minCount = (config \ "min_count").as[Double]
         n = (config \ "n").as[Int]
         
         super.initialize(config)

@@ -10,12 +10,12 @@ import tuktu.ml.models.BaseModel
 import de.bwaldvogel.liblinear._
 import java.io.File
 
-class ShortTextClassifier(n: Int, minCount: Int) extends BaseModel {
+class ShortTextClassifier(n: Int, minCount: Double) extends BaseModel {
     // Map containing the terms that we have found so far amd their feature indexes
     val featureMap = collection.mutable.Map.empty[String, (Int, Int)]
     var featureOffset = 1
     var _n: Int = n
-    var _minCount: Int = minCount
+    var _minCount: Double = minCount
     var model: Model = _
     
     def addDocument(tokens: List[String]) = {
@@ -51,8 +51,17 @@ class ShortTextClassifier(n: Int, minCount: Int) extends BaseModel {
         val sentences = data.flatMap(d => NLP.getSentences(d, language)).map(_.split(" ").toList)
         // Add all data
         sentences.foreach(addDocument)
+        
+        // Get the minCount percent of most frequent features
+        {
+            val newFeatures = featureMap.toList.sortBy(_._2._2)(Ordering[Int].reverse)
+                .take(Math.floor(featureMap.size.toDouble * _minCount).toInt)
+            featureMap.clear
+            featureMap ++= newFeatures
+        }
+        /*_minCount = minCount * featureMap.size.toDouble
         // Remove all words occurring too infrequently
-        featureMap.retain((k,v) => v._2 >= minCount)
+        featureMap.retain((k,v) => v._2 >= _minCount)*/
         // Renumber them all
         featureOffset = 1
         featureMap.foreach {fm =>
@@ -109,7 +118,7 @@ class ShortTextClassifier(n: Int, minCount: Int) extends BaseModel {
         featureMap.clear
         featureMap ++= obj("f").asInstanceOf[collection.mutable.Map[String, (Int, Int)]]
         _n = obj("n").asInstanceOf[Int]
-        _minCount = obj("m").asInstanceOf[Int]
+        _minCount = obj("m").asInstanceOf[Double]
         
         model = Model.load(new File(filename + ".svm"))
     }

@@ -52,9 +52,9 @@
 				},
 				{
 					"name": "min_count",
-					"type": "int",
+					"type": "double",
 					"required": true,
-					"description": "The minimum amount of times a feature should be present."
+					"description": "The minimum fraction a feature should be present."
 				},
 				{
 					"name": "n",
