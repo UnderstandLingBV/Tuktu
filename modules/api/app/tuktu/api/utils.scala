@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.GenMap
 import scala.xml.{ XML, Elem, Node, NodeSeq }
 import fastparse.all._
-import scala.reflect.runtime.universe._
+import org.apache.commons.lang3.StringEscapeUtils
 
 object utils {
     val logDpContent = Cache.getAs[Boolean]("mon.log_dp_content").getOrElse(Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true))
@@ -83,9 +83,7 @@ object utils {
                             case Some(el)    => evaluateSQLParameter(el)
                             case el: JsValue => evaluateSQLParameter(JsValueToAny(el))
                             case el: Boolean => if (el) "1" else "0"
-                            case el: String  =>
-                                // From: https://stackoverflow.com/questions/9913971/scala-how-can-i-get-an-escaped-representation-of-a-string?rq=1
-                                "'" + Literal(Constant(el.replace("'", "''"))).toString + "'"
+                            case el: String  => "'" + StringEscapeUtils.escapeJava(el.replace("'", "''")) + "'"
                             case _           => any.toString
                         }
                         evaluateSQLParameter(value)

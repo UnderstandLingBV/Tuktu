@@ -1250,18 +1250,19 @@ class RemoveEmptyPacketProcessor(resultName: String) extends BaseProcessor(resul
  */
 class GetListElementProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
-    var index: Int = _
+    var index: String = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
-        index = (config \ "index").as[Int]
+        index = (config \ "index").as[String]
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         new DataPacket(data.data.map { datum =>
             val seq = datum(field).asInstanceOf[Seq[Any]]
-            if (seq.size > index)
-                datum + (resultName -> seq(index))
+            val newIndex = utils.evaluateTuktuString(index, datum).toInt
+            if (seq.size > newIndex)
+                datum + (resultName -> seq(newIndex))
             else datum
         })
     })
