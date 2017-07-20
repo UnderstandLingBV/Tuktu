@@ -91,7 +91,15 @@ class PostCollector(fbClient: DefaultFacebookClient, commentCollector: ActorRef,
                 
                 // Go over them
                 for ((response, index) <- responses.zipWithIndex) {
-                    val objectList = new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
+                    val objectList = try {
+                        new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
+                    }
+                    catch {
+                        case e: com.restfb.json.JsonException => {
+                            Logger.error("Failed to get Facebook data for " + pcp.feeds + "\r\n" + response.getBody)
+                            throw e
+                        }
+                    }
                     for {
                         objects <- objectList
                         obj <- objects
@@ -139,7 +147,7 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
             self ! PoisonPill
         }
         case pl: PostList => pl.posts.foreach {post =>
-            posts += post -> (0L, 0)
+            posts += post -> (1L, 0)
         }
         case ic: IterateComments => {
             if (!isRequesting) {

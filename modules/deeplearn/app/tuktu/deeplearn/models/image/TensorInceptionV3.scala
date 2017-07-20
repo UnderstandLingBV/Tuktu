@@ -62,7 +62,8 @@ object TensorInceptionV3 {
         
         val lbls = labelProbabilities.zipWithIndex.sortBy(_._1)(Ordering[Float].reverse).take(n).map { x => (labels.get(x._2), x._1) }.toList
         if (useCategories) lbls.map{lbl =>
-            util.categoryMap(lbl._1.replaceAll(" ", "_")) -> lbl._2
+            val lookup = lbl._1.replaceAll(" ", "_")
+            util.categoryMap.get(lookup).getOrElse("chain_saw") -> lbl._2 // chain_saw resolves to object_other
         } else lbls
     }
     
