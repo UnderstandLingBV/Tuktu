@@ -46,11 +46,8 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
         super.initialize(config)
     }
     
-    override def instantiate(data: List[Map[String, Any]]): ShortTextClassifier = {
-        val jft = new JFastText
-        jft.loadModel(utils.evaluateTuktuString(vectorFile, data.head))
-        new ShortTextClassifier(minCount, jft, similarityThreshold)
-    }
+    override def instantiate(data: List[Map[String, Any]]): ShortTextClassifier =
+        new ShortTextClassifier(minCount, utils.evaluateTuktuString(vectorFile, data.head), similarityThreshold)
     
     override def train(data: List[Map[String, Any]], model: ShortTextClassifier): ShortTextClassifier = {
         // Add the documents

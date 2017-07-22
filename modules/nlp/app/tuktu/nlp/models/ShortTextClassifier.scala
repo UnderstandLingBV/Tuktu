@@ -11,10 +11,13 @@ import de.bwaldvogel.liblinear._
 import java.io.File
 import com.github.jfasttext.JFastText
 import scala.collection.JavaConverters._
+import play.api.Logger
 
 class ShortTextClassifier(
-        minCount: Int, jft: JFastText, similarityThreshold: Double
+        minCount: Int, jftModel: String, similarityThreshold: Double
 ) extends BaseModel {
+    val jft = new JFastText
+    jft.loadModel(jftModel)
     // Map containing the terms that we have found so far amd their feature indexes
     val featureMap = collection.mutable.Map.empty[String, (Int, Int)]
     var featureOffset = 1
@@ -121,7 +124,10 @@ class ShortTextClassifier(
             (s._1.split(" ").toList, s._2)
         }
         // Add all data
-        sentences.foreach(s => addDocument(s._1))
+        sentences.zipWithIndex.foreach(s => {
+            if (s._2 % 100 == 0) Logger.info("Preprocessing training record " + s._2)
+            addDocument(s._1._1)
+        })
 
         // Remove all words occurring too infrequently
         featureMap.retain((k,v) => v._2 >= _minCount)
@@ -168,7 +174,8 @@ class ShortTextClassifier(
                 "minCount" -> _minCount,
                 "seedWords" -> _seedWords,
                 "rightFlips" -> _rightFlips,
-                "leftFlips" -> _leftFlips
+                "leftFlips" -> _leftFlips,
+                "jft" -> jftModel
         ))
         oos.close
         model.save(new File(filename + ".svm"))
@@ -185,6 +192,9 @@ class ShortTextClassifier(
         _seedWords = obj("seedWords").asInstanceOf[Map[String, List[Array[java.lang.Float]]]]
         _rightFlips = obj("rightFlips").asInstanceOf[List[String]]
         _leftFlips = obj("leftFlips").asInstanceOf[List[String]]
+        val jftModel = obj("jft").asInstanceOf[String]
+        jft.unloadModel
+        jft.loadModel(jftModel)
         
         model = Model.load(new File(filename + ".svm"))
     }
