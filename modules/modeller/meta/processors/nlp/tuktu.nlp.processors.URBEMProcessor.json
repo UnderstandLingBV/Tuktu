@@ -1,0 +1,89 @@
+{
+	"name": "Unsupervised RBEM Processor",
+	"description": "Performs sentiment analtysis using the URBEM algorithm.",
+	"class": "tuktu.nlp.processors.URBEMProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "language",
+					"description": "The language to be used.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "tokens",
+					"label": "Tokens field",
+					"description": "The field that contains an Array of tokens.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "vector_file",
+					"description": "The file that contains the fastText model.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "seed_words",
+					"description": "The seed words. A list of words per class. Keys of the object should contain the class names, the values should be JsArrays containing the words.",
+					"type": "JsObject",
+					"required": true
+				},
+				{
+					"name": "right_flips",
+					"description": "The right flip seed words.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"description": "A right flip seed word.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "left_flips",
+					"description": "The left flip seed words.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"description": "A left flip seed word.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "seed_cutoff",
+					"description": "The seed cutoff - between 0.0 and 1.0.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "negation_cutoff",
+					"description": "The negation cutoff - between 0.0 and 1.0.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

@@ -10,22 +10,81 @@ import tuktu.ml.models.BaseModel
 import de.bwaldvogel.liblinear._
 import java.io.File
 
-class ShortTextClassifier(n: Int, minCount: Double) extends BaseModel {
+class ShortTextClassifier(
+        minCount: Int
+) extends BaseModel {
     // Map containing the terms that we have found so far amd their feature indexes
     val featureMap = collection.mutable.Map.empty[String, (Int, Int)]
     var featureOffset = 1
-    var _n: Int = n
-    var _minCount: Double = minCount
+    var _minCount: Int = minCount
+    var _seedWords: Map[String, List[String]] = _
+    var _rightFlips: List[String] = _    
+    var _leftFlips: List[String] = _
     var model: Model = _
     
+    def setWords(seedWords: Map[String, List[String]], rightFlips: List[String], leftFlips: List[String]) {
+        _seedWords = seedWords
+        _rightFlips = rightFlips
+        _leftFlips = leftFlips
+    }
+    
+    def processTokens(tokens: List[String]) = {
+        // Convert the negated tokens
+        val processedTokens = collection.mutable.ArrayBuffer.empty[String]
+        val seedIndices = collection.mutable.ArrayBuffer.empty[Int]
+        processedTokens ++= tokens.zipWithIndex.map {token =>
+            _seedWords.find {sw =>
+                sw._2.contains(token._1)
+            } match {
+                case Some(sw) => {
+                    // Replace token by the label of this word
+                    seedIndices += token._2
+                    sw._1
+                }
+                case None => token._1
+            }
+        }
+        tokens.zipWithIndex.map {token =>
+            if (_rightFlips.contains(token._1))
+                // Negate words to the right
+                (1 to 2).foreach {offset =>
+                    if (processedTokens.size > token._2 + offset && seedIndices.contains(token._2 + offset))
+                        if (processedTokens(token._2 + offset).endsWith("_NEG"))
+                            processedTokens(token._2 + offset) = processedTokens(token._2 + offset).take(processedTokens(token._2 + offset).size - 4)
+                        else processedTokens(token._2 + offset) = processedTokens(token._2 + offset) + "_NEG"
+                }
+            else if (_leftFlips.contains(token._1))
+                // Negate words to the left
+                (1 to 2).foreach {offset =>
+                    if (token._2 - offset >= 0 && seedIndices.contains(token._2 + offset))
+                        if (processedTokens(token._2 - offset).endsWith("_NEG"))
+                            processedTokens(token._2 - offset) = processedTokens(token._2 - offset).take(processedTokens(token._2 - offset).size - 4)
+                        else processedTokens(token._2 - offset) = processedTokens(token._2 - offset) + "_NEG"
+                }
+        }
+        processedTokens.toList
+    }
+    
+    def getNgramFeatures(tokens: List[String], processedTokens: List[String]) = {
+        // Construct the word N-grams
+        (1 to 3).toList.foldLeft(List.empty[String])((a,b) => {
+            a ++ NLP.getNgrams(processedTokens.toList, b).map(_.mkString)
+        }) ++
+            // Construct the character N-grams
+            (3 to 5).toList.foldLeft(List.empty[String])((a,b) => {
+                a ++ NLP.getNgramsChar(tokens.mkString(" ").toList, b).map(_.toString)
+            })
+    }
+    
     def addDocument(tokens: List[String]) = {
-        // Construct the N-grams
-        val ngrams = (1 to _n).toList.foldLeft(List.empty[Seq[String]])((a,b) => {
-            a ++ NLP.getNgrams(tokens, b)
-        })
+        // Convert the negated tokens
+        val processedTokens = processTokens(tokens)
+        
+        // Construct the word N-grams
+        val ngrams = getNgramFeatures(tokens, processedTokens)
+        
         // Add to the map
-        ngrams.foreach {ngram =>
-            val ng = ngram.mkString
+        ngrams.foreach {ng =>
             if (!featureMap.contains(ng)) {
                 featureMap += ng -> (featureOffset, 0)
                 featureOffset += 1
@@ -35,9 +94,8 @@ class ShortTextClassifier(n: Int, minCount: Double) extends BaseModel {
     }
     
     def tokensToVector(tokens: List[String]): Array[Feature] = {
-        val ngrams = (1 to _n).toList.foldLeft(List.empty[Seq[String]])((a,b) => {
-            a ++ NLP.getNgrams(tokens, b)
-        }).groupBy(a => a).map(a => a._1.mkString -> a._2.size)
+        val processedTokens = processTokens(tokens)
+        val ngrams = getNgramFeatures(tokens, processedTokens).groupBy(w => w).map(w => w._1 -> w._2.size)
             
         (ngrams.filter(w => featureMap.contains(w._1)).map {token =>
             new FeatureNode(featureMap(token._1)._1, token._2)
@@ -48,20 +106,17 @@ class ShortTextClassifier(n: Int, minCount: Double) extends BaseModel {
         
     def trainClassifier(data: List[List[String]], labels: List[Double], C: Double, eps: Double, language: String) = {
         // Get all sentences
-        val sentences = data.flatMap(d => NLP.getSentences(d, language)).map(_.split(" ").toList)
-        // Add all data
-        sentences.foreach(addDocument)
-        
-        // Get the minCount percent of most frequent features
-        {
-            val newFeatures = featureMap.toList.sortBy(_._2._2)(Ordering[Int].reverse)
-                .take(Math.floor(featureMap.size.toDouble * _minCount).toInt)
-            featureMap.clear
-            featureMap ++= newFeatures
+        val sentences = data.zipWithIndex.flatMap {d =>
+            NLP.getSentences(d._1, language).filter(!_.isEmpty).map(s => (s, labels(d._2)))
+        } map {s =>
+            (s._1.split(" ").toList, s._2)
         }
-        /*_minCount = minCount * featureMap.size.toDouble
+        // Add all data
+        sentences.foreach(s => addDocument(s._1))
+
         // Remove all words occurring too infrequently
-        featureMap.retain((k,v) => v._2 >= _minCount)*/
+        featureMap.retain((k,v) => v._2 >= _minCount)
+        
         // Renumber them all
         featureOffset = 1
         featureMap.foreach {fm =>
@@ -74,13 +129,11 @@ class ShortTextClassifier(n: Int, minCount: Double) extends BaseModel {
         p.n = featureMap.size
         // Construct the liblinear vectors now
         p.x = sentences.map {datum =>
-            tokensToVector(datum)
-        } filter {
-            !_.isEmpty
+            tokensToVector(datum._1)
         } toArray
         
         p.l = p.x.size
-        p.y = labels.toArray
+        p.y = sentences.map(_._2).toArray
         
         val param = new Parameter(SolverType.MCSVM_CS, C, eps)
         // Train model
@@ -103,8 +156,10 @@ class ShortTextClassifier(n: Int, minCount: Double) extends BaseModel {
         val oos = new ObjectOutputStream(new FileOutputStream(filename))
         oos.writeObject(Map(
                 "f" -> featureMap,
-                "n" -> _n,
-                "m" -> _minCount
+                "minCount" -> _minCount,
+                "seedWords" -> _seedWords,
+                "rightFlips" -> _rightFlips,
+                "leftFlips" -> _leftFlips
         ))
         oos.close
         model.save(new File(filename + ".svm"))
@@ -117,8 +172,10 @@ class ShortTextClassifier(n: Int, minCount: Double) extends BaseModel {
 
         featureMap.clear
         featureMap ++= obj("f").asInstanceOf[collection.mutable.Map[String, (Int, Int)]]
-        _n = obj("n").asInstanceOf[Int]
-        _minCount = obj("m").asInstanceOf[Double]
+        _minCount = obj("minCount").asInstanceOf[Int]
+        _seedWords = obj("seedWords").asInstanceOf[Map[String, List[String]]]
+        _rightFlips = obj("rightFlips").asInstanceOf[List[String]]
+        _leftFlips = obj("leftFlips").asInstanceOf[List[String]]
         
         model = Model.load(new File(filename + ".svm"))
     }

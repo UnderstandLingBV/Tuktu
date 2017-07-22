@@ -52,15 +52,9 @@
 				},
 				{
 					"name": "min_count",
-					"type": "double",
-					"required": true,
-					"description": "The minimum fraction a feature should be present."
-				},
-				{
-					"name": "n",
 					"type": "int",
 					"required": true,
-					"description": "The N-grams to use (1 for unigrams)."
+					"description": "The minimum times a feature should be present."
 				},
 				{
 					"name": "C",
@@ -80,6 +74,24 @@
 					"required": false,
 					"description": "The language of all the data inside the DP. Used for finding sentence boundaries.",
 					"default": "en"
+				},
+				{
+					"name": "seed_word_file",
+					"type": "string",
+					"required": true,
+					"description": "The file that contains the seed words for this language. Can be computed via PMI for a specific label in a dataset."
+				},
+				{
+					"name": "right_flip_file",
+					"type": "string",
+					"required": true,
+					"description": "The file that contains the right flips for this language."
+				},
+				{
+					"name": "left_flip_file",
+					"type": "string",
+					"required": true,
+					"description": "The file that contains the left flips for this language."
 				}
 			]
 		}

@@ -11,35 +11,42 @@ import tuktu.nlp.models.ShortTextClassifier
 import tuktu.ml.processors.BaseMLApplyProcessor
 import tuktu.ml.processors.BaseMLDeserializeProcessor
 import tuktu.api.utils
+import play.api.libs.json.Json
 
 class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainProcessor[ShortTextClassifier](resultName) {
     var tokensField: String = _
     var labelField: String = _
-    var minCount: Double = _
-    var n: Int = _
+    var minCount: Int = _
     var C: Double = _
     var eps: Double = _
     var lang: String = _
+    var rightFlipFile: String = _
+    var leftFlipFile: String = _
+    var seedWordFile: String = _
     
     override def initialize(config: JsObject) {
         tokensField = (config \ "data_field").as[String]
         labelField = (config \ "label_field").as[String]
-        minCount = (config \ "min_count").as[Double]
-        n = (config \ "n").as[Int]
+        minCount = (config \ "min_count").as[Int]
+        
         C = (config \ "C").as[Double]
         eps = (config \ "epsilon").as[Double]
         lang = (config \ "language").asOpt[String].getOrElse("en")
         
+        rightFlipFile = (config \ "right_flip_file").as[String]
+        leftFlipFile = (config \ "left_flip_file").as[String]
+        seedWordFile = (config \ "seed_word_file").as[String]
+        
         super.initialize(config)
     }
     
-    override def instantiate(): ShortTextClassifier =
-        new ShortTextClassifier(n, minCount)
+    override def instantiate(): ShortTextClassifier = new ShortTextClassifier(minCount)
     
     override def train(data: List[Map[String, Any]], model: ShortTextClassifier): ShortTextClassifier = {
         // Add the documents
         val x = collection.mutable.ListBuffer.empty[List[String]]
         val y = collection.mutable.ListBuffer.empty[Double]
+        
         data.map {datum =>
             x += datum(tokensField).asInstanceOf[String].split(" ").toList
             y += (datum(labelField) match {
@@ -50,7 +57,29 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
             })
         }
         
+        // Read the seed words from file
+        val seedWords = {
+            val f = scala.io.Source.fromFile(utils.evaluateTuktuString(seedWordFile, data.head))("utf8")
+            val words = Json.parse(f.getLines.mkString).as[Map[String, List[String]]]
+            f.close
+            words
+        }
+        // Read the right and left flips from file
+        val rightFlips = {
+            val f = scala.io.Source.fromFile(utils.evaluateTuktuString(rightFlipFile, data.head))("utf8")
+            val words = Json.parse(f.getLines.mkString).as[List[String]]
+            f.close
+            words
+        }
+        val leftFlips = {
+            val f = scala.io.Source.fromFile(utils.evaluateTuktuString(leftFlipFile, data.head))("utf8")
+            val words = Json.parse(f.getLines.mkString).as[List[String]]
+            f.close
+            words
+        }
+        
         // Train
+        model.setWords(seedWords, rightFlips, leftFlips)
         model.trainClassifier(x.toList, y.toList, C, eps, utils.evaluateTuktuString(lang, data.head))
         
         model
@@ -84,18 +113,16 @@ class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyP
 }
 
 class ShortTextClassifierDeserializeProcessor(resultName: String) extends BaseMLDeserializeProcessor[ShortTextClassifier](resultName) {
-    var minCount: Double = _
-    var n: Int = _
+    var minCount: Int = _
     
     override def initialize(config: JsObject) {
-        minCount = (config \ "min_count").as[Double]
-        n = (config \ "n").as[Int]
+        minCount = (config \ "min_count").as[Int]
         
         super.initialize(config)
     }
     
     override def deserializeModel(filename: String) = {
-        val model = new ShortTextClassifier(n, minCount)
+        val model = new ShortTextClassifier(minCount)
         model.deserialize(filename)
         model
     }

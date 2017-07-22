@@ -49,12 +49,6 @@
 					"type": "double",
 					"required": true,
 					"description": "The minimum fraction a feature should be present."
-				},
-				{
-					"name": "n",
-					"type": "int",
-					"required": true,
-					"description": "The N-grams to use (1 for unigrams)."
 				}
 			]
 		}
