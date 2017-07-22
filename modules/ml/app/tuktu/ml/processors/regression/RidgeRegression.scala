@@ -24,7 +24,7 @@ class RidgeRegressionTrainProcessor(resultName: String) extends BaseMLTrainProce
         super.initialize(config)
     }
     
-    override def instantiate(): RidgeRegression =
+    override def instantiate(data: List[Map[String, Any]]): RidgeRegression =
         new RidgeRegression(lambda)
         
     // Trains the Ridge regression classifier

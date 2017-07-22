@@ -49,7 +49,7 @@ class HMMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[HiddenM
     }
 
     // Instantiates a Hidden Markov Model with a number of hidden states and a number of observable states
-    override def instantiate(): HiddenMarkovModel = {
+    override def instantiate(data: List[Map[String, Any]]): HiddenMarkovModel = {
         new HiddenMarkovModel(numHidden, numObservable) {
             // Set priors if any
             if (priorsGiven) {

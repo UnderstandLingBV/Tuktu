@@ -20,7 +20,7 @@ class LinearRegressionTrainProcessor(resultName: String) extends BaseMLTrainProc
         super.initialize(config)
     }
     
-    override def instantiate(): LinearRegression =
+    override def instantiate(data: List[Map[String, Any]]): LinearRegression =
         new LinearRegression
         
     // Trains the linear regression classifier

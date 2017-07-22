@@ -12,6 +12,7 @@ import tuktu.ml.processors.BaseMLApplyProcessor
 import tuktu.ml.processors.BaseMLDeserializeProcessor
 import tuktu.api.utils
 import play.api.libs.json.Json
+import com.github.jfasttext.JFastText
 
 class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainProcessor[ShortTextClassifier](resultName) {
     var tokensField: String = _
@@ -23,6 +24,8 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
     var rightFlipFile: String = _
     var leftFlipFile: String = _
     var seedWordFile: String = _
+    var vectorFile: String = _
+    var similarityThreshold: Double = _
     
     override def initialize(config: JsObject) {
         tokensField = (config \ "data_field").as[String]
@@ -37,10 +40,17 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
         leftFlipFile = (config \ "left_flip_file").as[String]
         seedWordFile = (config \ "seed_word_file").as[String]
         
+        vectorFile = (config \ "vector_file").as[String]
+        similarityThreshold = (config \ "similarity_threshold").as[Double]
+        
         super.initialize(config)
     }
     
-    override def instantiate(): ShortTextClassifier = new ShortTextClassifier(minCount)
+    override def instantiate(data: List[Map[String, Any]]): ShortTextClassifier = {
+        val jft = new JFastText
+        jft.loadModel(utils.evaluateTuktuString(vectorFile, data.head))
+        new ShortTextClassifier(minCount, jft, similarityThreshold)
+    }
     
     override def train(data: List[Map[String, Any]], model: ShortTextClassifier): ShortTextClassifier = {
         // Add the documents
@@ -114,15 +124,19 @@ class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyP
 
 class ShortTextClassifierDeserializeProcessor(resultName: String) extends BaseMLDeserializeProcessor[ShortTextClassifier](resultName) {
     var minCount: Int = _
+    var vectorFile: String = _
+    var similarityThreshold: Double = _
     
     override def initialize(config: JsObject) {
         minCount = (config \ "min_count").as[Int]
+        vectorFile = (config \ "vector_file").as[String]
+        similarityThreshold = (config \ "similarity_threshold").as[Double]
         
         super.initialize(config)
     }
     
     override def deserializeModel(filename: String) = {
-        val model = new ShortTextClassifier(minCount)
+        val model = new ShortTextClassifier(minCount, null, similarityThreshold)
         model.deserialize(filename)
         model
     }

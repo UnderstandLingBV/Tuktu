@@ -28,7 +28,7 @@ class GradientTreeBoostTrainProcessor(resultName: String) extends BaseMLTrainPro
         super.initialize(config)
     }
     
-    override def instantiate(): GradientTreeBoost =
+    override def instantiate(data: List[Map[String, Any]]): GradientTreeBoost =
         new GradientTreeBoost
         
     // Trains the linear regression classifier

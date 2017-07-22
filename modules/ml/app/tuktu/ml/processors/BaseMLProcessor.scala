@@ -45,7 +45,7 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
         val modelInstance = model match {
             case None => {
                 // No model was found, create it and send it to our repository
-                val model = instantiate
+                val model = instantiate(data.data)
                 Akka.system.actorSelection("user/tuktu.ml.ModelRepository") ! new UpsertModel(newModelName, model, false)
 
                 model
@@ -71,7 +71,7 @@ abstract class BaseMLTrainProcessor[BM <: BaseModel](resultName: String) extends
     /**
      * Instantiates the model
      */
-    def instantiate(): BM = ???
+    def instantiate(data: List[Map[String, Any]]): BM = ???
 
     /**
      * Trains the model

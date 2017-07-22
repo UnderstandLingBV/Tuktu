@@ -24,7 +24,7 @@ class KMeansTrainProcessor(resultName: String) extends BaseMLTrainProcessor[KMea
         super.initialize(config)
     }
     
-    override def instantiate(): KMeans = new KMeans
+    override def instantiate(data: List[Map[String, Any]]): KMeans = new KMeans
         
     override def train(data: List[Map[String, Any]], model: KMeans): KMeans = {
         val records = for (datum <- data) yield

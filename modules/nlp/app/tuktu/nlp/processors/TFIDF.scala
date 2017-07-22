@@ -19,7 +19,7 @@ class TFIDFTrainProcessor(resultName: String) extends BaseMLTrainProcessor[TFIDF
         super.initialize(config)
     }
     
-    override def instantiate(): TFIDF = new TFIDF()
+    override def instantiate(data: List[Map[String, Any]]): TFIDF = new TFIDF()
     
     // Adds a document to the word count vector
     override def train(data: List[Map[String, Any]], model: TFIDF): TFIDF = {

@@ -21,7 +21,7 @@ class NormalizationTrainProcessor(resultName: String) extends BaseMLTrainProcess
         super.initialize(config)
     }
     
-    override def instantiate(): Normalization =
+    override def instantiate(data: List[Map[String, Any]]): Normalization =
         new Normalization(min, max)
     
     override def train(data: List[Map[String, Any]], model: Normalization): Normalization = {

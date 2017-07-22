@@ -35,7 +35,7 @@ class LogisticRegressionTrainProcessor(resultName: String) extends BaseMLTrainPr
         super.initialize(config)
     }
 
-    override def instantiate(): LogisticRegression =
+    override def instantiate(data: List[Map[String, Any]]): LogisticRegression =
         new LogisticRegression(lambda, tolerance, maxIterations)
     
     // Trains the logistic regression classifier

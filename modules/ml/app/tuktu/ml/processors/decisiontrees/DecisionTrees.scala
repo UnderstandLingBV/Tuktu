@@ -22,7 +22,7 @@ class DecisionTreeTrainProcessor(resultName: String) extends BaseMLTrainProcesso
         super.initialize(config)
     }
     
-    override def instantiate(): DecisionTree =
+    override def instantiate(data: List[Map[String, Any]]): DecisionTree =
         new DecisionTree
         
     // Trains the linear regression classifier

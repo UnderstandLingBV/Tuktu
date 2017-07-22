@@ -28,7 +28,7 @@ class SVMTrainProcessor(resultName: String) extends BaseMLTrainProcessor[Support
         super.initialize(config)
     }
     
-    override def instantiate(): SupportVectorMachine =
+    override def instantiate(data: List[Map[String, Any]]): SupportVectorMachine =
         new SupportVectorMachine
         
     // Trains the linear regression classifier

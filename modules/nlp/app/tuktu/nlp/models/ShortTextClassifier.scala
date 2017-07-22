@@ -9,21 +9,27 @@ import tuktu.ml.models.BaseModel
 
 import de.bwaldvogel.liblinear._
 import java.io.File
+import com.github.jfasttext.JFastText
+import scala.collection.JavaConverters._
 
 class ShortTextClassifier(
-        minCount: Int
+        minCount: Int, jft: JFastText, similarityThreshold: Double
 ) extends BaseModel {
     // Map containing the terms that we have found so far amd their feature indexes
     val featureMap = collection.mutable.Map.empty[String, (Int, Int)]
     var featureOffset = 1
     var _minCount: Int = minCount
-    var _seedWords: Map[String, List[String]] = _
+    var _seedWords: Map[String, List[Array[java.lang.Float]]] = _
     var _rightFlips: List[String] = _    
     var _leftFlips: List[String] = _
     var model: Model = _
     
     def setWords(seedWords: Map[String, List[String]], rightFlips: List[String], leftFlips: List[String]) {
-        _seedWords = seedWords
+        _seedWords = seedWords.map {sw =>
+            sw._1 -> sw._2.map {word =>
+                jft.getVector(word).asScala.toArray
+            }
+        }
         _rightFlips = rightFlips
         _leftFlips = leftFlips
     }
@@ -34,7 +40,10 @@ class ShortTextClassifier(
         val seedIndices = collection.mutable.ArrayBuffer.empty[Int]
         processedTokens ++= tokens.zipWithIndex.map {token =>
             _seedWords.find {sw =>
-                sw._2.contains(token._1)
+                val vec = jft.getVector(token._1).asScala.toArray
+                sw._2.exists {seedVec =>
+                    CosineSimilarity.cosineSimilarity(seedVec, vec) >= similarityThreshold
+                }
             } match {
                 case Some(sw) => {
                     // Replace token by the label of this word
@@ -173,7 +182,7 @@ class ShortTextClassifier(
         featureMap.clear
         featureMap ++= obj("f").asInstanceOf[collection.mutable.Map[String, (Int, Int)]]
         _minCount = obj("minCount").asInstanceOf[Int]
-        _seedWords = obj("seedWords").asInstanceOf[Map[String, List[String]]]
+        _seedWords = obj("seedWords").asInstanceOf[Map[String, List[Array[java.lang.Float]]]]
         _rightFlips = obj("rightFlips").asInstanceOf[List[String]]
         _leftFlips = obj("leftFlips").asInstanceOf[List[String]]
         
