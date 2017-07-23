@@ -121,12 +121,10 @@ class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyP
 
 class ShortTextClassifierDeserializeProcessor(resultName: String) extends BaseMLDeserializeProcessor[ShortTextClassifier](resultName) {
     var minCount: Int = _
-    var vectorFile: String = _
     var similarityThreshold: Double = _
     
     override def initialize(config: JsObject) {
         minCount = (config \ "min_count").as[Int]
-        vectorFile = (config \ "vector_file").as[String]
         similarityThreshold = (config \ "similarity_threshold").as[Double]
         
         super.initialize(config)

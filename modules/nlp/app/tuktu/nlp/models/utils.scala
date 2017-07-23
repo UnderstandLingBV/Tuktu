@@ -2,6 +2,8 @@ package tuktu.nlp.models
 
 import java.text.BreakIterator
 import java.util.Locale
+import org.jblas.DoubleMatrix
+import org.jblas.FloatMatrix
 
 /* 
  * Object in scala for calculating cosine similarity
@@ -17,42 +19,22 @@ object CosineSimilarity {
    * (x dot y)/||X|| ||Y||
    */
     def cosineSimilarity(x: Array[Double], y: Array[Double]): Double = {
-        require(x.size == y.size)
-        dotProduct(x, y) / (magnitude(x) * magnitude(y))
+        // Use BLAS
+        cosineSimilarity(new DoubleMatrix(x), new DoubleMatrix(y))
+    }
+    
+    def cosineSimilarity(vec1: DoubleMatrix, vec2: DoubleMatrix): Double = {
+          vec1.dot(vec2) / (vec1.norm2() * vec2.norm2())
     }
     
     @scala.annotation.strictfp
-    def cosineSimilarity(x: Array[java.lang.Float], y: Array[java.lang.Float]): java.lang.Float = {
-        dotProduct(x, y) / (magnitude(x).toFloat * magnitude(y).toFloat)
-    }
-
-
-    /*
-   * Return the dot product of the 2 arrays
-   * e.g. (a[0]*b[0])+(a[1]*a[2])
-   */
-    def dotProduct(x: Array[Double], y: Array[Double]): Double = {
-        (for ((a, b) <- x zip y) yield a * b) sum
-    }
-
-    @scala.annotation.strictfp
-    def dotProduct(x: Array[java.lang.Float], y: Array[java.lang.Float]): java.lang.Float = {
-        (for ((a, b) <- x zip y) yield a * b) sum
-    } 
-    
-    /*
-   * Return the magnitude of an array
-   * We multiply each element, sum it, then square root the result.
-   */
-    def magnitude(x: Array[Double]): Double = {
-        math.sqrt(x map (i => i * i) sum)
+    def cosineSimilarity(x: java.util.List[java.lang.Float], y: java.util.List[java.lang.Float]): java.lang.Float = {
+        cosineSimilarity(new FloatMatrix(x), new FloatMatrix(y))
     }
     
-    @scala.annotation.strictfp
-    def magnitude(x: Array[java.lang.Float]): Double = {
-        math.sqrt(x map (i => i * i) sum)
+    def cosineSimilarity(vec1: FloatMatrix, vec2: FloatMatrix): Float = {
+          vec1.dot(vec2) / (vec1.norm2() * vec2.norm2())
     }
-
 }
 
 object NLP {

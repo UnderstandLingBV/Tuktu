@@ -101,6 +101,7 @@ lazy val mlDependencies = Seq(
     "com.thoughtworks.xstream" % "xstream" % "1.4.8",
     "com.github.haifengl" % "smile-core" % "1.3.1",
     "org.scalanlp" %% "breeze" % "0.10",
+	"org.jblas" % "jblas" % "1.2.4",
 	"de.bwaldvogel" % "liblinear" % "2.11" withSources() withJavadoc(),
     "org.scalatestplus" %% "play" % "1.2.0" % "test"
 )
@@ -359,6 +360,7 @@ lazy val root = project
     .settings(scalaVersion := "2.11.8")
     .settings(resolvers ++= appResolvers)
     .settings(libraryDependencies ++= coreDependencies)
+	.settings(dependencyOverrides ++= Set("org.jblas" % "jblas" % "1.2.4"))
     .settings(EclipseKeys.skipParents in ThisBuild := false)
     .aggregate(api, aws, restapi, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz, dlib)
     .dependsOn(api, aws, restapi, nlp, csv, dfs, dl, social, nosql, ml, web, tuktudb, crawler, modeller, viz, dlib)

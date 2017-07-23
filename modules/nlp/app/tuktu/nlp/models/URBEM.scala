@@ -2,14 +2,13 @@ package tuktu.nlp.models
 
 import tuktu.ml.models.BaseModel
 import com.github.jfasttext.JFastText
-import scala.collection.JavaConverters._
 import scala.util.Random
 import java.util.Date
 
 class URBEM(language: String, jft: JFastText) extends BaseModel {
-    val seedWords = collection.mutable.Map.empty[String, List[Array[java.lang.Float]]]
-    val leftFlips = collection.mutable.ArrayBuffer.empty[Array[java.lang.Float]]
-    val rightFlips = collection.mutable.ArrayBuffer.empty[Array[java.lang.Float]]
+    val seedWords = collection.mutable.Map.empty[String, List[java.util.List[java.lang.Float]]]
+    val leftFlips = collection.mutable.ArrayBuffer.empty[java.util.List[java.lang.Float]]
+    val rightFlips = collection.mutable.ArrayBuffer.empty[java.util.List[java.lang.Float]]
     
     /**
      * Initializes the seed words per class, the left flips and right flips
@@ -27,17 +26,17 @@ class URBEM(language: String, jft: JFastText) extends BaseModel {
         this.rightFlips.clear
         this.seedWords ++= seedWords.map {wordGroup =>
             wordGroup._1 -> wordGroup._2.map {words =>
-                if (words.size == 1) jft.getVector(words.head).asScala.toArray
-            else Array.empty[java.lang.Float] // Wait for support for sentences
+                if (words.size == 1) jft.getVector(words.head)
+            else new java.util.ArrayList[java.lang.Float] // Wait for support for sentences
             }
         }
         this.leftFlips ++= leftFlips.map {words =>
-            if (words.size == 1) jft.getVector(words.head).asScala.toArray
-            else Array.empty[java.lang.Float] // Wait for support for sentences
+            if (words.size == 1) jft.getVector(words.head)
+            else new java.util.ArrayList[java.lang.Float] // Wait for support for sentences
         }
         this.rightFlips ++= rightFlips.map {words =>
-            if (words.size == 1) jft.getVector(words.head).asScala.toArray
-            else Array.empty[java.lang.Float] // Wait for support for sentences
+            if (words.size == 1) jft.getVector(words.head)
+            else new java.util.ArrayList[java.lang.Float] // Wait for support for sentences
         }
     }
     
@@ -46,7 +45,7 @@ class URBEM(language: String, jft: JFastText) extends BaseModel {
         NLP.getSentences(document, language).flatMap {sentence =>
             val tokens = sentence.toLowerCase.split(" ").toList
             val words = tokens.map {token =>
-                jft.getVector(token).asScala.toArray
+                jft.getVector(token)
             }
             
             // Set up the emissions for each class

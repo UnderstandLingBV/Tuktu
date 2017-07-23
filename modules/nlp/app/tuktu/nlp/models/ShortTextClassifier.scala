@@ -12,17 +12,19 @@ import java.io.File
 import com.github.jfasttext.JFastText
 import scala.collection.JavaConverters._
 import play.api.Logger
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import org.jblas.DoubleMatrix
 
 class ShortTextClassifier(
-        minCount: Int, jftModel: String, similarityThreshold: Double
+        minCount: Int, fastTextModel: String, similarityThreshold: Double
 ) extends BaseModel {
-    val jft = new JFastText
-    jft.loadModel(jftModel)
+    var ftw = if (fastTextModel != null) FastTextCache.getModel(fastTextModel) else null
     // Map containing the terms that we have found so far amd their feature indexes
     val featureMap = collection.mutable.Map.empty[String, (Int, Int)]
     var featureOffset = 1
     var _minCount: Int = minCount
-    var _seedWords: Map[String, List[Array[java.lang.Float]]] = _
+    var _seedWords: Map[String, List[Array[Double]]] = _
     var _rightFlips: List[String] = _    
     var _leftFlips: List[String] = _
     var model: Model = _
@@ -30,7 +32,7 @@ class ShortTextClassifier(
     def setWords(seedWords: Map[String, List[String]], rightFlips: List[String], leftFlips: List[String]) {
         _seedWords = seedWords.map {sw =>
             sw._1 -> sw._2.map {word =>
-                jft.getVector(word).asScala.toArray
+                ftw.getWordVector(word)
             }
         }
         _rightFlips = rightFlips
@@ -43,7 +45,7 @@ class ShortTextClassifier(
         val seedIndices = collection.mutable.ArrayBuffer.empty[Int]
         processedTokens ++= tokens.zipWithIndex.map {token =>
             _seedWords.find {sw =>
-                val vec = jft.getVector(token._1).asScala.toArray
+                val vec = ftw.getWordVector(token._1)
                 sw._2.exists {seedVec =>
                     CosineSimilarity.cosineSimilarity(seedVec, vec) >= similarityThreshold
                 }
@@ -117,12 +119,18 @@ class ShortTextClassifier(
     }
         
     def trainClassifier(data: List[List[String]], labels: List[Double], C: Double, eps: Double, language: String) = {
+        Logger.info("Started training")
         // Get all sentences
-        val sentences = data.zipWithIndex.flatMap {d =>
-            NLP.getSentences(d._1, language).filter(!_.isEmpty).map(s => (s, labels(d._2)))
-        } map {s =>
-            (s._1.split(" ").toList, s._2)
+        val sentences = {
+            val aLabels = labels.toArray
+            data.zipWithIndex.flatMap {d =>
+                if (d._2 % 1000 == 0) Logger.info("Getting sentences for record " + d._2)
+                NLP.getSentences(d._1, language).filter(!_.isEmpty).map(s => (s, aLabels(d._2)))
+            } map {s =>
+                (s._1.split(" ").toList, s._2)
+            }
         }
+        
         // Add all data
         sentences.zipWithIndex.foreach(s => {
             if (s._2 % 100 == 0) Logger.info("Preprocessing training record " + s._2)
@@ -175,7 +183,7 @@ class ShortTextClassifier(
                 "seedWords" -> _seedWords,
                 "rightFlips" -> _rightFlips,
                 "leftFlips" -> _leftFlips,
-                "jft" -> jftModel
+                "ft" -> fastTextModel
         ))
         oos.close
         model.save(new File(filename + ".svm"))
@@ -189,12 +197,11 @@ class ShortTextClassifier(
         featureMap.clear
         featureMap ++= obj("f").asInstanceOf[collection.mutable.Map[String, (Int, Int)]]
         _minCount = obj("minCount").asInstanceOf[Int]
-        _seedWords = obj("seedWords").asInstanceOf[Map[String, List[Array[java.lang.Float]]]]
+        _seedWords = obj("seedWords").asInstanceOf[Map[String, List[Array[Double]]]]
         _rightFlips = obj("rightFlips").asInstanceOf[List[String]]
         _leftFlips = obj("leftFlips").asInstanceOf[List[String]]
-        val jftModel = obj("jft").asInstanceOf[String]
-        jft.unloadModel
-        jft.loadModel(jftModel)
+        val fModel = obj("ft").asInstanceOf[String]
+        ftw = FastTextCache.getModel(fModel)
         
         model = Model.load(new File(filename + ".svm"))
     }

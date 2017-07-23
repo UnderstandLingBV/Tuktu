@@ -107,7 +107,10 @@ object FastTextCache {
         .build(
             new CacheLoader[String, FastTextWrapper]() {
                 def load(modelName: String) = {
-                    val model = new FastTextWrapper(0.05, 100 , 100, 5, 5, 5, 0, 5, 1, "ns", "sg", 2000000, 3, 6 , 1, 1e-4, "__label__", "")
+                    val model = new FastTextWrapper(0.05, 100 , 100, 5, 5, 5, 0, 5, 1, "ns", "sg", 2000000, 3, 6 , {
+                        Runtime.getRuntime().availableProcessors /
+                        Play.current.configuration.getLong("tuktu.nlp.fasttext.max_cache_size").getOrElse(4L).toInt
+                    }, 1e-4, "__label__", "")
                     model.deserialize(modelName)
                     model
                 }
