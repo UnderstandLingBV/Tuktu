@@ -1,0 +1,170 @@
+{
+	"name": "MongoDB Count Processor",
+	"description": "Counts the number of elements satisfying a given query.",
+	"class": "tuktu.nosql.processors.mongodb.MongoDBCountProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hosts",
+					"description": "A list of node names, like node1.foo.com:27017. Port is optional, it is 27017 by default.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "db",
+					"description": "The database to query against.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "collection",
+					"description": "The name of the collection to query.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "query",
+					"description": "Count the documents matching these given criteria. If you want to insert a JsObject using Tuktu Strings, you can do: $JSON.parse{${jsObject}}, or if you want to convert a Map to a JsObject on the fly: $JSON.parse{$JSON.stringify{map}}. Works not only on top-level, but also as a value within an object as JsString, and not only on maps, for example: {\"${key}\": \"$JSON.parse{$JSON.stringify{list}}\"} (Remember that keys never need to and hence can not be parsed as JSON, since they need to be strings.)",
+					"type": "any",
+					"required": true
+				},
+				{
+					"name": "limit",
+					"description": "The max number of results to count.",
+					"type": "int",
+					"required": false
+				},
+				{
+					"name": "skip",
+					"description": "The number of results to skip.",
+					"type": "int",
+					"required": false
+				},
+				{
+					"name": "mongo_options",
+					"description": "All possible mongo options, all optional.",
+					"type": "object",
+					"required": false,
+					"parameters": [
+						{
+							"name": "connectTimeoutMS",
+							"type": "int",
+							"required": false,
+							"default": 0,
+							"description": "The number of milliseconds to wait for a connection to be established before giving up."
+						},
+						{
+							"name": "authSource",
+							"type": "string",
+							"required": false,
+							"description": "The database source for authentication credentials."
+						},
+						{
+							"name": "sslEnabled",
+							"type": "boolean",
+							"required": false,
+							"default": false,
+							"description": "It enables the SSL support for the connection."
+						},
+						{
+							"name": "sslAllowsInvalidCert",
+							"type": "boolean",
+							"required": false,
+							"default": false,
+							"description": " If sslEnabled is true, this one indicates whether to accept invalid certificates (e.g. self-signed)."
+						},
+						{
+							"name": "authMode",
+							"type": "string",
+							"required": false,
+							"default": "cr",
+							"description": "The authentication mode. By default, it is the backward compatible MONGODB-CR which is used. If this options is set to sha1, then the SCRAM-SHA-1 authentication will be selected."
+						},
+						{
+							"name": "tcpNoDelay",
+							"type": "boolean",
+							"required": false,
+							"default": false,
+							"description": "TCPNoDelay boolean flag."
+						},
+						{
+							"name": "keepAlive",
+							"type": "boolean",
+							"required": false,
+							"default": false,
+							"description": "TCP KeepAlive boolean flag."
+						},
+						{
+							"name": "nbChannelsPerNode",
+							"type": "int",
+							"required": false,
+							"default": 10,
+							"description": "Number of channels (connections) per node."
+						},
+						{
+							"name": "writeConcern",
+							"type": "string",
+							"required": false,
+							"default": "acknowledged",
+							"description": "The default write concern (default: acknowledged). unacknowledged: Option w set to 0, journaling off (j), fsync off, no timeout. acknowledged: Option w set to 1, journaling off, fsync off, no timeout. journaled: Option w set to 1, journaling on, fsync off, no timeout."
+						},
+						{
+							"name": "readPreference",
+							"type": "string",
+							"required": false,
+							"default": "primary",
+							"description": "The default read preference (primary|primaryPreferred|secondary|secondaryPreferred|nearest) - see http://reactivemongo.org/releases/0.11/documentation/advanced-topics/read-preferences.html."
+						}
+					]
+				},
+				{
+					"name": "auth",
+					"description": "The authentication credentials if authentication is used.",
+					"type": "object",
+					"required": false,
+					"parameters": [
+						{
+							"name": "db",
+							"type": "string",
+							"required": false,
+							"description": "The authentication database name."
+						},
+						{
+							"name": "user",
+							"type": "string",
+							"required": false,
+							"description": "The username."
+						},
+						{
+							"name": "password",
+							"type": "string",
+							"required": false,
+							"description": "The password."
+						}
+					]
+				}
+			]
+		}
+	]
+}

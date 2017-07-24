@@ -114,6 +114,67 @@ class MongoDBFindProcessor(resultName: String) extends BaseProcessor(resultName)
     }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
 }
 
+class MongoDBCountProcessor(resultName: String) extends BaseProcessor(resultName) {
+    implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
+    var conn: MongoConnection = _
+    var nodes: List[String] = _
+
+    var db: utils.evaluateTuktuString.TuktuStringRoot = _
+    var collection: utils.evaluateTuktuString.TuktuStringRoot = _
+
+    var query: utils.PreparedJsNode = _
+    var limit: Option[Int] = _
+    var skip: Option[Int] = _
+
+    override def initialize(config: JsObject) {
+        // Get hosts
+        nodes = (config \ "hosts").as[List[String]]
+        // Get connection properties
+        val opts = (config \ "mongo_options").asOpt[JsObject]
+        val mongoOptions = MongoPool.parseMongoOptions(opts)
+        // Get credentials
+        val auth = (config \ "auth").asOpt[JsObject].map { a =>
+            Authenticate(
+                (a \ "db").as[String],
+                (a \ "user").as[String],
+                (a \ "password").as[String])
+        }
+
+        // DB and collection
+        db = utils.evaluateTuktuString.prepare((config \ "db").as[String])
+        collection = utils.evaluateTuktuString.prepare((config \ "collection").as[String])
+
+        // Get query and filter
+        query = utils.prepareTuktuJsValue(config \ "query")
+        limit = (config \ "limit").asOpt[Int]
+        skip = (config \ "skip").asOpt[Int]
+
+        // Get the connection
+        val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
+        conn = Await.result(fConnection, timeout.duration)
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
+        val results = Future.sequence(for (datum <- data.data) yield {
+            // Get collection
+            MongoPool.getCollection(conn, db.evaluate(datum), collection.evaluate(datum)).flatMap { coll =>
+                // Evaluate the query
+                val queryJson = query.evaluate(datum).as[JsObject]
+
+                // Get data based on query and limit
+                ((limit, skip) match {
+                    case (Some(lmt), Some(skp)) => coll.count(Some(queryJson), lmt, skp)
+                    case (Some(lmt), None)      => coll.count(Some(queryJson), lmt)
+                    case (None, Some(skp))      => coll.count(Some(queryJson), Int.MaxValue, skp)
+                    case (None, None)           => coll.count(Some(queryJson))
+                }).map { count => datum + (resultName -> count) }
+            }
+        })
+
+        results.map { dp => DataPacket(dp) }
+    }) compose Enumeratee.onEOF(() => MongoPool.releaseConnection(nodes, conn))
+}
+
 /**
  * Queries MongoDB for data and streams the resulting records.
  */
