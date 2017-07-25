@@ -12,6 +12,7 @@ import org.tensorflow.Graph
 import org.tensorflow.Tensor
 
 import play.api.Play
+import scala.util.Try
 
 object TensorInceptionV3 {
     lazy val labels = {
@@ -49,10 +50,11 @@ object TensorInceptionV3 {
         else {
             val conn = url.openConnection
             val baos = new ByteArrayOutputStream
-            
-            IOUtils.copy(conn.getInputStream, baos)
-            val imageBytes = baos.toByteArray
-            getLabels(imageBytes, n, useCategories)
+            Try {
+                IOUtils.copy(conn.getInputStream, baos)
+                val imageBytes = baos.toByteArray
+                getLabels(imageBytes, n, useCategories)
+            } getOrElse (List("unknown" -> 0.0f))
         }
     }
         
@@ -63,7 +65,7 @@ object TensorInceptionV3 {
         val lbls = labelProbabilities.zipWithIndex.sortBy(_._1)(Ordering[Float].reverse).take(n).map { x => (labels.get(x._2), x._1) }.toList
         if (useCategories) lbls.map{lbl =>
             val lookup = lbl._1.replaceAll(" ", "_")
-            util.categoryMap.get(lookup).getOrElse("chain_saw") -> lbl._2 // chain_saw resolves to object_other
+            util.categoryMap.getOrElse(lookup, "chain saw") -> lbl._2 // chain_saw resolves to object_other
         } else lbls
     }
     
