@@ -9,32 +9,21 @@ import tuktu.ml.models.BaseModel
 
 import de.bwaldvogel.liblinear._
 import java.io.File
-import com.github.jfasttext.JFastText
-import scala.collection.JavaConverters._
-import play.api.Logger
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import org.jblas.DoubleMatrix
 
 class ShortTextClassifier(
-        minCount: Int, fastTextModel: String, similarityThreshold: Double
+        minCount: Int
 ) extends BaseModel {
-    var ftw = if (fastTextModel != null) FastTextCache.getModel(fastTextModel) else null
     // Map containing the terms that we have found so far amd their feature indexes
     val featureMap = collection.mutable.Map.empty[String, (Int, Int)]
     var featureOffset = 1
     var _minCount: Int = minCount
-    var _seedWords: Map[String, List[Array[Double]]] = _
+    var _seedWords: Map[String, List[String]] = _
     var _rightFlips: List[String] = _    
     var _leftFlips: List[String] = _
     var model: Model = _
     
     def setWords(seedWords: Map[String, List[String]], rightFlips: List[String], leftFlips: List[String]) {
-        _seedWords = seedWords.map {sw =>
-            sw._1 -> sw._2.map {word =>
-                ftw.getWordVector(word)
-            }
-        }
+        _seedWords = seedWords
         _rightFlips = rightFlips
         _leftFlips = leftFlips
     }
@@ -45,10 +34,7 @@ class ShortTextClassifier(
         val seedIndices = collection.mutable.ArrayBuffer.empty[Int]
         processedTokens ++= tokens.zipWithIndex.map {token =>
             _seedWords.find {sw =>
-                val vec = ftw.getWordVector(token._1)
-                sw._2.exists {seedVec =>
-                    CosineSimilarity.cosineSimilarity(seedVec, vec) >= similarityThreshold
-                }
+                sw._2.contains(token._1)
             } match {
                 case Some(sw) => {
                     // Replace token by the label of this word
@@ -90,10 +76,7 @@ class ShortTextClassifier(
             })
     }
     
-    def addDocument(tokens: List[String]) = {
-        // Convert the negated tokens
-        val processedTokens = processTokens(tokens)
-        
+    def addDocument(tokens: List[String], processedTokens: List[String]) = {
         // Construct the word N-grams
         val ngrams = getNgramFeatures(tokens, processedTokens)
         
@@ -107,41 +90,59 @@ class ShortTextClassifier(
         }
     }
     
-    def tokensToVector(tokens: List[String]): Array[Feature] = {
-        val processedTokens = processTokens(tokens)
+    def getStaticFeatures(tokens: List[String]) = {
+        val sentence = tokens.mkString(" ")
+        // Get punctuation
+        val punctuation = (sentence.toList.filter {char =>
+            List('!', '?', '¡', '¿', '՜').exists(_ == char)
+        }).size.toDouble / sentence.size.toDouble
+        // Caps usage
+        val caps = (sentence.toList.filter {char =>
+            char.isUpper
+        }).size.toDouble / sentence.size.toDouble
+        List(punctuation, caps)
+    }
+    
+    def tokensToVector(tokens: List[String], pTokens: Option[List[String]] = None): Array[Feature] = {
+        val processedTokens = pTokens match {
+            case Some(pt) => pt
+            case None => processTokens(tokens)
+        }
         val ngrams = getNgramFeatures(tokens, processedTokens).groupBy(w => w).map(w => w._1 -> w._2.size)
             
-        (ngrams.filter(w => featureMap.contains(w._1)).map {token =>
+        // First 2 features are always static
+        val statics = getStaticFeatures(tokens).zipWithIndex.map {feat =>
+            new FeatureNode(feat._2 + 1, feat._1)
+        } toArray
+        
+        val other = (ngrams.filter(w => featureMap.contains(w._1)).map {token =>
             new FeatureNode(featureMap(token._1)._1, token._2)
         } toList).sortBy {
             _.getIndex
         } toArray
+        
+        statics ++ other
     }
         
     def trainClassifier(data: List[List[String]], labels: List[Double], C: Double, eps: Double, language: String) = {
-        Logger.info("Started training")
         // Get all sentences
-        val sentences = {
-            val aLabels = labels.toArray
-            data.zipWithIndex.flatMap {d =>
-                if (d._2 % 1000 == 0) Logger.info("Getting sentences for record " + d._2)
-                NLP.getSentences(d._1, language).filter(!_.isEmpty).map(s => (s, aLabels(d._2)))
-            } map {s =>
-                (s._1.split(" ").toList, s._2)
-            }
+        val sentences = data.zipWithIndex.flatMap {d =>
+            NLP.getSentences(d._1, language).filter(!_.isEmpty).map(s => (s, labels(d._2)))
+        } map {s =>
+            (s._1.split(" ").toList, s._2)
         }
-        
         // Add all data
-        sentences.zipWithIndex.foreach(s => {
-            if (s._2 % 100 == 0) Logger.info("Preprocessing training record " + s._2)
-            addDocument(s._1._1)
-        })
+        sentences.foreach {s =>
+            // Convert the negated tokens
+            val processedTokens = processTokens(s._1)
+            addDocument(s._1, processedTokens)
+        }
 
         // Remove all words occurring too infrequently
         featureMap.retain((k,v) => v._2 >= _minCount)
         
-        // Renumber them all
-        featureOffset = 1
+        // Renumber them all, start at 3 because we have 2 static features
+        featureOffset = 3
         featureMap.foreach {fm =>
             featureMap.update(fm._1, (featureOffset, fm._2._2))
             featureOffset += 1
@@ -149,7 +150,7 @@ class ShortTextClassifier(
         
         // Set up the data
         val p = new Problem
-        p.n = featureMap.size
+        p.n = featureMap.size + 2
         // Construct the liblinear vectors now
         p.x = sentences.map {datum =>
             tokensToVector(datum._1)
@@ -182,8 +183,7 @@ class ShortTextClassifier(
                 "minCount" -> _minCount,
                 "seedWords" -> _seedWords,
                 "rightFlips" -> _rightFlips,
-                "leftFlips" -> _leftFlips,
-                "ft" -> fastTextModel
+                "leftFlips" -> _leftFlips
         ))
         oos.close
         model.save(new File(filename + ".svm"))
@@ -197,11 +197,9 @@ class ShortTextClassifier(
         featureMap.clear
         featureMap ++= obj("f").asInstanceOf[collection.mutable.Map[String, (Int, Int)]]
         _minCount = obj("minCount").asInstanceOf[Int]
-        _seedWords = obj("seedWords").asInstanceOf[Map[String, List[Array[Double]]]]
+        _seedWords = obj("seedWords").asInstanceOf[Map[String, List[String]]]
         _rightFlips = obj("rightFlips").asInstanceOf[List[String]]
         _leftFlips = obj("leftFlips").asInstanceOf[List[String]]
-        val fModel = obj("ft").asInstanceOf[String]
-        ftw = FastTextCache.getModel(fModel)
         
         model = Model.load(new File(filename + ".svm"))
     }

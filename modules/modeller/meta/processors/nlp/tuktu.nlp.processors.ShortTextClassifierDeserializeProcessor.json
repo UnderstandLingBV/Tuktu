@@ -49,12 +49,6 @@
 					"type": "double",
 					"required": true,
 					"description": "The minimum fraction a feature should be present."
-				},
-				{
-					"name": "similarity_threshold",
-					"type": "double",
-					"required": true,
-					"description": "The threshold determining when a seed words is similar enough to a non-seed word using Cosine Similarity."
 				}
 			]
 		}

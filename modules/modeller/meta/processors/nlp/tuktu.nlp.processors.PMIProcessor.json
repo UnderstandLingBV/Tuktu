@@ -1,0 +1,63 @@
+{
+	"name": "PMI Processor",
+	"description": "Computes PMIs of given seed words and a corpus of documents.",
+	"class": "tuktu.nlp.processors.PMIProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "words",
+					"description": "The seed words to compute the PMI scores for.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"description": "A seed word to compute the PMI scores for.",
+							"type": "string",
+							"required": true
+						}
+					]
+				},
+				{
+					"name": "language",
+					"description": "Language of the text.",
+					"type": "string",
+					"required": true,
+					"default": "en"
+				},
+				{
+					"name": "document_field",
+					"description": "The field containing the documents.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "label_field",
+					"description": "The field containing the labels.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "retain",
+					"description": "The amount of words with highest PMI to retain.",
+					"type": "int",
+					"required": true
+				}
+			]
+		}
+	]
+}
