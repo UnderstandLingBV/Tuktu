@@ -194,8 +194,9 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
                                 case None        => Some(s)
                             }) match {
                                 case None => None
-                                case Some(tag) => userReplacements.find(_._1 == tag).flatMap { r =>
-                                    Some(r._2)
+                                case Some(tag) => userReplacements.find(_._1 == tag) match {
+                                    case None    => Some(tag)
+                                    case Some(r) => Some(r._2)
                                 }
                             }
                         }
