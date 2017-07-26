@@ -137,6 +137,13 @@ object utils {
         }
         val configTotal: P[TuktuStringRoot] = P(Start ~ (configString | anyChar).rep ~ End).map { TuktuStringRoot(_) }
 
+        // Meta strings
+        val metaKey: P[Seq[TuktuStringNode]] = P(metaString | string).rep
+        val metaString: P[TuktuStringFunction] = P("%" ~ StringIn(functionNames: _*).!.? ~ "{" ~ metaKey ~ "}").map {
+            case (optFunction, key) => TuktuStringFunction(optFunction, key)
+        }
+        val metaTotal: P[TuktuStringRoot] = P(Start ~ (metaString | anyChar).rep ~ End).map { TuktuStringRoot(_) }
+
         // Minify Tree by combining neighboring TuktuStringStrings
         def minify(root: TuktuStringRoot): TuktuStringRoot = {
             def helper(rest: Seq[TuktuStringNode]): Seq[TuktuStringNode] = rest match {
@@ -154,6 +161,7 @@ object utils {
                 specialChar match {
                     case '$' => tuktuTotal.parse(str).get.value
                     case '#' => configTotal.parse(str).get.value
+                    case '%' => metaTotal.parse(str).get.value
                 })
         // Evaluate Tuktu String given a map of variables
         def apply(root: TuktuStringRoot, vars: Map[String, Any]): String =
