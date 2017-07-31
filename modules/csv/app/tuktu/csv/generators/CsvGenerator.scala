@@ -207,7 +207,11 @@ class CSVGenerator(resultName: String, processors: List[Enumeratee[DataPacket, D
                 }
             }
         case sp: StopPacket =>
-            Option(csvGenActor) collect { case actor => actor ! PoisonPill }
+            Option(csvGenActor) collect {
+                case actor =>
+                    actor ! PoisonPill
+                    channel.eofAndEnd
+            }
             cleanup(false)
         case data: DataPacket => channel.push(data)
     }
