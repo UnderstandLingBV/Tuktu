@@ -895,12 +895,15 @@ class SequenceExploderProcessor(resultName: String) extends BaseProcessor(result
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
-        data.flatMap(datum => {
+        data.flatMap { datum =>
             // Get the field and explode it
-            val values = datum(field).asInstanceOf[Seq[Any]]
+            val values: Seq[Any] = datum(field) match {
+                case js: JsArray => js.value
+                case any: Any    => any.asInstanceOf[Seq[Any]]
+            }
 
             for (value <- values) yield datum + (field -> value)
-        })
+        }
     })
 }
 
