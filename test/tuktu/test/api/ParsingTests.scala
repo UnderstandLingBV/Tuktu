@@ -38,6 +38,7 @@ class ParsingTests extends PlaySpec {
             ArithmeticParser("1.7e2 - 1.8e1 / 2 - 12") should be(1.7e2 - 1.8e1 / 2 - 12)
             ArithmeticParser("3 + 3 * 3 ^ 3") should be(3 + 3 * Math.pow(3, 3))
             ArithmeticParser("2 + 2 * 2 ^ 2 ^ 3") should be(514)
+            ArithmeticParser("-2^3") should be(-8)
         }
 
         "honor bracket order" in {
@@ -53,6 +54,27 @@ class ParsingTests extends PlaySpec {
             ArithmeticParser("  1e3  ") should be(1e3)
             ArithmeticParser(" 17 + ( 1.7e2 - 1.8e1 ) * ( 2 + 7 ) - 23 ") should be(17 + (1.7e2 - 1.8e1) * (2 + 7) - 23)
             ArithmeticParser(" 17 + ( 1.7e2 - 1.8e1 ) / ( 2 + 7 ) - 23 ") should be(17 + (1.7e2 - 1.8e1) / (2 + 7) - 23)
+        }
+
+        "support basic arithmetic functions" in {
+            ArithmeticParser(" abs ( -0.5 ) ") should be(math.abs(-0.5))
+            ArithmeticParser(" floor ( -0.5 ) ") should be(math.floor(-0.5))
+            ArithmeticParser(" ceil ( -0.5 ) ") should be(math.ceil(-0.5))
+            ArithmeticParser(" round ( -0.5 ) ") should be(math.round(-0.5))
+            ArithmeticParser(" sqrt ( abs( -0.5 ) ) ") should be(math.sqrt(math.abs(-0.5)))
+            ArithmeticParser(" log ( abs ( -0.5 ) ) ") should be(math.log(math.abs(-0.5)))
+            ArithmeticParser(" exp ( -0.5 ) ") should be(math.exp(-0.5))
+            ArithmeticParser(" sin ( -0.5 ) ") should be(math.sin(-0.5))
+            ArithmeticParser(" cos ( -0.5 ) ") should be(math.cos(-0.5))
+            ArithmeticParser(" tan ( -0.5 ) ") should be(math.tan(-0.5))
+            ArithmeticParser(" asin ( -0.5 ) ") should be(math.asin(-0.5))
+            ArithmeticParser(" acos ( -0.5 ) ") should be(math.acos(-0.5))
+            ArithmeticParser(" atan ( -0.5 ) ") should be(math.atan(-0.5))
+            ArithmeticParser(" sinh ( -0.5 ) ") should be(math.sinh(-0.5))
+            ArithmeticParser(" cosh ( -0.5 ) ") should be(math.cosh(-0.5))
+            ArithmeticParser(" tanh ( -0.5 ) ") should be(math.tanh(-0.5))
+
+            ArithmeticParser(" exp ( - (1 - 2) ^ 2 ) ") should be(math.exp(-math.pow(1 - 2, 2)))
         }
 
         "return correct results for its functions on random data" in {

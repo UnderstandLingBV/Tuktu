@@ -14,6 +14,7 @@ object ArithmeticParser {
     // Tree structure
     abstract class DoubleNode
     case class DoubleLeaf(d: Double) extends DoubleNode
+    case class NumericFunction(function: String, parameter: DoubleNode) extends DoubleNode
     case class FunctionLeaf(function: String, parameter: PredicateParser.ValueNode) extends DoubleNode
     case class AddNode(base: DoubleNode, children: Seq[(String, DoubleNode)]) extends DoubleNode
     case class MultNode(base: DoubleNode, children: Seq[(String, DoubleNode)]) extends DoubleNode
@@ -37,7 +38,7 @@ object ArithmeticParser {
         .map { s => DoubleLeaf(s.toDouble) }
     val parens: P[DoubleNode] = P("-".!.? ~ "(" ~ addSub ~ ")")
         .map { case (neg, n) => if (neg.isDefined) NegateNode(n) else n }
-    val factor: P[DoubleNode] = P(parens | number | functions)
+    val factor: P[DoubleNode] = P(parens | number | functions | numericFunctions)
 
     // List of allowed functions
     val allowedFunctions = List("count", "distinct", "avg", "median", "sum", "max", "min", "stdev")
@@ -45,13 +46,29 @@ object ArithmeticParser {
     val functions: P[FunctionLeaf] = P(StringIn(allowedFunctions: _*).! ~ "(" ~ PredicateParser.parameter ~ ")")
         .map { case (func, param) => FunctionLeaf(func, param) }
 
+    // List of allowed numeric functions
+    val allowedNumericFunctions = List("abs", "floor", "ceil", "round", "sqrt", "log", "exp", "sin", "cos", "tan", "asin", "acos", "atan", "sinh", "cosh", "tanh")
+    val numericFunctions: P[NumericFunction] = P(StringIn(allowedNumericFunctions: _*).! ~ "(" ~ addSub ~ ")")
+        .map { case (func, param) => NumericFunction(func, param) }
+
     // Operations
-    val pow: P[PowNode] = P(factor ~ (CharIn("^") ~ factor).rep)
-        .map { case (base, seq) => PowNode(base +: seq) }
-    val divMul: P[MultNode] = P(pow ~ (CharIn("*/").! ~ pow).rep)
-        .map { case (base, seq) => MultNode(base, seq) }
-    val addSub: P[AddNode] = P(divMul ~ (CharIn("+-").! ~ divMul).rep)
-        .map { case (base, seq) => AddNode(base, seq) }
+    val pow: P[DoubleNode] = P("-".!.? ~ factor ~ (CharIn("^") ~ factor).rep)
+        .map {
+            case (None, base, Nil)    => base
+            case (Some(_), base, Nil) => NegateNode(base)
+            case (None, base, seq)    => PowNode(base +: seq)
+            case (Some(_), base, seq) => NegateNode(PowNode(base +: seq))
+        }
+    val divMul: P[DoubleNode] = P(pow ~ (CharIn("*/").! ~ pow).rep)
+        .map {
+            case (base, Nil) => base
+            case (base, seq) => MultNode(base, seq)
+        }
+    val addSub: P[DoubleNode] = P(divMul ~ (CharIn("+-").! ~ divMul).rep)
+        .map {
+            case (base, Nil) => base
+            case (base, seq) => AddNode(base, seq)
+        }
     val expr: P[DoubleNode] = P(Start ~ addSub ~ End)
 
     // Evaluate the tree
@@ -76,6 +93,24 @@ object ArithmeticParser {
                 case (current, acc) => Math.pow(eval(current), acc)
             }
         case NegateNode(n) => -eval(n)
+        case NumericFunction(f, value) => f match {
+            case "abs"   => math.abs(eval(value))
+            case "floor" => math.floor(eval(value))
+            case "ceil"  => math.ceil(eval(value))
+            case "round" => math.round(eval(value))
+            case "sqrt"  => math.sqrt(eval(value))
+            case "log"   => math.log(eval(value))
+            case "exp"   => math.exp(eval(value))
+            case "sin"   => math.sin(eval(value))
+            case "cos"   => math.cos(eval(value))
+            case "tan"   => math.tan(eval(value))
+            case "asin"  => math.asin(eval(value))
+            case "acos"  => math.acos(eval(value))
+            case "atan"  => math.atan(eval(value))
+            case "sinh"  => math.sinh(eval(value))
+            case "cosh"  => math.cosh(eval(value))
+            case "tanh"  => math.tanh(eval(value))
+        }
         case FunctionLeaf(f, value) =>
             val field = value.evaluate(data.headOption.getOrElse(Map.empty)).asInstanceOf[String]
             f match {
