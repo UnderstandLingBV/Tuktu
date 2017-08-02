@@ -506,7 +506,7 @@ class ParallelConfigProcessor(resultName: String) extends BaseProcessor(resultNa
                     data
                 }) compose enumeratee compose Enumeratee.onEOF { () =>
                     Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(idString, "done")
-                }
+                } compose utils.logEnumeratee(idString, evaluatedName + " - Pipeline " + pipeIndex + " - Enumeratee " + enumIndex)
                 Enumerator({
                     if (sendOriginal) data else DataPacket(List())
                 }).andThen(Enumerator.eof).through(inclMonitor).run(Iteratee.getChunks)
