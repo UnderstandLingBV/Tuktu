@@ -430,11 +430,7 @@ class Dispatcher(monitorActor: ActorRef) extends Actor with ActorLogging {
                     val instanceCount = nodeInstance._2
 
                     // See if this one needs to be started remotely or not
-                    val startRemotely = {
-                        // We may or may not need to start remotely
-                        if (hostname == Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")) false
-                        else true
-                    }
+                    val startRemotely = hostname != Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
 
                     val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
                     if (startRemotely && !dr.isRemote && hostname != "" && clusterNodes.contains(hostname)) {
