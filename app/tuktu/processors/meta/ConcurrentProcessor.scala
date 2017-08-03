@@ -36,21 +36,30 @@ case class AddSender()
 /**
  * Actor that deals with parallel processing
  */
-class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Map[String, ProcessorDefinition], ignoreResults: Boolean) extends Actor with ActorLogging {
+class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Map[String, ProcessorDefinition], ignoreResults: Boolean, anchorValues: Option[List[String]]) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     
     // Build the processor
     val (idString, processor) = {
-            val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "ConcurrentProcessor@" + parent.path.address.toString, true)
+            val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, {
+                // Add the anchor values to the name
+                anchorValues match {
+                    case Some(v) => "ConcurrentProcessor[" + v.mkString(",") + "]@" + parent.path.address.toString
+                    case None => "ConcurrentProcessor@" + parent.path.address.toString
+                }
+            }, true)
             (pipeline._1, pipeline._2.head)
     }
     
     // Notify the monitor so we can recover from errors
     Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(
             idString,
-            "ConcurrentProcessor@" + parent.path.address.toString,
+            anchorValues match {
+                case Some(v) => "ConcurrentProcessor[" + v.mkString(",") + "]@" + parent.path.address.toString
+                case None => "ConcurrentProcessor@" + parent.path.address.toString
+            },
             1,
             true,
             Some(self)
@@ -83,10 +92,21 @@ class IntermediateActor(genActor: ActorRef, nodes: List[(String, ClusterNode)], 
     var connectedSenders = 0
     
     // Set up remove actors across the nodes
-    val routers = nodes.map { node =>
+    val routers = nodes.zipWithIndex.map { ni =>
+        val node = ni._1
+        val nodeOffset = ni._2
+        
         Akka.system.actorOf(RemoteRouterConfig(RoundRobinPool(instanceCount),
             Seq(Address("akka.tcp", "application", node._2.host, node._2.akkaPort))
-        ).props(Props(classOf[ConcurrentProcessorActor], self, start, processorMap, ignoreResults)))
+        ).props(Props(classOf[ConcurrentProcessorActor], self, start, processorMap, ignoreResults, {
+            // Anchor values
+            if (anchorDomain.size == 0) None else {
+                // Find the values that route to this node
+                Some((anchorDomain.zipWithIndex.map {value =>
+                    (value._2 % nodes.size, value._1)
+                } groupBy {_._1})(nodeOffset).map(_._2))
+            }
+        })))
     }
     
     /**
