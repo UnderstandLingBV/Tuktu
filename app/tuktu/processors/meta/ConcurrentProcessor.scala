@@ -36,7 +36,7 @@ case class AddSender()
 /**
  * Actor that deals with parallel processing
  */
-class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Map[String, ProcessorDefinition], ignoreResults: Boolean, anchorValues: Option[List[String]]) extends Actor with ActorLogging {
+class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Map[String, ProcessorDefinition], ignoreResults: Boolean, anchorValues: Option[List[String]], concurrentName: String) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
@@ -46,8 +46,8 @@ class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Ma
             val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, {
                 // Add the anchor values to the name
                 anchorValues match {
-                    case Some(v) => "ConcurrentProcessor[" + v.mkString(",") + "]@" + parent.path.address.toString
-                    case None => "ConcurrentProcessor@" + parent.path.address.toString
+                    case Some(v) => "ConcurrentProcessor." + concurrentName + "[" + v.mkString(",") + "]@" + parent.path.address.toString
+                    case None => "ConcurrentProcessor." + concurrentName + "@" + parent.path.address.toString
                 }
             }, true)
             (pipeline._1, pipeline._2.head)
@@ -57,8 +57,8 @@ class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Ma
     Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(
             idString,
             anchorValues match {
-                case Some(v) => "ConcurrentProcessor[" + v.mkString(",") + "]@" + parent.path.address.toString
-                case None => "ConcurrentProcessor@" + parent.path.address.toString
+                case Some(v) => "ConcurrentProcessor." + concurrentName + "[" + v.mkString(",") + "]@" + parent.path.address.toString
+                case None => "ConcurrentProcessor." + concurrentName + "@" + parent.path.address.toString
             },
             1,
             true,
@@ -86,7 +86,7 @@ class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Ma
  */
 class IntermediateActor(genActor: ActorRef, nodes: List[(String, ClusterNode)], instanceCount: Int,
         start: String, processorMap: Map[String, ProcessorDefinition], anchorFields: Option[List[String]],
-        anchorDomain: List[String], ignoreResults: Boolean) extends Actor with ActorLogging {
+        anchorDomain: List[String], ignoreResults: Boolean, concurrentName: String) extends Actor with ActorLogging {
     implicit val timeout = Timeout(Cache.getAs[Int]("timeout").getOrElse(5) seconds)
     var actorOffset = 0
     var connectedSenders = 0
@@ -106,7 +106,7 @@ class IntermediateActor(genActor: ActorRef, nodes: List[(String, ClusterNode)], 
                     (value._2 % nodes.size, value._1)
                 } groupBy {_._1})(nodeOffset).map(_._2))
             }
-        })))
+        }, concurrentName)))
     }
     
     /**
@@ -238,7 +238,7 @@ class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends Buffer
         
         // Set up the intermediate actor
         intermediateActor = Akka.system.actorOf(Props(classOf[IntermediateActor], genActor, nodes, instanceCount, start,
-                processorMap, anchorFields, anchorDomain, ignoreResults), name = "Concurrent_" + concurrentName)
+                processorMap, anchorFields, anchorDomain, ignoreResults, concurrentName), name = "Concurrent_" + concurrentName)
         // Tell the intermediate actor we are connected
         intermediateActor ! new AddSender
     }
