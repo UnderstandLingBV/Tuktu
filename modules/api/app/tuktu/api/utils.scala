@@ -18,8 +18,6 @@ import fastparse.all._
 import org.apache.commons.lang3.StringEscapeUtils
 
 object utils {
-    val logDpContent = Cache.getAs[Boolean]("mon.log_dp_content").getOrElse(Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true))
-
     /**
      * Enumeratee for error-logging and handling
      * @param idString A string used to identify the flow this logEnumeratee is part of. A mapping exists
@@ -27,16 +25,20 @@ object utils {
      * @param configName The name of the config (if known)
      * @param processorName The name of the processor (if known)
      */
-    def logEnumeratee[T](idString: String, configName: String = "Unknown", processorName: String = "Unknown") = Enumeratee.recover[T] {
-        case (e, input) => {
-            // Notify the monitor so it can kill our flow
-            Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorNotificationPacket(idString, configName, processorName, input.toString, e)
+    def logEnumeratee[T](idString: String, configName: String = "Unknown", processorName: String = "Unknown") = {
+        val logDpContent = Cache.getAs[Boolean]("mon.log_dp_content").getOrElse(Play.current.configuration.getBoolean("tuktu.monitor.log_dp_content").getOrElse(true))
 
-            // Log the error
-            if (logDpContent)
-                play.api.Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString, on Input: " + input, e)
-            else
-                play.api.Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString", e)
+        Enumeratee.recover[T] {
+            case (e, input) => {
+                // Notify the monitor so it can kill our flow
+                Akka.system.actorSelection("user/TuktuMonitor") ! new ErrorNotificationPacket(idString, configName, processorName, input.toString, e)
+
+                // Log the error
+                if (logDpContent)
+                    play.api.Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString, on Input: " + input, e)
+                else
+                    play.api.Logger.error(s"Error happened at flow: $configName, processor: $processorName, id: $idString", e)
+            }
         }
     }
 
