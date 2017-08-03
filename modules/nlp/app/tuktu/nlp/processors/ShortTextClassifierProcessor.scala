@@ -128,7 +128,6 @@ class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyP
                 model.predict(datum(dataField) match {
                     case s: Seq[String] => s.toList
                     case s: Array[String] => s.toList
-                    case s: List[String] => s
                     case s: String => s.split(" ").toList
                     case _ => datum(dataField).toString.split(" ").toList
                 }, vectorFeaturesToAdd, utils.evaluateTuktuString(lang, data.head))

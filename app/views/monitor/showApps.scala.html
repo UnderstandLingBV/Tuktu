@@ -68,7 +68,9 @@
             @for((appName, appProps) <- running.drop((runningPage - 1) * 100).take(100)) {
                 <tr@if(appProps.errors.nonEmpty){ class="danger"}>
                     <td style="margin-right: 25px;" title="UUID:@("\t")@appProps.uuid@("\n")Name:@("\t")@appProps.configName">
-                        @if(appProps.actors.isEmpty){@appProps.configName (@appProps.uuid)}else{@appProps.actors.head.path.toStringWithoutAddress}
+                        @if(appProps.actors.isEmpty || appProps.configName.startsWith("ConcurrentProcessor")){
+                                @appProps.configName (@appProps.uuid)
+                        }else{@appProps.actors.head.path.toStringWithoutAddress}
                         @if(appProps.actors.exists(a => subflows.contains(a.path.toStringWithoutAddress))) {
                             <i>(Subflow)</i>
                         }

@@ -29,6 +29,7 @@ object sql {
             config.setUsername(conn.user)
             config.setPassword(conn.password)
             config.addDataSourceProperty("maximumPoolSize", maxSize)
+            config.setLeakDetectionThreshold(30000)
             val ds = new HikariDataSource(config)
             pools += conn -> ds
             ds.getConnection

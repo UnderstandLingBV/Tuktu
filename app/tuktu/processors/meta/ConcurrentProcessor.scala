@@ -43,9 +43,19 @@ class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Ma
     
     // Build the processor
     val (idString, processor) = {
-            val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "Concurrent Processor - Unknown", true)
+            val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "ConcurrentProcessor@" + parent.path.address.toString, true)
             (pipeline._1, pipeline._2.head)
     }
+    
+    // Notify the monitor so we can recover from errors
+    Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(
+            idString,
+            "ConcurrentProcessor@" + parent.path.address.toString,
+            1,
+            true,
+            Some(self)
+    )
+    
     val sendBack: Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         parent ! data
         data
@@ -55,9 +65,6 @@ class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Ma
         enumerator |>> processor &>> sinkIteratee
     else
         enumerator |>> (processor compose sendBack compose utils.logEnumeratee("")) &>> sinkIteratee
-    
-    // If we don't need to send back, just forward
-    if (ignoreResults) enumerator |>> processor &>> sinkIteratee
 
     def receive() = {
         case sp: StopPacket => self ! PoisonPill
