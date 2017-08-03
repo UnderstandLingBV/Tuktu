@@ -51,6 +51,20 @@
 					"description": "The field the label is in. Value must be a double."
 				},
 				{
+					"name": "features_to_add",
+					"type": "array",
+					"required": false,
+					"description": "If given, the fields in this list specify additional feature vectors to add.",
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true,
+							"description": "A field containing an additional feature vector."
+						}
+					]
+				},
+				{
 					"name": "min_count",
 					"type": "int",
 					"required": true,

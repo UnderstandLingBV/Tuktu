@@ -38,6 +38,20 @@
 					"description": "The field the data resides in. Data must be of type Seq[Double]."
 				},
 				{
+					"name": "features_to_add",
+					"type": "array",
+					"required": false,
+					"description": "If given, the fields in this list specify additional feature vectors to add.",
+					"parameters": [
+						{
+							"name": "",
+							"type": "string",
+							"required": true,
+							"description": "A field containing an additional feature vector."
+						}
+					]
+				},
+				{
 					"name": "language",
 					"type": "string",
 					"required": false,

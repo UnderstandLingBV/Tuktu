@@ -124,7 +124,7 @@ class ShortTextClassifier(
         statics ++ other
     }
         
-    def trainClassifier(data: List[List[String]], labels: List[Double], C: Double, eps: Double, language: String) = {
+    def trainClassifier(data: List[List[String]], additionalFeatures: List[Array[Double]], labels: List[Double], C: Double, eps: Double, language: String) = {
         // Get all sentences
         val sentences = data.zipWithIndex.flatMap {d =>
             NLP.getSentences(d._1, language).filter(!_.isEmpty).map(s => (s, labels(d._2)))
@@ -150,9 +150,18 @@ class ShortTextClassifier(
         
         // Set up the data
         val p = new Problem
-        p.n = featureMap.size + 2
+        // Add the two features we always add to n, also add the featuresToAdd
+        p.n = featureMap.size + 2 + {
+            if (additionalFeatures.size > 0) additionalFeatures.head.size else 0
+        }
         // Construct the liblinear vectors now
-        p.x = sentences.map {datum =>
+        p.x = if (additionalFeatures.size > 0) 
+            sentences.zip(additionalFeatures).map {datum =>
+                tokensToVector(datum._1._1) ++ datum._2.zipWithIndex.map {feat =>
+                    new FeatureNode(featureMap.size + 2 + feat._2, feat._1)
+                }
+            } toArray
+        else sentences.map {datum =>
             tokensToVector(datum._1)
         } toArray
         
@@ -164,12 +173,16 @@ class ShortTextClassifier(
         model = Linear.train(p, param)
     }
     
-    def predict(tokens: List[String], language: String) = {
+    def predict(tokens: List[String], additionalFeatures: Array[Double], language: String) = {
         // Get sentences
         val sentences = NLP.getSentences(tokens, language)
         if (sentences.isEmpty) -1.0 else
             (sentences.map {sentence =>
-                val vector = tokensToVector(sentence.split(" ").toList)
+                // Get feature vector with additional features
+                val vector = tokensToVector(sentence.split(" ").toList) ++ additionalFeatures.zipWithIndex.map {feat =>
+                    new FeatureNode(featureMap.size + 2 + feat._2, feat._1)
+                }
+                
                 if (vector.isEmpty) -1.0 else Linear.predict(model, vector)
             }).groupBy(a => a).map(pred => {
                 pred._1 -> pred._2.size
