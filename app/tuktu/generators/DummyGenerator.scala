@@ -19,12 +19,12 @@ import play.api.Logger
 
 object DummyHelper {
     def valToType(value: String, outputType: String) = outputType match {
-        case "double" => value.toDouble
-        case "int" => value.toInt
-        case "boolean" => value.toBoolean
+        case "double"   => value.toDouble
+        case "int"      => value.toInt
+        case "boolean"  => value.toBoolean
         case "jsobject" => Json.parse(value).as[JsObject]
-        case "jsarray" => Json.parse(value).as[JsArray]
-        case _ => value
+        case "jsarray"  => Json.parse(value).as[JsArray]
+        case _          => value
     }
 }
 
@@ -32,64 +32,55 @@ object DummyHelper {
  * Just generates dummy strings every tick
  */
 class DummyGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    var schedulerActor: Cancellable = null
-    var message: String = null
+    var schedule: Cancellable = null
     var maxAmount: Option[Int] = None
-    var amountSent = new AtomicInteger(0)
-    var outputType: String = _
-    
+    var message: Any = _
+    val amountSent = new AtomicInteger(0)
+
     override def _receive = {
-        case config: JsValue => {
-            // Get the ticking frequency
-            val tickInterval = (config \ "interval").as[Int]
+        case config: JsValue =>
             // Get the message to send
-            message = (config \ "message").as[String]
+            message = DummyHelper.valToType(
+                (config \ "message").as[String],
+                (config \ "type").asOpt[String].getOrElse("string").toLowerCase)
 
             // See if we need to stop at some point
             maxAmount = (config \ "max_amount").asOpt[Int]
 
-            outputType = (config \ "type").asOpt[String].getOrElse("string").toLowerCase
+            // Get the ticking frequency
+            val tickInterval = (config \ "interval").as[Int]
 
             // Determine initial waiting time before sending
             val initialDelay = {
-              if((config \ "send_immediately").asOpt[Boolean].getOrElse(false))
-                Duration.Zero
-              else
-                tickInterval milliseconds
+                if ((config \ "send_immediately").asOpt[Boolean].getOrElse(false))
+                    Duration.Zero
+                else
+                    tickInterval milliseconds
             }
 
             // Set up the scheduler
-            schedulerActor = Akka.system.scheduler.schedule(
-                    initialDelay,
-                    tickInterval milliseconds,
-                    self,
-                    message)
-        }
-        case sp: StopPacket => {
-            schedulerActor.cancel
+            schedule = Akka.system.scheduler.schedule(
+                initialDelay,
+                tickInterval milliseconds,
+                self,
+                0)
+
+        case sp: StopPacket =>
+            if (schedule != null) schedule.cancel
             cleanup
-        }
-        case msg: String => {
+
+        case 0 =>
             maxAmount match {
                 // check if we need to stop
-                case Some(amnt) => {
+                case Some(amnt) =>
                     if (amountSent.getAndIncrement >= amnt)
-                            self ! new StopPacket
+                        self ! new StopPacket
                     else
-                        channel.push(DataPacket(List(Map(resultName -> DummyHelper.valToType(message, outputType)))))
-                }
-                case None => {
-                    channel.push(DataPacket(List(Map(resultName -> DummyHelper.valToType(message, outputType)))))
-                }
-            }
-        }
-    }
-}
+                        channel.push(DataPacket(List(Map(resultName -> message))))
 
-class RandomActor(maxNum: Int) extends Actor with ActorLogging {
-    val r = scala.util.Random
-    def receive() = {
-        case _ => sender ! r.nextInt(maxNum)
+                case None =>
+                    channel.push(DataPacket(List(Map(resultName -> message))))
+            }
     }
 }
 
@@ -97,36 +88,29 @@ class RandomActor(maxNum: Int) extends Actor with ActorLogging {
  * Generates random numbers
  */
 class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    var schedulerActor: Cancellable = null
-    var maxNum = 0
-    var randomActor: ActorRef = null
-    
+    val r = scala.util.Random
+    var maxNum: Int = _
+    var schedule: Cancellable = _
+
     override def _receive = {
-        case config: JsValue => {
+        case config: JsValue =>
             // Get the ticking frequency
             val tickInterval = (config \ "interval").as[Int]
             maxNum = (config \ "max").as[Int]
 
-            // Set up actor that will make random numbers
-            randomActor = Akka.system.actorOf(Props(classOf[RandomActor], maxNum))
-
             // Set up the scheduler
-            schedulerActor = Akka.system.scheduler.schedule(
-                    tickInterval milliseconds,
-                    tickInterval milliseconds,
-                    self,
-                    1)
-        }
-        case sp: StopPacket => {
-            schedulerActor.cancel
+            schedule = Akka.system.scheduler.schedule(
+                tickInterval milliseconds,
+                tickInterval milliseconds,
+                self,
+                0)
+
+        case sp: StopPacket =>
+            if (schedule != null) schedule.cancel
             cleanup
-        }
-        case one: Int => {
-            val fut = randomActor ? one
-            fut.onSuccess {
-                case num: Int => channel.push(DataPacket(List(Map(resultName -> num))))
-            }
-        }
+
+        case 0 =>
+            channel.push(DataPacket(List(Map(resultName -> r.nextInt(maxNum)))))
     }
 }
 
@@ -134,32 +118,20 @@ class RandomGenerator(resultName: String, processors: List[Enumeratee[DataPacket
  * Generates a list of values
  */
 class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    var randomActor: ActorRef = null
-    var vals = List[String]()
-    var separate = true
-    var outputType: String = _
-
     override def _receive = {
-        case config: JsValue => {
+        case config: JsValue =>
             // Get the values
-            vals = (config \ "values").as[List[String]]
-            separate = (config \ "separate").asOpt[Boolean].getOrElse(true)
-            outputType = (config \ "type").asOpt[String].getOrElse("string").toLowerCase
-            
-            // Send message to self
-            self ! 0
-        }
-        case num: Int => {
-            if(separate) {
-              channel.push(DataPacket(List(Map(resultName -> DummyHelper.valToType(vals(num), outputType)))))
-              // See if we're done or not
-              if (num < vals.size - 1) self ! (num + 1)
-              else self ! new StopPacket
+            val vals = (config \ "values").as[List[String]]
+            val separate = (config \ "separate").asOpt[Boolean].getOrElse(true)
+            val outputType = (config \ "type").asOpt[String].getOrElse("string").toLowerCase
+
+            if (separate) {
+                for (value <- vals)
+                    channel.push(DataPacket(List(Map(resultName -> DummyHelper.valToType(value, outputType)))))
             } else {
-                channel.push(DataPacket(vals.map(v => Map(resultName -> DummyHelper.valToType(v, outputType)))))
-                self ! new StopPacket
+                channel.push(DataPacket(vals.map { v => Map(resultName -> DummyHelper.valToType(v, outputType)) }))
             }
-        }
+            self ! new StopPacket
     }
 }
 
@@ -167,56 +139,54 @@ class ListGenerator(resultName: String, processors: List[Enumeratee[DataPacket, 
  * Generates a custom data packet every tick
  */
 class CustomPacketGenerator(resultName: String, processors: List[Enumeratee[DataPacket, DataPacket]], senderActor: Option[ActorRef]) extends BaseGenerator(resultName, processors, senderActor) {
-    var schedulerActor: Cancellable = null
+    var schedule: Cancellable = null
     var packet: DataPacket = _
     var maxAmount: Option[Int] = _
-    var amountSent = new AtomicInteger(0)
+    val amountSent = new AtomicInteger(0)
 
     override def _receive = {
-        case config: JsValue => {
+        case config: JsValue =>
             // Get the ticking frequency
             val tickInterval = (config \ "interval").as[Int]
             // Get the packet to send
             val tpkt = (config \ "packet").as[String]
             val js = (config \ "json").asOpt[Boolean].getOrElse(true)
-            val jpkt = Json.parse( tpkt ).as[List[JsObject]]
-            packet = DataPacket(jpkt.map{ jobj => if(js) { jobj.as[Map[String,JsValue]]} else { tuktu.api.utils.JsObjectToMap(jobj) } } )
+            val jpkt = Json.parse(tpkt).as[List[JsObject]]
+            packet = DataPacket(jpkt.map { jobj => if (js) { jobj.as[Map[String, JsValue]] } else { tuktu.api.utils.JsObjectToMap(jobj) } })
 
             // See if we need to stop at some point
             maxAmount = (config \ "max_amount").asOpt[Int]
 
             // Determine initial waiting time before sending
             val initialDelay = {
-              if((config \ "send_immediately").asOpt[Boolean].getOrElse(false))
-                Duration.Zero
-              else
-                tickInterval milliseconds
+                if ((config \ "send_immediately").asOpt[Boolean].getOrElse(false))
+                    Duration.Zero
+                else
+                    tickInterval milliseconds
             }
 
             // Set up the scheduler
-            schedulerActor = Akka.system.scheduler.schedule(
-                    initialDelay,
-                    tickInterval milliseconds,
-                    self,
-                    packet)
-        }
-        case sp: StopPacket => {
-            schedulerActor.cancel
+            schedule = Akka.system.scheduler.schedule(
+                initialDelay,
+                tickInterval milliseconds,
+                self,
+                0)
+
+        case sp: StopPacket =>
+            if (schedule != null) schedule.cancel
             cleanup
-        }
-        case pkt: DataPacket => {
+
+        case 0 =>
             maxAmount match {
                 // check if we need to stop
-                case Some(amnt) => {
+                case Some(amnt) =>
                     if (amountSent.getAndIncrement >= amnt)
-                            self ! new StopPacket
+                        self ! new StopPacket
                     else
-                        channel.push(pkt)
-                }
-                case None => {
-                    channel.push(pkt)
-                }
+                        channel.push(packet)
+
+                case None =>
+                    channel.push(packet)
             }
-        }
     }
 }
