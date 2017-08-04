@@ -89,6 +89,8 @@ object Global extends WithFilters(CorsFilter) with GlobalSettings {
         })
         // Routee to Router mapping
         Cache.set("router.mapping", scala.collection.mutable.Map[ActorRef, ActorRef]())
+        // Concurrent processors
+        Cache.set("concurrent.names", collection.mutable.Map.empty[String, ActorRef])
 
         // Set up monitoring actor
         val monActor = Akka.system.actorOf(Props[DataMonitor], name = "TuktuMonitor")

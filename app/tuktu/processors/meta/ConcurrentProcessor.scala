@@ -41,6 +41,9 @@ class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Ma
     val (enumerator, channel) = Concurrent.broadcast[DataPacket]
     val sinkIteratee: Iteratee[DataPacket, Unit] = Iteratee.ignore
     
+    // Store this concurrent name if it wasn't there yet
+    Cache.getAs[collection.mutable.Map[String, ActorRef]]("concurrent.names").get += concurrentName -> parent
+    
     // Build the processor
     val (idString, processor) = {
             val pipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, {
@@ -76,7 +79,10 @@ class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Ma
         enumerator |>> (processor compose sendBack compose utils.logEnumeratee("")) &>> sinkIteratee
 
     def receive() = {
-        case sp: StopPacket => self ! PoisonPill
+        case sp: StopPacket => {
+            Cache.getAs[collection.mutable.Map[String, ActorRef]]("concurrent.names").get -= concurrentName
+            self ! PoisonPill
+        }
         case dp: DataPacket => channel.push(dp)
     }
 }
@@ -91,7 +97,7 @@ class IntermediateActor(genActor: ActorRef, nodes: List[(String, ClusterNode)], 
     var actorOffset = 0
     var connectedSenders = 0
     
-    // Set up remove actors across the nodes
+    // Set up remote actors across the nodes
     val routers = nodes.zipWithIndex.map { ni =>
         val node = ni._1
         val nodeOffset = ni._2
@@ -247,39 +253,14 @@ class ConcurrentProcessor(genActor: ActorRef, resultName: String) extends Buffer
         val concurrentName = (config \ "concurrent_name").as[String]
         
         // Check if this concurrent processor already exists
-        val clusterNodes = Cache.getOrElse[scala.collection.mutable.Map[String, ClusterNode]]("clusterNodes")(scala.collection.mutable.Map())
-        val homeAddress = Cache.getAs[String]("homeAddress").getOrElse("127.0.0.1")
-        val futures = clusterNodes.map {node =>
-            val address = if (node._1 == homeAddress)
-                    "/user/Concurrent_" + concurrentName
-                else
-                    "akka.tcp://application@" + node._1 + ":" + node._2.akkaPort + "/user/Concurrent_" + concurrentName
-            // Ask for identity
-            (Akka.system.actorSelection(address) ? new Identify(1)).asInstanceOf[Future[ActorIdentity]]
-        }
-        val promise = Promise[ActorIdentity]()
-        futures foreach { _ foreach promise.trySuccess }
-        val resultFuture = promise.future
-        resultFuture.onSuccess {
-            case ai: ActorIdentity => {
-                /**
-                 * We have found an already existing concurrent actor, use it
-                 */
-                intermediateActor = ai.getRef
-                if (intermediateActor == null)
-                    // No concurrent processor was found yet, we create it
-                    setUpIntermediateActor(config)
-                else
-                    // Tell the intermediate actor we are connected
-                    intermediateActor ! new AddSender
-            }
-        }
-        resultFuture.onFailure {
-            case _ =>
-                // No concurrent processor was found yet, we create it
-                setUpIntermediateActor(config)
-        }
-        Await.ready(resultFuture, timeout.duration + (1 seconds))
+        val runningConcurrentProcs = Cache.getAs[collection.mutable.Map[String, ActorRef]]("concurrent.names").get
+        if (runningConcurrentProcs.contains(concurrentName)) {
+            // Already exists
+            intermediateActor = runningConcurrentProcs(concurrentName)
+            // Tell the intermediate actor we are connected
+            intermediateActor ! new AddSender
+        } else setUpIntermediateActor(config)
+        Cache.getAs[collection.mutable.Map[String, ActorRef]]("concurrent.names").get += concurrentName -> intermediateActor
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
