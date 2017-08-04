@@ -20,6 +20,7 @@ import tuktu.api.utils._
 import tuktu.api.AppInitPacket
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
+import tuktu.api.AppMonitorUUIDPacket
 
 class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) {
     var thenProcessor: Enumeratee[DataPacket, DataPacket] = _
@@ -123,7 +124,9 @@ class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) 
                     true,
                     None
             )
-            thenPipeline._2.head
+            thenPipeline._2.head compose Enumeratee.onEOF { () =>
+                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(thenPipeline._1, "done")
+            }
         }
         
         elseProcessor = {
@@ -161,7 +164,9 @@ class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) 
                     true,
                     None
             )
-            elsePipeline._2.head
+            elsePipeline._2.head compose Enumeratee.onEOF { () =>
+                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(elsePipeline._1, "done")
+            }
         }
     }
     

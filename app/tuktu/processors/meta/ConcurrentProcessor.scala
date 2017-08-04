@@ -74,9 +74,13 @@ class ConcurrentProcessorActor(parent: ActorRef, start: String, processorMap: Ma
     })
     // Set up the pipeline
     if (ignoreResults)
-        enumerator |>> processor &>> sinkIteratee
+        enumerator |>> (processor compose Enumeratee.onEOF { () =>
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(idString, "done")
+        }) &>> sinkIteratee
     else
-        enumerator |>> (processor compose sendBack compose utils.logEnumeratee("")) &>> sinkIteratee
+        enumerator |>> (processor compose sendBack compose utils.logEnumeratee("") compose Enumeratee.onEOF { () =>
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(idString, "done")
+        }) &>> sinkIteratee
 
     def receive() = {
         case sp: StopPacket => {
