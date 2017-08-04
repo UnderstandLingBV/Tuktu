@@ -15,6 +15,7 @@ import tuktu.api.HealthCheck
 import tuktu.api.HealthReply
 import play.api.Play
 import scala.util.{ Try, Success, Failure }
+import play.api.Logger
 
 case class HealthRound()
 case class AddNode(
@@ -58,9 +59,11 @@ class HealthMonitor() extends Actor with ActorLogging {
                         // Can remove for now until next failure
                         healthChecks -= hostname
                     case Failure(_) =>
+                        Logger.warn("Health monitor failed to get a response from " + hostname)
                         // Increase counter and see if we need to remove
                         healthChecks(hostname) += 1
                         if (healthChecks(hostname) >= maxFails) {
+                            Logger.error("Health monitor failed too often for node " + hostname + ", removing from cluster")
                             // Remove from cluster and from health checks
                             cNodes -= hostname
                             healthChecks -= hostname

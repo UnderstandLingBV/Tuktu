@@ -17,6 +17,9 @@ import tuktu.api.Parsing.PredicateParser
 import tuktu.api.ProcessorDefinition
 import tuktu.api.utils
 import tuktu.api.utils._
+import tuktu.api.AppInitPacket
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
 
 class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) {
     var thenProcessor: Enumeratee[DataPacket, DataPacket] = _
@@ -32,6 +35,7 @@ class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) 
     var lastWarning: Long = 0
     var warningsSinceLast: Int = 0
     var evaluate: Boolean = _
+    var name: String = _
     
     /**
      * Evaluates an expression
@@ -56,6 +60,7 @@ class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) 
     }
     
     override def initialize(config: JsObject) {
+        name = (config \ "name").asOpt[String].getOrElse("UNNAMED")
         /**
          * Parsing parameters
          */
@@ -110,7 +115,15 @@ class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) 
                 processorId -> procDef
             }).toMap
             
-            controllers.Dispatcher.buildEnums(List(start), processorMap, None, "If-then-else-processor - Then-branch", true)._2.head
+            val thenPipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "If-then-else-processor - Then-branch - " + name, true)
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(
+                    thenPipeline._1,
+                    "If-then-else-processor - Then-branch - " + name,
+                    1,
+                    true,
+                    None
+            )
+            thenPipeline._2.head
         }
         
         elseProcessor = {
@@ -140,7 +153,15 @@ class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) 
                 processorId -> procDef
             }).toMap
             
-            controllers.Dispatcher.buildEnums(List(start), processorMap, None, "If-then-else-processor - Else-branch", true)._2.head
+            val elsePipeline = controllers.Dispatcher.buildEnums(List(start), processorMap, None, "If-then-else-processor - Else-branch - " + name, true)
+            Akka.system.actorSelection("user/TuktuMonitor") ! new AppInitPacket(
+                    elsePipeline._1,
+                    "If-then-else-processor - Else-branch - " + name,
+                    1,
+                    true,
+                    None
+            )
+            elsePipeline._2.head
         }
     }
     

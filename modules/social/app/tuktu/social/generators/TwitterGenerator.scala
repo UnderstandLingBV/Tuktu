@@ -87,7 +87,11 @@ class TwitterGenerator(resultName: String, processors: List[Enumeratee[DataPacke
             }
         }
         case sp: StopPacket => {
-            twitterStream.shutdown
+            try {
+                twitterStream.shutdown
+            } catch {
+                case e: NullPointerException => {}
+            }
             cleanup
         }
     }
