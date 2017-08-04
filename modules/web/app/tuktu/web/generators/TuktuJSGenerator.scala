@@ -32,7 +32,7 @@ class TuktuJSGenerator(
         enumerator |>> processor &>> Iteratee.ignore[DataPacket]
 
     // Keep track of requesters that need to be notified of errors
-    val requesters = collection.mutable.ListBuffer[ActorRef]()
+    val requesters = collection.concurrent.TrieMap.empty[ActorRef, ActorRef]
 
     // Options
     var add_ip: Boolean = _
@@ -68,7 +68,7 @@ class TuktuJSGenerator(
 
         case error: ErrorPacket =>
             // Inform all the requesters that an error occurred.
-            requesters.foreach { _ ! error }
+            requesters.foreach { _._1 ! error }
             requesters.clear
 
         case sp: StopPacket =>
@@ -82,7 +82,7 @@ class TuktuJSGenerator(
             self ! PoisonPill
 
         case RequestPacket(request, isInitial) =>
-            requesters += sender
+            requesters += sender -> sender
 
             // Get body data and potentially the name of the next flow
             val bodyData = request.body.asJson.flatMap {
