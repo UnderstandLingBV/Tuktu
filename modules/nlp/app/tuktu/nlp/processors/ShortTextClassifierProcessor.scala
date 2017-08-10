@@ -10,6 +10,7 @@ import tuktu.ml.processors.BaseMLApplyProcessor
 import tuktu.ml.processors.BaseMLDeserializeProcessor
 import tuktu.ml.processors.BaseMLTrainProcessor
 import tuktu.nlp.models.ShortTextClassifier
+import de.bwaldvogel.liblinear.FeatureNode
 
 class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainProcessor[ShortTextClassifier](resultName) {
     var tokensField: String = _
@@ -63,10 +64,12 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
             data.map {datum =>
                 (featuresToAdd.map {f =>
                     datum(f) match {
-                        case seq: Seq[_] => seq.map(_.toString.toDouble).toArray
-                        case _ => datum(f).asInstanceOf[Seq[_]].map(_.toString.toDouble).toArray
+                        case _ => datum(f) match {
+                            case n: Array[FeatureNode] => n
+                            case n: Seq[FeatureNode] => n.toArray
+                        }
                     }
-                }).foldLeft(Array.empty[Double])(_ ++ _)
+                }).foldLeft(Array.empty[FeatureNode])(_ ++ _)
             } else Nil
         
         // Read the seed words from file
@@ -118,11 +121,11 @@ class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyP
                 val vectorFeaturesToAdd = if (featuresToAdd.size > 0)
                     (featuresToAdd.map {f =>
                         datum(f) match {
-                            case seq: Seq[_] => seq.map(_.toString.toDouble).toArray
-                            case _ => datum(f).asInstanceOf[Seq[_]].map(_.toString.toDouble).toArray
+                            case n: Array[FeatureNode] => n
+                            case n: Seq[FeatureNode] => n.toArray
                         }
-                    }).foldLeft(Array.empty[Double])(_ ++ _)
-                    else Array.empty[Double]
+                    }).foldLeft(Array.empty[FeatureNode])(_ ++ _)
+                    else Array.empty[FeatureNode]
                 
                 // Run the prediction
                 model.predict(datum(dataField) match {

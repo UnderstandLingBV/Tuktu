@@ -21,10 +21,6 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
     var fieldName: String = _
     var asString: Boolean = _
     var language: Option[String] = _
-    
-    // Arabic
-    val tf = ArabicTokenizer.factory
-    tf.setOptions("untokenizable=noneKeep")
 
     override def initialize(config: JsObject) {
         // Get fields
@@ -32,18 +28,6 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
         asString = (config \ "as_string").asOpt[Boolean].getOrElse(false)
         // Language specifity?
         language = (config \ "language").asOpt[String]
-    }
-    
-    def defaultTokenization(string: String) = {
-        // Remove links and mentions, add stuff around sentence closures
-        val clean = string
-            .replaceAll("[\r|\n|\t]", " ")
-            .replaceAll("(http:|ftp:|https:|www.)[^ ]+", " ").replaceAll("(http:|ftp:|https:|www.).*", "")
-            .replaceAll("#[0-9a-zA-z_]+", " ").replaceAll("@[0-9a-zA-z_]+", " ")
-            .replaceAll("([\\.|!|\\?|\"|¡|¿|,|:|;])", " $1 ")
-            .replaceAll(" +", " ").replaceAll("(.)\\1{3,}", "$1")
-        // Now split on space
-        clean.split(" ").map(_.trim).filter(!_.isEmpty)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -57,16 +41,10 @@ class TokenizerProcessor(resultName: String) extends BaseProcessor(resultName) {
             // See if we need to apply a language-specific tokenizer
             val tokens = language match {
                 case Some(lang) => utils.evaluateTuktuString(lang, datum) match {
-                    case l: String if l == "ar" => {
-                        // Apply Arabic tokenization
-                        val tokenizer = tf.getTokenizer(new StringReader(fieldValue))
-                        var arTokens = collection.mutable.ListBuffer.empty[String]
-                        while (tokenizer.hasNext) arTokens += tokenizer.next.word
-                        arTokens.toArray
-                    }
-                    case _ => defaultTokenization(fieldValue)
+                    case l: String if l == "ar" => tuktu.nlp.models.NLP.tokenize(fieldValue, Some("ar"))
+                    case _ => tuktu.nlp.models.NLP.defaultTokenization(fieldValue)
                 }
-                case None => defaultTokenization(fieldValue)
+                case None => tuktu.nlp.models.NLP.defaultTokenization(fieldValue)
             }
 
             // See if we need to concat into a space-separated string

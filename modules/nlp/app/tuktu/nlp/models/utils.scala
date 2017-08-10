@@ -4,6 +4,8 @@ import java.text.BreakIterator
 import java.util.Locale
 import org.jblas.DoubleMatrix
 import org.jblas.FloatMatrix
+import edu.stanford.nlp.international.arabic.process.ArabicTokenizer
+import java.io.StringReader
 
 /* 
  * Object in scala for calculating cosine similarity
@@ -73,5 +75,33 @@ object NLP {
         }
         val n = bi.next
         process(0, n, n)
+    }
+    
+    
+    // Arabic
+    val tf = ArabicTokenizer.factory
+    tf.setOptions("untokenizable=noneKeep")
+    
+    def tokenize(string: String, language: Option[String]) = language match {
+        case Some(l) if l == "ar" => {
+            // Apply Arabic tokenization
+            val tokenizer = tf.getTokenizer(new StringReader(string))
+            var arTokens = collection.mutable.ListBuffer.empty[String]
+            while (tokenizer.hasNext) arTokens += tokenizer.next.word
+            arTokens.toArray
+        }
+        case _ => defaultTokenization(string)
+    }
+    
+    def defaultTokenization(string: String) = {
+        // Remove links and mentions, add stuff around sentence closures
+        val clean = string
+            .replaceAll("[\r|\n|\t]", " ")
+            .replaceAll("(http:|ftp:|https:|www.)[^ ]+", " ").replaceAll("(http:|ftp:|https:|www.).*", "")
+            .replaceAll("#[0-9a-zA-z_]+", " ").replaceAll("@[0-9a-zA-z_]+", " ")
+            .replaceAll("([\\.|!|\\?|\"|¡|¿|,|:|;])", " $1 ")
+            .replaceAll(" +", " ").replaceAll("(.)\\1{3,}", "$1")
+        // Now split on space
+        clean.split(" ").map(_.trim).filter(!_.isEmpty)
     }
 }

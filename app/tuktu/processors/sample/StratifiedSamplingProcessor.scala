@@ -14,10 +14,12 @@ import scala.util.Random
 class StratifiedSamplingProcessor(resultName: String) extends BaseProcessor(resultName) {
     var classField: String = _
     var random: Boolean = _
+    var sampleCount: Option[Int] = _
     
     override def initialize(config: JsObject) {
         classField = (config \ "class_field").as[String]
         random = (config \ "random").asOpt[Boolean].getOrElse(false)
+        sampleCount = (config \ "sample_count").asOpt[Int]
     }
     
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -29,7 +31,10 @@ class StratifiedSamplingProcessor(resultName: String) extends BaseProcessor(resu
             val minCount = classCounts.minBy(_._2)._2
             // Get the right samples
             grouped.flatMap(group => {
-                (if (random) Random.shuffle(group._2) else group._2).take(minCount)
+                (if (random) Random.shuffle(group._2) else group._2).take(sampleCount match {
+                    case Some(s) => Math.min(minCount, s)
+                    case None => minCount
+                })
             }).toList
         })
     })

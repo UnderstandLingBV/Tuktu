@@ -30,6 +30,12 @@
 					"type": "boolean",
 					"required": false,
 					"default": false
+				},
+				{
+					"name": "sample_count",
+					"description": "If given, no more than this number of instances are picked for each class.",
+					"type": "int",
+					"required": false
 				}
 			]
 		}
