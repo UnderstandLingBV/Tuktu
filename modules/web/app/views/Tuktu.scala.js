@@ -39,7 +39,7 @@ var tuktu = function() {
 
 	s = document.createElement("script");
 	s.setAttribute("type", "text/javascript");
-	s.innerHTML = "@Html(jsCode)";
+	s.innerHTML = @JavaScript(play.api.libs.json.JsString(jsCode).toString);
 	h.appendChild(s);
 
 	@nextFlow match {
