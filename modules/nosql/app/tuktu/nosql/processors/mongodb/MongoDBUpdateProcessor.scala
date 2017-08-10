@@ -24,19 +24,19 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     var conn: MongoConnection = _
     var nodes: List[String] = _
 
-    var db: String = _
-    var collection: String = _
+    var db: utils.evaluateTuktuString.TuktuStringRoot = _
+    var collection: utils.evaluateTuktuString.TuktuStringRoot = _
 
     var waitForCompletion: Boolean = _
 
     // If set to true, creates a new document when no document matches the query criteria. 
-    var upsert = false
+    var upsert: Boolean = _
     // The selection criteria for the update. 
-    var query: JsValue = _
+    var query: utils.PreparedJsNode = _
     // The modifications to apply. 
-    var update: JsValue = _
+    var update: utils.PreparedJsNode = _
     //  If set to true, updates multiple documents that meet the query criteria. If set to false, updates one document. 
-    var multi = false
+    var multi: Boolean = _
 
     override def initialize(config: JsObject) {
         // Get hosts
@@ -53,12 +53,12 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         }
 
         // DB and collection
-        db = (config \ "db").as[String]
-        collection = (config \ "collection").as[String]
+        db = utils.evaluateTuktuString.prepare((config \ "db").as[String])
+        collection = utils.evaluateTuktuString.prepare((config \ "collection").as[String])
 
         // Query stuff
-        query = (config \ "query")
-        update = (config \ "update")
+        query = utils.prepareTuktuJsValue(config \ "query")
+        update = utils.prepareTuktuJsValue(config \ "update")
         upsert = (config \ "upsert").asOpt[Boolean].getOrElse(false)
         multi = (config \ "multi").asOpt[Boolean].getOrElse(false)
 
@@ -73,18 +73,17 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => {
         val jsons = (for (datum <- data.data) yield {
             (
-                utils.evaluateTuktuString(db, datum),
-                utils.evaluateTuktuString(collection, datum),
+                db.evaluate(datum),
+                collection.evaluate(datum),
                 (
-                    utils.evaluateTuktuJsValue(query, datum).as[JsObject],
-                    utils.evaluateTuktuJsValue(update, datum).as[JsObject]))
-        }).toList.groupBy { case (db, _, _) => db }.map(elem => elem._1 -> elem._2.groupBy(_._2))
+                    query.evaluate(datum).as[JsObject],
+                    update.evaluate(datum).as[JsObject]))
+        }).groupBy { case (db, coll, _) => (db, coll) }
 
         // Execute per DB/Collection pair
         val resultFut = Future.sequence(for {
-            (dbEval, collectionMap) <- jsons
-            (collEval, queries) <- collectionMap
-            (selector, updater) <- queries.map(_._3)
+            ((dbEval, collEval), queries) <- jsons
+            (_, _, (selector, updater)) <- queries
         } yield {
             val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
             fCollection.flatMap(coll => coll.update(selector, updater, upsert = upsert, multi = multi))
