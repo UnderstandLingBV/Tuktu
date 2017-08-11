@@ -138,7 +138,8 @@ class PostCollector(fbClient: DefaultFacebookClient, commentCollector: ActorRef,
 }
 
 class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRef, commentFrequency: Int) extends Actor with ActorLogging {
-    val posts = collection.mutable.Map.empty[JsObject, (Long, Int)]
+    // Contains posts ánd comments we still need to fetch
+    val posts = collection.mutable.Map.empty[JsObject, (Long, Int, Boolean)]
     var isRequesting = false
     
     def receive() = {
@@ -147,7 +148,7 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
             self ! PoisonPill
         }
         case pl: PostList => pl.posts.foreach {post =>
-            posts += post -> (1L, 0)
+            posts += post -> (1L, 0, false)
         }
         case ic: IterateComments => {
             if (!isRequesting) {
@@ -195,9 +196,14 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
                                     try {
                                         val json = Json.parse(obj.toString).asInstanceOf[JsObject]
                                         // Merge the original post into the comment
-                                        val newObj = json ++ Json.obj("post" -> usePosts(offset * 50 + index)._1)
+                                        val up = usePosts(offset * 50 + index)
+                                        val newObj = json ++ Json.obj({
+                                            if (up._2._3) "comment" else "post"
+                                        } -> up._1, "is_comment_to_post" -> !up._2._3) 
                                         // Add to our buffer
                                         buffer += newObj
+                                        // Also add to the list of posts and comments we still have to fetch comments of
+                                        posts += newObj -> (1L, 0, true)
                                         // Send if we have reached 10 pages
                                         if (buffer.size == 500) {
                                             authorCollector ! new PostList(buffer.toList, true)
@@ -218,7 +224,7 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
                 
                 // Update the counts and kick out the ones we don't need anymore
                 usePosts.foreach {post =>
-                    posts(post._1) = (now + 1, post._2._2 + 1)
+                    posts(post._1) = (now + 1, post._2._2 + 1, post._2._3)
                     if (posts(post._1)._2 >= commentFrequency) posts -= post._1
                 }
                 isRequesting = false

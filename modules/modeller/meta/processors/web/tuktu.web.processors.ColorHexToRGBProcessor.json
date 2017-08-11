@@ -1,0 +1,30 @@
+{
+	"name": "Hex Color Code to RBG Processor",
+	"description": "Converts an HTML-based hex-code for colors into its RGB values, given as a List[Int] as result. Use the Get List Element Processor to get the individual values.",
+	"class": "tuktu.web.processors.ColorHexToRGBProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "hex",
+					"description": "The hex color string.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
