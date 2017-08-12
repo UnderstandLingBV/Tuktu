@@ -13,3 +13,6 @@ Takes stratified data from a DataPacket, equaling the class counts.
     * **random** *(type: boolean)* `[Optional, default = false]`
     - Whether or not to take random strata. If set to false, the order inside the DataPacket will be maintained and the datums picked will be the first ones encountered.
 
+    * **sample_count** *(type: int)* `[Optional]`
+    - If given, no more than this number of instances are picked for each class.
+

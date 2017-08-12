@@ -13,6 +13,9 @@ Adds an event listener to a specific DOM element and sends collected data to Tuk
     * **event_name** *(type: string)* `[Required]`
     - The event name that should be listened to.
 
+    * **event_value** *(type: string)* `[Optional, default = "true"]`
+    - The value that should be assigned to the event (ie. 'true').
+
     * **flow_name** *(type: string)* `[Required]`
     - The name of the flow where the data triggered by this event should be sent to.
 

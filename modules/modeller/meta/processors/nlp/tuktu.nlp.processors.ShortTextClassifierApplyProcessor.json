@@ -57,6 +57,12 @@
 					"required": false,
 					"description": "The language of all the data inside the DP. Used for finding sentence boundaries.",
 					"default": "en"
+				},
+				{
+					"name": "default_class",
+					"type": "string",
+					"required": false,
+					"description": "If the document bears too little information (less than 10 characters), this default class will be returned. Must be an integer. If not given, -1.0 is returned in cases where the text is too small."
 				}
 			]
 		}

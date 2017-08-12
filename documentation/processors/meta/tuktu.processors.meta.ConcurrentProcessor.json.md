@@ -10,11 +10,17 @@ Takes a subflow and creates a number of instances of it. Data is then processed 
     * **instances** *(type: int)* `[Required]`
     - The number of instances to run per node.
 
-    * **nodes** *(type: array)* `[Required]`
-    - The nodes to use.
+    * **nodes** *(type: array)* `[Optional]`
+    - The nodes to use. If left empty, all nodes are used.
 
       * **[UNNAMED]** *(type: string)* `[Required]`
       - The hostname of the node.
+
+    * **concurrent_name** *(type: string)* `[Required]`
+    - The name of the concurrent processor. Only one unique concurrent processor with this name will exist on the cluster.
+
+    * **ignore_results** *(type: boolean)* `[Optional, default = false]`
+    - If set to true, the concurrent processor should be the last processor in its branch. Results will not be fetched back from remote nodes, thus saving latency. Always leave to false unless this processor is the last.
 
     * **start** *(type: string)* `[Required]`
     - The ID of the processor to compose first.
@@ -24,6 +30,12 @@ Takes a subflow and creates a number of instances of it. Data is then processed 
 
       * **[UNNAMED]** *(type: string)* `[Required]`
       - A field to anchor on.
+
+    * **anchor_domain** *(type: array)* `[Optional]`
+    - If you are anchoring on a single field, you can specify the (ALL) values that will occur. The processor will then forward round-robin based on the value occurrence rather than on a hashing function to ensure better fairness.
+
+      * **[UNNAMED]** *(type: string)* `[Required]`
+      - A value that the single anchor field can take.
 
     * **pipeline** *(type: array)* `[Required]`
     - The actual pipeline of processors.

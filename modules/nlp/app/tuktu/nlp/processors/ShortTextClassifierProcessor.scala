@@ -105,11 +105,13 @@ class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyP
     var dataField = ""
     var lang: String = _
     var featuresToAdd: List[String] = _
+    var defaultClass: Option[String] = _
     
     override def initialize(config: JsObject) {
         dataField = (config \ "data_field").as[String]
         lang = (config \ "language").asOpt[String].getOrElse("en")
         featuresToAdd = (config \ "features_to_add").asOpt[List[String]].getOrElse(Nil)
+        defaultClass = (config \ "default_class").asOpt[String]
         
         super.initialize(config)
     }
@@ -127,13 +129,19 @@ class ShortTextClassifierApplyProcessor(resultName: String) extends BaseMLApplyP
                     }).foldLeft(Array.empty[FeatureNode])(_ ++ _)
                     else Array.empty[FeatureNode]
                 
+                // Get default class if any
+                val newDefaultClass = defaultClass match {
+                    case Some(dc) => Some(utils.evaluateTuktuString(dc, datum).toInt)
+                    case None => None
+                }
+                
                 // Run the prediction
                 model.predict(datum(dataField) match {
                     case s: Seq[String] => s.toList
                     case s: Array[String] => s.toList
                     case s: String => s.split(" ").toList
                     case _ => datum(dataField).toString.split(" ").toList
-                }, vectorFeaturesToAdd, utils.evaluateTuktuString(lang, data.head))
+                }, vectorFeaturesToAdd, utils.evaluateTuktuString(lang, data.head), newDefaultClass)
             }) 
         }
     }

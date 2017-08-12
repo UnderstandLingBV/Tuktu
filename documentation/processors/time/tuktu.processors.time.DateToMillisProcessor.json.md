@@ -8,5 +8,5 @@ Converts a date to milliseconds (unix timestamp).
   * **config** *(type: object)* `[Required]`
 
     * **field** *(type: string)* `[Required]`
-    - The field in which the date is; will be converted to Long in-place.
+    - The field in which the date is; will be converted to a unix epoch Long.
 

@@ -44,21 +44,3 @@ Given a list of keywords, users and a geo square, streams public tweets matching
 
         * **[UNNAMED]** *(type: string)* `[Required]`
 
-      * **geo** *(type: object)* `[Optional]`
-
-        * **p1** *(type: object)* `[Optional]`
-
-          * **long** *(type: string)* `[Optional]`
-          - Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.
-
-          * **lat** *(type: string)* `[Optional]`
-          - Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.
-
-        * **p2** *(type: object)* `[Optional]`
-
-          * **long** *(type: string)* `[Optional]`
-          - Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.
-
-          * **lat** *(type: string)* `[Optional]`
-          - Define a geo square with these four values to filter tweets for. Can be omitted to search globally. If one is set, all have to be set.
-

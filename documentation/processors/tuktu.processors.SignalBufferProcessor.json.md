@@ -16,3 +16,6 @@ Hybrid processor that either buffers data until a signal is received, or sends t
     * **node** *(type: string)* `[Optional, default = ""]`
     - The name of the node the signallee lives on. If set, the signal can be sent to a remote note from the signaller to the signalee.
 
+    * **sync** *(type: boolean)* `[Optional, default = false]`
+    - Whether or not the result of the remaining flow is required to be send back.
+

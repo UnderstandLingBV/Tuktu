@@ -31,3 +31,6 @@ No description present.
     * **distinct** *(type: boolean)* `[Optional, default = false]`
     - Only execute distinct queries within each DataPacket once, and reuse results if append is true.
 
+    * **clear_on_empty** *(type: boolean)* `[Optional, default = false]`
+    - If append and separate are set to true, and if the result of the query is empty, this flag returns an empty datum (true) or just the original datum (false).
+

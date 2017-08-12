@@ -12,3 +12,6 @@ Groups data by the value list of the provided fields.
 
       * **[UNNAMED]** *(type: string)* `[Required]`
 
+    * **sync** *(type: boolean)* `[Optional, default = false]`
+    - Whether or not the result of the remaining flow is required to be send back.
+

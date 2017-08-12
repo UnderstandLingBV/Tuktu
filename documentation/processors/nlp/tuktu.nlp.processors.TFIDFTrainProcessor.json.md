@@ -19,3 +19,6 @@ Adds documents to a model that can readily provide TF-IDF scores for new documen
     * **data_field** *(type: string)* `[Required]`
     - The field the data resides in. Data can be textual (String) or Seq[String].
 
+    * **label_field** *(type: string)* `[Optional]`
+    - Optional field containing the label of the document. If set, a document will only be considered new if it has a previously unseen label, otherwise it is appended to the existing label's document.
+

@@ -178,15 +178,21 @@ class ShortTextClassifier(
         model = Linear.train(p, param)
     }
     
-    def predict(tokens: List[String], additionalFeatures: Array[FeatureNode], language: String) = {
+    def predict(tokens: List[String], additionalFeatures: Array[FeatureNode], language: String, defaultClass: Option[Int] = None) = {
         // Get sentences
         val sentences = NLP.getSentences(tokens, language)
-        if (sentences.isEmpty) -1.0 else
+        if (sentences.isEmpty || sentences.foldLeft(0)(_ + _.size) < 10) defaultClass match {
+            case Some(c) => c
+            case None => -1.0
+        } else
             (sentences.map {sentence =>
                 // Get feature vector with additional features
                 val vector = additionalFeatures ++ tokensToVector(sentence.split(" ").toList)
                 
-                if (vector.isEmpty) -1.0 else Linear.predict(model, vector)
+                if (vector.isEmpty) defaultClass match {
+                    case Some(c) => c
+                    case None => -1.0
+                } else Linear.predict(model, vector)
             }).groupBy(a => a).map(pred => {
                 pred._1 -> pred._2.size
             }).toList.sortBy(_._2)(Ordering[Int].reverse).head._1

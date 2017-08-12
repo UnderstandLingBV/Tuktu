@@ -19,3 +19,6 @@ Word2Vec trained by Google's word2vec can be read by this processor.
     * **wait_for_load** *(type: boolean)* `[Optional, default = false]`
     - If set to true, processing only continues after the model has been loaded into memory (sync). If false, processing continues immediately, not knowing when the model has been materialized.
 
+    * **binary** *(type: boolean)* `[Optional, default = false]`
+    - If set to true, load a binary word2vec file.
+

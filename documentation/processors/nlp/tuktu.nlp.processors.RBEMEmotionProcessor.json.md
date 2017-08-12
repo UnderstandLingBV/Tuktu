@@ -16,3 +16,6 @@ Performs emotion detection given a language, an Array of tokens and an Array of 
     * **pos** *(type: string)* `[Required]`
     - The field that contains an Array of POS tags.
 
+    * **discretize** *(type: boolean)* `[Optional, default = false]`
+    - Whether or not to return discrete (1.0, 0.0, -1.0) or the actual continuous forms.
+

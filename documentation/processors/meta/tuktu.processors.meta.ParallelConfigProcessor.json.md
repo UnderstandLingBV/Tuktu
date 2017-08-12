@@ -7,8 +7,16 @@ Starts parallel processor pipelines through generic configs, which are merged up
 
   * **config** *(type: object)* `[Required]`
 
+    * **name** *(type: string)* `[Optional]`
+    - Name of these parallelly executed flows to identify in Monitor.
+
     * **merger** *(type: string)* `[Required]`
-    - The merger class to be used to merge the results of the processors.
+    - The merger class to be used to merge the results of the processors. For example:
+
+tuktu.processors.merge.SimpleMerger
+tuktu.processors.merge.JSMerger
+tuktu.processors.merge.PaddingMerger
+tuktu.processors.merge.SerialMerger
 
     * **include_original** *(type: boolean)* `[Optional, default = false]`
     - Merge the other results into the original DataPacket, or not.

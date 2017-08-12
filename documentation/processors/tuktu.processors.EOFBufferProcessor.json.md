@@ -7,3 +7,6 @@ Buffers until EOF (end of data stream) is found.
 
   * **config** *(type: object)* `[Required]`
 
+    * **sync** *(type: boolean)* `[Optional, default = false]`
+    - Whether or not the result of the remaining flow is required to be send back.
+

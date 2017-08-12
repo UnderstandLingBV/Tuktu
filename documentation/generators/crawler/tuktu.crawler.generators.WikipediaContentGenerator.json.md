@@ -12,9 +12,6 @@ Crawls wikipedia's content for a specific language
       * **nodes** *(type: string)* `[Required]`
       - The nodes to use for this node handler type
 
-      * **include_word** *(type: boolean)* `[Optional, default = false]`
-      - Whether or not to send the crawled word/page name as well
-
   * **result** *(type: string)* `[Required]`
 
   * **stop_on_error** *(type: boolean)* `[Optional, default = true]`

@@ -19,13 +19,13 @@ Executes a query with a filter on a given list of nodes and streams the results.
     - The name of the collection to query.
 
     * **query** *(type: JsObject)* `[Required]`
-    - Find the documents matching these given criteria.
+    - Find the documents matching these given criteria. If you want to insert a JsObject using Tuktu Strings, you can do: $JSON.parse{${jsObject}}, or if you want to convert a Map to a JsObject on the fly: $JSON.parse{$JSON.stringify{map}}. Works not only on top-level, but also as a value within an object as JsString, and not only on maps, for example: {"${key}": "$JSON.parse{$JSON.stringify{list}}"} (Remember that keys never need to and hence can not be parsed as JSON, since they need to be strings.)
 
-    * **filter** *(type: JsObject)* `[Optional]`
-    - Filter results by this projection.
+    * **filter** *(type: JsObject)* `[Optional, default = {}]`
+    - Filter results by this projection. If you want to insert a JsObject using Tuktu Strings, you can do: $JSON.parse{${jsObject}}, or if you want to convert a Map to a JsObject on the fly: $JSON.parse{$JSON.stringify{map}}. Works not only on top-level, but also as a value within an object as JsString, and not only on maps, for example: {"${key}": "$JSON.parse{$JSON.stringify{list}}"} (Remember that keys never need to and hence can not be parsed as JSON, since they need to be strings.)
 
-    * **sort** *(type: JsObject)* `[Optional]`
-    - Sort results by this projection.
+    * **sort** *(type: JsObject)* `[Optional, default = {}]`
+    - Sort results by this projection. If you want to insert a JsObject using Tuktu Strings, you can do: $JSON.parse{${jsObject}}, or if you want to convert a Map to a JsObject on the fly: $JSON.parse{$JSON.stringify{map}}. Works not only on top-level, but also as a value within an object as JsString, and not only on maps, for example: {"${key}": "$JSON.parse{$JSON.stringify{list}}"} (Remember that keys never need to and hence can not be parsed as JSON, since they need to be strings.)
 
     * **mongo_options** *(type: object)* `[Optional]`
     - All possible mongo options, all optional.

@@ -35,6 +35,12 @@ Gets posts containing keywords or from specific users from a given time interval
         * **[UNNAMED]** *(type: string)* `[Required]`
         - Facebook user id.
 
+    * **fields** *(type: array)* `[Optional]`
+    - The Graph API fields to request. If not specified, gets all fields known to exist.
+
+      * **[UNNAMED]** *(type: string)* `[Required]`
+      - Field name.
+
     * **update_time** *(type: long)* `[Optional, default = 5]`
     - Time in seconds between requests, if applicable.
 
@@ -46,4 +52,13 @@ Gets posts containing keywords or from specific users from a given time interval
 
       * **end** *(type: long)* `[Optional]`
       - Timestamp of end time of time interval to collect data for. Can be left empty. If an end-time is given, everything until that time will be fetched. If it is omitted, no end time is assumed and everything will be fetched perpetually.
+
+    * **flush_interval** *(type: int)* `[Optional, default = 60]`
+    - The time in seconds to wait before flushing posts if the limit of 50 is not reached before.
+
+    * **comment_interval** *(type: int)* `[Optional, default = 3600]`
+    - The interval in seconds to wait before collecting the comments to a post. This is done retroactively because comments are not made realtime. Make sure to set this interval frequent enough to not run out of memory and fit your application's real-time need, yet long enough to get almost all comments that will be made.
+
+    * **comment_frequency** *(type: int)* `[Optional, default = 5]`
+    - This is the amount of times to wait comment interval seconds for before fetching more comments. If comment interval is set to 3600 and comment frequency is 3, then for 3 hours long, every hour comments will be fetched.
 

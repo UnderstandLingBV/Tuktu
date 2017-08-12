@@ -10,3 +10,6 @@ Buffers data packets for a specific amount of time.
     * **interval** *(type: int)* `[Required]`
     - The amount of milliseconds to buffer for.
 
+    * **sync** *(type: boolean)* `[Optional, default = false]`
+    - Whether or not the result of the remaining flow is required to be send back.
+

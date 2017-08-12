@@ -18,8 +18,8 @@ Removes data from MongoDB.
     * **collection** *(type: string)* `[Required]`
     - The name of the collection to query.
 
-    * **query** *(type: string)* `[Required]`
-    - The deletion query.
+    * **query** *(type: JsObject)* `[Required]`
+    - The deletion query. If you want to insert a JsObject using Tuktu Strings, you can do: $JSON.parse{${jsObject}}, or if you want to convert a Map to a JsObject on the fly: $JSON.parse{$JSON.stringify{map}}. Works not only on top-level, but also as a value within an object as JsString, and not only on maps, for example: {"${key}": "$JSON.parse{$JSON.stringify{list}}"} (Remember that keys never need to and hence can not be parsed as JSON, since they need to be strings.)
 
     * **just_one** *(type: boolean)* `[Optional]`
     - Delete only one item?
