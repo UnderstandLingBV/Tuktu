@@ -105,6 +105,8 @@ class ShortTextClassifier(
     }
     
     def tokensToVector(tokens: List[String], pTokens: Option[List[String]] = None): Array[Feature] = {
+        val sentenceSize = tokens.mkString(" ").size.toDouble
+        
         val processedTokens = pTokens match {
             case Some(pt) => pt
             case None => processTokens(tokens)
@@ -113,11 +115,11 @@ class ShortTextClassifier(
             
         // First 2 features are always static
         val statics = getStaticFeatures(tokens).zipWithIndex.map {feat =>
-            new FeatureNode(feat._2 + additionalFeaturesNum, feat._1)
+            new FeatureNode(feat._2 + additionalFeaturesNum, feat._1.toDouble)
         } toArray
         
         val other = (ngrams.filter(w => featureMap.contains(w._1)).map {token =>
-            new FeatureNode(featureMap(token._1)._1, token._2)
+            new FeatureNode(featureMap(token._1)._1, token._2 / sentenceSize)
         } toList).sortBy {
             _.getIndex
         } toArray
