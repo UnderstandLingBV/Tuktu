@@ -21,9 +21,13 @@ import tuktu.api.AppInitPacket
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import tuktu.api.AppMonitorUUIDPacket
+import play.api.libs.iteratee.Input
+import tuktu.api.BranchMergeProcessor
 
 class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) {
     var thenProcessor: Enumeratee[DataPacket, DataPacket] = _
+    var thenId: String = _
+    var elseId: String = _
     var elseProcessor: Enumeratee[DataPacket, DataPacket] = _
     val iteratee: Iteratee[DataPacket, List[Map[String, Any]]] = Iteratee.fold(List.empty[Map[String,Any]])((acc, next) => {
         acc ++ next.data
@@ -124,9 +128,8 @@ class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) 
                     true,
                     None
             )
-            thenPipeline._2.head compose Enumeratee.onEOF { () =>
-                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(thenPipeline._1, "done")
-            }
+            thenId = thenPipeline._1
+            thenPipeline._2.head
         }
         
         elseProcessor = {
@@ -164,9 +167,8 @@ class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) 
                     true,
                     None
             )
-            elsePipeline._2.head compose Enumeratee.onEOF { () =>
-                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(elsePipeline._1, "done")
-            }
+            elseId = elsePipeline._1
+            elsePipeline._2.head
         }
     }
     
@@ -194,7 +196,11 @@ class IfThenElseProcessor(resultName: String) extends BaseProcessor(resultName) 
                 new DataPacket(result.flatten)
         }
     }) compose Enumeratee.onEOF{() =>
-        if (thenProcessor != null) Enumerator.eof.run(thenProcessor &>> Iteratee.ignore)
-        if (elseProcessor != null) Enumerator.eof.run(elseProcessor &>> Iteratee.ignore)
+        if (thenProcessor != null) Enumerator.eof.run((thenProcessor compose Enumeratee.onEOF { () =>
+                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(thenId, "done")
+            }) &>> Iteratee.ignore)
+        if (elseProcessor != null) Enumerator.eof.run((elseProcessor compose Enumeratee.onEOF { () =>
+                Akka.system.actorSelection("user/TuktuMonitor") ! new AppMonitorUUIDPacket(elseId, "done")
+            }) &>> Iteratee.ignore)
     }
 }
