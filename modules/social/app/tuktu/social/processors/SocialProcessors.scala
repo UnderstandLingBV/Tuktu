@@ -175,7 +175,10 @@ class FacebookTaggerProcessor(resultName: String) extends BaseProcessor(resultNa
             item = {
                 val obj = datum(objField).asInstanceOf[JsObject]
                 // Check if this is a comment or not
-                if ((obj \ "is_comment").as[Boolean]) (obj \ "post").as[JsObject] else obj
+                if ((obj \ "is_comment").as[Boolean])
+                    if ((obj \ "is_comment_to_post").as[Boolean])
+                        (obj \ "post").as[JsObject] else (obj \ "comment" \ "post").as[JsObject]
+                else obj
             }
 
             u = users match {
