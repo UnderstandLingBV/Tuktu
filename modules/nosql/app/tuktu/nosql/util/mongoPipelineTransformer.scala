@@ -67,42 +67,17 @@ class MongoPipelineTransformer(implicit collection: JSONCollection) {
                 Group,
                 GroupFunction
             }
+            
+            val params = (jobj - "_id").keys.map {key =>
+                (key, getExpression((jobj \ key).as[JsObject]))
+            } toSeq
 
-            var gArray: Array[(String, Any)] = Array[(String, Any)]()
-
-            var i: Int = 0
-            for (key <- jobj.keys) {
-                key match {
-                    case "_id"       => gArray = gArray :+ ("id", jobj.\("_id"))
-                    case key: String => gArray = gArray :+ (key, getExpression(jobj.\(key).as[JsObject]))
-
-                }
-            }
-            // println( "size : " + gArray.length )
-            var test = Group(gArray(0)._2.asInstanceOf[JsString])(handleTail(gArray.drop(1)): _*)
-            // println( test )
-            return Group(gArray(0)._2.asInstanceOf[JsString])(handleTail(gArray.drop(1)): _*)
-
+            val x = Group((jobj \ "_id").as[JsValue])(params: _*)
+            println(x.identifiers)
+            println(x.makePipe)
+            x
         }
 
-    def handleTail(tail: Array[(String, Any)])(implicit collection: JSONCollection): Array[(String, collection.BatchCommands.AggregationFramework.GroupFunction)] =
-        {
-            import collection.BatchCommands.AggregationFramework.{
-                GroupFunction,
-                Last,
-                First,
-                AddToSet,
-                Push,
-                Max,
-                Min,
-                Avg
-            }
-            var result: Array[(String, GroupFunction)] = Array[(String, GroupFunction)]()
-            for (el <- tail) {
-                result = result :+ (el._1, el._2.asInstanceOf[GroupFunction])
-            }
-            return result
-        }
 
     def getExpression(expression: JsObject)(implicit collection: JSONCollection): collection.BatchCommands.AggregationFramework.GroupFunction =
         {
@@ -117,18 +92,16 @@ class MongoPipelineTransformer(implicit collection: JSONCollection) {
                 Avg
             }
 
-            val result: GroupFunction = expression.keys.head match {
+            expression.keys.head match {
                 case "$sum"      => getSum(expression)
-                case "$avg"      => Avg(expression.\("$avg").as[String])
-                case "$min"      => (Min(expression.\("$min").as[String]))
-                case "$max"      => (Max(expression.\("$max").as[String]))
-                case "$push"     => (Push(expression.\("$push").as[String]))
-                case "$addToSet" => (AddToSet(expression.\("$addToSet").as[String]))
-                case "$first"    => (First(expression.\("$first").as[String]))
-                case "$last"     => (Last(expression.\("$last").as[String]))
+                case "$avg"      => Avg((expression \ ("$avg")).as[String])
+                case "$min"      => Min((expression \ ("$min")).as[String])
+                case "$max"      => Max((expression \ ("$max")).as[String])
+                case "$push"     => Push((expression \ ("$push")).as[String])
+                case "$addToSet" => AddToSet((expression \ "$addToSet").as[String])
+                case "$first"    => First((expression \ ("$first")).as[String])
+                case "$last"     => Last((expression \ ("$last")).as[String])
             }
-            return result
-
         }
 
     def getSum(sum: JsObject)(implicit collection: JSONCollection): collection.BatchCommands.AggregationFramework.GroupFunction =
