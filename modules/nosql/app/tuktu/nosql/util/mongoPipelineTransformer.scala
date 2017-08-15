@@ -5,14 +5,17 @@ import play.modules.reactivemongo.json.collection._
 import tuktu.api._
 
 class MongoPipelineTransformer(implicit collection: JSONCollection) {
+    // ReactiveMongo requires $ in front of fields to be dropped
+    def convert(s: String): String = if (s.headOption == Some('$')) s.tail else s
+
     def json2task(jobj: JsObject)(implicit collection: JSONCollection): collection.BatchCommands.AggregationFramework.PipelineOperator = {
         import collection.BatchCommands.AggregationFramework._
 
         jobj.value.head match {
             case ("$skip", JsNumber(n))    => Skip(n.intValue)
             case ("$limit", JsNumber(n))   => Limit(n.intValue)
-            case ("$unwind", JsString(s))  => Unwind(s) // Unwind prepends field names with '$'
-            case ("$out", JsString(s))     => Out(s)
+            case ("$unwind", JsString(s))  => Unwind(convert(s)) // Unwind prepends field names with '$'
+            case ("$out", JsString(s))     => Out(convert(s))
             case ("$sort", o: JsObject)    => Sort(getSortOrder(o): _*)
             case ("$match", o: JsObject)   => Match(o)
             case ("$project", o: JsObject) => Project(o)
@@ -33,14 +36,14 @@ class MongoPipelineTransformer(implicit collection: JSONCollection) {
 
         expression.value.head match {
             case ("$sum", JsNumber(n))      => SumValue(n.intValue)
-            case ("$sum", JsString(s))      => SumField(s)
-            case ("$avg", JsString(s))      => Avg(s)
-            case ("$min", JsString(s))      => Min(s)
-            case ("$max", JsString(s))      => Max(s)
-            case ("$push", JsString(s))     => Push(s)
-            case ("$addToSet", JsString(s)) => AddToSet(s)
-            case ("$first", JsString(s))    => First(s)
-            case ("$last", JsString(s))     => Last(s)
+            case ("$sum", JsString(s))      => SumField(convert(s))
+            case ("$avg", JsString(s))      => Avg(convert(s))
+            case ("$min", JsString(s))      => Min(convert(s))
+            case ("$max", JsString(s))      => Max(convert(s))
+            case ("$push", JsString(s))     => Push(convert(s))
+            case ("$addToSet", JsString(s)) => AddToSet(convert(s))
+            case ("$first", JsString(s))    => First(convert(s))
+            case ("$last", JsString(s))     => Last(convert(s))
         }
     }
 
