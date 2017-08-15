@@ -90,6 +90,13 @@
 					"default": "en"
 				},
 				{
+					"name": "split_sentences",
+					"type": "string",
+					"required": false,
+					"description": "Whether or not to split sentences. If sentences are split, the classifier runs on every sentence seperately, otherwise it runs on the entire text.",
+					"default": "true"
+				},
+				{
 					"name": "seed_word_file",
 					"type": "string",
 					"required": true,

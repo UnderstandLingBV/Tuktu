@@ -22,11 +22,13 @@ class ShortTextClassifier(
     var _rightFlips: List[String] = _    
     var _leftFlips: List[String] = _
     var model: Model = _
+    var splitSentences: Boolean = _
     
-    def setWords(seedWords: Map[String, List[String]], rightFlips: List[String], leftFlips: List[String]) {
+    def setWords(seedWords: Map[String, List[String]], rightFlips: List[String], leftFlips: List[String], splitSentences: Boolean = true) {
         _seedWords = seedWords
         _rightFlips = rightFlips
         _leftFlips = leftFlips
+        this.splitSentences = splitSentences
     }
     
     def processTokens(tokens: List[String]) = {
@@ -127,10 +129,14 @@ class ShortTextClassifier(
         statics ++ other
     }
         
-    def trainClassifier(data: List[List[String]], additionalFeatures: List[Array[FeatureNode]], labels: List[Double], C: Double, eps: Double, language: String) = {
+    def trainClassifier(data: List[List[String]], additionalFeatures: List[Array[FeatureNode]],
+            labels: List[Double], C: Double, eps: Double, language: String) = {
         // Get all sentences
         val sentences = data.zipWithIndex.flatMap {d =>
-            NLP.getSentences(d._1, language).filter(!_.isEmpty).map(s => (s, labels(d._2)))
+            if (splitSentences)
+                NLP.getSentences(d._1, language).filter(!_.isEmpty).map(s => (s, labels(d._2)))
+            else
+                List((d._1.mkString(" "), labels(d._2)))
         } map {s =>
             (s._1.split(" ").toList, s._2)
         }
@@ -182,7 +188,7 @@ class ShortTextClassifier(
     
     def predict(tokens: List[String], additionalFeatures: Array[FeatureNode], language: String, defaultClass: Option[Int] = None) = {
         // Get sentences
-        val sentences = NLP.getSentences(tokens, language)
+        val sentences = if (splitSentences) NLP.getSentences(tokens, language) else List(tokens.mkString(" "))
         if (sentences.isEmpty || sentences.foldLeft(0)(_ + _.size) < 10) defaultClass match {
             case Some(c) => c
             case None => -1.0
@@ -208,7 +214,8 @@ class ShortTextClassifier(
                 "minCount" -> _minCount,
                 "seedWords" -> _seedWords,
                 "rightFlips" -> _rightFlips,
-                "leftFlips" -> _leftFlips
+                "leftFlips" -> _leftFlips,
+                "split" -> splitSentences
         ))
         oos.close
         model.save(new File(filename + ".svm"))
@@ -226,6 +233,7 @@ class ShortTextClassifier(
         _seedWords = obj("seedWords").asInstanceOf[Map[String, List[String]]]
         _rightFlips = obj("rightFlips").asInstanceOf[List[String]]
         _leftFlips = obj("leftFlips").asInstanceOf[List[String]]
+        splitSentences = obj("split").asInstanceOf[Boolean]
         
         model = Model.load(new File(filename + ".svm"))
     }

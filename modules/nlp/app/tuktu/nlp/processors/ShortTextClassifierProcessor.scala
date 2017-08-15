@@ -23,6 +23,7 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
     var leftFlipFile: String = _
     var seedWordFile: String = _
     var featuresToAdd: List[String] = _
+    var splitSentences: String = _
     
     override def initialize(config: JsObject) {
         tokensField = (config \ "data_field").as[String]
@@ -38,6 +39,7 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
         seedWordFile = (config \ "seed_word_file").as[String]
         
         featuresToAdd = (config \ "features_to_add").asOpt[List[String]].getOrElse(Nil)
+        splitSentences = (config \ "split_sentences").asOpt[String].getOrElse("true")
         
         super.initialize(config)
     }
@@ -94,7 +96,7 @@ class ShortTextClassifierTrainProcessor(resultName: String) extends BaseMLTrainP
         }
         
         // Train
-        model.setWords(seedWords, rightFlips, leftFlips)
+        model.setWords(seedWords, rightFlips, leftFlips, utils.evaluateTuktuString(splitSentences, data.head).toBoolean)
         model.trainClassifier(x.toList, vectorFeaturesToAdd, y.toList, C, eps, utils.evaluateTuktuString(lang, data.head))
         
         model
