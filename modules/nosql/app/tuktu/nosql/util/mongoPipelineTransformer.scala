@@ -72,10 +72,7 @@ class MongoPipelineTransformer(implicit collection: JSONCollection) {
                 (key, getExpression((jobj \ key).as[JsObject]))
             } toSeq
 
-            val x = Group((jobj \ "_id").as[JsValue])(params: _*)
-            println(x.identifiers)
-            println(x.makePipe)
-            x
+            Group((jobj \ "_id").as[JsValue])(params: _*)
         }
 
 
