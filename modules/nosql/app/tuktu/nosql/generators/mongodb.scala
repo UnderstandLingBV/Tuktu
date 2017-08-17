@@ -54,11 +54,8 @@ class MongoDBAggregateGenerator(resultName: String, processors: List[Enumeratee[
                     case _ => self ! new StopPacket
                 }
                 fCollection.flatMap { collection: JSONCollection =>
-                    import collection.BatchCommands.AggregationFramework.PipelineOperator
-                    import collection.BatchCommands.AggregationFramework.AggregationResult
-
-                    val transformer: MongoPipelineTransformer = new MongoPipelineTransformer()(collection)
-                    val pipeline: List[PipelineOperator] = tasks.map { x => transformer.json2task(x)(collection = collection) }
+                    // Prepare aggregation pipeline
+                    val pipeline = tasks.map { task => MongoPipelineTransformer.json2task(task)(collection) }
                     // Get data based on the aggregation pipeline
                     val resultData: Future[List[JsObject]] = collection.aggregate(pipeline.head, pipeline.tail).map(_.head[JsObject])
                     resultData.onFailure {

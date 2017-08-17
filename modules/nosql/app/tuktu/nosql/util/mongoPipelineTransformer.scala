@@ -4,7 +4,7 @@ import play.api.libs.json._
 import play.modules.reactivemongo.json.collection._
 import tuktu.api._
 
-class MongoPipelineTransformer(implicit collection: JSONCollection) {
+object MongoPipelineTransformer {
     // ReactiveMongo requires $ in front of fields to be dropped
     def convert(s: String): String = if (s.headOption == Some('$')) s.tail else s
 

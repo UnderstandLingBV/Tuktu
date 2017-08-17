@@ -60,10 +60,8 @@ class MongoDBAggregateProcessor(resultName: String) extends BaseProcessor(result
         val newData = Future.sequence(for (datum <- data.data) yield {
             fCollection.flatMap { coll =>
                 // Prepare aggregation pipeline
-                import coll.BatchCommands.AggregationFramework.PipelineOperator
-                val transformer = new MongoPipelineTransformer()(coll)
                 val pipeline = tasks.map { task =>
-                    transformer.json2task(utils.evaluateTuktuJsValue(task, datum).as[JsObject])(collection = coll)
+                    MongoPipelineTransformer.json2task(utils.evaluateTuktuJsValue(task, datum).as[JsObject])(coll)
                 }
 
                 // Get data from Mongo
