@@ -363,9 +363,8 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val fbClient = new DefaultFacebookClient(aToken, Version.VERSION_2_8)
 
             // Filters that we need to check
-            val filters = Common.getFilters(config)
-            users = filters("userids")
-                .asInstanceOf[Array[String]].map(_ + "/feed")
+            val (_, userids, _) = Common.getFilters(config)
+            users = userids.map(_ + "/feed")
                 
             // Stop if there are no users
             if (users.size == 0) self ! new StopPacket
