@@ -233,7 +233,11 @@ class ShortTextClassifier(
         _seedWords = obj("seedWords").asInstanceOf[Map[String, List[String]]]
         _rightFlips = obj("rightFlips").asInstanceOf[List[String]]
         _leftFlips = obj("leftFlips").asInstanceOf[List[String]]
-        splitSentences = obj("split").asInstanceOf[Boolean]
+        splitSentences = try {
+            obj("split").asInstanceOf[Boolean]
+        } catch {
+            case e:Exception => true
+        }
         
         model = Model.load(new File(filename + ".svm"))
     }
