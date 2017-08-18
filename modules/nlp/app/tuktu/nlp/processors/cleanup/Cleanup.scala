@@ -15,6 +15,7 @@ import play.api.Play
 import play.api.Play.current
 import java.io.IOException
 import com.vdurmont.emoji.EmojiParser
+import java.text.Normalizer
 
 /**
  * Generic Base class for the cleaner classes.
@@ -33,7 +34,7 @@ abstract class BaseCleaner(resultName: String) extends BaseProcessor(resultName)
           val result = datum(fieldName) match {
             case a: Array[String] => clean(a.toSeq, datum)
             case a: Seq[String] => clean(a, datum)
-            case a: Any => clean(List(a.toString), datum)
+            case a: Any => clean(List(a.toString), datum).head
           }
                     
           datum + (resultName -> result)
@@ -41,6 +42,21 @@ abstract class BaseCleaner(resultName: String) extends BaseProcessor(resultName)
     })
     
     def clean(seq: Seq[String], datum: Map[String, Any]): Seq[String]
+}
+
+class OddCharacterRemoverProcessor(resultName: String) extends BaseCleaner(resultName) {
+    def flattenToAscii(string: String) = {
+        val normalized = Normalizer.normalize(string, Normalizer.Form.NFD)
+        normalized.toList.filter {_ <= '\u007F'} mkString("") replaceAll("[^a-zA-Z ]", "")
+    }
+    
+    override def initialize(config: JsObject) {
+        super.initialize(config)
+    }
+    
+    def clean(seq: Seq[String], datum: Map[String, Any]) = {
+        seq map flattenToAscii
+    }
 }
 
 /**
