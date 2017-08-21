@@ -1,0 +1,43 @@
+{
+	"name": "Dummy Variable Processor",
+	"description": "Turns an integer (class) into a sequence or string of dummy variables (1 if the value is on, 0 otherwise).",
+	"class": "tuktu.ml.processors.preprocessing.DummyVariableProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the integer to convert.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "max",
+					"type": "int",
+					"required": true,
+					"description": "The maximum value the field can take."
+				},
+				{
+					"name": "as_list",
+					"type": "boolean",
+					"required": false,
+					"description": "If set to true, returns the dummies as a list, if set to false, a string will be returned.",
+					"default": false
+				}
+			]
+		}
+	]
+}

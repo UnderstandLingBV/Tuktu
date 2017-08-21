@@ -68,6 +68,13 @@
 					]
 				},
 				{
+					"name": "flatten",
+					"description": "Whether or not to flatten the resulting JsObjects.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
 					"name": "db",
 					"description": "The database to query against.",
 					"type": "string",

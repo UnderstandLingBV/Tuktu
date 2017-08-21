@@ -14,6 +14,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import tuktu.api.{ BaseGenerator, DataPacket, InitPacket, StopPacket }
 import tuktu.nosql.util._
+import play.api.Logger
+import tuktu.api.utils
 
 /**
  * Generator for MongoDB aggregations
@@ -243,6 +245,7 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
                     (a \ "user").as[String],
                     (a \ "password").as[String])
             }
+            val flatten = (config \ "flatten").asOpt[Boolean].getOrElse(false)
 
             // Get the connection
             val fConnection = MongoPool.getConnection(nodes, mongoOptions, auth)
@@ -259,18 +262,32 @@ class MongoDBCommandGenerator(resultName: String, processors: List[Enumeratee[Da
                     val runner = Command.run(JSONSerializationPack)
                     // Run it
                     val futureResult = runner(db, runner.rawCommand(command)).one[JsObject]
-
-                    val futureCollections = futureResult.map { result => (result \\ "name").map { coll => coll.as[String] } }
-                    futureCollections.onSuccess {
-                        case collections: List[String] => {
-                            collections.foreach { collection => channel.push(DataPacket(List(Map(resultName -> collection)))) }
+                    futureResult.onSuccess {
+                        case o: JsObject => {
+                            // Get the result code
+                            if (o.keys.contains("ok") && (o \ "ok").as[Double] == 1.0) {
+                                // Get the resulting data
+                                (o \ "result").as[List[JsObject]].foreach {datum =>
+                                    channel.push(new DataPacket(List(
+                                            if (flatten) utils.JsObjectToMap(datum)
+                                            else Map(resultName -> datum)
+                                    )))
+                                }
+                                // We are done
+                                self ! new StopPacket
+                            } else {
+                                Logger.warn("MongoDB Command Generator got unexpected response: " + o)
+                                self ! new StopPacket
+                            }
+                        }
+                        case a: Any => {
+                            Logger.warn("MongoDB Command Generator got unexpected response: " + a)
                             self ! new StopPacket
                         }
-                        case _ => self ! new StopPacket
                     }
-                    futureCollections.onFailure {
+                    futureResult.onFailure {
                         case e: Throwable => {
-                            e.printStackTrace
+                            Logger.error(e.getMessage)
                             self ! new StopPacket
                         }
                     }
