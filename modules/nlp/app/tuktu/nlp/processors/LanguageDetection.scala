@@ -54,6 +54,7 @@ class LangDetProcessor(resultName: String) extends BaseProcessor(resultName) {
     val languageProfiles = new LanguageProfileReader().readAllBuiltIn
     val languageDetector = LanguageDetectorBuilder.create(NgramExtractors.standard)
         .withProfiles(languageProfiles)
+        .minimalConfidence(0.85d)
         .build
     var textObjectFactory: TextObjectFactory = _
     
