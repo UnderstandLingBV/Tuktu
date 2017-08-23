@@ -9,6 +9,7 @@ import tuktu.ml.models.BaseModel
 
 import de.bwaldvogel.liblinear._
 import java.io.File
+import com.vdurmont.emoji.EmojiParser
 
 class ShortTextClassifier(
         minCount: Int
@@ -95,15 +96,48 @@ class ShortTextClassifier(
     
     def getStaticFeatures(tokens: List[String]) = {
         val sentence = tokens.mkString(" ")
+        
         // Get punctuation
         val punctuation = (sentence.toList.filter {char =>
-            List('!', '?', '¡', '¿', '՜').exists(_ == char)
+            List("!", ".", ",", "?", "!", ":", ";", "'", "\"", "[", "]", "{", "}", "(", ")", "-", "+", "=", "&", "%", "$", "€").exists(_ == char)
         }).size.toDouble / sentence.size.toDouble
+        
         // Caps usage
         val caps = (sentence.toList.filter {char =>
             char.isUpper
         }).size.toDouble / sentence.size.toDouble
-        List(punctuation, caps)
+        
+        // Number of vowels
+        val vowels = (sentence.toList.filter {char =>
+            List("a", "e", "o", "i", "u", "y",
+                  "ä", "á", "à", "â", "ã",
+                  "ë", "é", "è", "ê",
+                  "ö", "ó", "ò", "ô", "õ",
+                  "ï", "í", "ì", "î",
+                  "ü", "ú", "ù", "û",
+                  "ÿ", "ý"
+            ).exists(_ == char)
+        }).size.toDouble / sentence.size.toDouble
+        
+        // Words starting with a capital
+        val capWords = tokens.filter {t => t.size > 0 && t.head.isUpper}.size.toDouble / tokens.size.toDouble
+        // Slow-release case
+        val slowRelease = tokens.filter {t =>
+            if (t.size > 2) t(0).isUpper && t(1).isUpper else false
+        }.size.toDouble / tokens.size.toDouble
+        
+        // First word capital or not?
+        val firstWordCap = if (tokens.size > 0 && tokens.head.size > 0 && tokens.head(0).isUpper) 1.0 else 0.0
+        
+        // Count emojis
+        val emojis = sentence.size.toDouble - EmojiParser.removeAllEmojis(sentence).size.toDouble
+        
+        // How lengthy is this sentence
+        val shortLength = if (sentence.size <= 10) 1.0 else 0.0
+        val midLength = if (sentence.size > 10 && sentence.size <= 80) 1.0 else 0.0
+        val longLength = if (sentence.size > 80) 1.0 else 0.0
+        
+        List(punctuation, caps, vowels, capWords, slowRelease, firstWordCap, emojis, shortLength, midLength, longLength)
     }
     
     def tokensToVector(tokens: List[String], pTokens: Option[List[String]] = None): Array[Feature] = {
@@ -157,8 +191,8 @@ class ShortTextClassifier(
             } getIndex) + 1
         else 1
         
-        // Renumber them all, start at 3 because we have 2 static features
-        featureOffset = additionalFeaturesNum + 3
+        // Renumber them all, start at 11 because we have 10 static features
+        featureOffset = additionalFeaturesNum + 11
         featureMap.foreach {fm =>
             featureMap.update(fm._1, (featureOffset, fm._2._2))
             featureOffset += 1
@@ -166,8 +200,8 @@ class ShortTextClassifier(
         
         // Set up the data
         val p = new Problem
-        // Add the two features we always add to n, also add the featuresToAdd
-        p.n = featureMap.size + 2 + additionalFeaturesNum
+        // Add the ten features we always add to n, also add the featuresToAdd
+        p.n = featureMap.size + 10 + additionalFeaturesNum
         // Construct the liblinear vectors now
         p.x = if (additionalFeatures.size > 0) {
             sentences.zip(additionalFeatures).map {datum =>
