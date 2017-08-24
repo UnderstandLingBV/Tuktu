@@ -78,6 +78,21 @@ object utils {
                         case Some(js: JsString) => js.value
                         case Some(a)            => a.toString
                     }
+                    case Some("capitalize") => value match {
+                        case None               => "null".capitalize
+                        case Some(js: JsString) => js.value.capitalize
+                        case Some(a)            => a.toString.capitalize
+                    }
+                    case Some("toLowerCase") => value match {
+                        case None               => "null".toLowerCase
+                        case Some(js: JsString) => js.value.toLowerCase
+                        case Some(a)            => a.toString.toLowerCase
+                    }
+                    case Some("toUpperCase") => value match {
+                        case None               => "null".toUpperCase
+                        case Some(js: JsString) => js.value.toUpperCase
+                        case Some(a)            => a.toString.toUpperCase
+                    }
                     case Some("JSON.stringify") => AnyToJsValue(value).toString
                     case Some("SQL") =>
                         def evaluateSQLParameter(any: Any): String = any match {
@@ -119,7 +134,7 @@ object utils {
         }
 
         // Supported functions; empty String not properly supported by StringIn, so we will use Option instead
-        val functionNames: Seq[String] = Seq("JSON.stringify", "SQL", "SplitGet", "GetOrNull")
+        val functionNames: Seq[String] = Seq("toLowerCase", "toUpperCase", "capitalize", "JSON.stringify", "SQL", "SplitGet", "GetOrNull")
 
         // AnyChar and AnyChar but closing curly bracket
         val anyChar: P[TuktuStringString] = P(AnyChar).!.map { TuktuStringString(_) }

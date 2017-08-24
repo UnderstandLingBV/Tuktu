@@ -16,6 +16,13 @@ class utilsTests extends PlaySpec {
             utils.evaluateTuktuString("${${${key}.${sub}}}", datum, '$') should be("17")
         }
 
+        "support some basic String functions" in {
+            val datum: Map[String, Any] = Map("key" -> "some TEXT")
+            utils.evaluateTuktuString("$toLowerCase{key}", datum, '$') should be ("some text")
+            utils.evaluateTuktuString("$toUpperCase{key}", datum, '$') should be ("SOME TEXT")
+            utils.evaluateTuktuString("$capitalize{key}", datum, '$') should be ("Some TEXT")
+        }
+
         "JSON.stringify different types" in {
             val datum: Map[String, Any] = Map("List" -> List(1, "2", Map("a" -> 3)))
             utils.evaluateTuktuString("$JSON.stringify{List}", datum, '$') should be(Json.arr(1, "2", Json.obj("a" -> 3)).toString)
