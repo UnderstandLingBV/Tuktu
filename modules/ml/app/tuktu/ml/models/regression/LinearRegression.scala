@@ -6,6 +6,10 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.io.OutputStreamWriter
+import java.io.BufferedWriter
+import play.api.libs.json.Json
+import scala.io.Source
 
 /**
  * Implements a wrapper around apache common math regression
@@ -26,12 +30,8 @@ class LinearRegression() extends BaseModel {
         regression.newSampleData(currentLabels, currentData)
     }
     
-    def calculateEstimation(x: Double, coe: Array[Double]) = {
-        var result: Double = 0.0
-        for (i <- 0 to coe.length - 1)
-            result += coe(i) * Math.pow(x, i)
-        result
-    }
+    def calculateEstimation(x: Double, coe: Array[Double]) =
+        (0 to coe.length - 1).foldLeft(0.0)((a,b) => a + coe(b) * Math.pow(x,b))
 
     /**
      * Predicts a Y-value for X-values
@@ -45,14 +45,14 @@ class LinearRegression() extends BaseModel {
     override def serialize(filename: String) = {
         // Write out model
         coefficients = regression.estimateRegressionParameters()
-        val oos = new ObjectOutputStream(new FileOutputStream(filename))
-        oos.writeObject(coefficients)
-        oos.close
+        val bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename), "utf8"))
+        bw.write(Json.toJson(coefficients).toString)
+        bw.close
     }
     
     override def deserialize(filename: String) = {
-        val ois = new ObjectInputStream(new FileInputStream(filename))
-        coefficients = ois.readObject.asInstanceOf[Array[Double]]
-        ois.close
+        val br = Source.fromFile(filename)("utf8").bufferedReader
+        coefficients = Json.parse(br.readLine).as[Array[Double]]
+        br.close
     }
 }
