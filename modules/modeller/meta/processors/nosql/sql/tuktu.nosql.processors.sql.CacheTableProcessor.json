@@ -19,6 +19,12 @@
 			"required": true,
 			"parameters": [
 				{
+					"name": "cache_name",
+					"description": "The name of this cached table. Will be loaded once on the node running this flow and then used from cache.",
+					"type": "string",
+					"required": true
+				},
+				{
 					"name": "url",
 					"description": "A database url of the form jdbc:subprotocol:subname.",
 					"type": "string",
@@ -56,23 +62,9 @@
 				},
 				{
 					"name": "data_query",
-					"description": "The query to run on the data, can either be starts_with or equals.",
-					"type": "object",
-					"required": true,
-					"parameters": [
-						{
-							"name": "type",
-							"description": "The type of query to run, can either be starts_with or equals.",
-							"type": "string",
-							"required": true
-						},
-						{
-							"name": "query",
-							"description": "The actual query to match the key_by field on.",
-							"type": "string",
-							"required": true
-						}
-					]
+					"description": "The query to run on the data.",
+					"type": "string",
+					"required": true
 				}
 			]
 		}

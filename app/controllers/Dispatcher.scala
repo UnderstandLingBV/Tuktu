@@ -44,7 +44,13 @@ object Dispatcher {
      */
     def monitorEnumeratee(uuid: String, branch: String, mpType: MPType): Enumeratee[DataPacket, DataPacket] = {
         Enumeratee.mapM((data: DataPacket) => Future {
-            Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, uuid, branch, data.size)
+            try {
+                Akka.system.actorSelection("user/TuktuMonitor") ! new MonitorPacket(mpType, uuid, branch, data.size)
+            } catch {
+                case e: java.lang.IllegalStateException => {
+                    // To prevent 'java.lang.IllegalStateException: Can't get ClosableLazy value after it has been closed' when app closes
+                }
+            }
             data
         })
     }

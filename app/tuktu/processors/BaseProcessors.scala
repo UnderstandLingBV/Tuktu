@@ -977,10 +977,12 @@ class DataPacketWrapperProcessor(resultName: String) extends BaseProcessor(resul
 class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultName) {
     var field: String = _
     var separator: String = _
+    var removeEmpty: Boolean = _
 
     override def initialize(config: JsObject) {
         field = (config \ "field").as[String]
         separator = (config \ "separator").as[String]
+        removeEmpty = (config \ "remove_empty").asOpt[Boolean].getOrElse(true)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -988,7 +990,9 @@ class StringSplitterProcessor(resultName: String) extends BaseProcessor(resultNa
             // Get the field and explode it
             val values = datum(field).toString.split(separator).toList
 
-            datum + (resultName -> values)
+            datum + (resultName -> {
+                if (removeEmpty) values.filter(!_.isEmpty) else values
+            })
         }
     })
 }

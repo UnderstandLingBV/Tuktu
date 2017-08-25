@@ -29,6 +29,13 @@
 					"description": "The separator used to split on.",
 					"type": "string",
 					"required": true
+				},
+				{
+					"name": "remove_empty",
+					"description": "Whether or not to remove empty strings.",
+					"type": "boolean",
+					"required": false,
+					"default": true
 				}
 			]
 		}
