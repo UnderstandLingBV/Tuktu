@@ -34,7 +34,7 @@ object ArithmeticParser {
         ("-".? ~ CharIn('0' to '9').rep ~ "." ~ CharIn('0' to '9').rep(min = 1) |
             // Otherwise, we need a number
             "-".? ~ CharIn('0' to '9').rep(min = 1))
-            ~ ("e" ~ "-".? ~ CharIn('0' to '9').rep(min = 1)).?).!
+            ~ (("e" | "E") ~ "-".? ~ CharIn('0' to '9').rep(min = 1)).?).!
         .map { s => DoubleLeaf(s.toDouble) }
     val parens: P[DoubleNode] = P("-".!.? ~ "(" ~ addSub ~ ")")
         .map { case (neg, n) => if (neg.isDefined) NegateNode(n) else n }

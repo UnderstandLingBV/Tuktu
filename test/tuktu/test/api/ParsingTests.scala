@@ -23,6 +23,7 @@ class ParsingTests extends PlaySpec {
             ArithmeticParser("-1e3") should be(-1e3)
             ArithmeticParser("-17.3") should be(-17.3)
             ArithmeticParser("-1.7e-2") should be(-1.7e-2)
+            ArithmeticParser("-1.7E-2") should be(-1.7E-2)
             ArithmeticParser("-.7e-2") should be(-.7e-2)
         }
 
