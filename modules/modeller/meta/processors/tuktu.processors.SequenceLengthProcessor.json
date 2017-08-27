@@ -1,0 +1,30 @@
+{
+	"name": "Sequence Length Processor",
+	"description": "Returns the number of items in a sequence field.",
+	"class": "tuktu.processors.SequenceLengthProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the sequence to count the number of items of.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}

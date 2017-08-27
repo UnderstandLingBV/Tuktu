@@ -12,21 +12,24 @@ import tuktu.api.utils
 import play.api.cache.Cache
 import play.api.Play.current
 import scala.concurrent.duration.DurationInt
+import play.api.libs.json.Json
 
 class CacheTableProcessor(resultName: String) extends BaseProcessor(resultName) {
     var dataQuery: String = _
     var cacheName: String = _
+    var filters: Map[String, String] = _
     
     override def initialize(config: JsObject) {
         cacheName = (config \ "cache_name").as[String]
         // Query
         dataQuery = (config \ "data_query").as[String]
+        // Filters
+        filters = (config \ "filters").asOpt[Map[String,String]].getOrElse(Map.empty[String,String])
         
         // Check if cached
         Cache.getAs[Map[String, List[Map[String, Any]]]]("cache.table." + cacheName) match {
             case Some(table) => {
                 // Already loaded
-                dataQuery = (config \ "data_query").as[String]
             }
             case None => {
                 // Get url, username and password for the connection; and the SQL driver (new drivers may have to be added to dependencies) and query
@@ -58,9 +61,20 @@ class CacheTableProcessor(resultName: String) extends BaseProcessor(resultName) 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.map((data: DataPacket) => {
         new DataPacket(data.data.map {datum =>
             val query = utils.evaluateTuktuString(dataQuery, datum)
+            // Evaluate filters
+            val filters = this.filters.map {f =>
+                utils.evaluateTuktuString(f._1, datum) -> utils.evaluateTuktuString(f._2, datum)
+            }
             
             val records = Cache.getAs[Map[String, List[Map[String, Any]]]]("cache.table." + cacheName).get.collect {
-                case row if (row._1.endsWith(".*") && row._1.startsWith(query)) || row._1 == query => row._2
+                case row if (row._1.endsWith(".*") && query.startsWith(row._1.dropRight(2))) || row._1 == query => {
+                    row._2.filter {row =>
+                        // Apply filters
+                        filters.forall {filter =>
+                            row(filter._1) == filter._2
+                        }
+                    }
+                }
             }.flatten.toList
             
             if (records.isEmpty) datum else datum + (resultName -> records)

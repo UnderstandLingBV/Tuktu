@@ -65,6 +65,12 @@
 					"description": "The query to run on the data.",
 					"type": "string",
 					"required": true
+				},
+				{
+					"name": "filters",
+					"description": "Filters to apply on the data. May only contain String values because they are evaluated.",
+					"type": "any",
+					"required": false
 				}
 			]
 		}

@@ -914,6 +914,29 @@ class SequenceExploderProcessor(resultName: String) extends BaseProcessor(result
 }
 
 /**
+ * Returns the size of a sequence
+ */
+class SequenceLengthProcessor(resultName: String) extends BaseProcessor(resultName) {
+    var field: String = _
+
+    override def initialize(config: JsObject) {
+        field = (config \ "field").as[String]
+    }
+
+    override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
+        new DataPacket(data.data.map {datum =>
+            datum + (resultName -> {
+                datum(field) match {
+                    case js: JsArray => js.value.size
+                    case a: Array[Any] => a.size
+                    case any: Any    => any.asInstanceOf[Seq[Any]].size
+                }
+            })
+        })
+    })
+}
+
+/**
  * Takes a sequence of sequence objects and flattens it
  */
 class SequenceFlattenerProcessor(resultName: String) extends BaseProcessor(resultName) {
