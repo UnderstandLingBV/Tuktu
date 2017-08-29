@@ -1,0 +1,38 @@
+{
+	"name": "Max Field By Value Processor",
+	"description": "Gets the name of the field with the maximum value among a number of fields.",
+	"class": "tuktu.processors.arithmetics.MaxFieldByValueProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "fields",
+					"description": "The fields.",
+					"type": "array",
+					"required": true,
+					"parameters": [
+						{
+							"name": "",
+							"description": "A field.",
+							"type": "string",
+							"required": true
+						}
+					]
+				}
+			]
+		}
+	]
+}
