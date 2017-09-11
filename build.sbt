@@ -22,9 +22,10 @@ lazy val appResolvers = Seq(
 lazy val modellerDependencies = Seq(
     cache,
     filters,
-    "org.webjars" % "jquery" % "1.11.3",
+    "org.webjars" % "jquery" % "1.12.4",
+    "org.webjars" % "jquery-ui" % "1.12.1",
     "org.webjars" % "bootstrap" % "3.3.4",
-    "org.webjars" % "raphaeljs" % "2.1.2-1",
+    "org.webjars" % "raphaeljs" % "2.1.4",
     "org.webjars" % "underscorejs" % "1.8.3"
 )
 

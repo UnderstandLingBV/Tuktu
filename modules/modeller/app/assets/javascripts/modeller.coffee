@@ -746,6 +746,10 @@ $('*[data-toggle="tooltip"]').each( (i, el) ->
 	$(el).tooltip() if $(el).closest('div[data-arraytype="prototype"]').length is 0
 )
 
+$('div[data-type="array"]').sortable({
+	items: '> div[data-arraytype="value"]'
+})
+
 # Bind delete key to node deletion if active element is window
 document.addEventListener('keydown', (e) ->
 	if e.keyCode is 46 and document.activeElement.nodeName is 'BODY'
