@@ -1,0 +1,30 @@
+{
+	"name": "Location Detection Processor",
+	"description": "Tries to detect a location based on a given input",
+	"class": "tuktu.nlp.processors.LocationDetectionProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "field",
+					"description": "The field containing the tokenized text to detect a location on.",
+					"type": "string",
+					"required": true
+				}
+			]
+		}
+	]
+}
