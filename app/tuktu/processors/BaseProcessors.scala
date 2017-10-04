@@ -100,7 +100,11 @@ class HeadOfListProcessor(resultName: String) extends BaseProcessor(resultName) 
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
         for (datum <- data) yield {
-            val value = datum(field).asInstanceOf[Seq[Any]]
+            val value = datum(field) match {
+                case a: Seq[Any] => a
+                case a: Array[Any] => a.toSeq
+                case a: JsArray => a.value.toSeq
+            }
             if (value.nonEmpty)
                 datum + (resultName -> value.head)
             else if (!keepOriginal)
