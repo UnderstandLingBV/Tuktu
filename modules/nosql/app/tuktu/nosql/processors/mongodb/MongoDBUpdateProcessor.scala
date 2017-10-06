@@ -83,10 +83,17 @@ class MongoDBUpdateProcessor(resultName: String) extends BaseProcessor(resultNam
         // Execute per DB/Collection pair
         val resultFut = Future.sequence(for {
             ((dbEval, collEval), queries) <- jsons
-            (_, _, (selector, updater)) <- queries
         } yield {
-            val fCollection = MongoPool.getCollection(conn, dbEval, collEval)
-            fCollection.flatMap(coll => coll.update(selector, updater, upsert = upsert, multi = multi))
+            MongoPool.getCollection(conn, dbEval, collEval).flatMap { collection =>
+                import collection.BatchCommands._
+                import UpdateCommand._
+
+                val elements = for ((_, _, (selector, updater)) <- queries) yield {
+                    UpdateElement(q = selector, u = updater, upsert = upsert, multi = multi)
+                }
+
+                collection.runCommand(Update(elements.head, elements.tail: _*))
+            }
         })
 
         // Continue directly or wait?
