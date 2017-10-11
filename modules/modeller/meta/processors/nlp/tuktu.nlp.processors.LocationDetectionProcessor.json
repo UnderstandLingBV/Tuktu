@@ -23,6 +23,18 @@
 					"description": "The field containing the tokenized text to detect a location on.",
 					"type": "string",
 					"required": true
+				},
+				{
+					"name": "country_file",
+					"description": "The file containing the list of countries.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "city_file",
+					"description": "The file containing the list of cities.",
+					"type": "string",
+					"required": true
 				}
 			]
 		}
