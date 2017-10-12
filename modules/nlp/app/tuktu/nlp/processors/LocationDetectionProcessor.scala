@@ -21,13 +21,16 @@ import play.api.libs.json.JsValue
  */
 class LocationDetectionProcessor(resultName: String) extends BaseProcessor(resultName) {
     // Helper case class to store some location information
-    case class LocationInformation(lat: Float, long: Float, pop: Int = 0)
+    case class LocationInformation(lat: Float, lon: Float, pop: Int = 0)
+    case class Center(lat: Float, lon: Float, radius: Float)
     
     var fieldName: String = _
     var asciiCities = Map.empty[String, LocationInformation]
     var utf8Cities = Map.empty[String, LocationInformation]
     var altCities = Map.empty[String, LocationInformation]
     var countries = Map.empty[String, LocationInformation]
+    var centers = List.empty[Center]
+    var maxWindow: Int = _
 
     override def initialize(config: JsObject) {
         // Get fields
@@ -79,6 +82,9 @@ class LocationDetectionProcessor(resultName: String) extends BaseProcessor(resul
                         val names = collection.mutable.ListBuffer.empty[JsValue]
                         names += (x \ "name" \ "common")
                         names ++= x \ "translations" \\ "common"
+                        names ++= (x \ "altSpellings").as[List[JsValue]].filter {spell =>
+                            spell.as[String] == "USA" || spell.as[String].size > 3
+                        }
 
                         names.map(_.as[String].toLowerCase).foreach { x => countries += x -> locInfo }
 
@@ -91,6 +97,13 @@ class LocationDetectionProcessor(resultName: String) extends BaseProcessor(resul
 
             countries.toMap
         }
+        
+        // Load centers
+        centers = (config \ "centers").asOpt[List[JsObject]].getOrElse(Nil).map {center =>
+            new Center((center \ "lat").as[Float], (center \ "lon").as[Float], (center \ "radius").as[Float])
+        }
+        
+        maxWindow = (config \ "max_window").asOpt[Int].getOrElse(3)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM(data => Future {
@@ -101,43 +114,68 @@ class LocationDetectionProcessor(resultName: String) extends BaseProcessor(resul
                 case s: Any           => s.toString.split(" ").toSeq
             }).map(_.toLowerCase)
 
-            val location = getLocation(tokens)
-
             datum + (resultName -> {
-                if (location.isDefined) Map("lat" -> location.get.lat, "lon" -> location.get.long)
-                else Map.empty[String, Float]
+                val locations = getLocations(tokens)
+                
+                // If centers are given, filter out locations not within them and the radius
+                {
+                    if (centers.isEmpty) locations
+                    else {
+                        locations.filter {loc =>
+                            centers.exists {center =>
+                                Math.sqrt(Math.pow(loc._2.lat - center.lat, 2) + Math.pow(loc._2.lon - center.lon, 2)) <= center.radius
+                            }
+                        }
+                    }
+                } map {loc =>
+                    Map(
+                            "lat" -> loc._2.lat,
+                            "lon" -> loc._2.lon,
+                            "name" -> loc._1
+                    )
+                }
             })
         }
     })
 
-    // the maximum amount of tokens to look at when trying to determine a location
-    val maxTokenSize = 3
 
-    // Get the location mentioned in the tokens
-    // First Country then cities
-    def getLocation(tokens: Seq[String], sliding: Int = maxTokenSize): Option[LocationInformation] = {
-        if (sliding < 1) getCity(tokens)
-        else {
-            val slice = tokens.sliding(sliding).map(_.mkString(" ")).toSeq
-            val result = slice.collectFirst { case i if (countries.contains(i)) => countries(i) }
-            if (result.isDefined) result
-            else getLocation(tokens, sliding - 1)
+    // Gets the locations in this text
+    def getLocations(tokens: Seq[String]): List[(String, LocationInformation)] = {
+        val windows = (1 to maxWindow).toList.flatMap {window =>
+            tokens.sliding(window).map(_.mkString(" "))
         }
-    }
-
-    // Looks for the most likely city, based on population size
-    def getCity(tokens: Seq[String], sliding: Int = maxTokenSize): Option[LocationInformation] = {
-        if (sliding < 1) None
-        else {
-            val slice = tokens.sliding(sliding).map(_.mkString(" ")).toSeq
-
-            val result = List(
-                slice.collectFirst { case i if (asciiCities.contains(i)) => asciiCities(i) },
-                slice.collectFirst { case i if (utf8Cities.contains(i)) => utf8Cities(i) },
-                slice.collectFirst { case i if (altCities.contains(i)) => altCities(i) }).flatten.headOption
-
-            if (result.isDefined) result
-            else getCity(tokens, sliding - 1)
+        
+        // Try out countries
+        val matchedCountries = {
+            val matches = windows.collect {
+                case w if (countries.contains(w)) => (w, countries(w))
+            }
+            // Remove all subsumed ones
+            matches.collect {
+                case m if !matches.exists {n => n._1 != m._1 && n._1.contains(m._1)} => m
+            }
+        }
+        
+        // Try out cities
+        val matchedCities = {
+            val matches = windows.collect {
+                case w if (asciiCities.contains(w)) => (w, asciiCities(w))
+                case w if (utf8Cities.contains(w)) => (w, utf8Cities(w))
+                case w if (altCities.contains(w)) => (w, altCities(w))
+            }
+            // Remove all subsumed ones
+            matches.collect {
+                case m if !matches.exists {n => n._1 != m._1 && n._1.contains(m._1)} => m
+            }
+        }
+        
+        // Remove all countries that have more fine-grained cities
+        {
+            val matches = matchedCountries ++ matchedCities
+            // Remove all subsumed ones
+            matches.collect {
+                case m if !matches.exists {n => n._1 != m._1 && n._1.contains(m._1)} => m
+            }
         }
     }
 }

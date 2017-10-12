@@ -35,6 +35,47 @@
 					"description": "The file containing the list of cities.",
 					"type": "string",
 					"required": true
+				},
+				{
+					"name": "max_window",
+					"description": "The maximum window size of words to consider.",
+					"type": "int",
+					"required": false,
+					"default": 3
+				},
+				{
+					"name": "centers",
+					"description": "A list of lat, lon pairs that represent centers to which a location must be close by (defined by radius).",
+					"type": "array",
+					"required": false,
+					"parameters": [
+						{
+							"name": "",
+							"description": "A center point.",
+							"type": "object",
+							"required": true,
+							"parameters": [
+								{
+									"name": "lat",
+									"description": "Latitude.",
+									"type": "double",
+									"required": true
+								},
+								{
+									"name": "lon",
+									"description": "Longitude.",
+									"type": "double",
+									"required": true
+								},
+								{
+									"name": "radius",
+									"description": "The radius within which a location must be located computed from this center.",
+									"type": "double",
+									"required": true
+								}
+							]
+						}
+					]
 				}
 			]
 		}
