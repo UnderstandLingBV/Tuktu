@@ -584,7 +584,11 @@ importConfig = (object) ->
 
 		# Start from all generators and build their descendants recursively, depth first
 		for generator, i in object.generators
-			gen = new Generator(generator, false, paperx + grid, papery + grid + i * grid * Math.ceil(100 / grid))
+			gen = new Generator(
+				generator,
+				false,
+				if generator.modeller? and generator.modeller.x? then generator.modeller.x else paperx + grid,
+				if generator.modeller? and generator.modeller.y? then generator.modeller.y else papery + grid + i * grid * Math.ceil(100 / grid))
 			for succ in generator.next
 				importProcessor(succ)
 				newConnections.push([gen, succ])
