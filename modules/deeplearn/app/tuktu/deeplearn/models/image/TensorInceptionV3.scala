@@ -43,12 +43,13 @@ object TensorInceptionV3 {
     }.getOrElse(List("unknown" -> 0.0f))
 
     def classifyFile(url: URL, n: Int, useCategories: Boolean): List[(String, Float)] = session.flatMap { session =>
-        val is = url.openStream
         val result = Try {
+            val is = url.openStream
             val imageBytes = IOUtils.toByteArray(is)
-            getLabels(session, imageBytes, n, useCategories)
+            val r = getLabels(session, imageBytes, n, useCategories)
+            is.close
+            r
         }
-        is.close
         result.toOption
     }.getOrElse(List("unknown" -> 0.0f))
 

@@ -191,6 +191,19 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
                             case e: com.restfb.json.JsonException => {
                                 // Log the error for fault tracking
                                 Logger.error("Failed to get comments for: " + urls(offset) + "\r\n" + response.getBody)
+                                
+                                // Check if this is because the actual object no longer exists
+                                try {
+                                    val json = Json.parse(response.getBody).as[JsObject]
+                                    if ((json \ "error" \ "code").as[Int] == 100) {// 100 == not exists
+                                        // Remove this URL from our poll list to prevent future errors
+                                        posts -= usePosts(offset)._1
+                                        Logger.info("Removing no longer existing post from queue: " + urls(offset))
+                                    }
+                                } catch {
+                                    case e: Exception => {}
+                                }
+                                
                                 null
                             }
                         }
