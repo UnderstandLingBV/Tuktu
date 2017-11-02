@@ -188,7 +188,11 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
                         val objectList = try {
                             new Connection[JsonObject](fbClient, response.getBody, classOf[JsonObject])
                         } catch {
-                            case e: com.restfb.json.JsonException => null
+                            case e: com.restfb.json.JsonException => {
+                                // Log the error for fault tracking
+                                Logger.error("Failed to get comments for: " + urls(offset) + "\r\n" + response.getBody)
+                                null
+                            }
                         }
                         if (objectList != null) {
                             objectList.foreach(objects => {
@@ -210,7 +214,10 @@ class CommentCollector(fbClient: DefaultFacebookClient, authorCollector: ActorRe
                                             buffer.clear
                                         }
                                     } catch {
-                                        case e: com.restfb.json.JsonException => {}
+                                        case e: com.restfb.json.JsonException => {
+                                            Logger.error("Failed to parse JSON for comment: " + obj.toString)
+                                            e.printStackTrace()
+                                        }
                                     }
                                 })
                             })
