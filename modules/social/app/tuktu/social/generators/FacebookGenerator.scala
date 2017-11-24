@@ -271,9 +271,18 @@ class AuthorCollector(fbClient: DefaultFacebookClient, channel: Concurrent.Chann
         }
         case a: ActorRef => commentCollector = a
         case pr: PostList => {
-            val usePosts = pr.posts.toList
+            val (usePosts, skipPosts) = pr.posts.toList.partition {post =>
+                post.keys.contains("from")
+            }
+            // Send the ones to skip directly one
+            skipPosts.foreach {post =>
+                channel.push(new DataPacket(List(Map(resultName -> {
+                    post ++ Json.obj("is_comment" -> pr.is_comment)
+                }))))
+            }
+            
             // We don't know the type, so are constrained to using metadata to figure it out
-            val requestLists = (pr.posts.map {post =>
+            val requestLists = (usePosts.map {post =>
                 // Add the batched request for from
                 new BatchRequestBuilder((post \ "from" \ "id").as[String])
                         .parameters(Parameter.`with`("metadata", 1))
