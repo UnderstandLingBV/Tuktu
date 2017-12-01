@@ -389,7 +389,7 @@ class FacebookGenerator(resultName: String, processors: List[Enumeratee[DataPack
             val commentFrequency = (config \ "comment_frequency").asOpt[Int].getOrElse(5)
             
             // Set up RestFB
-            val fbClient = new DefaultFacebookClient(aToken, Version.VERSION_2_8)
+            val fbClient = new DefaultFacebookClient(aToken, Version.VERSION_2_10)
 
             // Filters that we need to check
             val (_, userids, _) = Common.getFilters(config)

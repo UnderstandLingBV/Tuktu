@@ -74,7 +74,7 @@ lazy val socialDependencies = Seq(
     "org.twitter4j" % "twitter4j-core" % "4.0.4",
     "org.twitter4j" % "twitter4j-stream" % "4.0.4",
     "com.github.scribejava" % "scribejava-apis" % "4.1.0",
-    "com.restfb" % "restfb" % "1.33.0"
+    "com.restfb" % "restfb" % "1.48.0"
 )
 
 lazy val nosqlDependencies = Seq(
