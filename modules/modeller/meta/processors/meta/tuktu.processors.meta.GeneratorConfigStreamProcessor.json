@@ -19,6 +19,13 @@
 			"required": true,
 			"parameters": [
 				{
+					"name": "stop_on_error",
+					"description": "Whether or not the generator forwarded to should stop on error.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
 					"name": "name",
 					"description": "The name of the config so that you can follow it in the job overview.",
 					"type": "string",

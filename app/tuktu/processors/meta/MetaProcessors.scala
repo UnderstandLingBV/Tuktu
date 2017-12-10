@@ -128,6 +128,7 @@ class GeneratorStreamProcessor(resultName: String) extends BaseProcessor(resultN
                     }
                 },
                 "result" -> "",
+                "stop_on_error" -> (config \ "stop_on_error").asOpt[Boolean].getOrElse(true).toString,
                 "config" -> Json.obj(),
                 "next" -> next) ++
                 (nodes match {
@@ -190,6 +191,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
     var remoteGenerator: ActorRef = null
     val remaining = new AtomicInteger(0)
     val done = new AtomicBoolean(false)
+    var stopOnError = false
 
     override def initialize(config: JsObject) {
         // Get the name of the config file
@@ -220,6 +222,8 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
 
         // Should we keep the async flow alive or create a new one each DP?
         keepAlive = (config \ "keep_alive").asOpt[Boolean].getOrElse(false)
+        
+        stopOnError = (config \ "stop_on_error").asOpt[Boolean].getOrElse(true)
     }
 
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
@@ -242,6 +246,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
                 val customConfig = Json.obj(
                     "generators" -> List((Json.obj(
                         "name" -> "tuktu.generators.AsyncStreamGenerator",
+                        "stop_on_error" -> stopOnError.toString,
                         "result" -> "",
                         "config" -> Json.obj(),
                         "next" -> next) ++ nodes)),
@@ -284,6 +289,7 @@ class GeneratorConfigStreamProcessor(resultName: String) extends BaseProcessor(r
         val customConfig = Json.obj(
             "generators" -> List((Json.obj(
                 "name" -> "tuktu.generators.AsyncStreamGenerator",
+                "stop_on_error" -> stopOnError.toString,
                 "result" -> "",
                 "config" -> Json.obj(),
                 "next" -> next) ++ nodes)),
