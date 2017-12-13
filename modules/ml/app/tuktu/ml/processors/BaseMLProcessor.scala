@@ -146,6 +146,7 @@ class MLSerializeProcessor[BM <: BaseModel](resultName: String) extends BaseProc
     override def processor(): Enumeratee[DataPacket, DataPacket] = Enumeratee.mapM((data: DataPacket) => Future {
         // Get name of the model
         val newModelName = utils.evaluateTuktuString(modelName, data.data.headOption.getOrElse(Map.empty))
+        val newFileName = utils.evaluateTuktuString(fileName, data.data.headOption.getOrElse(Map.empty))
 
         // Check if we actually need to serialize
         if (!onlyOnce || !serialized.contains(newModelName)) {
@@ -158,7 +159,7 @@ class MLSerializeProcessor[BM <: BaseModel](resultName: String) extends BaseProc
             model match {
                 case Some(m) => {
                     serialized += newModelName
-                    m.serialize(fileName)
+                    m.serialize(newFileName)
                 }
                 case None => {}
             }
