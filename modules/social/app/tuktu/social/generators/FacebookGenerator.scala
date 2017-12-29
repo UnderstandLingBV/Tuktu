@@ -98,36 +98,39 @@ class PostCollector(fbClient: DefaultFacebookClient, commentCollector: ActorRef,
                         case e: com.restfb.json.JsonException => {
                             Logger.error("Failed to get Facebook data for " + pcp.feeds + "\r\n" + response.getBody)
                             throw e
+                            null
                         }
                     }
-                    for {
+                    if (objectList != null) {
+                        for {
                         objects <- objectList
                         obj <- objects
-                    } {
-                        // Get the post
-                        val post = fbClient.getJsonMapper.toJavaObject(obj.toString, classOf[Post])
-                        
-                        // Parse time and all that
-                        val unixTime = post.getCreatedTime.getTime / 1000
-                        
-                        // See if the creation time was within our interval
-                        val keep = unixTime >= pcp.startTime && (pcp.endTime match {
-                            case Some(e) => unixTime <= e
-                            case _ => true
-                        })
-                        
-                        if (keep) {
-                            // Add to our buffer
-                            postsBuffer += Json.parse(obj.toString).asInstanceOf[JsObject]
+                        } {
+                            // Get the post
+                            val post = fbClient.getJsonMapper.toJavaObject(obj.toString, classOf[Post])
                             
-                            // Cancel the time flushing actor and reset
-                            cancellablePosts.cancel
-                            cancellablePosts = context.system.scheduler.scheduleOnce(flushInterval seconds, self, new FlushAuthors)
+                            // Parse time and all that
+                            val unixTime = post.getCreatedTime.getTime / 1000
                             
-                            if (postsBuffer.size == 50) {
-                                // Forward to our comment and author actor
-                                authorCollector ! new PostList(postsBuffer.toList, false)
-                                postsBuffer.clear
+                            // See if the creation time was within our interval
+                            val keep = unixTime >= pcp.startTime && (pcp.endTime match {
+                                case Some(e) => unixTime <= e
+                                case _ => true
+                            })
+                            
+                            if (keep) {
+                                // Add to our buffer
+                                postsBuffer += Json.parse(obj.toString).asInstanceOf[JsObject]
+                                
+                                // Cancel the time flushing actor and reset
+                                cancellablePosts.cancel
+                                cancellablePosts = context.system.scheduler.scheduleOnce(flushInterval seconds, self, new FlushAuthors)
+                                
+                                if (postsBuffer.size == 50) {
+                                    // Forward to our comment and author actor
+                                    authorCollector ! new PostList(postsBuffer.toList, false)
+                                    postsBuffer.clear
+                                }
                             }
                         }
                     }
