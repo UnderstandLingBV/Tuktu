@@ -1,0 +1,74 @@
+{
+	"name": "NBSVM Train Processor",
+	"description": "Trains NBSVM.",
+	"class": "tuktu.nlp.processors.NBSVMTrainProcessor",
+	"parameters": [
+		{
+			"name": "id",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "result",
+			"type": "string",
+			"required": true
+		},
+		{
+			"name": "config",
+			"type": "object",
+			"required": true,
+			"parameters": [
+				{
+					"name": "model_name",
+					"description": "Name of the model to be trained. If a model with that name is already available, that model will be used for additional training. Otherwise a new model with this name will be instantiated.",
+					"type": "string",
+					"required": true
+				},
+				{
+					"name": "destroy_on_eof",
+					"description": "Will this model be cleaned up once EOF is reached.",
+					"type": "boolean",
+					"required": false,
+					"default": true
+				},
+				{
+					"name": "wait_for_store",
+					"description": "Whether to wait for the model to be stored in the model repository. Setting this to true will ensure the model exists when proceeding to the next processor.",
+					"type": "boolean",
+					"required": false,
+					"default": false
+				},
+				{
+					"name": "data_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the data resides in. Data must be a string of words."
+				},
+				{
+					"name": "label_field",
+					"type": "string",
+					"required": true,
+					"description": "The field the label is in. Value must be a double."
+				},
+				{
+					"name": "epochs",
+					"type": "int",
+					"required": true,
+					"description": "Number of epochs."
+				},
+				{
+					"name": "lambda",
+					"type": "double",
+					"required": true,
+					"description": "Lambda."
+				},
+				{
+					"name": "alpha",
+					"type": "double",
+					"required": true,
+					"description": "Alpha."
+				}
+			]
+		}
+	]
+}

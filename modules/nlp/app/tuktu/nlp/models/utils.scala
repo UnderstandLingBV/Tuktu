@@ -37,6 +37,10 @@ object CosineSimilarity {
     def cosineSimilarity(vec1: FloatMatrix, vec2: FloatMatrix): Float = {
           vec1.dot(vec2) / (vec1.norm2() * vec2.norm2())
     }
+    
+    def cosineSimilarity(vec1: fasttext.Vector, vec2: fasttext.Vector): Float = {
+        cosineSimilarity(new FloatMatrix(vec1.data_), new FloatMatrix(vec2.data_))
+    }
 }
 
 object NLP {
