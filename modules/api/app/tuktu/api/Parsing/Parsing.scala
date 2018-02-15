@@ -188,6 +188,8 @@ object PredicateParser {
                 case js: JsBoolean => js.value
                 case js: JsNumber  => js.value.toDouble
                 case js: JsString  => js.value
+                case js: JsObject  => js.value
+                case js: JsArray   => js.value
                 case JsNull        => null
             }
         }
@@ -304,6 +306,7 @@ object PredicateParser {
                     case ">=" => true
                     case "<"  => false
                     case ">"  => false
+                    case _    => false
                 }
             case (left: Boolean, right: Boolean) =>
                 operator match {
@@ -313,6 +316,7 @@ object PredicateParser {
                     case ">=" => left >= right
                     case "<"  => left < right
                     case ">"  => left > right
+                    case _    => false
                 }
             case (left: Double, right: Double) =>
                 operator match {
@@ -322,6 +326,7 @@ object PredicateParser {
                     case ">=" => left > right || nearlyEqual(left, right)
                     case "==" => nearlyEqual(left, right)
                     case "!=" => !nearlyEqual(left, right)
+                    case _    => false
                 }
             case (left: String, right: String) =>
                 operator match {
@@ -331,6 +336,27 @@ object PredicateParser {
                     case ">=" => left >= right
                     case "==" => left == right
                     case "!=" => left != right
+                    case "in" => right.contains(left)
+                }
+            case (left: String, right: Map[String, _]) =>
+                operator match {
+                    case "in" => right.contains(left)
+                    case _    => false
+                }
+            case (left: String, right: Seq[JsValue]) =>
+                operator match {
+                    case "in" => right.contains(JsString(left))
+                    case _    => false
+                }
+            case (left: Boolean, right: Seq[JsValue]) =>
+                operator match {
+                    case "in" => right.contains(JsBoolean(left))
+                    case _    => false
+                }
+            case (left: Double, right: Seq[JsValue]) =>
+                operator match {
+                    case "in" => right.contains(JsNumber(left))
+                    case _    => false
                 }
             case (_, _) if operator == "!=" => true
             case (_, _)                     => false
@@ -393,7 +419,7 @@ object PredicateParser {
 
     // Bringing everything together
     val valueNode: P[ValueNode] = P(nullLiteral | tuktuString | stringNode | parens | booleanLiteral | allFunctions | arithNode | "(" ~ valueNode ~ ")")
-    val comparison: P[ComparisonNode] = P(valueNode ~ StringIn("<", ">", "<=", ">=", "==", "!=").! ~ valueNode)
+    val comparison: P[ComparisonNode] = P(valueNode ~ StringIn("<", ">", "<=", ">=", "==", "!=", "in").! ~ valueNode)
         .map { case (node1, op, node2) => ComparisonNode(node1, op, node2) }
 
     val and: P[BooleanNode] = P(factor ~ ("&&" ~ factor).rep).map {

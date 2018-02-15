@@ -277,5 +277,14 @@ class ParsingTests extends PlaySpec {
             PredicateParser("${empty3} == ${empty4}", datum) should be(true)
             PredicateParser("containsSubstring(toLowerCase((${String})), toLowerCase(${Substring1}), toLowerCase(${Substring2}))", datum) should be(true)
         }
+
+        "support 'in' comparison" in {
+            PredicateParser("\"1\" in ${null} && \"2\" in ${null}", datum) should be(true)
+            PredicateParser("\"3\" in ${null}", datum) should be(false)
+            PredicateParser("1 in ${JsArray} && \"2\" in ${JsArray}", datum) should be(true)
+            PredicateParser("\"3\" in ${JsArray}", datum) should be(false)
+            PredicateParser("${Substring1} in ${String}", datum) should be(true)
+            PredicateParser("${Substring2} in ${String}", datum) should be(false)
+        }
     }
 }
