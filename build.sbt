@@ -46,12 +46,11 @@ lazy val apiDependencies = Seq(
     "com.netaporter" %% "scala-uri" % "0.4.7",
     "com.enragedginger" %% "akka-quartz-scheduler" % "1.4.0-akka-2.3.x",
     "org.apache.commons" % "commons-collections4" % "4.1",
-    "com.lihaoyi" %% "fastparse" % "0.4.1"
+    "com.lihaoyi" %% "fastparse" % "1.0.0"
 )
 
 lazy val nlpDependencies = Seq(
     cache,
-	"com.crtomirmajer" % "wmd4j" % "1.0",
     "edu.stanford.nlp" % "stanford-parser" % "3.7.0",
     "org.scalatestplus" %% "play" % "1.2.0" % "test",
     "com.optimaize.languagedetector" % "language-detector" % "0.6",
